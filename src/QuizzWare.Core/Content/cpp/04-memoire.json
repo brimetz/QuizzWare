@@ -1,0 +1,100 @@
+{
+  "id": "cpp-ch-memoire",
+  "title": "Mémoire et RAII",
+  "summary": "Gérer la mémoire sans new ni delete manuels.",
+  "lessons": [
+    {
+      "id": "cpp-raii",
+      "title": "RAII et pointeurs intelligents",
+      "summary": "Lier la durée de vie des ressources à celle des objets.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "RAII",
+          "body": "Resource Acquisition Is Initialization : une ressource (mémoire, fichier, mutex) est acquise dans le constructeur d'un objet et libérée dans son destructeur. Les destructeurs s'exécutant automatiquement en sortie de portée — même en cas d'exception — il n'y a plus de fuite."
+        },
+        {
+          "title": "unique_ptr et shared_ptr",
+          "body": "std::unique_ptr possède seul sa ressource : il n'est pas copiable, seulement déplaçable (std::move). std::shared_ptr partage la possession via un compteur de références. std::weak_ptr observe sans posséder, ce qui casse les cycles de shared_ptr.",
+          "code": "auto p = std::make_unique<Widget>();\nauto q = std::move(p);  // p est maintenant vide\n\nauto s1 = std::make_shared<Node>();\nauto s2 = s1;           // compteur = 2"
+        },
+        {
+          "title": "Règle des cinq",
+          "body": "Si une classe définit l'un de ces membres, elle doit probablement tous les définir : destructeur, constructeur de copie, affectation par copie, constructeur de déplacement, affectation par déplacement. Mieux encore : la « règle du zéro », en déléguant la gestion des ressources à des types RAII."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-raii-q1",
+          "prompt": "Quel est le principe du RAII ?",
+          "choices": [
+            "Lier la durée de vie d'une ressource à celle d'un objet",
+            "Allouer toute la mémoire au démarrage",
+            "Utiliser un garbage collector",
+            "Interdire les exceptions"
+          ],
+          "answerIndex": 0,
+          "explanation": "La ressource est libérée par le destructeur, appelé automatiquement en sortie de portée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-raii-q2",
+          "prompt": "Peut-on copier un std::unique_ptr ?",
+          "choices": [
+            "Oui, cela copie l'objet pointé",
+            "Oui, cela partage la ressource",
+            "Non, il est seulement déplaçable",
+            "Seulement s'il est const"
+          ],
+          "answerIndex": 2,
+          "explanation": "unique_ptr exprime une possession exclusive : son constructeur de copie est supprimé, il faut utiliser std::move.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-raii-q3",
+          "prompt": "Deux objets se référencent mutuellement via des shared_ptr. Que se passe-t-il ?",
+          "choices": [
+            "Ils sont libérés normalement",
+            "Fuite mémoire : les compteurs n'atteignent jamais 0",
+            "Erreur de compilation",
+            "Crash immédiat"
+          ],
+          "answerIndex": 1,
+          "explanation": "Le cycle maintient les compteurs à au moins 1. On le casse avec un std::weak_ptr.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-raii-q4",
+          "prompt": "Depuis quelle version du standard std::make_unique est-il disponible ?",
+          "choices": [
+            "C++98",
+            "C++11",
+            "C++14",
+            "C++17"
+          ],
+          "answerIndex": 2,
+          "explanation": "unique_ptr est arrivé en C++11, mais make_unique n'a été ajouté qu'en C++14.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-raii-q5",
+          "prompt": "Lequel de ces membres ne fait PAS partie de la « règle des cinq » ?",
+          "choices": [
+            "Constructeur de déplacement",
+            "Destructeur",
+            "Constructeur par défaut",
+            "Affectation par copie"
+          ],
+          "answerIndex": 2,
+          "explanation": "La règle des cinq concerne le destructeur, la copie (constructeur + affectation) et le déplacement (constructeur + affectation).",
+          "difficulty": 3
+        }
+      ]
+    }
+  ]
+}

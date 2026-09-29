@@ -1,0 +1,87 @@
+{
+  "id": "csharp-ch-bases",
+  "title": "Bases du langage",
+  "summary": "Types valeur, types référence et nullabilité.",
+  "lessons": [
+    {
+      "id": "csharp-types",
+      "title": "Types et bases du langage",
+      "summary": "Types valeur, types référence et nullabilité.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Types valeur vs types référence",
+          "body": "Une struct est un type valeur : l'affectation copie les données. Une class est un type référence : l'affectation copie la référence, et les deux variables désignent le même objet."
+        },
+        {
+          "title": "string est immuable",
+          "body": "Une string ne peut pas être modifiée : chaque opération crée une nouvelle instance. Pour des concaténations en boucle, on utilise StringBuilder."
+        },
+        {
+          "title": "var et nullabilité",
+          "body": "var ne rend pas le code dynamique : le type est inféré à la compilation et reste statique. Les types nullables (int?, string? avec les nullable reference types) et les opérateurs ?? et ?. aident à gérer l'absence de valeur.",
+          "code": "int? x = null;\nConsole.WriteLine(x ?? 42);      // 42\nstring? name = null;\nConsole.WriteLine(name?.Length); // (vide)"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "csharp-types-q1",
+          "prompt": "Quelle est la nature d'une struct en C# ?",
+          "choices": [
+            "Un type référence",
+            "Un type valeur",
+            "Un type dynamique",
+            "Une interface"
+          ],
+          "answerIndex": 1,
+          "explanation": "Les struct sont des types valeur : elles sont copiées lors de l'affectation.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "csharp-types-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int? x = null;\nConsole.WriteLine(x ?? 42);",
+          "choices": [
+            "null",
+            "0",
+            "42",
+            "Une exception"
+          ],
+          "answerIndex": 2,
+          "explanation": "L'opérateur ?? renvoie l'opérande de droite quand celle de gauche est null.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "csharp-types-q3",
+          "prompt": "Que fait le mot-clé var ?",
+          "choices": [
+            "Crée une variable dynamique",
+            "Infère le type à la compilation",
+            "Déclare une variable globale",
+            "Rend la variable nullable"
+          ],
+          "answerIndex": 1,
+          "explanation": "Le type est déduit par le compilateur et reste statique ; c'est dynamic qui repousse la résolution à l'exécution.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "csharp-types-q4",
+          "prompt": "Pourquoi préférer StringBuilder pour concaténer dans une boucle ?",
+          "choices": [
+            "string est immuable : chaque concaténation alloue une nouvelle chaîne",
+            "string ne supporte pas l'opérateur +",
+            "StringBuilder est thread-safe",
+            "StringBuilder compresse les données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Concaténer n fois des string crée n objets intermédiaires ; StringBuilder travaille sur un buffer modifiable.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ]
+}

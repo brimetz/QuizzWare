@@ -1,0 +1,19 @@
+{
+  "id": "rust-ch-types",
+  "title": "Structs, enums et traits",
+  "summary": "Modéliser avec les types.",
+  "lessons": [
+    {
+      "id": "rust-structs-enums",
+      "title": "Structs et enums",
+      "summary": "Option et Result.",
+      "difficulty": 1
+    },
+    {
+      "id": "rust-traits",
+      "title": "Traits",
+      "summary": "Comportements partagés et génériques.",
+      "difficulty": 2
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "ia-ch-llm",
+  "title": "Les LLM dans les applications",
+  "summary": "Intégrer des modèles de langage.",
+  "lessons": [
+    {
+      "id": "ia-prompting",
+      "title": "Prompting",
+      "summary": "Instructions, exemples et formats de sortie.",
+      "difficulty": 1
+    },
+    {
+      "id": "ia-rag",
+      "title": "RAG",
+      "summary": "Recherche et génération augmentée.",
+      "difficulty": 2
+    },
+    {
+      "id": "ia-agents",
+      "title": "Agents et outils",
+      "summary": "Appels d'outils et boucles d'agents.",
+      "difficulty": 3
+    }
+  ]
+}

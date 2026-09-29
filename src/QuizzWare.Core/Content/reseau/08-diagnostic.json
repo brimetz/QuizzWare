@@ -1,0 +1,19 @@
+{
+  "id": "net-ch-diagnostic",
+  "title": "Diagnostic réseau",
+  "summary": "Trouver pourquoi ça ne marche pas.",
+  "lessons": [
+    {
+      "id": "net-diag-outils",
+      "title": "Les outils de base",
+      "summary": "ping, traceroute, dig, curl.",
+      "difficulty": 1
+    },
+    {
+      "id": "net-diag-captures",
+      "title": "Lire une capture",
+      "summary": "tcpdump et Wireshark.",
+      "difficulty": 3
+    }
+  ]
+}

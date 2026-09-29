@@ -1,0 +1,19 @@
+{
+  "id": "qa-ch-integration",
+  "title": "Tests d'intégration et de bout en bout",
+  "summary": "Tester l'ensemble.",
+  "lessons": [
+    {
+      "id": "qa-integration",
+      "title": "Tests d'intégration",
+      "summary": "Bases de données et conteneurs de test.",
+      "difficulty": 2
+    },
+    {
+      "id": "qa-e2e",
+      "title": "Tests de bout en bout",
+      "summary": "Des navigateurs automatisés.",
+      "difficulty": 2
+    }
+  ]
+}

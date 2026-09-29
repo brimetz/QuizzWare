@@ -1,0 +1,398 @@
+{
+  "id": "db-ch-panorama",
+  "title": "Le panorama des bases de données",
+  "summary": "Relationnel, NoSQL et bases spécialisées : laquelle pour quel besoin ?",
+  "lessons": [
+    {
+      "id": "db-familles",
+      "title": "Relationnel et NoSQL",
+      "summary": "Deux philosophies, et une frontière qui s'estompe.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le relationnel (SGBDR)",
+          "body": "PostgreSQL, MySQL, SQL Server, Oracle, SQLite. Schéma strict, langage SQL, jointures et transactions ACID. C'est le choix par défaut pour des données structurées et liées entre elles : comptes, commandes, stocks, facturation."
+        },
+        {
+          "title": "Pourquoi NoSQL ?",
+          "body": "NoSQL (« Not only SQL ») regroupe des bases qui renoncent à une partie du modèle relationnel (schéma fixe, jointures, parfois transactions sur plusieurs lignes) pour gagner en souplesse ou en capacité à se répartir sur de nombreuses machines. Quatre grandes familles : document, clé-valeur, colonnes larges et graphe."
+        },
+        {
+          "title": "Schéma à l'écriture ou à la lecture",
+          "body": "En relationnel, la structure est vérifiée à l'écriture (schema-on-write). Dans une base document, on peut stocker des documents de formes différentes : la structure est interprétée à la lecture (schema-on-read). C'est plus souple, mais les incohérences se découvrent plus tard, dans le code."
+        },
+        {
+          "title": "ACID et BASE",
+          "body": "Les SGBDR privilégient les garanties ACID. Beaucoup de systèmes NoSQL distribués suivent plutôt BASE (Basically Available, Soft state, Eventually consistent) : les répliques finissent par converger. La frontière s'estompe : MongoDB gère des transactions multi-documents, et PostgreSQL stocke et indexe du JSON (JSONB)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-familles-q1",
+          "prompt": "Laquelle de ces bases est relationnelle ?",
+          "choices": ["PostgreSQL", "MongoDB", "Redis", "Neo4j"],
+          "answerIndex": 0,
+          "explanation": "PostgreSQL est un SGBDR. MongoDB est une base document, Redis une base clé-valeur en mémoire, Neo4j une base graphe.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "db-familles-q2",
+          "prompt": "Lesquelles sont des familles de bases NoSQL ?",
+          "choices": ["Document", "Clé-valeur", "Graphe", "Tabulaire normalisée", "Colonnes larges"],
+          "answerIndices": [0, 1, 2, 4],
+          "explanation": "Les quatre familles classiques du NoSQL sont document, clé-valeur, colonnes larges et graphe. Les tables normalisées sont le propre du relationnel.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-familles-q3",
+          "prompt": "Que signifie « cohérence à terme » (eventual consistency) ?",
+          "choices": [
+            "Sans nouvelle écriture, toutes les répliques finissent par renvoyer la même valeur",
+            "Les données ne sont cohérentes qu'en fin de journée",
+            "Chaque lecture renvoie toujours la dernière écriture",
+            "Les transactions sont validées par lots"
+          ],
+          "answerIndex": 0,
+          "explanation": "Juste après une écriture, une réplique peut encore renvoyer l'ancienne valeur ; la convergence est garantie, mais pas immédiate. La troisième proposition décrit la cohérence forte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-familles-q4",
+          "prompt": "« Schema-on-read » signifie…",
+          "choices": [
+            "La structure des données est interprétée au moment de la lecture",
+            "Le schéma est vérifié à chaque écriture",
+            "La base n'accepte que des lectures",
+            "Le schéma est stocké dans un fichier séparé"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le cas des bases document : rien n'oblige deux documents d'une même collection à avoir les mêmes champs. C'est le code qui lit qui doit gérer les variations.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "db-familles-q5",
+          "prompt": "Quelles affirmations sont vraies aujourd'hui ?",
+          "choices": [
+            "PostgreSQL sait stocker et indexer du JSON (JSONB)",
+            "MongoDB supporte les transactions multi-documents",
+            "Une base NoSQL ne peut jamais faire de jointure",
+            "NoSQL signifie « aucun SQL, jamais »"
+          ],
+          "answerIndices": [0, 1],
+          "explanation": "Les deux mondes ont convergé : JSONB dans PostgreSQL, transactions multi-documents dans MongoDB (depuis la 4.0), $lookup pour joindre des collections. NoSQL se lit « Not only SQL ».",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-familles-q6",
+          "prompt": "Commandes et paiements d'une boutique en ligne : données liées, cohérence indispensable. Quel choix par défaut ?",
+          "choices": ["Une base relationnelle", "Une base graphe", "Un cache clé-valeur seul", "Une base de séries temporelles"],
+          "answerIndex": 0,
+          "explanation": "Données structurées et liées, transactions ACID, requêtes ad hoc : c'est exactement le terrain du relationnel.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "db-nosql-familles",
+      "title": "Document, clé-valeur, colonnes, graphe",
+      "summary": "Les quatre familles NoSQL et leurs cas d'usage.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Document (MongoDB, Couchbase, Firestore)",
+          "body": "On stocke des documents JSON, éventuellement imbriqués. Idéal quand on lit un agrégat entier d'un coup : un profil, une fiche produit, un article avec ses commentaires. On imbrique ce qui est lu ensemble plutôt que de faire des jointures.",
+          "code": "db.articles.insertOne({\n  titre: \"Index B-tree\",\n  tags: [\"sql\", \"perf\"],\n  auteur: { nom: \"Ada\" }\n})\n\ndb.articles.find({ tags: \"sql\" })",
+          "language": "javascript"
+        },
+        {
+          "title": "Clé-valeur (Redis, DynamoDB, Memcached)",
+          "body": "Une clé donne accès à une valeur, en temps constant. Très rapide, souvent en mémoire (Redis) : cache, sessions, compteurs, files d'attente, classements. En contrepartie, on n'interroge que par la clé.",
+          "code": "SET session:42 \"{...}\" EX 3600\nGET session:42\nINCR vues:article:7\nZADD classement 1500 \"alice\"",
+          "language": "text"
+        },
+        {
+          "title": "Colonnes larges (Cassandra, ScyllaDB, HBase)",
+          "body": "Conçues pour d'énormes volumes d'écriture répartis sur de nombreux nœuds. On modélise à partir des requêtes : la clé de partition détermine le nœud qui stocke les données. Pas de jointure : on duplique les données, une table par requête."
+        },
+        {
+          "title": "Graphe (Neo4j, Amazon Neptune)",
+          "body": "Nœuds et relations sont stockés comme tels. Parcourir « les amis de mes amis » ou remonter une chaîne de virements suspects reste rapide, là où SQL empilerait les jointures.",
+          "code": "MATCH (moi:Personne {nom: \"Ada\"})\n      -[:AMI]->()-[:AMI]->(suggestion)\nRETURN DISTINCT suggestion.nom",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-nosql-q1",
+          "prompt": "Quel est le cas d'usage typique de Redis ?",
+          "choices": ["Cache et sessions en mémoire", "Entrepôt de données analytique", "Stockage de fichiers vidéo", "Recherche plein texte avancée"],
+          "answerIndex": 0,
+          "explanation": "Redis garde les données en mémoire avec des accès en temps constant : parfait pour un cache, des sessions, des compteurs ou des classements.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-nosql-q2",
+          "prompt": "Quelle famille est la plus adaptée pour suggérer « les amis de mes amis » ?",
+          "choices": ["Graphe", "Clé-valeur", "Colonnes larges", "Séries temporelles"],
+          "answerIndex": 0,
+          "explanation": "Une base graphe parcourt les relations directement, sans jointure. Le coût dépend du voisinage exploré, pas de la taille totale des tables.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-nosql-q3",
+          "prompt": "Que renvoie cette requête MongoDB ?",
+          "code": "db.articles.find({ tags: \"sql\" })",
+          "language": "javascript",
+          "choices": [
+            "Les articles dont le tableau tags contient \"sql\"",
+            "Les articles dont tags vaut exactement [\"sql\"]",
+            "Le nombre d'articles tagués sql",
+            "Une erreur : tags est un tableau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sur un champ tableau, un filtre d'égalité est vrai si l'un des éléments correspond. C'est très pratique pour les tags.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-nosql-q4",
+          "prompt": "Dans Cassandra, comment conçoit-on le modèle de données ?",
+          "choices": [
+            "À partir des requêtes à servir, quitte à dupliquer les données",
+            "En normalisant jusqu'en 3NF",
+            "À partir des jointures nécessaires",
+            "Automatiquement : il n'y a pas de schéma"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans jointure, chaque requête doit pouvoir être servie par une seule table, organisée selon sa clé de partition. Une même donnée peut donc être écrite dans plusieurs tables.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "db-nosql-q5",
+          "prompt": "Ce document grossit sans limite et finira par être rejeté. Touche la ligne en cause.",
+          "code": "db.produits.updateOne(\n  { _id: 42 },\n  { $push: { historiqueVues: new Date() } }\n)",
+          "language": "javascript",
+          "bugLines": [3],
+          "explanation": "Chaque vue ajoute un élément au tableau : le document grossit indéfiniment, alors que MongoDB limite un document à 16 Mo. C'est l'anti-pattern du tableau non borné : on stocke les vues dans une collection séparée, ou on n'entretient qu'un compteur.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "db-nosql-q6",
+          "prompt": "Dans quels cas une base document est-elle un bon choix ?",
+          "choices": [
+            "Les données sont lues sous forme d'agrégats complets (profil, fiche produit)",
+            "Les attributs varient beaucoup d'un enregistrement à l'autre",
+            "De nombreuses transactions modifient plusieurs entités très liées",
+            "On a besoin de requêtes ad hoc avec beaucoup de jointures"
+          ],
+          "answerIndices": [0, 1],
+          "explanation": "Le document brille quand ce qui est lu ensemble est stocké ensemble et que la structure varie. Pour des entités très liées et des jointures fréquentes, le relationnel reste plus adapté.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "db-specialisees",
+      "title": "Les bases spécialisées",
+      "summary": "Séries temporelles, recherche, vecteurs et analytique.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Séries temporelles (TimescaleDB, InfluxDB, Prometheus)",
+          "body": "Des mesures horodatées, écrites en continu et rarement modifiées : métriques de serveurs, capteurs IoT, cours de bourse. Ces bases offrent une forte compression, des agrégations par fenêtre de temps et une rétention automatique (supprimer ce qui a plus de 30 jours, par exemple)."
+        },
+        {
+          "title": "Moteurs de recherche (Elasticsearch, OpenSearch, Meilisearch)",
+          "body": "Un index inversé associe chaque mot aux documents qui le contiennent : recherche plein texte, tolérance aux fautes de frappe, tri par pertinence, filtres à facettes. On l'alimente depuis la base principale, qui reste la source de vérité."
+        },
+        {
+          "title": "Bases vectorielles (pgvector, Qdrant, Pinecone, Milvus)",
+          "body": "Elles stockent des embeddings, des vecteurs qui représentent le sens d'un texte ou d'une image, et retrouvent les plus proches voisins (similarité cosinus…). C'est la brique de la recherche sémantique et du RAG pour les LLM. Les index approximatifs (HNSW) échangent un peu de précision contre beaucoup de vitesse."
+        },
+        {
+          "title": "Analytique (ClickHouse, BigQuery, Snowflake, DuckDB)",
+          "body": "Stockage par colonnes : pour calculer SUM(montant) sur un milliard de lignes, on ne lit que la colonne montant, fortement compressée. Parfait pour l'analyse (OLAP), inadapté aux petites transactions fréquentes (OLTP)."
+        },
+        {
+          "title": "La persistance polyglotte",
+          "body": "Un système combine souvent plusieurs bases : PostgreSQL comme source de vérité, Redis en cache, Elasticsearch pour la recherche, un entrepôt pour l'analytique. Chaque base ajoutée a un coût : synchronisation, cohérence, supervision, sauvegardes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-special-q1",
+          "prompt": "Pour une barre de recherche tolérante aux fautes de frappe, avec des résultats triés par pertinence ?",
+          "choices": ["Elasticsearch / OpenSearch", "Redis", "Cassandra", "SQLite"],
+          "answerIndex": 0,
+          "explanation": "Les moteurs de recherche sont construits pour ça : index inversé, analyse linguistique, recherche approximative et score de pertinence.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-special-q2",
+          "prompt": "Qu'est-ce qu'un index inversé ?",
+          "choices": [
+            "Une structure qui associe chaque terme aux documents qui le contiennent",
+            "Un index B-tree trié en ordre décroissant",
+            "Un index qui conserve les lignes supprimées",
+            "Une copie de la table dans l'ordre inverse"
+          ],
+          "answerIndex": 0,
+          "explanation": "Comme l'index à la fin d'un livre : pour chaque mot, la liste des pages où il apparaît.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-special-q3",
+          "prompt": "Pourquoi une base orientée colonnes est-elle rapide pour cette requête sur un milliard de lignes ?",
+          "code": "SELECT SUM(montant) FROM ventes;",
+          "choices": [
+            "Elle ne lit que la colonne montant, fortement compressée",
+            "Elle garde toute la table en mémoire",
+            "Elle précalcule toutes les sommes possibles",
+            "Elle ignore les lignes NULL"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une base orientée lignes lit chaque ligne en entier. Une base orientée colonnes ne lit que les colonnes utiles, et des valeurs similaires stockées côte à côte se compressent très bien.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-special-q4",
+          "prompt": "Que stocke une base vectorielle pour faire de la recherche sémantique ?",
+          "choices": [
+            "Des embeddings : des vecteurs numériques qui représentent le sens",
+            "Des images vectorielles (SVG)",
+            "Un index B-tree sur chaque mot",
+            "Un graphe de relations entre documents"
+          ],
+          "answerIndex": 0,
+          "explanation": "Deux textes au sens proche ont des vecteurs proches : on retrouve « chaussures de course » en cherchant « baskets pour courir », même sans mot commun.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "db-special-q5",
+          "prompt": "Lesquelles de ces associations besoin → base sont pertinentes ?",
+          "choices": [
+            "Métriques de serveurs toutes les 10 s → base de séries temporelles",
+            "Tableau de bord sur des milliards de ventes → base analytique en colonnes",
+            "Paiements bancaires → base vectorielle",
+            "Classement de joueurs en temps réel → Redis (sorted set)"
+          ],
+          "answerIndices": [0, 1, 3],
+          "explanation": "Les paiements exigent des transactions ACID : un SGBDR. Les sorted sets de Redis maintiennent un classement trié à chaque mise à jour.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-special-q6",
+          "prompt": "Tu ajoutes Elasticsearch à côté de PostgreSQL pour la recherche. Quel est le principal risque introduit ?",
+          "choices": [
+            "Les deux bases peuvent diverger : il faut synchroniser et accepter un décalage",
+            "PostgreSQL ne peut plus faire de transactions",
+            "Les requêtes SQL deviennent plus lentes",
+            "Elasticsearch doit remplacer PostgreSQL"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une donnée modifiée dans PostgreSQL n'apparaît dans la recherche qu'après synchronisation (tâche applicative ou capture des changements, dite CDC). PostgreSQL reste la source de vérité.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "db-defi-panorama",
+    "title": "Défi entretien : choisis la bonne base",
+    "summary": "Des scénarios d'architecture réels, comme en entretien de system design.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "db-defi2-q1",
+        "prompt": "Une messagerie stocke des milliards de messages, écrits en continu et lus conversation par conversation, triés par date. Quel choix est le plus défendable ?",
+        "choices": [
+          "Colonnes larges (Cassandra, ScyllaDB) avec la conversation comme clé de partition",
+          "Une base graphe",
+          "SQLite",
+          "Une base vectorielle"
+        ],
+        "answerIndex": 0,
+        "explanation": "Écritures massives et un seul motif de lecture (les messages d'une conversation par date) : c'est le cas idéal des colonnes larges. Discord a par exemple stocké ses messages dans Cassandra puis ScyllaDB.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi2-q2",
+        "prompt": "Une banque veut détecter des réseaux de comptes liés par des virements en chaîne. Quel type de base est le plus naturel ?",
+        "choices": ["Graphe", "Document", "Clé-valeur", "Séries temporelles"],
+        "answerIndex": 0,
+        "explanation": "Remonter des chaînes de relations de longueur variable est le point fort des bases graphe. En SQL, chaque niveau ajouterait une jointure (ou une CTE récursive coûteuse).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi2-q3",
+        "prompt": "Cas pratique 1/3 — La page produit exécute 12 requêtes SQL et met 800 ms. Les données changent rarement. Que fais-tu en premier ?",
+        "choices": [
+          "Mettre le résultat en cache dans Redis, avec une expiration",
+          "Migrer toute la base vers MongoDB",
+          "Ajouter une base graphe",
+          "Passer à une base vectorielle"
+        ],
+        "answerIndex": 0,
+        "explanation": "Des lectures fréquentes de données qui changent peu : un cache est la solution la plus simple et la plus efficace. Une migration de base serait disproportionnée.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "db-defi2-q4",
+        "prompt": "Cas pratique 2/3 — Après une baisse de prix, les clients voient l'ancien prix indéfiniment. Touche la ligne en cause.",
+        "code": "produit = redis.get(\"produit:42\")\nif produit is None:\n    produit = sql.charger_produit(42)\n    redis.set(\"produit:42\", produit)\nreturn produit",
+        "language": "python",
+        "bugLines": [4],
+        "explanation": "La clé est écrite sans expiration : une fois en cache, le produit n'est jamais relu depuis la base. Il faut une durée de vie (ex=3600) et/ou supprimer la clé quand le produit est modifié.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "db-defi2-q5",
+        "prompt": "Cas pratique 3/3 — Quelles stratégies limitent les données périmées dans le cache ?",
+        "choices": [
+          "Définir une durée de vie (TTL) sur chaque clé",
+          "Supprimer la clé du cache à chaque modification du produit",
+          "Augmenter la mémoire de Redis",
+          "Ne plus jamais lire la base de données"
+        ],
+        "answerIndices": [0, 1],
+        "explanation": "Le TTL borne la durée pendant laquelle une donnée peut être périmée ; l'invalidation à l'écriture la réduit presque à zéro. On combine souvent les deux.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "db-defi2-q6",
+        "prompt": "Revue d'architecture : une startup de 3 développeurs prévoit PostgreSQL, MongoDB, Cassandra, Neo4j et Elasticsearch dès la V1. Quelles critiques sont justifiées ?",
+        "choices": [
+          "Chaque base ajoute un coût d'exploitation : sauvegardes, supervision, mises à jour",
+          "Synchroniser les données entre bases crée des incohérences possibles",
+          "PostgreSQL seul (JSONB, recherche plein texte) couvre souvent les besoins d'une V1",
+          "Il est impossible d'héberger cinq bases chez le même fournisseur cloud"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "En entretien, on attend un choix sobre et justifié : commencer simple, puis ajouter une base spécialisée quand un besoin mesuré le justifie.",
+        "difficulty": 3
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "java-ch-bases",
+  "title": "Bases du langage",
+  "summary": "Types, classes et chaînes.",
+  "lessons": [
+    {
+      "id": "java-types",
+      "title": "Types primitifs et objets",
+      "summary": "int, Integer et autoboxing.",
+      "difficulty": 1
+    },
+    {
+      "id": "java-classes",
+      "title": "Classes et objets",
+      "summary": "Constructeurs et static.",
+      "difficulty": 1
+    },
+    {
+      "id": "java-strings",
+      "title": "Chaînes",
+      "summary": "String immuable, StringBuilder et equals.",
+      "difficulty": 1
+    }
+  ]
+}

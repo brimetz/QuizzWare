@@ -1,0 +1,251 @@
+{
+  "unlockedBy": "db-ch-panorama",
+  "nodes": [
+    {
+      "id": "db-spe-relationnel",
+      "title": "Bases relationnelles",
+      "summary": "Les SGBDR et les ORM qui les pilotent depuis le code.",
+      "icon": "SQL",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-postgresql",
+          "title": "PostgreSQL",
+          "summary": "La base relationnelle open source de référence : JSONB, index avancés, extensions.",
+          "icon": "PG",
+          "kind": "techno"
+        },
+        {
+          "id": "db-spe-mysql",
+          "title": "MySQL et MariaDB",
+          "summary": "InnoDB, réplication et spécificités.",
+          "icon": "MY",
+          "kind": "techno"
+        },
+        {
+          "id": "db-spe-sqlserver",
+          "title": "SQL Server",
+          "summary": "La base de Microsoft : T-SQL, index et outillage.",
+          "icon": "MSSQL",
+          "kind": "techno"
+        },
+        {
+          "id": "db-spe-sqlite",
+          "title": "SQLite",
+          "summary": "Une base complète dans un seul fichier, embarquée partout, du mobile au navigateur.",
+          "icon": "LITE",
+          "kind": "techno"
+        },
+        {
+          "id": "db-spe-efcore",
+          "title": "Entity Framework Core",
+          "summary": "L'ORM de .NET : DbContext, LINQ traduit en SQL, migrations et relations.",
+          "icon": "EF",
+          "kind": "lib",
+          "relatedCategory": "csharp",
+          "language": "csharp"
+        },
+        {
+          "id": "db-spe-sqlalchemy",
+          "title": "SQLAlchemy",
+          "summary": "L'ORM et la boîte à outils SQL de référence en Python.",
+          "icon": "SQLA",
+          "kind": "lib",
+          "relatedCategory": "python"
+        }
+      ]
+    },
+    {
+      "id": "db-spe-document",
+      "title": "Bases document",
+      "summary": "Des documents JSON flexibles, lus d'un bloc.",
+      "icon": "DOC",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-mongodb",
+          "title": "MongoDB",
+          "summary": "CRUD, modélisation par l'usage, index et pipeline d'agrégation.",
+          "icon": "MDB",
+          "kind": "techno",
+          "language": "javascript"
+        }
+      ]
+    },
+    {
+      "id": "db-spe-cle-valeur",
+      "title": "Clé-valeur",
+      "summary": "Accès ultra-rapide par clé : cache, sessions, compteurs.",
+      "icon": "K/V",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-redis",
+          "title": "Redis",
+          "summary": "Structures de données en mémoire : strings, hashes, sorted sets, streams.",
+          "icon": "RDS",
+          "kind": "techno"
+        },
+        {
+          "id": "db-spe-dynamodb",
+          "title": "DynamoDB",
+          "summary": "La base clé-valeur managée d'AWS : partitions et modélisation à table unique.",
+          "icon": "DDB",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "db-spe-colonnes",
+      "title": "Colonnes larges",
+      "summary": "Des volumes d'écriture massifs répartis sur de nombreux nœuds.",
+      "icon": "COL",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-cassandra",
+          "title": "Cassandra",
+          "summary": "Modéliser par requête, clés de partition et niveaux de cohérence.",
+          "icon": "CAS",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "db-spe-graphe",
+      "title": "Graphe",
+      "summary": "Des relations parcourues directement, sans jointure.",
+      "icon": "GRA",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-neo4j",
+          "title": "Neo4j",
+          "summary": "Le modèle nœuds / relations et le langage Cypher.",
+          "icon": "NEO",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "db-spe-recherche",
+      "title": "Moteurs de recherche",
+      "summary": "Recherche plein texte, pertinence et facettes.",
+      "icon": "FTS",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-elasticsearch",
+          "title": "Elasticsearch",
+          "summary": "Index inversé, analyseurs, requêtes de pertinence et agrégations.",
+          "icon": "ES",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "db-spe-vectoriel",
+      "title": "Bases vectorielles",
+      "summary": "Recherche sémantique et RAG à partir d'embeddings.",
+      "icon": "VEC",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-pgvector",
+          "title": "pgvector",
+          "summary": "L'extension PostgreSQL pour stocker et rechercher des vecteurs.",
+          "icon": "PGV",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "db-spe-series",
+      "title": "Séries temporelles",
+      "summary": "Mesures horodatées, compression et rétention.",
+      "icon": "TS",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-timescaledb",
+          "title": "TimescaleDB",
+          "summary": "Les séries temporelles dans PostgreSQL : hypertables et agrégats continus.",
+          "icon": "TSDB",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "db-spe-analytique",
+      "title": "Analytique",
+      "summary": "Du stockage en colonnes pour analyser des milliards de lignes.",
+      "icon": "OLAP",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-duckdb",
+          "title": "DuckDB",
+          "summary": "L'analytique embarquée : du SQL rapide sur des fichiers Parquet ou CSV.",
+          "icon": "DUCK",
+          "kind": "techno"
+        },
+        {
+          "id": "db-spe-clickhouse",
+          "title": "ClickHouse",
+          "summary": "Des requêtes analytiques en temps réel sur des milliards de lignes.",
+          "icon": "CH",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "db-spe-streaming",
+      "title": "Flux de données",
+      "summary": "Traiter les données en mouvement.",
+      "icon": "STRM",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-kafka",
+          "title": "Kafka",
+          "summary": "Journal d'événements distribué, au cœur des architectures de données.",
+          "icon": "KFK",
+          "kind": "techno",
+          "linkTo": "architecture-systeme/sys-spe-kafka"
+        },
+        {
+          "id": "db-spe-cdc",
+          "title": "Capture des changements (CDC)",
+          "summary": "Debezium : propager les modifications d'une base en temps réel.",
+          "icon": "CDC",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "db-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "db-spe-porte-ia",
+          "title": "Intelligence artificielle",
+          "summary": "Des données aux modèles.",
+          "icon": "IA",
+          "kind": "porte",
+          "linkTo": "ia"
+        },
+        {
+          "id": "db-spe-porte-algo",
+          "title": "Algorithmes et structures de données",
+          "summary": "B-trees, hachage : ce qu'il y a sous les index.",
+          "icon": "ALGO",
+          "kind": "porte",
+          "linkTo": "algorithmes"
+        }
+      ]
+    }
+  ]
+}

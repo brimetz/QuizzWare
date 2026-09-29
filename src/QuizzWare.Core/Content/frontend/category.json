@@ -1,0 +1,9 @@
+{
+  "id": "frontend",
+  "order": 18,
+  "name": "Développement web frontend",
+  "description": "HTML, CSS, accessibilité et performance des interfaces web.",
+  "icon": "WEB",
+  "color": "#9E9D24",
+  "language": "javascript"
+}

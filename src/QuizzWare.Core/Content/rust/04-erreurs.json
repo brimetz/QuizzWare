@@ -1,0 +1,19 @@
+{
+  "id": "rust-ch-erreurs",
+  "title": "Gestion des erreurs",
+  "summary": "Result et l'opérateur ?.",
+  "lessons": [
+    {
+      "id": "rust-result",
+      "title": "Result et ?",
+      "summary": "Propager les erreurs.",
+      "difficulty": 2
+    },
+    {
+      "id": "rust-panic",
+      "title": "panic! et unwrap",
+      "summary": "Quand les utiliser.",
+      "difficulty": 1
+    }
+  ]
+}

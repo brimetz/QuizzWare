@@ -1,0 +1,25 @@
+{
+  "id": "cs-ch-memoire",
+  "title": "Mémoire et performance",
+  "summary": "GC, IDisposable et Span.",
+  "lessons": [
+    {
+      "id": "cs-gc",
+      "title": "Le ramasse-miettes",
+      "summary": "Générations et Large Object Heap.",
+      "difficulty": 2
+    },
+    {
+      "id": "cs-idisposable",
+      "title": "IDisposable et using",
+      "summary": "Libérer les ressources.",
+      "difficulty": 1
+    },
+    {
+      "id": "cs-span",
+      "title": "Span et allocations",
+      "summary": "Réduire la pression mémoire.",
+      "difficulty": 3
+    }
+  ]
+}

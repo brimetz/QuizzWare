@@ -1,0 +1,25 @@
+{
+  "id": "c-ch-compilation",
+  "title": "Compilation et modules",
+  "summary": "Headers, linkage et Make.",
+  "lessons": [
+    {
+      "id": "c-headers",
+      "title": "Headers et unités de compilation",
+      "summary": "Déclarations et définitions.",
+      "difficulty": 2
+    },
+    {
+      "id": "c-linkage",
+      "title": "static, extern et linkage",
+      "summary": "Visibilité des symboles.",
+      "difficulty": 3
+    },
+    {
+      "id": "c-make",
+      "title": "Make",
+      "summary": "Construire un projet.",
+      "difficulty": 1
+    }
+  ]
+}

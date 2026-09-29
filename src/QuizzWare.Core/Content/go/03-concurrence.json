@@ -1,0 +1,25 @@
+{
+  "id": "go-ch-concurrence",
+  "title": "Concurrence",
+  "summary": "Goroutines et channels.",
+  "lessons": [
+    {
+      "id": "go-goroutines",
+      "title": "Goroutines",
+      "summary": "Lancer du travail concurrent.",
+      "difficulty": 2
+    },
+    {
+      "id": "go-channels",
+      "title": "Channels et select",
+      "summary": "Communiquer plutôt que partager.",
+      "difficulty": 3
+    },
+    {
+      "id": "go-sync",
+      "title": "sync et context",
+      "summary": "Mutex, WaitGroup et annulation.",
+      "difficulty": 3
+    }
+  ]
+}

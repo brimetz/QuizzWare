@@ -1,0 +1,25 @@
+{
+  "id": "sys-ch-resilience",
+  "title": "Résilience et observabilité",
+  "summary": "Survivre aux pannes et les comprendre.",
+  "lessons": [
+    {
+      "id": "sys-resilience-patterns",
+      "title": "Timeouts, retries et circuit breakers",
+      "summary": "Contenir les pannes en cascade.",
+      "difficulty": 2
+    },
+    {
+      "id": "sys-rate-limiting",
+      "title": "Limitation de débit",
+      "summary": "Token bucket et fenêtres glissantes.",
+      "difficulty": 2
+    },
+    {
+      "id": "sys-observabilite",
+      "title": "Logs, métriques et traces",
+      "summary": "Les trois piliers de l'observabilité.",
+      "difficulty": 2
+    }
+  ]
+}

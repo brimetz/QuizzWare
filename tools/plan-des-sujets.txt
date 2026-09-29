@@ -1,0 +1,875 @@
+// =====================================================================================
+// PLAN DES SUJETS DE QUIZZWARE
+// Source de la STRUCTURE du contenu : catégories, chapitres, leçons et arbres de spécialisations.
+// Après modification : dotnet run --project tools/GenerateurContenu   (syntaxe : tools/README.md)
+// Le contenu des leçons (cours, questions) s'écrit directement dans les fichiers JSON.
+// =====================================================================================
+
+// =====================================================================================
+// ARCHITECTURE SYSTÈME
+// =====================================================================================
+@existing architecture-systeme
+@unlock archi-ch-conception
+#keep 01 archi-ch-conception
+#ch 02 sys-ch-patterns | Design patterns | Les solutions éprouvées aux problèmes récurrents.
+- sys-patterns-creation | Patterns de création | Factory, Builder, Singleton et leurs pièges. | 1
+- sys-patterns-structure | Patterns de structure | Adapter, Decorator, Facade, Proxy. | 2
+- sys-patterns-comportement | Patterns de comportement | Strategy, Observer, Command, State. | 2
+#ch 03 sys-ch-architecture-applicative | Architecture applicative | Organiser une application en couches et en modules.
+- sys-couches | Architecture en couches | Présentation, métier, données : rôles et dépendances. | 1
+- sys-hexagonale | Hexagonale et clean architecture | Ports, adaptateurs et règle de dépendance. | 2
+- sys-ddd-bases | Les bases du DDD | Langage ubiquitaire, entités, objets valeur, agrégats. | 3
+#ch 04 sys-ch-apis | Concevoir des APIs | Des contrats clairs, évolutifs et robustes.
+- sys-api-rest | REST en pratique | Ressources, verbes, codes de statut, pagination. | 1
+- sys-api-versioning | Versioning et compatibilité | Faire évoluer une API sans casser les clients. | 2
+- sys-api-idempotence | Idempotence et nouvelles tentatives | Rejouer une requête sans effet de bord. | 3
+#ch 05 sys-ch-donnees | Données à l'échelle | Cache, réplication et partitionnement.
+- sys-cache | Stratégies de cache | Cache-aside, write-through, invalidation. | 2
+- sys-cap | CAP et PACELC | Choisir entre cohérence, disponibilité et latence. | 3
+- sys-partitionnement | Partitionnement | Répartir les données et la charge. | 3
+#keep 06 archi-ch-distribue
+#ch 07 sys-ch-asynchrone | Communication asynchrone | Messages, événements et cohérence à terme.
+- sys-messaging | Files et topics | Point à point, publication et abonnement. | 2
+- sys-livraison | Garanties de livraison | Au plus une fois, au moins une fois, exactement une fois. | 3
+- sys-outbox | Outbox et idempotence | Publier un événement de façon fiable. | 3
+#ch 08 sys-ch-resilience | Résilience et observabilité | Survivre aux pannes et les comprendre.
+- sys-resilience-patterns | Timeouts, retries et circuit breakers | Contenir les pannes en cascade. | 2
+- sys-rate-limiting | Limitation de débit | Token bucket et fenêtres glissantes. | 2
+- sys-observabilite | Logs, métriques et traces | Les trois piliers de l'observabilité. | 2
++ sys-spe-conception | Conception logicielle | Organiser le code pour qu'il reste simple à faire évoluer. | DES
+* sys-spe-patterns | Design patterns | Les patterns du Gang of Four, et quand ne pas les utiliser. | GOF | concept
+* sys-spe-clean | Clean architecture et hexagonale | Isoler le métier de l'infrastructure : ports, adaptateurs et règle de dépendance. | HEX | concept
+* sys-spe-ddd | Domain-Driven Design | Langage ubiquitaire, bounded contexts, agrégats et événements de domaine. | DDD | concept
+* sys-spe-refactoring | Refactoring et code legacy | Faire évoluer du code existant sans tout casser. | REF | concept
++ sys-spe-apis | APIs | Concevoir les contrats entre services et clients. | API
+* sys-spe-rest | REST | Ressources, verbes, codes de statut, pagination, versioning et idempotence. | REST | concept
+* sys-spe-grpc | gRPC | Contrats Protobuf, HTTP/2, streaming et communication entre microservices. | gRPC | techno
+* sys-spe-graphql | GraphQL | Un schéma typé où le client choisit les données : résolveurs, N+1 et DataLoader. | GQL | techno
+* sys-spe-openapi | OpenAPI et contrats | Décrire, documenter et générer des clients d'API. | OAS | techno
++ sys-spe-distribue | Systèmes distribués | Faire collaborer des services qui peuvent tomber à tout moment. | DIST
+* sys-spe-kafka | Kafka | Journal d'événements distribué : topics, partitions, groupes de consommateurs. | KFK | techno
+* sys-spe-rabbitmq | RabbitMQ | Files de messages : exchanges, routage, accusés de réception et dead letters. | RMQ | techno
+* sys-spe-event-sourcing | Event sourcing et CQRS | Stocker les événements plutôt que l'état, et séparer lecture et écriture. | ES | concept
+* sys-spe-workflows | Workflows durables | Orchestrer des processus longs et fiables (Temporal, sagas). | WF | concept
++ sys-spe-cloud | Architecture cloud | Concevoir pour le cloud. | CLD
+* sys-spe-serverless | Serverless | Fonctions, événements et facturation à l'usage. | FaaS | concept
+* sys-spe-multi-region | Multi-régions | Haute disponibilité et latence à l'échelle mondiale. | GEO | concept
++ sys-spe-observabilite | Observabilité | Comprendre ce qui se passe en production. | OBS
+* sys-spe-opentelemetry | OpenTelemetry | Le standard des traces, métriques et logs, instrumenté dans le code. | OTEL | techno
+* sys-spe-prometheus | Prometheus et Grafana | Métriques, requêtes PromQL, tableaux de bord et alertes. | PROM | techno | link=architecture-infra/infra-spe-prometheus
++ sys-spe-entretien | System design d'entretien | La démarche attendue en entretien, étape par étape. | SD
+* sys-spe-demarche | Démarche et estimations | Clarifier le besoin, estimer la charge, proposer puis approfondir une architecture. | EST | concept | lang=text
+* sys-spe-cas | Études de cas | Raccourcisseur d'URL, fil d'actualité, messagerie, limiteur de débit… | CAS | concept
++ sys-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* sys-spe-porte-securite | Sécurité applicative | Concevoir des systèmes sûrs dès l'architecture. | SEC | porte | link=securite
+* sys-spe-porte-algo | Algorithmes et structures de données | Les fondations de tout système performant. | ALGO | porte | link=algorithmes
+* sys-spe-porte-tests | Tests et qualité | Garder un système maintenable dans la durée. | QA | porte | link=tests
+
+// =====================================================================================
+// ARCHITECTURE INFRA
+// =====================================================================================
+@existing architecture-infra
+@unlock infra-ch-conteneurs
+#ch 01 infra-ch-linux | Linux et shell | Le socle de l'infrastructure.
+- infra-linux-processus | Processus et services | ps, signaux, systemd. | 1
+- infra-linux-fichiers | Fichiers et permissions | Arborescence, droits, utilisateurs. | 1
+- infra-linux-shell | Le shell | Pipes, redirections, variables. | 1
+#keep 02 infra-ch-conteneurs
+#keep 03 infra-ch-orchestration
+#ch 04 infra-ch-cicd | CI/CD | Construire, tester et livrer automatiquement.
+- infra-cicd-pipelines | Pipelines d'intégration continue | Build, tests, artefacts. | 1
+- infra-cicd-deploiement | Stratégies de déploiement | Rolling, blue / green, canary. | 2
+- infra-cicd-gitops | GitOps | Le dépôt Git comme source de vérité. | 2
+#ch 05 infra-ch-iac | Infrastructure as Code | Décrire et versionner l'infrastructure.
+- infra-iac-principes | Principes de l'IaC | Déclaratif, idempotence, état. | 1
+- infra-iac-terraform | Terraform en bref | Providers, plan, apply, état. | 2
+- infra-iac-configuration | Gestion de configuration | Ansible et consorts. | 2
+#ch 06 infra-ch-cloud | Le cloud | Calcul, stockage, réseau et identités.
+- infra-cloud-modeles | IaaS, PaaS, SaaS, serverless | Qui gère quoi. | 1
+- infra-cloud-reseau | Réseau cloud | VPC, sous-réseaux, groupes de sécurité. | 2
+- infra-cloud-iam | Identités et accès | Rôles, politiques, moindre privilège. | 2
+#ch 07 infra-ch-sre | Observabilité et SRE | Mesurer et améliorer la fiabilité.
+- infra-sre-monitoring | Supervision et alertes | Métriques, seuils et alertes utiles. | 2
+- infra-sre-slo | SLI, SLO et budgets d'erreur | Quantifier la fiabilité. | 2
+- infra-sre-incidents | Gestion d'incident | Astreinte, communication, post-mortem. | 2
+#ch 08 infra-ch-securite | Sécurité de l'infrastructure | Protéger la plateforme.
+- infra-sec-secrets | Gestion des secrets | Coffres-forts et rotation. | 2
+- infra-sec-supply-chain | Chaîne d'approvisionnement | Images, dépendances, signatures. | 3
++ infra-spe-conteneurs | Conteneurs et orchestration | Empaqueter, déployer et faire tourner des applications à l'échelle. | K8S
+* infra-spe-docker | Docker | Images optimisées, réseaux, volumes, Docker Compose et sécurité des images. | DKR | techno
+* infra-spe-kubernetes | Kubernetes | Deployments, Services, Ingress, ConfigMaps, autoscaling et dépannage. | K8S | techno | lang=yaml
+* infra-spe-helm | Helm | Le gestionnaire de paquets de Kubernetes : charts, valeurs et releases. | HELM | techno
+* infra-spe-service-mesh | Service mesh | Istio, Linkerd : trafic, sécurité et observabilité entre services. | MESH | techno
++ infra-spe-cloud | Cloud public | Calcul, stockage, réseau et identités chez les grands fournisseurs. | CLD
+* infra-spe-aws | AWS | EC2, S3, VPC, IAM, Lambda et RDS : les services incontournables. | AWS | techno
+* infra-spe-azure | Azure | App Service, AKS, Entra ID, Storage et l'écosystème Microsoft. | AZ | techno
+* infra-spe-gcp | Google Cloud | Compute Engine, GKE, Cloud Run et BigQuery. | GCP | techno
++ infra-spe-iac | Infrastructure as Code | Décrire l'infrastructure dans des fichiers versionnés. | IaC
+* infra-spe-terraform | Terraform | Providers, état, modules, plan / apply et travail en équipe. | TF | techno
+* infra-spe-ansible | Ansible | Configurer des serveurs sans agent : inventaires, playbooks, rôles. | ANS | techno
+* infra-spe-pulumi | Pulumi | L'infrastructure décrite dans un vrai langage de programmation. | PUL | techno
++ infra-spe-cicd | CI/CD | Construire, tester et déployer automatiquement. | CI
+* infra-spe-github-actions | GitHub Actions | Workflows, jobs, matrices, secrets et déploiements. | GHA | techno
+* infra-spe-gitlab-ci | GitLab CI | Pipelines, stages, runners et environnements. | GLCI | techno
+* infra-spe-argocd | Argo CD et GitOps | Le dépôt Git comme source de vérité du cluster. | ARGO | techno
++ infra-spe-sre | Observabilité et SRE | Mesurer la fiabilité et réagir aux incidents. | SRE
+* infra-spe-prometheus | Prometheus et Grafana | Métriques, requêtes PromQL, tableaux de bord et alertes. | PROM | techno
+* infra-spe-logs | Centralisation des logs | Loki, ELK : collecter, indexer et interroger les journaux. | LOG | techno
+* infra-spe-slo | SLI, SLO et gestion d'incident | Budgets d'erreur, astreinte et post-mortems sans reproche. | SLO | concept
++ infra-spe-linux | Systèmes Linux | Le socle de presque toute l'infrastructure. | LNX
+* infra-spe-admin-linux | Administration Linux | Processus, systemd, permissions, disques et journaux. | SYSD | concept
+* infra-spe-bash | Bash et scripts | Pipes, redirections, variables et scripts robustes. | SH | techno | lang=shell
+* infra-spe-nginx | Nginx | Serveur web, reverse proxy, TLS et répartition de charge. | NGX | techno
++ infra-spe-plateforme | Platform engineering | Offrir une plateforme interne aux équipes produit. | PLAT
+* infra-spe-idp | Portails développeurs | Backstage et les plateformes internes en libre-service. | IDP | techno
+* infra-spe-finops | FinOps | Comprendre et maîtriser les coûts du cloud. | €€ | concept
++ infra-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* infra-spe-porte-systemes | Systèmes d'exploitation | Ce qui se passe sous les conteneurs. | OS | porte | link=systemes
+* infra-spe-porte-securite | Sécurité applicative | Sécuriser ce que l'on déploie. | SEC | porte | link=securite
+* infra-spe-porte-git | Git et collaboration | Le point de départ de toute chaîne CI/CD. | GIT | porte | link=git
+
+// =====================================================================================
+// RÉSEAU
+// =====================================================================================
+@existing reseau
+@unlock reseau-ch-fondamentaux
+#keep 01 reseau-ch-fondamentaux
+#ch 02 net-ch-adressage | Adressage IP | IPv4, IPv6, sous-réseaux et NAT.
+- net-ipv4-cidr | IPv4 et CIDR | Masques et calcul de sous-réseaux. | 2
+- net-ipv6 | IPv6 | Adresses, notation et cohabitation avec IPv4. | 2
+- net-nat | NAT et adresses privées | Traduire des adresses. | 2
+#ch 03 net-ch-transport | TCP et UDP en profondeur | Fiabilité, flux et congestion.
+- net-tcp-connexion | Cycle de vie d'une connexion TCP | Handshake, fermeture, TIME_WAIT. | 2
+- net-tcp-flux | Contrôle de flux et de congestion | Fenêtres et slow start. | 3
+- net-udp-quic | UDP et QUIC | Quand la fiabilité passe au second plan. | 2
+#keep 04 reseau-ch-web
+#ch 05 net-ch-routage | Routage et commutation | Comment un paquet trouve son chemin.
+- net-commutation | Commutation et VLAN | Couche 2 et adresses MAC. | 2
+- net-routage | Routage IP | Tables de routage et passerelles. | 2
+- net-bgp | Internet et BGP | Comment les réseaux s'interconnectent. | 3
+#ch 06 net-ch-infrastructure | Infrastructure réseau des applications | Répartiteurs, proxys et CDN.
+- net-load-balancing | Répartition de charge | Couche 4 ou couche 7. | 2
+- net-proxy | Proxys et reverse proxys | Rôles et usages. | 2
+- net-cdn | CDN | Le cache géographique. | 2
+#ch 07 net-ch-securite | Sécurité réseau | Chiffrement, filtrage et attaques.
+- net-sec-tls | TLS en détail | Certificats et chaîne de confiance. | 2
+- net-sec-pare-feu | Pare-feu et segmentation | Filtrer les flux. | 2
+- net-sec-attaques | Attaques courantes | DDoS, homme du milieu, usurpation. | 3
+#ch 08 net-ch-diagnostic | Diagnostic réseau | Trouver pourquoi ça ne marche pas.
+- net-diag-outils | Les outils de base | ping, traceroute, dig, curl. | 1
+- net-diag-captures | Lire une capture | tcpdump et Wireshark. | 3
++ net-spe-web | Protocoles du web | Ce qui transporte les applications modernes. | WEB
+* net-spe-http | HTTP/2 et HTTP/3 | Multiplexage, compression d'en-têtes, QUIC et fin du blocage en tête de file. | H3 | concept
+* net-spe-websocket | WebSocket et temps réel | Connexions bidirectionnelles, Server-Sent Events et long polling. | WS | concept
+* net-spe-grpc | gRPC | Contrats Protobuf et streaming sur HTTP/2. | gRPC | techno | link=architecture-systeme/sys-spe-grpc
++ net-spe-securite | Sécurité réseau | Protéger les échanges et les infrastructures. | SEC
+* net-spe-tls | TLS et PKI | Certificats, autorités de certification, handshake, mTLS et renouvellement. | TLS | concept
+* net-spe-vpn | Pare-feu et VPN | Filtrage, NAT, WireGuard, IPsec et zero trust. | VPN | concept
+* net-spe-attaques | Attaques réseau | DDoS, homme du milieu, usurpation DNS : comprendre pour se défendre. | ATK | concept
++ net-spe-infra | Réseau d'infrastructure | Du datacenter au cloud. | INFR
+* net-spe-cloud | Réseau cloud | VPC, sous-réseaux publics et privés, tables de routage, peering. | VPC | concept
+* net-spe-lb | Nginx : reverse proxy et load balancing | Répartir la charge, terminer TLS et mettre en cache. | NGX | techno | link=architecture-infra/infra-spe-nginx
+* net-spe-cdn | CDN et edge | Cache géographique, invalidation et calcul en périphérie. | CDN | concept
+* net-spe-dns-avance | DNS avancé | Anycast, DNSSEC, routage géographique. | DNS | concept
++ net-spe-sans-fil | Réseaux sans fil et mobiles | Les réseaux que l'on ne voit pas. | WIFI
+* net-spe-wifi | Wi-Fi | Normes, canaux, sécurité WPA. | WIFI | concept
+* net-spe-cellulaire | Réseaux cellulaires | De la 4G à la 5G. | 5G | concept
++ net-spe-diagnostic | Diagnostic | Trouver pourquoi « ça ne répond pas ». | DIAG
+* net-spe-wireshark | Wireshark et tcpdump | Capturer et lire des paquets : handshake, retransmissions, TLS. | PCAP | techno | lang=text
+* net-spe-outils | curl, dig et traceroute | Les outils du quotidien pour tester HTTP, DNS et les routes. | CLI | techno | lang=shell
++ net-spe-programmation | Programmation réseau | Écrire des clients et des serveurs. | SOCK
+* net-spe-sockets | Sockets | TCP et UDP en code : bind, listen, accept, E/S non bloquantes. | SOCK | concept
++ net-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* net-spe-porte-securite | Sécurité applicative | Des failles réseau aux failles applicatives. | SEC | porte | link=securite
+* net-spe-porte-systemes | Systèmes d'exploitation | La pile réseau vue du noyau. | OS | porte | link=systemes
+* net-spe-porte-infra | Architecture infra | Mettre en œuvre le réseau dans le cloud. | INF | porte | link=architecture-infra
+
+// =====================================================================================
+// C++
+// =====================================================================================
+@existing cpp
+@unlock cpp-ch-references-pointeurs
+#keep 01 cpp-ch-fondamentaux
+#keep 02 cpp-ch-references-pointeurs
+#ch 03 cpp-ch-classes | Classes et objets | Encapsulation, constructeurs et destructeur.
+- cpp-classes-bases | Classes et encapsulation | Membres, accès et méthodes const. | 1
+- cpp-constructeurs | Constructeurs et destructeur | Listes d'initialisation et explicit. | 2
+- cpp-surcharge-operateurs | Surcharge d'opérateurs | Opérateurs arithmétiques, de comparaison et <=>. | 2
+#keep 04 cpp-ch-memoire
+#ch 05 cpp-ch-copie-deplacement | Copie et déplacement | Les règles des 3, 5 et 0.
+- cpp-copie | Copie profonde et superficielle | Constructeur et affectation par copie. | 2
+- cpp-deplacement | Sémantique de déplacement | rvalues et std::move. | 3
+- cpp-regle-zero | La règle du zéro | Déléguer aux types RAII. | 2
+#ch 06 cpp-ch-heritage | Héritage et polymorphisme | virtual, vtable et pièges.
+- cpp-heritage | Héritage | Public, protégé, privé. | 1
+- cpp-virtual | Fonctions virtuelles | Polymorphisme dynamique, override, final. | 2
+- cpp-slicing | Pièges du polymorphisme | Slicing et destructeur virtuel. | 3
+#ch 07 cpp-ch-templates | Templates | La programmation générique.
+- cpp-templates-fonctions | Templates de fonctions | Déduction de types. | 2
+- cpp-templates-classes | Templates de classes | Spécialisation. | 3
+- cpp-concepts | Concepts (C++20) | Contraindre les templates. | 3
+#ch 08 cpp-ch-stl | La bibliothèque standard | Conteneurs, itérateurs et algorithmes.
+- cpp-conteneurs | Conteneurs | vector, map, unordered_map… | 1
+- cpp-iterateurs | Itérateurs et invalidation | Ce qui casse quand on modifie un conteneur. | 2
+- cpp-algorithmes | Algorithmes | sort, find_if, transform et ranges. | 2
+#ch 09 cpp-ch-erreurs | Erreurs et exceptions | Garanties et noexcept.
+- cpp-exceptions | Exceptions | throw, try et catch. | 1
+- cpp-garanties | Garanties d'exception | Basique, forte, nothrow. | 3
+- cpp-expected | Alternatives aux exceptions | optional et expected (C++23). | 2
+#ch 10 cpp-ch-concurrence | Concurrence | Threads, mutex et atomics.
+- cpp-threads | Threads | std::thread et jthread. | 2
+- cpp-mutex | Mutex et verrous | lock_guard, scoped_lock et deadlocks. | 2
+- cpp-atomics | Atomics | Opérations atomiques et data races. | 3
+#ch 11 cpp-ch-moderne | C++ moderne | Lambdas, constexpr et nouveautés.
+- cpp-lambdas | Lambdas | Captures et durée de vie. | 2
+- cpp-constexpr | constexpr et consteval | Calculer à la compilation. | 3
+- cpp-cpp20 | De C++17 à C++23 | Structured bindings, variant, ranges, modules. | 2
+#ch 12 cpp-ch-pieges | Pièges et comportements indéfinis | La synthèse d'entretien.
+- cpp-ub | Comportements indéfinis | Les reconnaître et les éviter. | 3
+- cpp-pieges-entretien | Pièges classiques d'entretien | Questions piège et bonnes réponses. | 3
++ cpp-spe-bibliotheques | Frameworks et bibliothèques | L'écosystème au-delà de la bibliothèque standard. | LIB
+* cpp-spe-qt | Qt | Interfaces graphiques multiplateformes : signaux, slots, QML. | Qt | lib
+* cpp-spe-boost | Boost | Les bibliothèques qui préfigurent souvent le standard : Asio, filesystem… | BST | lib
++ cpp-spe-jeu | Jeu vidéo et temps réel | Performance et rendu à 60 images par seconde. | GAME
+* cpp-spe-unreal | Unreal Engine | Acteurs, composants, UObject, réflexion et Blueprints. | UE | techno
+* cpp-spe-graphique | Programmation graphique | OpenGL, Vulkan, pipeline de rendu et shaders. | GPU | concept
++ cpp-spe-performance | Performance | Écrire du C++ vraiment rapide, et le prouver. | PERF
+* cpp-spe-optimisation | Profilage et optimisation | Caches CPU, localité des données, allocations et mesures. | PROF | concept
+* cpp-spe-concurrence | Concurrence avancée | Modèle mémoire, atomics, structures sans verrou. | ATOM | concept
+* cpp-spe-simd | SIMD et vectorisation | Traiter plusieurs données par instruction. | SIMD | concept
++ cpp-spe-embarque | Systèmes embarqués | Du C++ sous contraintes de mémoire et de temps réel. | EMB
+* cpp-spe-cpp-embarque | C++ embarqué | Sans allocation dynamique ni exceptions : constexpr, templates et registres. | MCU | concept
++ cpp-spe-domaines | Domaines d'application | Là où le C++ règne. | DOM
+* cpp-spe-finance | Finance à basse latence | Trading haute fréquence : chaque microseconde compte. | HFT | concept
+* cpp-spe-audio | Audio et temps réel | Traitement du signal sans jamais rater une échéance. | DSP | concept
++ cpp-spe-outillage | Outillage | Compiler, tester et déboguer efficacement. | TOOL
+* cpp-spe-cmake | CMake | Cibles, dépendances, options et gestion de paquets (vcpkg, Conan). | CMK | techno | lang=text
+* cpp-spe-sanitizers | Sanitizers et débogage | AddressSanitizer, UBSan, Valgrind et gdb pour traquer les comportements indéfinis. | ASAN | techno
+* cpp-spe-tests | GoogleTest | Tests unitaires, fixtures et mocks en C++. | GT | lib
++ cpp-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* cpp-spe-porte-c | C | Les racines du C++. | C | porte | link=c
+* cpp-spe-porte-rust | Rust | La sûreté mémoire garantie par le compilateur. | RS | porte | link=rust
+* cpp-spe-porte-algo | Algorithmes et structures de données | Ce que la STL implémente pour vous. | ALGO | porte | link=algorithmes
+
+// =====================================================================================
+// C#
+// =====================================================================================
+@existing csharp
+@unlock csharp-ch-bases
+#keep 01 csharp-ch-bases
+#ch 02 cs-ch-poo | Programmation orientée objet | Classes, héritage, interfaces et records.
+- cs-classes | Classes et propriétés | Constructeurs, propriétés, init. | 1
+- cs-heritage-interfaces | Héritage et interfaces | abstract, virtual, méthodes d'interface par défaut. | 2
+- cs-records-struct | Records et structs | Égalité par valeur et expressions with. | 2
+#ch 03 cs-ch-collections | Collections et génériques | Choisir la bonne structure.
+- cs-collections | Les collections | List, Dictionary, HashSet, Queue. | 1
+- cs-generiques | Génériques | Contraintes et variance. | 3
+- cs-ienumerable | IEnumerable et yield | Itérer paresseusement. | 2
+#keep 04 csharp-ch-linq-async
+#ch 05 cs-ch-memoire | Mémoire et performance | GC, IDisposable et Span.
+- cs-gc | Le ramasse-miettes | Générations et Large Object Heap. | 2
+- cs-idisposable | IDisposable et using | Libérer les ressources. | 1
+- cs-span | Span et allocations | Réduire la pression mémoire. | 3
+#ch 06 cs-ch-erreurs | Exceptions et nullabilité | Des programmes robustes.
+- cs-exceptions | Exceptions | throw, filtres et bonnes pratiques. | 1
+- cs-nullable | Nullable reference types | Annotations et avertissements. | 2
+#ch 07 cs-ch-fonctionnel | Délégués, événements et lambdas | Le C# fonctionnel.
+- cs-delegues | Délégués, Func et Action | Passer du comportement en paramètre. | 2
+- cs-evenements | Événements | Publication et abonnement. | 2
+- cs-closures | Lambdas et closures | Captures et pièges. | 3
+#ch 08 cs-ch-moderne | C# moderne | Pattern matching et nouveautés.
+- cs-pattern-matching | Pattern matching | switch expressions et patterns de propriétés. | 2
+- cs-nouveautes | Nouveautés récentes | Primary constructors, collection expressions… | 2
+#ch 09 cs-ch-dotnet | L'écosystème .NET | Runtime, injection de dépendances et outillage.
+- cs-runtime | Runtime et compilation | IL, JIT et AOT. | 3
+- cs-injection | Injection de dépendances | Le conteneur de .NET. | 2
++ cs-spe-web | Web et API | Construire des services et des applications web en .NET. | WEB
+* cs-spe-aspnet | ASP.NET Core | Minimal APIs, contrôleurs, middlewares, injection de dépendances et authentification. | ASP | techno
+* cs-spe-blazor | Blazor | Des interfaces web en C# : composants, rendu serveur et WebAssembly. | BLZ | techno
+* cs-spe-signalr | SignalR | Le temps réel en .NET : hubs, groupes et reconnexion. | SIGR | lib
+* cs-spe-grpc | gRPC en .NET | Services gRPC avec ASP.NET Core. | gRPC | techno | link=architecture-systeme/sys-spe-grpc
++ cs-spe-donnees | Accès aux données | Lire et écrire en base depuis .NET. | DATA
+* cs-spe-efcore | Entity Framework Core | L'ORM de .NET : DbContext, LINQ traduit en SQL, migrations et relations. | EF | lib | link=bases-de-donnees/db-spe-efcore
+* cs-spe-dapper | Dapper | Le micro-ORM : du SQL écrit à la main, mappé vers des objets. | DAP | lib
++ cs-spe-applications | Applications et jeux | Du mobile au bureau, jusqu'au jeu vidéo. | APP
+* cs-spe-maui | .NET MAUI | Une base de code pour Android, iOS, Windows et macOS : XAML, MVVM, Shell. | MAUI | techno
+* cs-spe-wpf | WPF | Les applications de bureau Windows : XAML, bindings et MVVM. | WPF | techno
+* cs-spe-unity | Unity | Le jeu vidéo en C# : GameObjects, MonoBehaviour, cycle de vie et physique. | UNTY | techno
++ cs-spe-cloud | .NET et cloud | Des services .NET pensés pour le cloud. | CLD
+* cs-spe-aspire | .NET Aspire | Orchestrer et observer une application distribuée en local. | ASPR | techno
+* cs-spe-azure-functions | Azure Functions | Le serverless en C#. | FUNC | techno
++ cs-spe-qualite | Qualité et performance | Tester, mesurer et optimiser. | QA
+* cs-spe-tests | xUnit et tests | Tests unitaires et d'intégration, mocks et WebApplicationFactory. | XU | lib
+* cs-spe-perf | Performance .NET | Span<T>, allocations, GC, BenchmarkDotNet et async efficace. | PERF | concept
++ cs-spe-architecture | Architecture .NET | Structurer une application .NET qui dure. | ARCH
+* cs-spe-clean | Clean architecture et hexagonale | Isoler le métier de l'infrastructure : ports, adaptateurs et règle de dépendance. | HEX | concept | link=architecture-systeme/sys-spe-clean
++ cs-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* cs-spe-porte-java | Java | Le cousin de C# sur la JVM. | JAVA | porte | link=java
+* cs-spe-porte-mobile | Développement mobile | Aller plus loin que MAUI. | MOB | porte | link=mobile
+* cs-spe-porte-tests | Tests et qualité | Les pratiques au-delà des frameworks. | QA | porte | link=tests
+
+// =====================================================================================
+// C
+// =====================================================================================
+@existing c
+@unlock c-ch-memoire
+#ch 01 c-ch-bases | Bases du langage | Types, opérateurs et contrôle.
+- c-types | Types et tailles | int, char et stdint.h. | 1
+- c-operateurs | Opérateurs et promotions | Promotions entières et conversions. | 2
+- c-controle | Contrôle et fonctions | Boucles, fonctions et portée. | 1
+#keep 02 c-ch-memoire
+#keep 03 c-ch-avance
+#ch 04 c-ch-dynamique | Mémoire dynamique | malloc, realloc et free.
+- c-malloc | Allouer et libérer | malloc, calloc et free. | 1
+- c-realloc | realloc et tableaux dynamiques | Faire grandir un tableau. | 2
+- c-fuites | Fuites et double free | Les erreurs classiques. | 2
+#ch 05 c-ch-structures | Structures de données | struct, union et enum.
+- c-struct | Structures | Déclaration, alignement et padding. | 2
+- c-union-enum | Unions et énumérations | Partager la mémoire. | 2
+- c-listes | Listes chaînées | Implémenter une structure dynamique. | 2
+#ch 06 c-ch-compilation | Compilation et modules | Headers, linkage et Make.
+- c-headers | Headers et unités de compilation | Déclarations et définitions. | 2
+- c-linkage | static, extern et linkage | Visibilité des symboles. | 3
+- c-make | Make | Construire un projet. | 1
+#ch 07 c-ch-es | Entrées / sorties | Fichiers et formats.
+- c-stdio | stdio | printf, scanf et leurs pièges. | 1
+- c-fichiers | Fichiers | fopen, fread et fwrite. | 2
+#ch 08 c-ch-ub | Comportements indéfinis et sécurité | Écrire du C sûr.
+- c-ub-courants | Comportements indéfinis courants | Débordements et pointeurs invalides. | 3
+- c-buffer-overflow | Débordements de tampon | Comprendre et prévenir. | 3
+#ch 09 c-ch-bas-niveau | Bas niveau | Bits, endianness et volatile.
+- c-bits | Opérations bit à bit | Masques et décalages. | 2
+- c-endianness | Endianness | L'ordre des octets. | 2
++ c-spe-systeme | Programmation système | Parler directement au système d'exploitation. | SYS
+* c-spe-posix | API POSIX | Processus (fork, exec), fichiers, signaux, threads et sockets. | POSX | lib
+* c-spe-noyau | Noyau Linux | Modules, pilotes, espace noyau et espace utilisateur. | KRNL | techno
++ c-spe-embarque | Systèmes embarqués | Le C au plus près du matériel. | EMB
+* c-spe-microcontroleurs | Microcontrôleurs | Registres, GPIO, interruptions, timers (Arduino, STM32). | MCU | concept
+* c-spe-freertos | FreeRTOS | Tâches, ordonnancement temps réel, files et sémaphores. | RTOS | techno
+* c-spe-zephyr | Zephyr | Un RTOS moderne pour objets connectés. | ZEPH | techno
++ c-spe-securite | Sécurité | Les failles mémoire et comment les éviter. | SEC
+* c-spe-exploitation | Failles mémoire et défenses | Débordements de tampon, use-after-free, ASLR, canaris de pile. | PWN | concept
+* c-spe-code-sur | Règles de code sûr | CERT C et MISRA C : écrire du C pour les systèmes critiques. | MSRA | concept
++ c-spe-projets | Projets classiques | Apprendre en construisant. | PRJ
+* c-spe-interpreteur | Écrire un interpréteur | Analyse lexicale, syntaxique et évaluation. | INTP | concept
+* c-spe-emulateur | Écrire un émulateur | Simuler un processeur, instruction par instruction. | EMU | concept
++ c-spe-outillage | Outillage | Compiler, construire et déboguer. | TOOL
+* c-spe-compilation | GCC, Clang et Make | Étapes de compilation, édition de liens, options et Makefiles. | GCC | techno | lang=text
+* c-spe-debogage | GDB et Valgrind | Points d'arrêt, core dumps et détection de fuites mémoire. | GDB | techno
++ c-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* c-spe-porte-cpp | C++ | Le C, en plus riche et plus abstrait. | C++ | porte | link=cpp
+* c-spe-porte-rust | Rust | Le bas niveau, sans les failles mémoire. | RS | porte | link=rust
+* c-spe-porte-systemes | Systèmes d'exploitation | Ce que le C permet de construire. | OS | porte | link=systemes
+
+// =====================================================================================
+// PYTHON
+// =====================================================================================
+@existing python
+@unlock python-ch-bases
+#keep 01 python-ch-bases
+#ch 02 py-ch-structures | Structures de données | list, dict, set et tuple.
+- py-listes-tuples | Listes et tuples | Opérations et complexités. | 1
+- py-dict-set | Dictionnaires et ensembles | Hachage et usages. | 1
+- py-collections | Le module collections | Counter, defaultdict, deque. | 2
+#ch 03 py-ch-fonctions | Fonctions | Arguments, portée et closures.
+- py-arguments | Arguments | Positionnels, nommés, *args et **kwargs. | 1
+- py-portee | Portée (LEGB) | global et nonlocal. | 2
+- py-closures | Closures | Des fonctions qui capturent leur contexte. | 2
+#ch 04 py-ch-poo | Programmation orientée objet | Classes, méthodes spéciales et dataclasses.
+- py-classes | Classes | self, attributs et méthodes. | 1
+- py-dunder | Méthodes spéciales | __repr__, __eq__, __len__… | 2
+- py-dataclasses | Dataclasses et héritage | MRO et super(). | 2
+#ch 05 py-ch-iterateurs | Itérateurs et générateurs | Traiter les données paresseusement.
+- py-iterateurs | Le protocole d'itération | __iter__ et __next__. | 2
+- py-generateurs | Générateurs | yield et expressions génératrices. | 2
+#keep 06 python-ch-avance
+#ch 07 py-ch-erreurs | Erreurs et tests | Exceptions et pytest.
+- py-exceptions | Exceptions | try, except, finally et exceptions personnalisées. | 1
+- py-tests | Tests avec pytest | Fixtures et assertions. | 2
+#ch 08 py-ch-typage | Typage et outillage | Type hints et packaging.
+- py-type-hints | Type hints | Annotations et mypy. | 2
+- py-packaging | Environnements et paquets | venv, pip et pyproject.toml. | 1
+#ch 09 py-ch-internes | Fonctionnement interne | CPython, mémoire et GIL.
+- py-cpython | CPython | Bytecode et interprétation. | 3
+- py-memoire | Gestion de la mémoire | Comptage de références et ramasse-miettes. | 3
++ py-spe-web | Développement web | Des API et des sites en Python. | WEB
+* py-spe-django | Django | Le framework « batteries incluses » : ORM, admin, vues, templates. | DJ | techno
+* py-spe-fastapi | FastAPI | Des API asynchrones typées : Pydantic, dépendances, OpenAPI automatique. | FAPI | techno
+* py-spe-flask | Flask | Le micro-framework : routes, blueprints et extensions. | FLSK | techno
++ py-spe-data | Data et IA | Analyser des données et entraîner des modèles. | DATA
+* py-spe-numpy | NumPy | Tableaux multidimensionnels, vectorisation et broadcasting. | NP | lib
+* py-spe-pandas | pandas | DataFrames : filtrer, regrouper, joindre et nettoyer des données. | PD | lib
+* py-spe-polars | Polars | Des DataFrames rapides, en Rust, avec évaluation paresseuse. | PL | lib
+* py-spe-sklearn | scikit-learn | Apprentissage automatique classique : pipelines, validation croisée, métriques. | SKL | lib
+* py-spe-pytorch | PyTorch | Tenseurs, autograd et entraînement de réseaux de neurones. | PT | lib
++ py-spe-donnees | Accès aux données | Parler aux bases de données depuis Python. | SQL
+* py-spe-sqlalchemy | SQLAlchemy | L'ORM et la boîte à outils SQL de référence en Python. | SQLA | lib | link=bases-de-donnees/db-spe-sqlalchemy
++ py-spe-async | Asynchrone | La concurrence avec asyncio. | ASYN
+* py-spe-asyncio | asyncio en profondeur | Boucle d'événements, tâches, annulation et bibliothèques asynchrones. | AIO | concept
++ py-spe-automatisation | Automatisation | Scripts, outils en ligne de commande et collecte de données. | AUTO
+* py-spe-scripts | Scripts et CLI | pathlib, subprocess, argparse et Typer pour des outils robustes. | CLI | concept
+* py-spe-requests | HTTP et scraping | requests, httpx et BeautifulSoup : consommer des API et des pages web. | HTTP | lib
++ py-spe-qualite | Qualité et outillage | Du code Python fiable et maintenable. | QA
+* py-spe-pytest | pytest | Fixtures, paramétrage, mocks et couverture. | PYT | lib
+* py-spe-typage | Typage et mypy | Type hints, génériques, Protocol et vérification statique. | MYPY | lib
+* py-spe-packaging | Packaging | pyproject.toml, environnements virtuels, uv et publication. | PKG | techno | lang=text
++ py-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* py-spe-porte-ia | Intelligence artificielle | Le terrain de jeu favori de Python. | IA | porte | link=ia
+* py-spe-porte-algo | Algorithmes et structures de données | Les exercices d'entretien, en Python. | ALGO | porte | link=algorithmes
+* py-spe-porte-tests | Tests et qualité | Au-delà de pytest. | QA | porte | link=tests
+
+// =====================================================================================
+// BASES DE DONNÉES (tronc commun déjà complet)
+// =====================================================================================
+@existing bases-de-donnees
+@unlock db-ch-panorama
+#keep 01 db-ch-sql
+#keep 02 db-ch-panorama
+#keep 03 db-ch-jointures
+#keep 04 db-ch-modelisation
+#keep 05 db-ch-index
+#keep 06 db-ch-transactions
+#keep 07 db-ch-sql-avance
+#keep 08 db-ch-echelle
++ db-spe-relationnel | Bases relationnelles | Les SGBDR et les ORM qui les pilotent depuis le code. | SQL
+* db-spe-postgresql | PostgreSQL | La base relationnelle open source de référence : JSONB, index avancés, extensions. | PG | techno
+* db-spe-mysql | MySQL et MariaDB | InnoDB, réplication et spécificités. | MY | techno
+* db-spe-sqlserver | SQL Server | La base de Microsoft : T-SQL, index et outillage. | MSSQL | techno
+* db-spe-sqlite | SQLite | Une base complète dans un seul fichier, embarquée partout, du mobile au navigateur. | LITE | techno
+* db-spe-efcore | Entity Framework Core | L'ORM de .NET : DbContext, LINQ traduit en SQL, migrations et relations. | EF | lib | rel=csharp | lang=csharp
+* db-spe-sqlalchemy | SQLAlchemy | L'ORM et la boîte à outils SQL de référence en Python. | SQLA | lib | rel=python
++ db-spe-document | Bases document | Des documents JSON flexibles, lus d'un bloc. | DOC
+* db-spe-mongodb | MongoDB | CRUD, modélisation par l'usage, index et pipeline d'agrégation. | MDB | techno | lang=javascript
++ db-spe-cle-valeur | Clé-valeur | Accès ultra-rapide par clé : cache, sessions, compteurs. | K/V
+* db-spe-redis | Redis | Structures de données en mémoire : strings, hashes, sorted sets, streams. | RDS | techno
+* db-spe-dynamodb | DynamoDB | La base clé-valeur managée d'AWS : partitions et modélisation à table unique. | DDB | techno
++ db-spe-colonnes | Colonnes larges | Des volumes d'écriture massifs répartis sur de nombreux nœuds. | COL
+* db-spe-cassandra | Cassandra | Modéliser par requête, clés de partition et niveaux de cohérence. | CAS | techno
++ db-spe-graphe | Graphe | Des relations parcourues directement, sans jointure. | GRA
+* db-spe-neo4j | Neo4j | Le modèle nœuds / relations et le langage Cypher. | NEO | techno
++ db-spe-recherche | Moteurs de recherche | Recherche plein texte, pertinence et facettes. | FTS
+* db-spe-elasticsearch | Elasticsearch | Index inversé, analyseurs, requêtes de pertinence et agrégations. | ES | techno
++ db-spe-vectoriel | Bases vectorielles | Recherche sémantique et RAG à partir d'embeddings. | VEC
+* db-spe-pgvector | pgvector | L'extension PostgreSQL pour stocker et rechercher des vecteurs. | PGV | lib
++ db-spe-series | Séries temporelles | Mesures horodatées, compression et rétention. | TS
+* db-spe-timescaledb | TimescaleDB | Les séries temporelles dans PostgreSQL : hypertables et agrégats continus. | TSDB | techno
++ db-spe-analytique | Analytique | Du stockage en colonnes pour analyser des milliards de lignes. | OLAP
+* db-spe-duckdb | DuckDB | L'analytique embarquée : du SQL rapide sur des fichiers Parquet ou CSV. | DUCK | techno
+* db-spe-clickhouse | ClickHouse | Des requêtes analytiques en temps réel sur des milliards de lignes. | CH | techno
++ db-spe-streaming | Flux de données | Traiter les données en mouvement. | STRM
+* db-spe-kafka | Kafka | Journal d'événements distribué, au cœur des architectures de données. | KFK | techno | link=architecture-systeme/sys-spe-kafka
+* db-spe-cdc | Capture des changements (CDC) | Debezium : propager les modifications d'une base en temps réel. | CDC | concept
++ db-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* db-spe-porte-ia | Intelligence artificielle | Des données aux modèles. | IA | porte | link=ia
+* db-spe-porte-algo | Algorithmes et structures de données | B-trees, hachage : ce qu'il y a sous les index. | ALGO | porte | link=algorithmes
+
+// =====================================================================================
+// NOUVELLES CATÉGORIES
+// =====================================================================================
+
+@cat algorithmes | 9 | Algorithmes et structures de données | ALGO | #FF7043 | python | Complexité, structures de données et algorithmes classiques des entretiens techniques.
+@unlock algo-ch-complexite
+#ch 01 algo-ch-complexite | Complexité | Mesurer le coût d'un algorithme.
+- algo-big-o | La notation grand O | O(1), O(log n), O(n), O(n²)… | 1
+- algo-analyse | Analyser un algorithme | Boucles, récursion et coût amorti. | 2
+#ch 02 algo-ch-lineaires | Structures linéaires | Tableaux, listes, piles et files.
+- algo-tableaux | Tableaux dynamiques | Accès, insertion et redimensionnement. | 1
+- algo-listes | Listes chaînées | Simples, doubles et leurs pièges. | 1
+- algo-piles-files | Piles et files | LIFO, FIFO et usages. | 1
+#ch 03 algo-ch-hachage | Tables de hachage | L'accès en temps constant.
+- algo-hachage | Fonctionnement | Fonctions de hachage et collisions. | 2
+- algo-hachage-problemes | Problèmes classiques | Two sum, anagrammes, fréquences. | 2
+#ch 04 algo-ch-arbres | Arbres | Arbres binaires, de recherche et tas.
+- algo-arbres-binaires | Arbres binaires | Parcours en profondeur et en largeur. | 2
+- algo-abr | Arbres binaires de recherche | Insertion, recherche et équilibrage. | 2
+- algo-tas | Tas et files de priorité | Top K et médiane. | 3
+#ch 05 algo-ch-graphes | Graphes | Représentation et parcours.
+- algo-graphes-representation | Représenter un graphe | Listes et matrices d'adjacence. | 2
+- algo-bfs-dfs | BFS et DFS | Les parcours et leurs applications. | 2
+- algo-plus-court-chemin | Plus court chemin | Dijkstra et consorts. | 3
+#ch 06 algo-ch-tri-recherche | Tri et recherche | Les algorithmes fondamentaux.
+- algo-tris | Algorithmes de tri | Tri fusion, tri rapide, tri par tas. | 2
+- algo-recherche-binaire | Recherche binaire | Et ses nombreuses variantes. | 2
+#ch 07 algo-ch-techniques | Techniques de résolution | Les patterns des entretiens.
+- algo-deux-pointeurs | Deux pointeurs et fenêtre glissante | Parcourir intelligemment. | 2
+- algo-backtracking | Récursion et backtracking | Explorer les possibilités. | 3
+- algo-programmation-dynamique | Programmation dynamique | Mémoïsation et tabulation. | 3
+- algo-glouton | Algorithmes gloutons | Quand le choix local suffit. | 3
++ algo-spe-entretiens | Préparation aux entretiens | S'entraîner méthodiquement. | INT
+* algo-spe-patterns | Problèmes par patterns | Reconnaître le bon pattern en quelques minutes. | PAT | concept
+* algo-spe-live-coding | Coder en direct | Réfléchir à voix haute et communiquer pendant l'exercice. | LIVE | concept
++ algo-spe-avancees | Structures avancées | Au-delà des classiques. | ADV
+* algo-spe-trie | Tries et arbres de suffixes | Rechercher dans des chaînes. | TRIE | concept
+* algo-spe-union-find | Union-Find | Composantes connexes en temps quasi constant. | UF | concept
+* algo-spe-segment-tree | Arbres de segments | Requêtes sur des intervalles. | SEG | concept
++ algo-spe-domaines | Algorithmes par domaine | Des algorithmes spécialisés. | DOM
+* algo-spe-texte | Algorithmes sur les chaînes | KMP, Rabin-Karp, distance d'édition. | STR | concept
+* algo-spe-geometrie | Géométrie algorithmique | Enveloppes convexes et intersections. | GEO | concept
+* algo-spe-probabilistes | Structures probabilistes | Filtres de Bloom, HyperLogLog. | PROB | concept
++ algo-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* algo-spe-porte-ia | Intelligence artificielle | Quand les algorithmes apprennent. | IA | porte | link=ia
+* algo-spe-porte-archi | Architecture système | Des algorithmes aux systèmes. | SYS | porte | link=architecture-systeme
+
+@cat javascript | 10 | JavaScript et TypeScript | JS | #3178C6 | javascript | Le langage du web, côté navigateur et serveur, et son typage avec TypeScript.
+@unlock js-ch-bases
+#ch 01 js-ch-bases | Bases du langage | Types, variables et fonctions.
+- js-types | Types et coercition | typeof, == et ===. | 1
+- js-variables | let, const et portée | Hoisting et zone morte temporelle. | 2
+- js-fonctions | Fonctions | Fonctions fléchées, this et closures. | 2
+#ch 02 js-ch-objets | Objets et prototypes | Le modèle objet de JavaScript.
+- js-objets | Objets et déstructuration | Spread et rest. | 1
+- js-prototypes | Prototypes et classes | L'héritage prototypal. | 3
+#ch 03 js-ch-asynchrone | Asynchrone | Boucle d'événements, promesses et async/await.
+- js-event-loop | La boucle d'événements | Tâches et microtâches. | 3
+- js-promesses | Promesses | then, catch et Promise.all. | 2
+- js-async-await | async / await | Du code asynchrone lisible. | 2
+#ch 04 js-ch-typescript | TypeScript | Typer JavaScript.
+- ts-bases | Types de base | Annotations et inférence. | 1
+- ts-avance | Types avancés | Unions, génériques et types utilitaires. | 3
+- ts-narrowing | Narrowing | Affiner les types. | 2
+#ch 05 js-ch-modules | Modules et outillage | ESM, npm et bundlers.
+- js-modules | Modules | import, export, ESM et CommonJS. | 2
+- js-npm | npm et les dépendances | package.json et versions. | 1
+#ch 06 js-ch-navigateur | Le navigateur | DOM, événements et stockage.
+- js-dom | Le DOM | Sélectionner et modifier la page. | 1
+- js-evenements | Événements | Propagation et délégation. | 2
++ js-spe-frontend | Frameworks frontend | Construire des interfaces riches. | FE
+* js-spe-react | React | Composants, hooks, état et rendu. | RCT | techno
+* js-spe-vue | Vue | Composants, réactivité et Composition API. | VUE | techno
+* js-spe-angular | Angular | Composants, services, injection de dépendances et signaux. | NG | techno
+* js-spe-svelte | Svelte | Un framework compilé, sans DOM virtuel. | SVLT | techno
++ js-spe-backend | JavaScript côté serveur | Des API et des services en JavaScript. | BE
+* js-spe-node | Node.js | Le runtime serveur : modules, streams, boucle d'événements. | NODE | techno
+* js-spe-express | Express et NestJS | Du micro-framework au framework structuré. | NEST | lib
+* js-spe-deno-bun | Deno et Bun | Les runtimes nouvelle génération. | BUN | techno
++ js-spe-outillage | Outillage | Construire et tester. | TOOL
+* js-spe-vite | Vite et les bundlers | Serveur de développement et build de production. | VITE | techno
+* js-spe-tests | Vitest, Jest et Playwright | Tests unitaires et de bout en bout. | TEST | lib
++ js-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* js-spe-porte-frontend | Développement web frontend | HTML, CSS, accessibilité et performance. | WEB | porte | link=frontend
+* js-spe-porte-mobile | Développement mobile | React Native et au-delà. | MOB | porte | link=mobile
+
+@cat java | 11 | Java | JAVA | #B07219 | java | Le langage de la JVM : orienté objet, collections, concurrence et écosystème Spring.
+@unlock java-ch-bases
+#ch 01 java-ch-bases | Bases du langage | Types, classes et chaînes.
+- java-types | Types primitifs et objets | int, Integer et autoboxing. | 1
+- java-classes | Classes et objets | Constructeurs et static. | 1
+- java-strings | Chaînes | String immuable, StringBuilder et equals. | 1
+#ch 02 java-ch-poo | Orienté objet | Héritage, interfaces et records.
+- java-heritage | Héritage et interfaces | abstract et méthodes par défaut. | 2
+- java-records | Records et sealed classes | Le Java moderne. | 2
+#ch 03 java-ch-collections | Collections et génériques | List, Map, Set et Streams.
+- java-collections | Le framework Collections | Choisir la bonne collection. | 1
+- java-equals-hashcode | equals et hashCode | Le contrat à respecter. | 2
+- java-streams | Streams | map, filter et collect. | 2
+#ch 04 java-ch-exceptions | Exceptions | Checked et unchecked.
+- java-exceptions | Exceptions | try-with-resources et bonnes pratiques. | 1
+#ch 05 java-ch-concurrence | Concurrence | Threads, executors et virtual threads.
+- java-threads | Threads et synchronized | Visibilité et verrous. | 3
+- java-executors | Executors et CompletableFuture | La programmation asynchrone. | 3
+- java-virtual-threads | Virtual threads | Le projet Loom. | 2
+#ch 06 java-ch-jvm | La JVM | Mémoire, GC et bytecode.
+- java-memoire | Mémoire et garbage collectors | Heap, stack et GC. | 3
+- java-bytecode | Bytecode et JIT | De la source à l'exécution. | 3
++ java-spe-spring | Écosystème Spring | Le framework phare de Java. | SPR
+* java-spe-spring-boot | Spring Boot | Applications autoconfigurées, starters et Actuator. | BOOT | techno
+* java-spe-spring-data | Spring Data JPA | Des dépôts générés au-dessus de JPA. | JPA | lib
+* java-spe-spring-security | Spring Security | Authentification et autorisation. | SEC | lib
++ java-spe-donnees | Accès aux données | Parler aux bases depuis Java. | DATA
+* java-spe-hibernate | Hibernate | L'ORM de référence : entités, sessions et chargement. | HIB | lib
++ java-spe-outillage | Outillage | Construire et tester. | TOOL
+* java-spe-build | Maven et Gradle | Dépendances et cycle de build. | MVN | techno
+* java-spe-junit | JUnit et Mockito | Tests unitaires et doublures. | JU | lib
++ java-spe-jvm | Langages de la JVM | D'autres langages sur la même plateforme. | JVM
+* java-spe-kotlin | Kotlin | Concis, sûr face aux null, et langage officiel d'Android. | KT | techno
+* java-spe-scala | Scala | Programmation fonctionnelle et orientée objet. | SCL | techno
++ java-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* java-spe-porte-mobile | Développement mobile | Android, de Java à Kotlin. | MOB | porte | link=mobile
+* java-spe-porte-csharp | C# | Le cousin de Java sur .NET. | C# | porte | link=csharp
+
+@cat go | 12 | Go | GO | #00ADD8 | go | Un langage simple et concurrent, taillé pour les services et l'outillage cloud.
+@unlock go-ch-bases
+#ch 01 go-ch-bases | Bases du langage | Types, fonctions et erreurs.
+- go-types | Types et variables | Déclarations et valeurs zéro. | 1
+- go-fonctions | Fonctions et erreurs | Retours multiples et type error. | 1
+- go-slices-maps | Slices et maps | Capacité, append et pièges. | 2
+#ch 02 go-ch-types | Structs et interfaces | La composition plutôt que l'héritage.
+- go-structs | Structs et méthodes | Receveurs valeur ou pointeur. | 2
+- go-interfaces | Interfaces | Une implémentation implicite. | 2
+- go-generiques | Génériques | Paramètres de type. | 3
+#ch 03 go-ch-concurrence | Concurrence | Goroutines et channels.
+- go-goroutines | Goroutines | Lancer du travail concurrent. | 2
+- go-channels | Channels et select | Communiquer plutôt que partager. | 3
+- go-sync | sync et context | Mutex, WaitGroup et annulation. | 3
+#ch 04 go-ch-outillage | Outillage et tests | Modules, tests et benchmarks.
+- go-modules | Modules | go.mod et dépendances. | 1
+- go-tests | Tests et benchmarks | go test. | 2
++ go-spe-web | Services web | Des API performantes en Go. | WEB
+* go-spe-net-http | net/http | Le serveur HTTP de la bibliothèque standard. | HTTP | lib
+* go-spe-gin | Gin | Un framework web minimaliste et rapide. | GIN | lib
+* go-spe-grpc | gRPC en Go | Services et clients gRPC. | gRPC | techno | link=architecture-systeme/sys-spe-grpc
++ go-spe-cloud | Outillage cloud | Go est le langage du cloud natif. | CLD
+* go-spe-cli | Outils en ligne de commande | Cobra et la distribution de binaires. | CLI | lib
+* go-spe-operators | Opérateurs Kubernetes | Étendre Kubernetes avec ses propres contrôleurs. | OPS | concept
++ go-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* go-spe-porte-infra | Architecture infra | Là où tournent les outils écrits en Go. | INF | porte | link=architecture-infra
+* go-spe-porte-rust | Rust | L'autre langage système moderne. | RS | porte | link=rust
+
+@cat rust | 13 | Rust | RS | #B7410E | rust | La sûreté mémoire sans ramasse-miettes : ownership, emprunts et performance.
+@unlock rust-ch-bases
+#ch 01 rust-ch-bases | Bases du langage | Types, fonctions et contrôle.
+- rust-types | Types et variables | Immutabilité par défaut et shadowing. | 1
+- rust-controle | Contrôle et pattern matching | match et if let. | 1
+#ch 02 rust-ch-ownership | Ownership et emprunts | Le cœur de Rust.
+- rust-ownership | Ownership | Déplacement et copie. | 2
+- rust-emprunts | Références et emprunts | & et &mut, et leurs règles. | 2
+- rust-lifetimes | Durées de vie | Annotations de lifetimes. | 3
+#ch 03 rust-ch-types | Structs, enums et traits | Modéliser avec les types.
+- rust-structs-enums | Structs et enums | Option et Result. | 1
+- rust-traits | Traits | Comportements partagés et génériques. | 2
+#ch 04 rust-ch-erreurs | Gestion des erreurs | Result et l'opérateur ?.
+- rust-result | Result et ? | Propager les erreurs. | 2
+- rust-panic | panic! et unwrap | Quand les utiliser. | 1
+#ch 05 rust-ch-concurrence | Concurrence | Threads, Send, Sync et async.
+- rust-threads | Threads, Arc et Mutex | Partager en sécurité. | 3
+- rust-async | async et Tokio | L'asynchrone en Rust. | 3
++ rust-spe-web | Web et services | Des services rapides et sûrs. | WEB
+* rust-spe-axum | Axum | Le framework web de l'écosystème Tokio. | AXUM | lib
+* rust-spe-tokio | Tokio | Le runtime asynchrone de référence. | TOK | lib
++ rust-spe-systeme | Programmation système | Le terrain naturel de Rust. | SYS
+* rust-spe-embarque | Rust embarqué | Microcontrôleurs sans système d'exploitation. | EMB | concept
+* rust-spe-wasm | WebAssembly | Compiler Rust pour le navigateur et au-delà. | WASM | techno
++ rust-spe-avance | Rust avancé | Les recoins du langage. | ADV
+* rust-spe-unsafe | unsafe et FFI | Sortir des garanties, en connaissance de cause. | FFI | concept
+* rust-spe-macros | Macros | Macros déclaratives et procédurales. | MAC | concept
++ rust-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* rust-spe-porte-cpp | C++ | Comparer les approches de la sûreté mémoire. | C++ | porte | link=cpp
+* rust-spe-porte-systemes | Systèmes d'exploitation | Ce que Rust permet de construire. | OS | porte | link=systemes
+
+@cat securite | 14 | Sécurité applicative | SEC | #43A047 | - | Comprendre les attaques pour écrire et déployer du code sûr.
+@unlock sec-ch-fondamentaux
+#ch 01 sec-ch-fondamentaux | Fondamentaux | Menaces, principes et modèle de risque.
+- sec-cia | Confidentialité, intégrité, disponibilité | La triade CIA. | 1
+- sec-principes | Principes de conception sûre | Moindre privilège et défense en profondeur. | 1
+- sec-threat-modeling | Modélisation des menaces | La méthode STRIDE. | 2
+#ch 02 sec-ch-web | Vulnérabilités web | Le top 10 de l'OWASP.
+- sec-injections | Injections | SQL, commandes système et autres. | 2
+- sec-xss | XSS | Des scripts injectés dans les pages. | 2
+- sec-csrf-ssrf | CSRF et SSRF | Des requêtes falsifiées. | 3
+#ch 03 sec-ch-authentification | Authentification et autorisation | Identités, sessions et jetons.
+- sec-mots-de-passe | Mots de passe | Hachage et authentification multifacteur. | 1
+- sec-sessions-jwt | Sessions et JWT | Avantages et pièges. | 2
+- sec-oauth-oidc | OAuth 2 et OpenID Connect | Déléguer l'authentification. | 3
+#ch 04 sec-ch-cryptographie | Cryptographie appliquée | Utiliser la cryptographie sans se tromper.
+- sec-chiffrement | Chiffrement symétrique et asymétrique | AES, RSA et courbes elliptiques. | 2
+- sec-hachage-signatures | Hachage et signatures | SHA-256, HMAC et signatures numériques. | 2
+#ch 05 sec-ch-devsecops | Sécurité dans le cycle de développement | DevSecOps.
+- sec-dependances | Dépendances et supply chain | CVE et SBOM. | 2
+- sec-analyses | Analyses automatiques | SAST, DAST et détection de secrets. | 2
++ sec-spe-offensif | Sécurité offensive | Penser comme un attaquant. | RED
+* sec-spe-pentest | Tests d'intrusion | Méthodologie et outils du pentest. | PEN | concept
+* sec-spe-ctf | CTF | S'entraîner sur des challenges de sécurité. | CTF | concept
++ sec-spe-defensif | Sécurité défensive | Détecter et répondre. | BLUE
+* sec-spe-soc | Détection et réponse | SOC, SIEM et gestion d'incident de sécurité. | SOC | concept
+* sec-spe-forensic | Investigation numérique | Comprendre ce qui s'est passé après une attaque. | DFIR | concept
++ sec-spe-identite | Identités | Qui est qui, et qui a le droit de quoi. | IAM
+* sec-spe-keycloak | Keycloak | Un fournisseur d'identité open source. | KC | techno
+* sec-spe-oauth | OAuth et OIDC en profondeur | Flux, jetons, scopes et pièges d'implémentation. | OIDC | concept
++ sec-spe-transverse | Sécurité par domaine | La sécurité vue depuis les autres catégories. | DOM
+* sec-spe-tls | TLS et PKI | Certificats, handshake et mTLS. | TLS | concept | link=reseau/net-spe-tls
+* sec-spe-memoire | Failles mémoire et défenses | Débordements de tampon, use-after-free, ASLR. | PWN | concept | link=c/c-spe-exploitation
++ sec-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* sec-spe-porte-reseau | Réseau | Les fondations de la sécurité réseau. | NET | porte | link=reseau
+* sec-spe-porte-infra | Architecture infra | Sécuriser la plateforme. | INF | porte | link=architecture-infra
+
+@cat systemes | 15 | Systèmes d'exploitation | OS | #8D6E63 | c | Processus, mémoire, fichiers et concurrence : ce qui se passe sous le code.
+@unlock os-ch-processus
+#ch 01 os-ch-processus | Processus et threads | L'exécution des programmes.
+- os-processus | Processus | Création, états et contexte. | 1
+- os-threads | Threads | Partager un espace mémoire. | 2
+- os-ordonnancement | Ordonnancement | Comment le processeur est partagé. | 2
+#ch 02 os-ch-memoire | Mémoire | Mémoire virtuelle et pagination.
+- os-memoire-virtuelle | Mémoire virtuelle | Les espaces d'adressage. | 2
+- os-pagination | Pagination et TLB | Traduire les adresses. | 3
+- os-allocation | Allocation mémoire | Pile, tas et mmap. | 2
+#ch 03 os-ch-synchronisation | Synchronisation | Verrous, sémaphores et interblocages.
+- os-sections-critiques | Sections critiques | Les conditions de course. | 2
+- os-primitives | Primitives de synchronisation | Mutex, sémaphores et variables de condition. | 3
+- os-deadlocks | Interblocages | Conditions et prévention. | 3
+#ch 04 os-ch-fichiers | Systèmes de fichiers | Stocker durablement.
+- os-inodes | Fichiers et inodes | L'organisation sur disque. | 2
+- os-journalisation | Journalisation | Survivre aux crashs. | 3
+#ch 05 os-ch-es | Entrées / sorties | Interruptions et E/S asynchrones.
+- os-appels-systeme | Interruptions et appels système | Passer en mode noyau. | 2
+- os-io-async | E/S asynchrones | epoll et io_uring. | 3
++ os-spe-linux | Linux | Le système qui fait tourner le cloud. | LNX
+* os-spe-noyau | Noyau Linux | Modules, pilotes, espace noyau et espace utilisateur. | KRNL | techno | link=c/c-spe-noyau
+* os-spe-admin | Administration Linux | Processus, systemd, permissions, disques et journaux. | SYSD | concept | link=architecture-infra/infra-spe-admin-linux
++ os-spe-virtualisation | Virtualisation | Plusieurs systèmes sur une même machine. | VM
+* os-spe-hyperviseurs | Hyperviseurs | KVM, Hyper-V et machines virtuelles. | HYP | concept
+* os-spe-isolation | Namespaces et cgroups | Les briques des conteneurs. | CGRP | concept
++ os-spe-temps-reel | Systèmes temps réel | Des garanties de délai. | RT
+* os-spe-rtos | FreeRTOS | Tâches, ordonnancement temps réel, files et sémaphores. | RTOS | techno | link=c/c-spe-freertos
++ os-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* os-spe-porte-c | C | Le langage des systèmes d'exploitation. | C | porte | link=c
+* os-spe-porte-archi | Architecture système | Des systèmes aux systèmes distribués. | SYS | porte | link=architecture-systeme
+
+@cat git | 16 | Git et collaboration | GIT | #EC407A | shell | Versionner, collaborer et livrer en équipe.
+@unlock git-ch-bases
+#ch 01 git-ch-bases | Les bases de Git | Commits, index et historique.
+- git-modele | Le modèle de Git | Commits, arbres et blobs. | 1
+- git-commandes | Commandes essentielles | add, commit, log et diff. | 1
+#ch 02 git-ch-branches | Branches et fusions | Travailler en parallèle.
+- git-branches | Branches | Créer, basculer et supprimer. | 1
+- git-merge-rebase | merge ou rebase | Deux façons d'intégrer. | 2
+- git-conflits | Résoudre les conflits | Méthode et outils. | 2
+#ch 03 git-ch-distant | Travail à distance | Remotes, push et pull.
+- git-remotes | Remotes | fetch, pull et push. | 1
+- git-pull-requests | Pull requests et revue de code | Collaborer sur GitHub ou GitLab. | 1
+#ch 04 git-ch-avance | Git avancé | Réparer et réécrire l'historique.
+- git-reset-revert | reset, revert et reflog | Annuler proprement. | 2
+- git-rebase-interactif | Rebase interactif | Nettoyer une branche. | 3
+- git-bisect | bisect | Trouver le commit fautif. | 2
+#ch 05 git-ch-workflows | Workflows d'équipe | Organiser le travail.
+- git-strategies | Stratégies de branches | Git flow et trunk-based development. | 2
+- git-conventions | Conventions | Messages de commit et versioning sémantique. | 1
++ git-spe-plateformes | Plateformes | Héberger et collaborer. | PLT
+* git-spe-github | GitHub | Pull requests, issues, protections de branches. | GH | techno
+* git-spe-gitlab | GitLab | Merge requests, groupes et intégration continue. | GL | techno
++ git-spe-automatisation | Automatisation | Du commit au déploiement. | CI
+* git-spe-actions | GitHub Actions | Workflows, jobs, matrices, secrets et déploiements. | GHA | techno | link=architecture-infra/infra-spe-github-actions
+* git-spe-gitlab-ci | GitLab CI | Pipelines, stages, runners et environnements. | GLCI | techno | link=architecture-infra/infra-spe-gitlab-ci
++ git-spe-echelle | Grands dépôts | Git à grande échelle. | MONO
+* git-spe-monorepo | Monorepos | Un dépôt pour tous les projets : outils et compromis. | MONO | concept
+* git-spe-lfs | Git LFS | Versionner de gros fichiers. | LFS | techno
+
+@cat tests | 17 | Tests et qualité | QA | #689F38 | - | Tester, relire et maintenir du code de qualité.
+@unlock qa-ch-fondamentaux
+#ch 01 qa-ch-fondamentaux | Fondamentaux des tests | Pourquoi et quoi tester.
+- qa-pyramide | La pyramide des tests | Unitaires, intégration, bout en bout. | 1
+- qa-bons-tests | Un bon test | Rapide, isolé, lisible, déterministe. | 1
+#ch 02 qa-ch-unitaires | Tests unitaires | Isoler et vérifier.
+- qa-aaa | Arrange, Act, Assert | Structurer un test. | 1
+- qa-doublures | Doublures de test | Stubs, mocks et fakes. | 2
+- qa-tdd | TDD | Écrire le test d'abord. | 2
+#ch 03 qa-ch-integration | Tests d'intégration et de bout en bout | Tester l'ensemble.
+- qa-integration | Tests d'intégration | Bases de données et conteneurs de test. | 2
+- qa-e2e | Tests de bout en bout | Des navigateurs automatisés. | 2
+#ch 04 qa-ch-qualite | Qualité du code | Lisibilité, revue et dette technique.
+- qa-code-lisible | Code lisible | Nommage, fonctions et duplication. | 1
+- qa-revue | Revue de code | Donner et recevoir des retours. | 1
+- qa-refactoring | Refactoring | Améliorer sans casser. | 2
+#ch 05 qa-ch-avance | Tests avancés | Propriétés, mutations et performance.
+- qa-proprietes | Tests par propriétés | Générer des cas de test. | 3
+- qa-mutation | Tests de mutation | Tester les tests. | 3
+- qa-charge | Tests de charge | Mesurer sous pression. | 2
++ qa-spe-frameworks | Frameworks de test | Les outils de chaque langage. | FW
+* qa-spe-xunit | xUnit (C#) | Tests unitaires et d'intégration en .NET. | XU | lib | link=csharp/cs-spe-tests
+* qa-spe-pytest | pytest (Python) | Fixtures, paramétrage, mocks et couverture. | PYT | lib | link=python/py-spe-pytest
+* qa-spe-junit | JUnit (Java) | Tests unitaires et doublures en Java. | JU | lib | link=java/java-spe-junit
+* qa-spe-googletest | GoogleTest (C++) | Tests unitaires, fixtures et mocks en C++. | GT | lib | link=cpp/cpp-spe-tests
++ qa-spe-e2e | Tests de bout en bout | Piloter de vrais navigateurs. | E2E
+* qa-spe-playwright | Playwright | Tests multi-navigateurs fiables. | PW | techno
+* qa-spe-cypress | Cypress | Tests de bout en bout dans le navigateur. | CY | techno
++ qa-spe-performance | Performance | Tenir la charge. | PERF
+* qa-spe-k6 | k6 | Des tests de charge écrits en JavaScript. | K6 | techno
++ qa-spe-pratiques | Pratiques | Au-delà des outils. | PRA
+* qa-spe-bdd | BDD | Des spécifications exécutables. | BDD | concept
+* qa-spe-contrats | Tests de contrat | Vérifier les échanges entre services. | PACT | concept
+
+@cat frontend | 18 | Développement web frontend | WEB | #9E9D24 | javascript | HTML, CSS, accessibilité et performance des interfaces web.
+@unlock fe-ch-html
+#ch 01 fe-ch-html | HTML | La structure des pages.
+- fe-semantique | HTML sémantique | Les bonnes balises au bon endroit. | 1
+- fe-formulaires | Formulaires | Saisie et validation. | 1
+#ch 02 fe-ch-css | CSS | Mise en page et style.
+- fe-cascade | Cascade et spécificité | Quelle règle l'emporte ? | 2
+- fe-flexbox-grid | Flexbox et Grid | Les mises en page modernes. | 2
+- fe-responsive | Responsive design | Media queries et unités relatives. | 1
+#ch 03 fe-ch-accessibilite | Accessibilité | Des interfaces pour tous.
+- fe-wcag | Principes WCAG | Perceptible, utilisable, compréhensible, robuste. | 1
+- fe-aria | ARIA et navigation au clavier | Quand et comment. | 2
+#ch 04 fe-ch-performance | Performance web | Des pages rapides.
+- fe-rendu | Le rendu du navigateur | Chemin critique et reflow. | 3
+- fe-web-vitals | Core Web Vitals | LCP, INP et CLS. | 2
+#ch 05 fe-ch-architecture | Architecture frontend | Rendu et gestion de l'état.
+- fe-modes-rendu | CSR, SSR et SSG | Où la page est-elle rendue ? | 2
+- fe-etat | Gestion de l'état | Local, global et serveur. | 2
++ fe-spe-frameworks | Frameworks | Les grandes bibliothèques d'interface. | FW
+* fe-spe-react | React | Composants, hooks, état et rendu. | RCT | techno | link=javascript/js-spe-react
+* fe-spe-vue | Vue | Composants, réactivité et Composition API. | VUE | techno | link=javascript/js-spe-vue
+* fe-spe-angular | Angular | Composants, services et signaux. | NG | techno | link=javascript/js-spe-angular
++ fe-spe-meta | Méta-frameworks | Rendu serveur et routage intégrés. | META
+* fe-spe-nextjs | Next.js | Le méta-framework de React. | NEXT | techno
+* fe-spe-nuxt | Nuxt | Le méta-framework de Vue. | NUXT | techno
++ fe-spe-css | Outils CSS | Écrire du CSS à grande échelle. | CSS
+* fe-spe-tailwind | Tailwind CSS | Des classes utilitaires. | TW | lib
+* fe-spe-sass | Sass | Variables, imbrication et mixins. | SASS | lib
++ fe-spe-design | Design et UX | Travailler avec les designers. | UX
+* fe-spe-design-systems | Design systems | Composants, jetons de design et documentation. | DS | concept
++ fe-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* fe-spe-porte-js | JavaScript et TypeScript | Le langage derrière les interfaces. | JS | porte | link=javascript
+* fe-spe-porte-mobile | Développement mobile | Des interfaces pour les petits écrans. | MOB | porte | link=mobile
+
+@cat mobile | 19 | Développement mobile | MOB | #F57C00 | - | Applications natives et multiplateformes pour Android et iOS.
+@unlock mob-ch-fondamentaux
+#ch 01 mob-ch-fondamentaux | Fondamentaux | Les spécificités du mobile.
+- mob-cycle-vie | Cycle de vie des applications | Premier plan, arrière-plan et suspension. | 1
+- mob-contraintes | Contraintes mobiles | Batterie, réseau et mémoire. | 1
+#ch 02 mob-ch-interfaces | Interfaces mobiles | Navigation et mise en page.
+- mob-navigation | Navigation | Piles, onglets et liens profonds. | 1
+- mob-layout | Mises en page adaptatives | Tailles d'écran et orientation. | 2
+#ch 03 mob-ch-donnees | Données et réseau | Stockage local et synchronisation.
+- mob-stockage | Stockage local | Fichiers, SQLite et préférences. | 1
+- mob-hors-ligne | Mode hors ligne | Synchroniser sans perdre de données. | 3
+#ch 04 mob-ch-publication | Publication | Des stores aux mises à jour.
+- mob-stores | Signature et stores | App Store et Google Play. | 1
+- mob-cicd | CI/CD mobile | Des builds et déploiements automatisés. | 2
++ mob-spe-natif | Natif | Au plus près de chaque plateforme. | NAT
+* mob-spe-android | Android et Kotlin | Jetpack Compose, activités et architecture recommandée. | AND | techno
+* mob-spe-ios | iOS et Swift | SwiftUI, cycle de vie et publication. | iOS | techno
++ mob-spe-multi | Multiplateforme | Une base de code, plusieurs plateformes. | MULT
+* mob-spe-flutter | Flutter | Dart, widgets et rendu propre. | FLT | techno
+* mob-spe-react-native | React Native | Des applications natives en JavaScript. | RN | techno
+* mob-spe-maui | .NET MAUI | Une base de code pour Android, iOS, Windows et macOS. | MAUI | techno | link=csharp/cs-spe-maui
++ mob-spe-services | Services mobiles | Ce qui entoure l'application. | SVC
+* mob-spe-notifications | Notifications push | APNs, FCM et bonnes pratiques. | PUSH | concept
+* mob-spe-firebase | Firebase | Authentification, base temps réel et analytics. | FB | techno
+
+@cat ia | 20 | Intelligence artificielle | IA | #E040FB | python | Apprentissage automatique, deep learning et intégration des LLM dans les applications.
+@unlock ia-ch-fondamentaux
+#ch 01 ia-ch-fondamentaux | Fondamentaux du machine learning | Apprendre à partir de données.
+- ia-types-apprentissage | Types d'apprentissage | Supervisé, non supervisé et par renforcement. | 1
+- ia-donnees | Préparer les données | Nettoyage, variables, jeux d'entraînement et de test. | 1
+- ia-evaluation | Évaluer un modèle | Précision, rappel et surapprentissage. | 2
+#ch 02 ia-ch-modeles | Modèles classiques | Régressions, arbres et clustering.
+- ia-regression | Régression linéaire et logistique | Les bases. | 2
+- ia-arbres | Arbres et forêts | Random forest et gradient boosting. | 2
+- ia-clustering | Clustering | k-means et consorts. | 2
+#ch 03 ia-ch-deep-learning | Deep learning | Les réseaux de neurones.
+- ia-neurones | Réseaux de neurones | Couches, activation et rétropropagation. | 3
+- ia-architectures | Architectures classiques | CNN et RNN. | 3
+- ia-transformers | Transformers | L'attention et les modèles de langage. | 3
+#ch 04 ia-ch-llm | Les LLM dans les applications | Intégrer des modèles de langage.
+- ia-prompting | Prompting | Instructions, exemples et formats de sortie. | 1
+- ia-rag | RAG | Recherche et génération augmentée. | 2
+- ia-agents | Agents et outils | Appels d'outils et boucles d'agents. | 3
+#ch 05 ia-ch-production | L'IA en production | Déployer et surveiller.
+- ia-mlops | MLOps | Versionner, entraîner et déployer. | 2
+- ia-evaluation-llm | Évaluer des LLM | Jeux d'évaluation et garde-fous. | 3
++ ia-spe-frameworks | Frameworks | Les outils du machine learning. | FW
+* ia-spe-pytorch | PyTorch | Tenseurs, autograd et entraînement de réseaux de neurones. | PT | lib | link=python/py-spe-pytorch
+* ia-spe-sklearn | scikit-learn | Apprentissage automatique classique : pipelines, validation croisée, métriques. | SKL | lib | link=python/py-spe-sklearn
++ ia-spe-llm | LLM | Construire avec les modèles de langage. | LLM
+* ia-spe-api-llm | APIs de LLM | Appels, streaming, sorties structurées et coûts. | API | concept
+* ia-spe-rag | RAG en profondeur | Découpage, embeddings, recherche hybride et évaluation. | RAG | concept
+* ia-spe-vectoriel | pgvector | L'extension PostgreSQL pour stocker et rechercher des vecteurs. | PGV | lib | link=bases-de-donnees/db-spe-pgvector
++ ia-spe-domaines | Domaines | Les grandes familles d'applications. | DOM
+* ia-spe-vision | Vision par ordinateur | Classification, détection et segmentation d'images. | CV | concept
+* ia-spe-nlp | Traitement du langage | Du texte brut aux modèles de langage. | NLP | concept
++ ia-spe-donnees | Données | La matière première de l'IA. | DATA
+* ia-spe-pandas | pandas | DataFrames : filtrer, regrouper, joindre et nettoyer des données. | PD | lib | link=python/py-spe-pandas
+* ia-spe-data-engineering | Data engineering | Pipelines de données, orchestration et qualité. | DE | concept
++ ia-spe-horizons | Autres horizons | Des catégories voisines pour élargir le regard. | 🚪
+* ia-spe-porte-python | Python | Le langage de l'IA. | PY | porte | link=python
+* ia-spe-porte-algo | Algorithmes et structures de données | Les fondations mathématiques et algorithmiques. | ALGO | porte | link=algorithmes

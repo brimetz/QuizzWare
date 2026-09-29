@@ -1,0 +1,25 @@
+{
+  "id": "ia-ch-fondamentaux",
+  "title": "Fondamentaux du machine learning",
+  "summary": "Apprendre à partir de données.",
+  "lessons": [
+    {
+      "id": "ia-types-apprentissage",
+      "title": "Types d'apprentissage",
+      "summary": "Supervisé, non supervisé et par renforcement.",
+      "difficulty": 1
+    },
+    {
+      "id": "ia-donnees",
+      "title": "Préparer les données",
+      "summary": "Nettoyage, variables, jeux d'entraînement et de test.",
+      "difficulty": 1
+    },
+    {
+      "id": "ia-evaluation",
+      "title": "Évaluer un modèle",
+      "summary": "Précision, rappel et surapprentissage.",
+      "difficulty": 2
+    }
+  ]
+}

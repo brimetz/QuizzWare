@@ -1,0 +1,25 @@
+{
+  "id": "infra-ch-cloud",
+  "title": "Le cloud",
+  "summary": "Calcul, stockage, réseau et identités.",
+  "lessons": [
+    {
+      "id": "infra-cloud-modeles",
+      "title": "IaaS, PaaS, SaaS, serverless",
+      "summary": "Qui gère quoi.",
+      "difficulty": 1
+    },
+    {
+      "id": "infra-cloud-reseau",
+      "title": "Réseau cloud",
+      "summary": "VPC, sous-réseaux, groupes de sécurité.",
+      "difficulty": 2
+    },
+    {
+      "id": "infra-cloud-iam",
+      "title": "Identités et accès",
+      "summary": "Rôles, politiques, moindre privilège.",
+      "difficulty": 2
+    }
+  ]
+}

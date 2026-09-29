@@ -1,0 +1,25 @@
+{
+  "id": "fe-ch-css",
+  "title": "CSS",
+  "summary": "Mise en page et style.",
+  "lessons": [
+    {
+      "id": "fe-cascade",
+      "title": "Cascade et spécificité",
+      "summary": "Quelle règle l'emporte ?",
+      "difficulty": 2
+    },
+    {
+      "id": "fe-flexbox-grid",
+      "title": "Flexbox et Grid",
+      "summary": "Les mises en page modernes.",
+      "difficulty": 2
+    },
+    {
+      "id": "fe-responsive",
+      "title": "Responsive design",
+      "summary": "Media queries et unités relatives.",
+      "difficulty": 1
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "git-ch-bases",
+  "title": "Les bases de Git",
+  "summary": "Commits, index et historique.",
+  "lessons": [
+    {
+      "id": "git-modele",
+      "title": "Le modèle de Git",
+      "summary": "Commits, arbres et blobs.",
+      "difficulty": 1
+    },
+    {
+      "id": "git-commandes",
+      "title": "Commandes essentielles",
+      "summary": "add, commit, log et diff.",
+      "difficulty": 1
+    }
+  ]
+}

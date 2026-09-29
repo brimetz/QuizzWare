@@ -1,0 +1,86 @@
+{
+  "id": "infra-ch-conteneurs",
+  "title": "Conteneurs",
+  "summary": "Images, Dockerfile et cache de build.",
+  "lessons": [
+    {
+      "id": "infra-conteneurs",
+      "title": "Conteneurs et Docker",
+      "summary": "Comprendre les conteneurs et écrire de bons Dockerfiles.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Conteneur vs machine virtuelle",
+          "body": "Une VM embarque un système d'exploitation complet au-dessus d'un hyperviseur. Un conteneur partage le noyau de l'hôte et isole les processus (namespaces, cgroups) : il démarre en quelques millisecondes et pèse beaucoup moins lourd."
+        },
+        {
+          "title": "Le Dockerfile",
+          "body": "FROM définit l'image de base, RUN exécute une commande pendant le build, COPY ajoute des fichiers, et CMD/ENTRYPOINT définissent ce qui s'exécute au démarrage du conteneur.",
+          "code": "FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build\nWORKDIR /src\nCOPY *.csproj .\nRUN dotnet restore\nCOPY . .\nRUN dotnet publish -c Release -o /app\n\nFROM mcr.microsoft.com/dotnet/aspnet:9.0\nCOPY --from=build /app /app\nCMD [\"dotnet\", \"/app/Api.dll\"]"
+        },
+        {
+          "title": "Couches et cache",
+          "body": "Chaque instruction crée une couche mise en cache. On place en premier ce qui change rarement (dépendances) et en dernier ce qui change souvent (code source). Le multi-stage build permet de compiler dans une image lourde et de ne livrer que le résultat dans une image légère."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-conteneurs-q1",
+          "prompt": "Quelle est la différence fondamentale entre un conteneur et une VM ?",
+          "choices": [
+            "Le conteneur partage le noyau de l'hôte",
+            "Le conteneur embarque son propre noyau",
+            "La VM ne peut pas être isolée",
+            "Il n'y a aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les conteneurs isolent des processus sur le même noyau, alors qu'une VM virtualise une machine complète avec son OS.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-conteneurs-q2",
+          "prompt": "Quelle instruction Dockerfile définit la commande exécutée par défaut au démarrage du conteneur ?",
+          "choices": [
+            "RUN",
+            "FROM",
+            "CMD",
+            "COPY"
+          ],
+          "answerIndex": 2,
+          "explanation": "CMD (ou ENTRYPOINT) s'exécute au lancement du conteneur ; RUN s'exécute pendant la construction de l'image.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-conteneurs-q3",
+          "prompt": "Quel est l'intérêt principal d'un build multi-stage ?",
+          "choices": [
+            "Accélérer le réseau",
+            "Réduire la taille de l'image finale",
+            "Lancer plusieurs conteneurs",
+            "Chiffrer l'image"
+          ],
+          "answerIndex": 1,
+          "explanation": "Les outils de build restent dans l'étape intermédiaire ; l'image finale ne contient que le nécessaire à l'exécution.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-conteneurs-q4",
+          "prompt": "Pour profiter au mieux du cache Docker, où placer COPY du code source ?",
+          "choices": [
+            "Avant l'installation des dépendances",
+            "Après l'installation des dépendances",
+            "Dans une image séparée obligatoirement",
+            "L'ordre n'a aucun impact"
+          ],
+          "answerIndex": 1,
+          "explanation": "Le code change souvent : le copier après la restauration des dépendances évite de réinstaller celles-ci à chaque build.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ]
+}

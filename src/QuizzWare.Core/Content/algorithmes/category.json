@@ -1,0 +1,9 @@
+{
+  "id": "algorithmes",
+  "order": 9,
+  "name": "Algorithmes et structures de données",
+  "description": "Complexité, structures de données et algorithmes classiques des entretiens techniques.",
+  "icon": "ALGO",
+  "color": "#FF7043",
+  "language": "python"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "rust-ch-bases",
+  "title": "Bases du langage",
+  "summary": "Types, fonctions et contrôle.",
+  "lessons": [
+    {
+      "id": "rust-types",
+      "title": "Types et variables",
+      "summary": "Immutabilité par défaut et shadowing.",
+      "difficulty": 1
+    },
+    {
+      "id": "rust-controle",
+      "title": "Contrôle et pattern matching",
+      "summary": "match et if let.",
+      "difficulty": 1
+    }
+  ]
+}

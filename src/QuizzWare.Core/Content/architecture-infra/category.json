@@ -1,0 +1,9 @@
+{
+  "id": "architecture-infra",
+  "order": 2,
+  "name": "Architecture infra",
+  "description": "Conteneurs, orchestration, cloud et Infrastructure as Code.",
+  "icon": "INF",
+  "color": "#26A69A",
+  "language": "shell"
+}

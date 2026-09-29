@@ -1,0 +1,25 @@
+{
+  "id": "infra-ch-iac",
+  "title": "Infrastructure as Code",
+  "summary": "Décrire et versionner l'infrastructure.",
+  "lessons": [
+    {
+      "id": "infra-iac-principes",
+      "title": "Principes de l'IaC",
+      "summary": "Déclaratif, idempotence, état.",
+      "difficulty": 1
+    },
+    {
+      "id": "infra-iac-terraform",
+      "title": "Terraform en bref",
+      "summary": "Providers, plan, apply, état.",
+      "difficulty": 2
+    },
+    {
+      "id": "infra-iac-configuration",
+      "title": "Gestion de configuration",
+      "summary": "Ansible et consorts.",
+      "difficulty": 2
+    }
+  ]
+}

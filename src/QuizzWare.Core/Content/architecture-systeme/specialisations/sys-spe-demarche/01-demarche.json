@@ -1,0 +1,387 @@
+{
+  "id": "sd-ch-demarche",
+  "title": "System design : la démarche",
+  "summary": "Méthode, estimations et briques d'architecture.",
+  "lessons": [
+    {
+      "id": "sd-methode",
+      "title": "La méthode en quatre étapes",
+      "summary": "Clarifier, estimer, concevoir, approfondir.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Pourquoi une méthode",
+          "body": "Un entretien de system design dure 45 à 60 minutes, sur un sujet volontairement vague (« Conçois Twitter »). On n'attend pas LA bonne réponse, mais un raisonnement structuré, des compromis explicites et une bonne communication."
+        },
+        {
+          "title": "Étape 1 — Clarifier le besoin",
+          "body": "Exigences fonctionnelles (que fait le système ?), non fonctionnelles (latence, disponibilité, cohérence, volumétrie), et ce qui est hors périmètre. On pose des questions avant de dessiner quoi que ce soit."
+        },
+        {
+          "title": "Étape 2 — Estimer",
+          "body": "Des ordres de grandeur : utilisateurs actifs, requêtes par seconde, ratio lecture / écriture, volume stocké. Ces chiffres orientent les choix : une seule base suffit-elle ? faut-il un cache ? du sharding ?"
+        },
+        {
+          "title": "Étapes 3 et 4 — Concevoir, puis approfondir",
+          "body": "D'abord un schéma de haut niveau (clients, API, services, bases, caches, files), les API et le modèle de données. Puis on approfondit les points critiques : goulots d'étranglement, pannes, montée en charge, et les compromis de chaque choix."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sd-methode-q1",
+          "prompt": "Sujet : « Conçois un service de raccourcissement d'URL ». Que fais-tu en premier ?",
+          "choices": [
+            "Poser des questions pour clarifier le besoin et les contraintes",
+            "Dessiner une architecture avec Kafka et Kubernetes",
+            "Choisir la base de données",
+            "Écrire le code du service"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans exigences claires, impossible de justifier un choix. Et l'interviewer attend justement ces questions.",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "sd-methode-q2",
+          "prompt": "Remets dans l'ordre la démarche d'un entretien de system design.",
+          "lines": [
+            "Clarifier les exigences fonctionnelles et non fonctionnelles",
+            "Estimer la charge et le stockage",
+            "Proposer une architecture de haut niveau",
+            "Définir les API et le modèle de données",
+            "Approfondir les points critiques et les compromis"
+          ],
+          "explanation": "Du général au particulier : on ne détaille le sharding qu'après avoir montré qu'il est nécessaire.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sd-methode-q3",
+          "prompt": "Lesquelles sont des exigences non fonctionnelles ?",
+          "choices": [
+            "Une latence p99 inférieure à 200 ms",
+            "Une disponibilité de 99,9 %",
+            "Un utilisateur peut publier un message",
+            "Supporter 10 000 requêtes par seconde"
+          ],
+          "answerIndices": [0, 1, 3],
+          "explanation": "Publier un message est une fonctionnalité. Les exigences non fonctionnelles décrivent comment le système doit se comporter : vitesse, fiabilité, volume.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sd-methode-q4",
+          "prompt": "Qu'évalue surtout l'interviewer ?",
+          "choices": [
+            "Le raisonnement structuré, les compromis explicites et la communication",
+            "La connaissance de l'unique bonne réponse",
+            "Le nombre de technologies citées",
+            "La vitesse à dessiner"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un bon candidat pense à voix haute, justifie chaque choix par une exigence, et dit ce qu'il sacrifie.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sd-methode-q5",
+          "prompt": "L'interviewer dit : « Le système doit être très disponible. » Quelle est la bonne réaction ?",
+          "choices": [
+            "Quantifier : quelle disponibilité (99,9 % ? 99,99 %) et quel compromis accepter sur la cohérence ?",
+            "Répondre qu'on utilisera Kubernetes",
+            "Ignorer, c'est toujours implicite",
+            "Promettre 100 %"
+          ],
+          "answerIndex": 0,
+          "explanation": "99,9 % tolère environ 8 h 45 d'indisponibilité par an ; 99,99 %, environ 53 minutes. L'écart change complètement l'architecture et son coût.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sd-methode-q6",
+          "prompt": "Voici le début de réponse d'un candidat. Touche la phrase qui arrive trop tôt.",
+          "code": "« On utilisera Cassandra et Kafka. »\n« Combien d'utilisateurs actifs par jour ? »\n« Faut-il des URL personnalisées ? »\n« Les liens expirent-ils ? »",
+          "bugLines": [1],
+          "explanation": "Choisir des technologies avant de connaître le besoin et la volumétrie est l'erreur la plus fréquente, et la plus pénalisante.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "sd-estimations",
+      "title": "Les estimations de capacité",
+      "summary": "Calculer vite des ordres de grandeur.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les chiffres à connaître",
+          "body": "Une journée compte 86 400 s, qu'on arrondit à 100 000 (10^5) pour calculer vite. 1 million de requêtes par jour, c'est environ 12 par seconde en moyenne ; le pic vaut souvent 2 à 10 fois la moyenne.",
+          "code": "1 jour          ≈ 10^5 s\n1 M req/jour    ≈ 12 req/s\n1 Md req/jour   ≈ 12 000 req/s\n1 Ko × 1 M      = 1 Go"
+        },
+        {
+          "title": "Les latences de référence",
+          "body": "Lecture en mémoire vive : environ 100 ns. Lecture aléatoire sur SSD : environ 100 µs. Aller-retour dans un même datacenter : environ 0,5 ms. Aller-retour Europe – États-Unis : environ 100 ms. Un cache en mémoire est donc des milliers de fois plus rapide qu'un disque, et chaque appel intercontinental coûte cher."
+        },
+        {
+          "title": "Exemple : un raccourcisseur d'URL",
+          "body": "On part d'hypothèses annoncées à voix haute, puis on déroule les calculs.",
+          "code": "Écritures : 100 M nouvelles URL par mois\n  → 100 M / (30 × 10^5 s) ≈ 40 écritures/s\nLectures (ratio 100:1) → ≈ 4 000 lectures/s\nStockage : 500 octets × 100 M × 12 mois × 5 ans\n  → 500 × 6 × 10^9 = 3 × 10^12 ≈ 3 To"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sd-estim-q1",
+          "prompt": "1 million de requêtes par jour, c'est environ combien de requêtes par seconde ?",
+          "choices": ["≈ 12", "≈ 1 000", "≈ 1", "≈ 100 000"],
+          "answerIndex": 0,
+          "explanation": "10^6 / 10^5 = 10, et plus précisément 10^6 / 86 400 ≈ 11,6. Une seule machine suffit largement pour ce débit moyen.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sd-estim-q2",
+          "prompt": "10 millions d'utilisateurs actifs par jour font chacun 10 lectures. Quel est le débit moyen ?",
+          "choices": ["≈ 1 000 lectures/s", "≈ 100 lectures/s", "≈ 10 000 lectures/s", "≈ 100 000 lectures/s"],
+          "answerIndex": 0,
+          "explanation": "10^7 × 10 = 10^8 lectures par jour ; 10^8 / 10^5 = 10^3 par seconde. Au pic, compter plutôt 3 000 à 5 000.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sd-estim-q3",
+          "prompt": "Ordre de grandeur : une lecture en mémoire comparée à un aller-retour Paris – New York ?",
+          "choices": [
+            "La mémoire est environ un million de fois plus rapide",
+            "Environ dix fois plus rapide",
+            "Environ mille fois plus rapide",
+            "C'est équivalent"
+          ],
+          "answerIndex": 0,
+          "explanation": "100 ns contre 100 ms : un facteur 10^6. D'où l'intérêt des CDN et des répliques proches des utilisateurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "sd-estim-q4",
+          "prompt": "Complète l'estimation de stockage.",
+          "code": "Messages : 1 Ko × 50 M par jour\n  → ___ Go par jour\n  → × 365 ≈ ___ To par an",
+          "answers": ["50", "18"],
+          "distractors": ["5", "500", "180"],
+          "explanation": "1 Ko × 50 × 10^6 = 50 × 10^9 octets = 50 Go par jour ; × 365 ≈ 18 000 Go, soit environ 18 To par an (avant réplication).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sd-estim-q5",
+          "prompt": "Cette estimation contient une erreur d'ordre de grandeur. Touche la ligne fautive.",
+          "code": "100 M requêtes par jour\n1 jour ≈ 10^5 secondes\n→ 100 M / 10^5 = 100 requêtes/s\nPic ≈ 3 × moyenne ≈ 3 000 requêtes/s",
+          "bugLines": [3],
+          "explanation": "10^8 / 10^5 = 10^3, soit 1 000 requêtes par seconde, et non 100. La ligne suivante est d'ailleurs cohérente avec 1 000 : l'erreur est un simple calcul, facile à repérer si l'on garde les puissances de 10.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "sd-estim-q6",
+          "prompt": "Pourquoi faire des estimations en entretien ?",
+          "choices": [
+            "Pour savoir si une seule machine suffit ou s'il faut répartir",
+            "Pour dimensionner le cache et le stockage",
+            "Pour justifier des choix (sharding, CDN…)",
+            "Pour obtenir un chiffre exact, à la requête près"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Seul l'ordre de grandeur compte : 40 ou 50 écritures par seconde mènent à la même architecture ; 40 ou 40 000, non.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "sd-briques",
+      "title": "Les briques et leurs compromis",
+      "summary": "Répartiteur, cache, files, stockage objet et CDN.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les briques",
+          "body": "Répartiteur de charge, serveurs applicatifs sans état, cache (Redis), base de données (SQL ou NoSQL, avec répliques et shards), file de messages (Kafka, RabbitMQ) pour découpler et absorber les pics, stockage objet (S3) pour les fichiers, CDN pour les contenus statiques."
+        },
+        {
+          "title": "Des compromis, toujours",
+          "body": "Cohérence ou disponibilité (CAP), latence ou coût, simplicité ou scalabilité, synchrone ou asynchrone. En entretien, on nomme le compromis et on justifie son choix par les exigences clarifiées au départ."
+        },
+        {
+          "title": "Des serveurs sans état",
+          "body": "Un serveur applicatif sans état (sessions dans Redis ou dans un jeton, fichiers dans S3) peut être dupliqué à volonté derrière un répartiteur de charge : c'est la clé de la montée en charge horizontale."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sd-briques-q1",
+          "prompt": "Pourquoi garder les serveurs applicatifs sans état ?",
+          "choices": [
+            "Pour en ajouter ou en retirer librement derrière un répartiteur de charge",
+            "Pour consommer moins de mémoire",
+            "Pour se passer de base de données",
+            "Parce que HTTP l'impose"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si n'importe quel serveur peut traiter n'importe quelle requête, on ajoute des serveurs quand la charge monte, et une panne n'emporte aucune session.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sd-briques-q2",
+          "prompt": "Les utilisateurs envoient des photos. Où les stocker ?",
+          "choices": [
+            "Dans un stockage objet (S3), servies via un CDN ; la base ne garde que les métadonnées",
+            "En BLOB dans la base relationnelle",
+            "Sur le disque local du serveur web",
+            "Dans Redis"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le stockage objet est peu cher, durable et quasi illimité ; le CDN rapproche les fichiers des utilisateurs. Le disque local casse l'absence d'état des serveurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sd-briques-q3",
+          "prompt": "À quoi sert une file de messages entre le site et le service d'envoi d'e-mails ?",
+          "choices": [
+            "Découpler, absorber les pics et réessayer en cas d'échec, sans ralentir l'utilisateur",
+            "Chiffrer les e-mails",
+            "Remplacer la base de données",
+            "Accélérer l'affichage des pages"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le site dépose un message et répond aussitôt ; le service d'e-mails le traite à son rythme, même s'il était momentanément en panne.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sd-briques-q4",
+          "prompt": "Lesquelles de ces associations besoin → brique sont pertinentes ?",
+          "choices": [
+            "Fichiers statiques consultés dans le monde entier → CDN",
+            "Compteur de likes très sollicité → compteur en mémoire (Redis), persisté périodiquement",
+            "Transactions de paiement → une file de messages, sans base de données",
+            "Traitement vidéo long → file de tâches et workers"
+          ],
+          "answerIndices": [0, 1, 3],
+          "explanation": "Un paiement exige une base transactionnelle (ACID) ; une file peut l'accompagner, jamais la remplacer.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "sd-briques-q5",
+          "prompt": "Cette architecture ne peut pas monter en charge horizontalement. Touche l'élément en cause.",
+          "code": "Client → Répartiteur de charge\nRépartiteur → Serveurs web (×3)\nServeurs web : sessions en mémoire locale\nServeurs web → PostgreSQL (primaire + 2 répliques)\nFichiers envoyés → S3",
+          "bugLines": [3],
+          "explanation": "Avec des sessions locales, un utilisateur doit toujours retomber sur le même serveur (sessions « collantes ») et perd sa session si ce serveur redémarre. On les déplace dans Redis, ou dans un jeton signé.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sd-briques-q6",
+          "prompt": "Fil d'actualité : le « fan-out à l'écriture » précalcule le fil de chaque abonné à chaque publication. Quel est son principal inconvénient ?",
+          "choices": [
+            "Une célébrité suivie par des millions de personnes provoque des millions d'écritures par publication",
+            "Les lectures deviennent lentes",
+            "Le fil ne peut pas être mis en cache",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "La réponse classique est hybride : fan-out à l'écriture pour la plupart des comptes, et fusion à la lecture pour les comptes très suivis.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "sd-defi",
+    "title": "Défi entretien : un raccourcisseur d'URL",
+    "summary": "Un sujet classique, déroulé étape par étape.",
+    "questions": [
+      {
+        "type": "multi",
+        "id": "sd-defi-q1",
+        "prompt": "Étape 1/5 — Quelles questions de clarification sont pertinentes ?",
+        "choices": [
+          "Combien de nouvelles URL par jour ?",
+          "Les liens expirent-ils ?",
+          "Faut-il des alias personnalisés et des statistiques de clics ?",
+          "De quelle couleur est le bouton « Raccourcir » ?"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "Volumétrie, durée de vie et fonctionnalités annexes changent l'architecture ; la couleur du bouton, non.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sd-defi-q2",
+        "prompt": "Étape 2/5 — 100 millions d'URL créées par mois, avec un ratio lecture / écriture de 100 pour 1. Quel est le débit moyen de lecture ?",
+        "choices": ["≈ 4 000 lectures/s", "≈ 40 lectures/s", "≈ 40 000 lectures/s", "≈ 400 000 lectures/s"],
+        "answerIndex": 0,
+        "explanation": "100 M / (30 × 10^5 s) ≈ 40 écritures par seconde, donc environ 4 000 lectures par seconde, et plusieurs fois plus au pic. Un cache devant la base s'impose.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sd-defi-q3",
+        "prompt": "Étape 3/5 — Comment générer les codes courts (par exemple « aZ3x9Q ») ?",
+        "choices": [
+          "Encoder en base 62 un identifiant unique (compteur distribué ou plages pré-allouées)",
+          "Hacher l'URL en MD5 et garder 6 caractères, sans gérer les collisions",
+          "Un nombre aléatoire de 3 chiffres",
+          "Utiliser l'URL d'origine telle quelle"
+        ],
+        "answerIndex": 0,
+        "explanation": "62^6 ≈ 57 milliards de codes de 6 caractères : largement assez. Un identifiant unique garantit l'absence de collision ; chaque serveur peut réserver une plage d'identifiants pour éviter un point central.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "sd-defi-q4",
+        "prompt": "Étape 4/5 — On veut compter chaque clic. Quel code HTTP pour la redirection ?",
+        "choices": [
+          "302 (temporaire) : le navigateur repasse par le service à chaque clic",
+          "301 (permanent) : plus efficace, et tous les clics restent comptés",
+          "200, avec le contenu de la page cible",
+          "404"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un 301 est mis en cache par le navigateur : les clics suivants ne passent plus par le service. 301 allège la charge, 302 garde la mesure : c'est un compromis à expliciter.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "sd-defi-q5",
+        "prompt": "Étape 5/5 — Remets dans l'ordre le traitement d'un clic sur un lien court.",
+        "lines": [
+          "Le navigateur appelle GET /aZ3x9Q",
+          "Le service cherche le code dans le cache (Redis)",
+          "S'il est absent, il lit la base et remplit le cache",
+          "Il répond 302 avec l'URL d'origine"
+        ],
+        "explanation": "Avec un ratio de 100 lectures pour une écriture, la plupart des clics sont servis par le cache, sans toucher la base. Les statistiques de clics partent en asynchrone, par une file.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sd-defi-q6",
+        "prompt": "L'interviewer relance : « Et si le service devient viral ? » Quelles réponses sont pertinentes ?",
+        "choices": [
+          "Mettre en cache les redirections les plus populaires, au plus près des utilisateurs (CDN, edge)",
+          "Ajouter des serveurs sans état derrière le répartiteur",
+          "Sharder la table des URL par code court",
+          "Passer les redirections en 200 avec la page cible intégrée"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "On reprend les briques : cache, serveurs sans état, partitionnement des données. Une bonne réponse précise aussi dans quel ordre on les introduit, selon ce qui sature en premier.",
+        "difficulty": 3
+      }
+    ]
+  }
+}

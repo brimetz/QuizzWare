@@ -1,0 +1,25 @@
+{
+  "id": "sec-ch-fondamentaux",
+  "title": "Fondamentaux",
+  "summary": "Menaces, principes et modèle de risque.",
+  "lessons": [
+    {
+      "id": "sec-cia",
+      "title": "Confidentialité, intégrité, disponibilité",
+      "summary": "La triade CIA.",
+      "difficulty": 1
+    },
+    {
+      "id": "sec-principes",
+      "title": "Principes de conception sûre",
+      "summary": "Moindre privilège et défense en profondeur.",
+      "difficulty": 1
+    },
+    {
+      "id": "sec-threat-modeling",
+      "title": "Modélisation des menaces",
+      "summary": "La méthode STRIDE.",
+      "difficulty": 2
+    }
+  ]
+}

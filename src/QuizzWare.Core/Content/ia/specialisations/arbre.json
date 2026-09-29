@@ -1,0 +1,133 @@
+{
+  "unlockedBy": "ia-ch-fondamentaux",
+  "nodes": [
+    {
+      "id": "ia-spe-frameworks",
+      "title": "Frameworks",
+      "summary": "Les outils du machine learning.",
+      "icon": "FW",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "ia-spe-pytorch",
+          "title": "PyTorch",
+          "summary": "Tenseurs, autograd et entraînement de réseaux de neurones.",
+          "icon": "PT",
+          "kind": "lib",
+          "linkTo": "python/py-spe-pytorch"
+        },
+        {
+          "id": "ia-spe-sklearn",
+          "title": "scikit-learn",
+          "summary": "Apprentissage automatique classique : pipelines, validation croisée, métriques.",
+          "icon": "SKL",
+          "kind": "lib",
+          "linkTo": "python/py-spe-sklearn"
+        }
+      ]
+    },
+    {
+      "id": "ia-spe-llm",
+      "title": "LLM",
+      "summary": "Construire avec les modèles de langage.",
+      "icon": "LLM",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "ia-spe-api-llm",
+          "title": "APIs de LLM",
+          "summary": "Appels, streaming, sorties structurées et coûts.",
+          "icon": "API",
+          "kind": "concept"
+        },
+        {
+          "id": "ia-spe-rag",
+          "title": "RAG en profondeur",
+          "summary": "Découpage, embeddings, recherche hybride et évaluation.",
+          "icon": "RAG",
+          "kind": "concept"
+        },
+        {
+          "id": "ia-spe-vectoriel",
+          "title": "pgvector",
+          "summary": "L'extension PostgreSQL pour stocker et rechercher des vecteurs.",
+          "icon": "PGV",
+          "kind": "lib",
+          "linkTo": "bases-de-donnees/db-spe-pgvector"
+        }
+      ]
+    },
+    {
+      "id": "ia-spe-domaines",
+      "title": "Domaines",
+      "summary": "Les grandes familles d'applications.",
+      "icon": "DOM",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "ia-spe-vision",
+          "title": "Vision par ordinateur",
+          "summary": "Classification, détection et segmentation d'images.",
+          "icon": "CV",
+          "kind": "concept"
+        },
+        {
+          "id": "ia-spe-nlp",
+          "title": "Traitement du langage",
+          "summary": "Du texte brut aux modèles de langage.",
+          "icon": "NLP",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "ia-spe-donnees",
+      "title": "Données",
+      "summary": "La matière première de l'IA.",
+      "icon": "DATA",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "ia-spe-pandas",
+          "title": "pandas",
+          "summary": "DataFrames : filtrer, regrouper, joindre et nettoyer des données.",
+          "icon": "PD",
+          "kind": "lib",
+          "linkTo": "python/py-spe-pandas"
+        },
+        {
+          "id": "ia-spe-data-engineering",
+          "title": "Data engineering",
+          "summary": "Pipelines de données, orchestration et qualité.",
+          "icon": "DE",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "ia-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "ia-spe-porte-python",
+          "title": "Python",
+          "summary": "Le langage de l'IA.",
+          "icon": "PY",
+          "kind": "porte",
+          "linkTo": "python"
+        },
+        {
+          "id": "ia-spe-porte-algo",
+          "title": "Algorithmes et structures de données",
+          "summary": "Les fondations mathématiques et algorithmiques.",
+          "icon": "ALGO",
+          "kind": "porte",
+          "linkTo": "algorithmes"
+        }
+      ]
+    }
+  ]
+}

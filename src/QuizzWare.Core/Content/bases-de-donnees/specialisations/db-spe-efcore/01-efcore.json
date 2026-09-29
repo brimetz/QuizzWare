@@ -1,0 +1,386 @@
+{
+  "id": "efcore-ch-essentiel",
+  "title": "Entity Framework Core : l'essentiel",
+  "summary": "DbContext, requêtes LINQ, relations et pièges de performance.",
+  "lessons": [
+    {
+      "id": "efcore-bases",
+      "title": "DbContext, entités et migrations",
+      "summary": "Faire correspondre des classes C# à des tables.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un ORM",
+          "body": "Entity Framework Core est l'ORM (Object-Relational Mapper) de .NET : il fait correspondre des classes C# à des tables et traduit des requêtes LINQ en SQL. On gagne en productivité, à condition de savoir quel SQL est généré."
+        },
+        {
+          "title": "Entités et DbContext",
+          "body": "Une propriété Id (ou <Type>Id) devient la clé primaire par convention, et chaque DbSet<T> représente une table. Le DbContext est une unité de travail de courte durée : un par requête HTTP en ASP.NET Core, fourni par l'injection de dépendances.",
+          "code": "public class Client\n{\n    public int Id { get; set; }  // clé primaire\n    public string Nom { get; set; } = \"\";\n    public List<Commande> Commandes { get; set; } = [];\n}\n\npublic class BoutiqueContext : DbContext\n{\n    public DbSet<Client> Clients => Set<Client>();\n}"
+        },
+        {
+          "title": "Les migrations",
+          "body": "Les migrations versionnent le schéma. La première commande génère une migration à partir des changements du modèle, la seconde l'applique à la base. Le fichier généré se relit et se versionne comme du code.",
+          "code": "dotnet ef migrations add AjoutClients\ndotnet ef database update",
+          "language": "text"
+        },
+        {
+          "title": "Le suivi des modifications",
+          "body": "Le DbContext suit les entités qu'il a chargées (change tracking). SaveChanges() détecte les modifications et envoie tous les INSERT, UPDATE et DELETE nécessaires, dans une seule transaction."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "efcore-bases-q1",
+          "prompt": "Que fait un ORM comme Entity Framework Core ?",
+          "choices": [
+            "Il fait correspondre des classes à des tables et traduit les requêtes en SQL",
+            "Il remplace la base de données par des fichiers JSON",
+            "Il compile le SQL en C#",
+            "Il sert uniquement à créer des sauvegardes"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'ORM fait le pont entre le monde objet (classes, listes) et le monde relationnel (tables, clés étrangères).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "efcore-bases-q2",
+          "prompt": "Quelle propriété devient la clé primaire par convention ?",
+          "code": "public class Produit\n{\n    public int ProduitId { get; set; }\n    public string Nom { get; set; } = \"\";\n}",
+          "choices": ["ProduitId", "Nom", "Aucune : il faut l'attribut [Key]", "Les deux"],
+          "answerIndex": 0,
+          "explanation": "EF Core reconnaît Id ou <NomDuType>Id. Un entier clé primaire devient en plus auto-incrémenté par défaut.",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "efcore-bases-q3",
+          "prompt": "Remets dans l'ordre : ajouter une colonne Email à la table des clients.",
+          "language": "text",
+          "lines": [
+            "Ajouter la propriété Email à la classe Client",
+            "dotnet ef migrations add AjoutEmailClient",
+            "Relire le fichier de migration généré",
+            "dotnet ef database update"
+          ],
+          "explanation": "On part du modèle C#, on génère la migration, on la relit (une migration peut supprimer des données !), puis on l'applique.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "efcore-bases-q4",
+          "prompt": "Dans quelle transaction partent l'INSERT et l'UPDATE de ce code ?",
+          "code": "db.Clients.Add(new Client { Nom = \"Ada\" });\nvar c = db.Clients.First(x => x.Id == 7);\nc.Nom = \"Linus\";\ndb.SaveChanges();",
+          "choices": [
+            "Dans une seule transaction, au moment de SaveChanges",
+            "Chacun dans sa propre transaction",
+            "Aucune transaction n'est utilisée",
+            "L'INSERT part dès l'appel à Add"
+          ],
+          "answerIndex": 0,
+          "explanation": "Add et la modification sont seulement enregistrés dans le suivi des modifications. First exécute un SELECT immédiatement, mais les écritures partent ensemble au SaveChanges, dans une transaction.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "efcore-bases-q5",
+          "prompt": "Cette modification n'est jamais enregistrée en base. Touche la ligne en cause.",
+          "code": "var client = db.Clients\n    .AsNoTracking()\n    .First(c => c.Id == 7);\nclient.Nom = \"Ada Lovelace\";\ndb.SaveChanges();",
+          "bugLines": [2],
+          "explanation": "Avec AsNoTracking, le DbContext ne suit pas l'entité : SaveChanges ne voit aucune modification. AsNoTracking est fait pour la lecture seule.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "efcore-bases-q6",
+          "prompt": "Quelles affirmations sur le DbContext sont vraies ?",
+          "choices": [
+            "Il suit les modifications des entités qu'il a chargées",
+            "Il doit vivre peu de temps : une unité de travail, une requête HTTP",
+            "Il n'est pas thread-safe : pas d'utilisation concurrente",
+            "Une seule instance doit être partagée par toute l'application"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Un DbContext partagé accumulerait les entités suivies (mémoire, données périmées) et planterait en cas d'accès concurrent. On l'enregistre en « scoped » dans l'injection de dépendances.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "efcore-linq",
+      "title": "Requêter avec LINQ",
+      "summary": "Ce qui s'exécute en base, et ce qui s'exécute en mémoire.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "IQueryable et traduction en SQL",
+          "body": "Sur un DbSet, les opérateurs LINQ construisent un IQueryable : rien n'est exécuté tant qu'on n'énumère pas (ToList, First, Count, foreach…). À ce moment-là, toute l'expression est traduite en une seule requête SQL.",
+          "code": "var noms = await db.Clients\n    .Where(c => c.Ville == \"Lyon\")\n    .OrderBy(c => c.Nom)\n    .Select(c => c.Nom)\n    .ToListAsync();\n// SELECT nom FROM clients\n// WHERE ville = 'Lyon' ORDER BY nom"
+        },
+        {
+          "title": "Attention au ToList trop tôt",
+          "body": "Un ToList() placé trop tôt charge toute la table en mémoire ; la suite s'exécute en C#, sur la totalité des lignes. On filtre, trie, projette et pagine avant d'énumérer.",
+          "code": "// charge TOUTE la table, puis filtre en mémoire :\nvar lyon = db.Clients.ToList()\n    .Where(c => c.Ville == \"Lyon\");"
+        },
+        {
+          "title": "Projection, suivi et SQL généré",
+          "body": "Un Select vers un DTO ne charge que les colonnes utiles. En lecture seule, AsNoTracking() évite le coût du suivi. Pour voir le SQL : ToQueryString() sur la requête, ou les logs (LogTo)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "efcore-linq-q1",
+          "prompt": "Quand la requête SQL est-elle exécutée ?",
+          "code": "var q = db.Clients.Where(c => c.Actif);\n// ...\nvar n = q.Count();",
+          "choices": ["À l'appel de Count()", "À la déclaration de q", "Au démarrage de l'application", "Jamais"],
+          "answerIndex": 0,
+          "explanation": "q n'est qu'une description de requête ; Count() la déclenche, traduite en SELECT COUNT(*) … WHERE actif.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "efcore-linq-q2",
+          "prompt": "Cette requête est très lente sur une table d'un million de clients. Touche la ligne en cause.",
+          "code": "var clientsLyon = db.Clients\n    .ToList()\n    .Where(c => c.Ville == \"Lyon\")\n    .Take(20);",
+          "bugLines": [2],
+          "explanation": "ToList() exécute un SELECT sans filtre et charge un million d'objets ; Where et Take s'exécutent ensuite en mémoire. En déplaçant ToList à la fin, tout est traduit en SQL (WHERE … LIMIT 20).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "efcore-linq-q3",
+          "prompt": "Complète : lire les noms des clients actifs, sans suivi des modifications.",
+          "code": "var noms = await db.Clients\n    .___()\n    .Where(c => c.Actif)\n    .___(c => c.Nom)\n    .ToListAsync();",
+          "answers": ["AsNoTracking", "Select"],
+          "distractors": ["Include", "AsTracking", "SelectMany"],
+          "explanation": "AsNoTracking pour la lecture seule, Select pour ne ramener que la colonne nom.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "efcore-linq-q4",
+          "prompt": "Quel SQL correspond à cette requête ?",
+          "code": "db.Commandes\n  .Where(c => c.Total > 100)\n  .OrderByDescending(c => c.Date)\n  .Take(10)\n  .ToList();",
+          "choices": [
+            "SELECT … WHERE total > 100 ORDER BY date DESC LIMIT 10 (TOP 10 en SQL Server)",
+            "SELECT … sans filtre, puis tri et filtrage en mémoire",
+            "SELECT TOP 10 … sans condition",
+            "Dix requêtes SELECT successives"
+          ],
+          "answerIndex": 0,
+          "explanation": "Tant que les opérateurs sont appliqués sur l'IQueryable, avant ToList, tout est traduit en une seule requête.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "efcore-linq-q5",
+          "prompt": "Comment voir le SQL généré par EF Core ?",
+          "choices": [
+            "Appeler ToQueryString() sur la requête",
+            "Configurer optionsBuilder.LogTo(Console.WriteLine)",
+            "Consulter les logs ou le profileur de la base",
+            "Activer une propriété db.ShowSql = true"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Réflexe à prendre : regarder le SQL de toute requête importante, surtout avec des Include ou des projections complexes.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "efcore-linq-q6",
+          "prompt": "Un Where appelle une méthode C# personnelle, impossible à traduire en SQL. Que se passe-t-il ?",
+          "choices": [
+            "EF Core lève une exception à l'exécution (depuis EF Core 3.0)",
+            "EF Core charge silencieusement toute la table pour filtrer en mémoire",
+            "La condition est ignorée",
+            "Le code ne compile pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avant la version 3.0, EF évaluait silencieusement côté client, source de lenteurs cachées. Désormais, seule la projection finale (Select) peut contenir du code non traduisible.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "efcore-relations",
+      "title": "Relations et chargement",
+      "summary": "Include, lazy loading et le problème N+1.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les propriétés de navigation",
+          "body": "Client.Commandes et Commande.Client sont des propriétés de navigation : EF Core en déduit la clé étrangère (ClientId) et la relation 1-N."
+        },
+        {
+          "title": "Include : le chargement anticipé",
+          "body": "Sans Include, les commandes ne sont pas chargées. Include les charge dans la même requête, par jointure. Avec plusieurs collections incluses, AsSplitQuery() évite l'explosion du nombre de lignes en faisant une requête par collection.",
+          "code": "var clients = await db.Clients\n    .Where(c => c.Ville == \"Lyon\")\n    .Include(c => c.Commandes)\n    .ToListAsync();"
+        },
+        {
+          "title": "Le lazy loading et le N+1",
+          "body": "Avec le chargement paresseux (lazy loading, via des proxies), accéder à client.Commandes déclenche une requête à la volée : pratique, mais dans une boucle, c'est le problème N+1. On préfère Include, ou mieux, une projection Select vers exactement ce dont on a besoin.",
+          "code": "foreach (var client in db.Clients.ToList())\n{\n    // lazy loading : une requête par client !\n    Console.WriteLine(client.Commandes.Count);\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "efcore-rel-q1",
+          "prompt": "Sans Include ni lazy loading, que contient client.Commandes après db.Clients.First() ?",
+          "choices": [
+            "Rien n'est chargé : la collection est vide",
+            "Toutes les commandes du client",
+            "Seulement la première commande",
+            "Une exception est levée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les relations ne sont jamais chargées implicitement. Une collection vide ne veut donc pas dire « aucune commande » : piège classique.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "efcore-rel-q2",
+          "prompt": "Ce code exécute 1 001 requêtes pour 1 000 clients. Touche la ligne qui déclenche les requêtes en trop.",
+          "code": "foreach (var client in db.Clients.ToList())\n{\n    // lazy loading activé\n    Console.WriteLine(client.Commandes.Count);\n}",
+          "bugLines": [4],
+          "explanation": "Chaque accès à client.Commandes déclenche une requête. Avec db.Clients.Select(c => new { c.Nom, Nb = c.Commandes.Count() }), tout se fait en une seule requête.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "efcore-rel-q3",
+          "prompt": "Complète pour charger les clients avec leurs commandes, en une requête.",
+          "code": "var clients = await db.Clients\n    .___(c => c.___)\n    .ToListAsync();",
+          "answers": ["Include", "Commandes"],
+          "distractors": ["Select", "Join", "Client"],
+          "explanation": "Include(c => c.Commandes) ajoute une jointure et remplit la collection de chaque client.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "efcore-rel-q4",
+          "prompt": "Pourquoi inclure deux collections (Commandes et Adresses) dans la même requête peut-il être lent ?",
+          "choices": [
+            "La jointure multiplie les lignes (commandes × adresses) ; AsSplitQuery y remédie",
+            "EF Core interdit plusieurs Include",
+            "Les adresses sont chargées deux fois en mémoire",
+            "Include désactive les index"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un client avec 50 commandes et 3 adresses produit 150 lignes au lieu de 53. On retrouve le problème de « jointures qui multiplient les lignes » vu dans le tronc commun.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "efcore-rel-q5",
+          "prompt": "Pour afficher le nom de chaque client et son nombre de commandes, quelle requête est la plus efficace ?",
+          "choices": [
+            "db.Clients.Select(c => new { c.Nom, Nb = c.Commandes.Count() })",
+            "db.Clients.Include(c => c.Commandes).ToList(), puis Count en C#",
+            "db.Clients.ToList() avec le lazy loading",
+            "Une requête par client"
+          ],
+          "answerIndex": 0,
+          "explanation": "La projection est traduite en une seule requête avec un COUNT : ni commandes chargées inutilement, ni N+1.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "efcore-rel-q6",
+          "prompt": "Revue de code : coche tous les problèmes.",
+          "code": "public async Task<List<Client>> Get()\n{\n    var db = new BoutiqueContext();\n    return db.Clients.Include(c => c.Commandes)\n                     .ToList();\n}",
+          "choices": [
+            "Le DbContext n'est jamais libéré (ni using, ni injection)",
+            "La méthode async appelle ToList() au lieu de ToListAsync()",
+            "Toutes les commandes de tous les clients sont chargées, sans filtre ni pagination",
+            "Include est interdit dans une méthode async"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "On injecte le DbContext, on utilise ToListAsync pour ne pas bloquer de thread, et on filtre et pagine (ou on projette) plutôt que de tout charger.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "efcore-defi",
+    "title": "Défi entretien : EF Core en production",
+    "summary": "N+1, projections et concurrence.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "efcore-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une page liste 50 commandes avec le nom du client. Les logs montrent 51 requêtes SQL. Quel est le diagnostic ?",
+        "choices": [
+          "Un problème N+1 : le client de chaque commande est chargé à la demande (lazy loading)",
+          "Un index manquant sur commandes.id",
+          "Un pool de connexions trop petit",
+          "Un deadlock"
+        ],
+        "answerIndex": 0,
+        "explanation": "1 requête pour les commandes, puis 50 pour les clients : la signature typique du N+1.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "efcore-defi-q2",
+        "prompt": "Cas pratique 2/3 — Corrige avec une projection.",
+        "code": "var lignes = await db.Commandes\n    .OrderByDescending(c => c.Date)\n    .Take(50)\n    .___(c => new { c.Id, c.Total,\n                    Client = c.Client.___ })\n    .ToListAsync();",
+        "answers": ["Select", "Nom"],
+        "distractors": ["Include", "Where", "Commandes"],
+        "explanation": "La projection ne ramène que les colonnes affichées, dont le nom du client.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "efcore-defi-q3",
+        "prompt": "Cas pratique 3/3 — Quel SQL EF Core génère-t-il pour c.Client.Nom dans cette projection ?",
+        "choices": [
+          "Une jointure avec la table clients, dans la même requête",
+          "Une requête séparée par commande",
+          "Aucun : le nom vient d'un cache",
+          "Une sous-requête par colonne"
+        ],
+        "answerIndex": 0,
+        "explanation": "Naviguer vers une relation dans un Select est traduit en JOIN : 51 requêtes deviennent 1.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "efcore-defi-q4",
+        "prompt": "Deux achats simultanés peuvent vendre deux fois le dernier article. Touche une ligne en cause.",
+        "code": "var produit = await db.Produits.FindAsync(id);\nif (produit.Stock > 0)\n{\n    produit.Stock -= 1;\n    await db.SaveChangesAsync();\n}",
+        "bugLines": [1, 4],
+        "explanation": "C'est la mise à jour perdue du tronc commun : les deux requêtes lisent Stock = 1, puis écrivent 0. Solutions : un jeton de concurrence ([ConcurrencyCheck] ou rowversion, qui provoque une DbUpdateConcurrencyException) ou une mise à jour atomique.",
+        "difficulty": 3
+      },
+      {
+        "type": "fill",
+        "id": "efcore-defi-q5",
+        "prompt": "Corrige avec une mise à jour atomique exécutée en base (EF Core 7 et plus).",
+        "code": "var n = await db.Produits\n    .Where(p => p.Id == id && p.Stock ___ 0)\n    .___(s => s.SetProperty(\n        p => p.Stock, p => p.Stock - 1));\n// n == 0 : rupture de stock",
+        "answers": [">", "ExecuteUpdateAsync"],
+        "distractors": ["<", "SaveChangesAsync", "UpdateRange"],
+        "explanation": "ExecuteUpdateAsync envoie directement UPDATE produits SET stock = stock - 1 WHERE id = … AND stock > 0, sans charger l'entité, et renvoie le nombre de lignes modifiées.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "efcore-defi-q6",
+        "prompt": "Question d'entretien : quels sont les risques d'un ORM ?",
+        "choices": [
+          "Générer des requêtes inefficaces sans s'en rendre compte (N+1, chargements excessifs)",
+          "Faire oublier le SQL au point de ne plus savoir optimiser",
+          "Des problèmes de concurrence si l'on ignore transactions et verrous",
+          "Rendre impossible l'écriture de SQL brut"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "EF Core permet le SQL brut quand il le faut (FromSql, SqlQuery). La bonne réponse d'entretien : l'ORM est un outil de productivité, qui ne dispense pas de comprendre le SQL qu'il produit.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

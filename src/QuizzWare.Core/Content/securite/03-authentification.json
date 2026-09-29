@@ -1,0 +1,25 @@
+{
+  "id": "sec-ch-authentification",
+  "title": "Authentification et autorisation",
+  "summary": "Identités, sessions et jetons.",
+  "lessons": [
+    {
+      "id": "sec-mots-de-passe",
+      "title": "Mots de passe",
+      "summary": "Hachage et authentification multifacteur.",
+      "difficulty": 1
+    },
+    {
+      "id": "sec-sessions-jwt",
+      "title": "Sessions et JWT",
+      "summary": "Avantages et pièges.",
+      "difficulty": 2
+    },
+    {
+      "id": "sec-oauth-oidc",
+      "title": "OAuth 2 et OpenID Connect",
+      "summary": "Déléguer l'authentification.",
+      "difficulty": 3
+    }
+  ]
+}

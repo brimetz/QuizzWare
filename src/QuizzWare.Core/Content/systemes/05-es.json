@@ -1,0 +1,19 @@
+{
+  "id": "os-ch-es",
+  "title": "Entrées / sorties",
+  "summary": "Interruptions et E/S asynchrones.",
+  "lessons": [
+    {
+      "id": "os-appels-systeme",
+      "title": "Interruptions et appels système",
+      "summary": "Passer en mode noyau.",
+      "difficulty": 2
+    },
+    {
+      "id": "os-io-async",
+      "title": "E/S asynchrones",
+      "summary": "epoll et io_uring.",
+      "difficulty": 3
+    }
+  ]
+}

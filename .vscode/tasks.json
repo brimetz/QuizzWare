@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "QuizzWare: Lancer (Windows)",
+      "detail": "Compile et lance l'app sur Windows : le plus rapide pour itérer",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "${workspaceFolder}/src/QuizzWare", "-t:Run", "-f", "net9.0-windows10.0.19041.0"],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "QuizzWare: Lancer (Android)",
+      "detail": "Compile, déploie et lance l'app sur le téléphone ou l'émulateur Android connecté",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "${workspaceFolder}/src/QuizzWare", "-t:Run", "-f", "net9.0-android"],
+      "problemMatcher": "$msCompile",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "QuizzWare: Tests",
+      "detail": "Lance les tests du Core (logique + validation du contenu JSON)",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["test", "${workspaceFolder}/tests/QuizzWare.Core.Tests"],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "test", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    }
+  ]
+}

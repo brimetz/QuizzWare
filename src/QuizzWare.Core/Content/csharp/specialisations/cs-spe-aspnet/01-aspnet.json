@@ -1,0 +1,378 @@
+{
+  "id": "aspnet-ch-essentiel",
+  "title": "ASP.NET Core : l'essentiel",
+  "summary": "Pipeline, injection de dépendances et API robustes.",
+  "lessons": [
+    {
+      "id": "aspnet-pipeline",
+      "title": "Minimal APIs et pipeline",
+      "summary": "Routes, liaison des paramètres et middlewares.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Une application minimale",
+          "body": "builder configure les services (injection de dépendances) et la configuration ; app configure le pipeline HTTP et les routes. Les paramètres d'un handler sont liés automatiquement : valeur de route, query string, corps JSON ou service enregistré.",
+          "code": "var builder = WebApplication.CreateBuilder(args);\nbuilder.Services.AddScoped<IClientService, ClientService>();\n\nvar app = builder.Build();\napp.MapGet(\"/clients/{id:int}\", async (int id, IClientService s) =>\n    await s.Trouver(id) is { } c ? Results.Ok(c) : Results.NotFound());\napp.Run();"
+        },
+        {
+          "title": "Le pipeline de middlewares",
+          "body": "Chaque requête traverse une chaîne de middlewares, dans l'ordre où ils ont été ajoutés ; la réponse remonte ensuite dans l'ordre inverse. L'ordre compte : la gestion d'erreurs en premier, l'authentification avant l'autorisation.",
+          "code": "app.UseExceptionHandler(\"/erreur\");\napp.UseHttpsRedirection();\napp.UseAuthentication();\napp.UseAuthorization();\napp.MapControllers();"
+        },
+        {
+          "title": "Écrire un middleware",
+          "body": "Un middleware reçoit le contexte HTTP et le middleware suivant. Ce qui précède await next(context) s'exécute à l'aller, ce qui suit au retour.",
+          "code": "app.Use(async (context, next) =>\n{\n    var chrono = Stopwatch.StartNew();\n    await next(context); // passe au suivant\n    app.Logger.LogInformation(\"{Path} : {Ms} ms\",\n        context.Request.Path, chrono.ElapsedMilliseconds);\n});"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "aspnet-pipe-q1",
+          "prompt": "À quoi sert builder.Services ?",
+          "choices": [
+            "Enregistrer les services pour l'injection de dépendances",
+            "Définir les routes HTTP",
+            "Démarrer le serveur web",
+            "Configurer uniquement la base de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les services sont enregistrés avant builder.Build() ; les routes et middlewares se configurent ensuite sur app.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "aspnet-pipe-q2",
+          "prompt": "Avec cette route, que renvoie GET /clients/abc ?",
+          "code": "app.MapGet(\"/clients/{id:int}\", (int id) => ...);",
+          "choices": [
+            "404 : la contrainte :int n'est pas satisfaite, aucune route ne correspond",
+            "400 Bad Request",
+            "500 Internal Server Error",
+            "Le handler est appelé avec id = 0"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les contraintes de route participent à la sélection de la route : « abc » n'est pas un entier, donc la route ne correspond pas.",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "aspnet-pipe-q3",
+          "prompt": "Remets les middlewares dans le bon ordre.",
+          "lines": [
+            "app.UseExceptionHandler(\"/erreur\");",
+            "app.UseHttpsRedirection();",
+            "app.UseRouting();",
+            "app.UseAuthentication();",
+            "app.UseAuthorization();",
+            "app.MapControllers();"
+          ],
+          "explanation": "La gestion d'erreurs enveloppe tout le reste ; il faut savoir quelle route est visée (routage) et qui est l'utilisateur (authentification) avant de vérifier ses droits (autorisation).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "aspnet-pipe-q4",
+          "prompt": "Des utilisateurs connectés reçoivent 401 sur les endpoints protégés. Touche une ligne en cause.",
+          "code": "var app = builder.Build();\napp.UseAuthorization();\napp.UseAuthentication();\napp.MapControllers();\napp.Run();",
+          "bugLines": [2, 3],
+          "explanation": "L'autorisation s'exécute avant que l'authentification n'ait établi l'identité : l'utilisateur est encore anonyme. UseAuthentication doit précéder UseAuthorization.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "aspnet-pipe-q5",
+          "prompt": "Complète ce middleware pour qu'il passe la main au suivant.",
+          "code": "app.Use(async (context, ___) =>\n{\n    context.Response.Headers[\"X-App\"] = \"QuizzWare\";\n    await ___(context);\n});",
+          "answers": ["next", "next"],
+          "distractors": ["context", "Invoke", "return"],
+          "explanation": "Sans appel à next, la requête s'arrête là : c'est un « court-circuit », utile par exemple pour renvoyer une réponse depuis un cache.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "aspnet-pipe-q6",
+          "prompt": "Quelles sources un paramètre de handler de Minimal API peut-il recevoir automatiquement ?",
+          "choices": [
+            "Une valeur de la route",
+            "Un paramètre de query string",
+            "Le corps JSON de la requête",
+            "Un service enregistré dans le conteneur",
+            "Une variable locale d'un autre handler"
+          ],
+          "answerIndices": [0, 1, 2, 3],
+          "explanation": "La liaison est déduite du type et du nom : types simples depuis la route ou la query string, objets complexes depuis le corps, interfaces enregistrées depuis l'injection de dépendances. [FromQuery], [FromBody]… permettent de lever les ambiguïtés.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "aspnet-di",
+      "title": "Injection de dépendances et configuration",
+      "summary": "Durées de vie, dépendance captive et options.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les trois durées de vie",
+          "body": "Transient : une nouvelle instance à chaque résolution. Scoped : une instance par requête HTTP (le DbContext, par exemple). Singleton : une seule instance pour toute l'application, qui doit donc être thread-safe.",
+          "code": "builder.Services.AddTransient<IHorloge, Horloge>();\nbuilder.Services.AddScoped<IPanier, Panier>();\nbuilder.Services.AddSingleton<ICache, CacheMemoire>();"
+        },
+        {
+          "title": "La dépendance captive",
+          "body": "Un singleton qui reçoit un service scoped le garde pour toujours : le scoped devient de fait un singleton, par exemple un DbContext partagé entre des requêtes concurrentes. En développement, ASP.NET Core valide les portées et lève une exception."
+        },
+        {
+          "title": "Configuration et options",
+          "body": "appsettings.json, appsettings.{Environnement}.json, secrets utilisateur, variables d'environnement et ligne de commande sont fusionnés dans IConfiguration : la dernière source chargée l'emporte. Le pattern Options lie une section à une classe typée.",
+          "code": "builder.Services.Configure<SmtpOptions>(\n    builder.Configuration.GetSection(\"Smtp\"));\n\npublic class Notifieur(IOptions<SmtpOptions> options) { }"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "aspnet-di-q1",
+          "prompt": "Quelle durée de vie pour un DbContext EF Core ?",
+          "choices": ["Scoped", "Singleton", "Transient", "Aucune : on l'instancie avec new"],
+          "answerIndex": 0,
+          "explanation": "Une unité de travail par requête HTTP : c'est ce que fait AddDbContext par défaut.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "aspnet-di-q2",
+          "prompt": "Que se passe-t-il avec cette configuration ?",
+          "code": "builder.Services.AddScoped<BoutiqueContext>();\nbuilder.Services.AddSingleton<CacheProduits>();\n\npublic class CacheProduits(BoutiqueContext db) { }",
+          "choices": [
+            "Dépendance captive : le DbContext serait partagé par toute l'application ; en développement, une exception est levée",
+            "Tout va bien : chaque requête reçoit un nouveau DbContext",
+            "Erreur de compilation",
+            "Le singleton devient automatiquement scoped"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour utiliser un service scoped depuis un singleton, on injecte IServiceScopeFactory et on crée un scope le temps de l'opération.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "aspnet-di-q3",
+          "prompt": "Complète : une instance par requête HTTP.",
+          "code": "builder.Services.___<IPanier, Panier>();",
+          "answers": ["AddScoped"],
+          "distractors": ["AddSingleton", "AddTransient", "AddPerRequest"],
+          "explanation": "En ASP.NET Core, le scope correspond à la requête HTTP.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "aspnet-di-q4",
+          "prompt": "Ce service, enregistré en singleton, plante de façon aléatoire sous charge. Touche la ligne en cause.",
+          "code": "public class CompteurVisites\n{\n    private readonly Dictionary<string, int> _visites = new();\n\n    public void Ajouter(string page) =>\n        _visites[page] = _visites.GetValueOrDefault(page) + 1;\n}",
+          "bugLines": [3],
+          "explanation": "Un singleton est utilisé par plusieurs requêtes en parallèle, et Dictionary n'est pas thread-safe. ConcurrentDictionary (AddOrUpdate) règle le problème.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "aspnet-di-q5",
+          "prompt": "appsettings.json définit Smtp:Port = 25 et la variable d'environnement Smtp__Port vaut 587. Quelle valeur l'application lit-elle ?",
+          "choices": [
+            "587 : les variables d'environnement sont chargées après appsettings.json",
+            "25 : le fichier est prioritaire",
+            "Une erreur de conflit au démarrage",
+            "La valeur la plus petite"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui permet de surcharger la configuration par environnement (conteneur, cloud) sans toucher au fichier. Le double tiret bas remplace « : » dans les noms de variables.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "aspnet-di-q6",
+          "prompt": "Quelles affirmations sur les durées de vie sont vraies ?",
+          "choices": [
+            "Un singleton doit être thread-safe",
+            "Un service transient est recréé à chaque injection",
+            "Un service scoped est partagé pendant toute la requête HTTP",
+            "On peut injecter un service scoped dans un singleton sans risque"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "La règle : un service ne doit dépendre que de services qui vivent au moins aussi longtemps que lui.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "aspnet-api",
+      "title": "Construire une API robuste",
+      "summary": "Codes de statut, async de bout en bout et sécurité.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Codes de statut et validation",
+          "body": "201 Created (avec l'adresse de la ressource) après une création, 400 pour une entrée invalide, 404 si la ressource n'existe pas, 409 en cas de conflit. Le format ProblemDetails (RFC 9457) standardise le corps des erreurs.",
+          "code": "app.MapPost(\"/clients\", async (ClientDto dto, IClientService s) =>\n{\n    if (string.IsNullOrWhiteSpace(dto.Email))\n        return Results.ValidationProblem(new Dictionary<string, string[]>\n            { [\"email\"] = [\"Email obligatoire\"] });\n\n    var client = await s.Creer(dto);\n    return Results.Created($\"/clients/{client.Id}\", client);\n});"
+        },
+        {
+          "title": "Async de bout en bout",
+          "body": "Le serveur (Kestrel) traite les requêtes avec un pool de threads. Un appel bloquant (.Result, .Wait(), Thread.Sleep) immobilise un thread pendant l'attente : sous charge, le pool s'épuise (thread pool starvation) et toute l'application ralentit. On utilise async/await jusqu'au bout, et on propage le CancellationToken de la requête."
+        },
+        {
+          "title": "Authentification et autorisation",
+          "body": "L'authentification établit qui est l'utilisateur (cookie, JWT…) ; l'autorisation décide s'il a le droit d'agir (rôles, policies). On renvoie 401 quand l'identité manque ou est invalide, 403 quand elle est connue mais insuffisante.",
+          "code": "app.MapDelete(\"/clients/{id}\", Supprimer)\n   .RequireAuthorization(\"Admin\");"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "aspnet-api-q1",
+          "prompt": "Quel code renvoyer après la création réussie d'une ressource ?",
+          "choices": ["201 Created", "200 OK", "204 No Content", "302 Found"],
+          "answerIndex": 0,
+          "explanation": "201, avec un en-tête Location qui indique l'adresse de la nouvelle ressource.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "aspnet-api-q2",
+          "prompt": "Quelle est la différence entre 401 et 403 ?",
+          "choices": [
+            "401 : identité absente ou invalide ; 403 : identité connue mais droits insuffisants",
+            "401 : droits insuffisants ; 403 : pas connecté",
+            "Aucune, ce sont des synonymes",
+            "401 est réservé aux API, 403 aux pages web"
+          ],
+          "answerIndex": 0,
+          "explanation": "401 invite à s'authentifier ; 403 signifie que s'authentifier à nouveau ne changera rien.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "aspnet-api-q3",
+          "prompt": "Cet endpoint s'effondre sous forte charge, alors que la base répond vite. Touche la ligne en cause.",
+          "code": "app.MapGet(\"/produits/{id}\", (int id, IProduitService s) =>\n{\n    var produit = s.TrouverAsync(id).Result;\n    return Results.Ok(produit);\n});",
+          "bugLines": [3],
+          "explanation": ".Result bloque un thread du pool pendant toute l'attente : sous charge, le pool s'épuise. Le handler doit être async et faire await s.TrouverAsync(id).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "aspnet-api-q4",
+          "prompt": "Complète : renvoyer 201 avec l'adresse de la nouvelle ressource.",
+          "code": "var client = await s.Creer(dto);\nreturn Results.___($\"/clients/{client.Id}\", client);",
+          "answers": ["Created"],
+          "distractors": ["Ok", "Accepted", "Redirect"],
+          "explanation": "Results.Created renseigne l'en-tête Location et le code 201.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "aspnet-api-q5",
+          "prompt": "Quelles pratiques rendent une API ASP.NET Core plus robuste ?",
+          "choices": [
+            "Propager le CancellationToken de la requête aux appels asynchrones",
+            "Renvoyer les erreurs au format ProblemDetails",
+            "Valider les entrées et renvoyer 400 avec le détail des erreurs",
+            "Renvoyer 200 avec un message d'erreur dans le corps"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Un code 200 pour une erreur trompe les clients, les caches et la supervision.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "aspnet-api-q6",
+          "prompt": "Pourquoi un .Result dans un seul handler peut-il ralentir TOUTE l'application ?",
+          "choices": [
+            "Il bloque un thread du pool ; sous charge, le pool s'épuise et les autres requêtes attendent",
+            "Il désactive le garbage collector",
+            "Il force l'utilisation de HTTP/1.0",
+            "Il vide le cache de configuration"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le pool crée de nouveaux threads lentement : pendant ce temps, les requêtes s'accumulent. C'est une cause classique de latence en production.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "aspnet-defi",
+    "title": "Défi entretien : ASP.NET Core en production",
+    "summary": "Erreurs, annulation, HttpClient et pipeline.",
+    "questions": [
+      {
+        "type": "bug",
+        "id": "aspnet-defi-q1",
+        "prompt": "Cas pratique 1/3 — En production, une erreur non gérée renvoie une page avec la stack trace. Touche la ligne en cause.",
+        "code": "var app = builder.Build();\napp.UseDeveloperExceptionPage();\napp.UseHttpsRedirection();\napp.MapControllers();\napp.Run();",
+        "bugLines": [2],
+        "explanation": "La page de développement expose le code, les chemins et parfois des secrets. Depuis .NET 6, elle est activée automatiquement en environnement Development : l'appeler explicitement l'active partout.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "aspnet-defi-q2",
+        "prompt": "Cas pratique 2/3 — Active la page détaillée seulement en développement.",
+        "code": "if (app.Environment.___())\n    app.UseDeveloperExceptionPage();\nelse\n    app.___(\"/erreur\");",
+        "answers": ["IsDevelopment", "UseExceptionHandler"],
+        "distractors": ["IsProduction", "UseStatusCodePages", "IsDebug"],
+        "explanation": "En production, UseExceptionHandler renvoie une réponse générique (idéalement un ProblemDetails) et journalise l'erreur.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "aspnet-defi-q3",
+        "prompt": "Cas pratique 3/3 — Qu'est-ce qui ne doit jamais apparaître dans une réponse d'erreur en production ?",
+        "choices": [
+          "La stack trace",
+          "Des chaînes de connexion ou des secrets",
+          "Des détails SQL (noms de tables, requêtes)",
+          "Un identifiant de corrélation pour retrouver l'erreur dans les logs"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "L'identifiant de corrélation (traceId) est au contraire recommandé : le support retrouve l'erreur dans les logs sans rien exposer.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "aspnet-defi-q4",
+        "prompt": "Un endpoint appelle une API externe lente. L'utilisateur ferme la page. Comment éviter de continuer à travailler pour rien ?",
+        "choices": [
+          "Accepter un CancellationToken dans le handler et le passer aux appels (HttpClient, EF Core)",
+          "Ajouter un Thread.Sleep",
+          "Augmenter le délai d'expiration",
+          "Utiliser .Result"
+        ],
+        "answerIndex": 0,
+        "explanation": "ASP.NET Core annule le token quand le client se déconnecte : les appels qui le reçoivent s'arrêtent aussitôt.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "aspnet-defi-q5",
+        "prompt": "Sous forte charge, ce code finit par échouer faute de sockets disponibles. Touche la ligne en cause.",
+        "code": "app.MapGet(\"/meteo\", async () =>\n{\n    using var client = new HttpClient();\n    return await client.GetStringAsync(\"https://api.meteo/...\");\n});",
+        "bugLines": [3],
+        "explanation": "Créer un HttpClient par requête ouvre une nouvelle connexion à chaque fois ; les sockets fermées restent un moment en TIME_WAIT et finissent par s'épuiser. On utilise IHttpClientFactory (builder.Services.AddHttpClient) ou un client partagé.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "aspnet-defi-q6",
+        "prompt": "Remets dans l'ordre le trajet d'une requête vers un endpoint protégé.",
+        "language": "text",
+        "lines": [
+          "Kestrel reçoit la requête HTTP",
+          "Le middleware de gestion d'erreurs l'enveloppe",
+          "L'authentification établit l'identité (cookie, JWT)",
+          "L'autorisation vérifie les droits",
+          "Le handler de l'endpoint s'exécute",
+          "La réponse remonte les middlewares dans l'ordre inverse"
+        ],
+        "explanation": "Savoir décrire ce trajet est une question d'entretien fréquente : elle montre qu'on comprend le rôle de l'ordre des middlewares.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

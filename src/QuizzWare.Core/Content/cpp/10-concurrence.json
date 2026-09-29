@@ -1,0 +1,25 @@
+{
+  "id": "cpp-ch-concurrence",
+  "title": "Concurrence",
+  "summary": "Threads, mutex et atomics.",
+  "lessons": [
+    {
+      "id": "cpp-threads",
+      "title": "Threads",
+      "summary": "std::thread et jthread.",
+      "difficulty": 2
+    },
+    {
+      "id": "cpp-mutex",
+      "title": "Mutex et verrous",
+      "summary": "lock_guard, scoped_lock et deadlocks.",
+      "difficulty": 2
+    },
+    {
+      "id": "cpp-atomics",
+      "title": "Atomics",
+      "summary": "Opérations atomiques et data races.",
+      "difficulty": 3
+    }
+  ]
+}

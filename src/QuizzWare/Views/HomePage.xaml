@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:QuizzWare.ViewModels"
+             x:Class="QuizzWare.Views.HomePage"
+             x:DataType="vm:HomeViewModel"
+             Shell.NavBarIsVisible="False">
+
+    <CollectionView ItemsSource="{Binding Categories}" SelectionMode="None" Margin="16,0">
+        <CollectionView.Header>
+            <Grid ColumnDefinitions="*,Auto" Padding="0,32,0,20">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="QuizzWare" Style="{StaticResource TitleLabel}" />
+                    <Label Text="{Binding SummaryText}" Style="{StaticResource MutedLabel}" />
+                </VerticalStackLayout>
+                <Border Grid.Column="1" Style="{StaticResource Pill}" VerticalOptions="Start">
+                    <Label Text="{Binding StreakText}" FontAttributes="Bold" FontSize="16" />
+                </Border>
+            </Grid>
+        </CollectionView.Header>
+
+        <CollectionView.ItemsLayout>
+            <LinearItemsLayout Orientation="Vertical" ItemSpacing="12" />
+        </CollectionView.ItemsLayout>
+
+        <CollectionView.ItemTemplate>
+            <DataTemplate x:DataType="vm:CategoryCardViewModel">
+                <Border Style="{StaticResource Card}" Opacity="{Binding Opacity}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="56,*" ColumnSpacing="14">
+                        <Border Style="{StaticResource Badge}" BackgroundColor="{Binding Color}" VerticalOptions="Start">
+                            <Label Text="{Binding Icon}" FontAttributes="Bold" FontSize="16" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="6">
+                            <Label Text="{Binding Name}" Style="{StaticResource SubHeaderLabel}" />
+                            <Label Text="{Binding LevelText}" Style="{StaticResource MutedLabel}" />
+                            <ProgressBar Progress="{Binding Progress}" ProgressColor="{Binding Color}" />
+                            <Label Text="{Binding XpText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </CollectionView.ItemTemplate>
+
+        <CollectionView.Footer>
+            <BoxView HeightRequest="24" Color="Transparent" />
+        </CollectionView.Footer>
+    </CollectionView>
+
+</ContentPage>

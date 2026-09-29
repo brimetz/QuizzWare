@@ -1,0 +1,25 @@
+{
+  "id": "os-ch-processus",
+  "title": "Processus et threads",
+  "summary": "L'exécution des programmes.",
+  "lessons": [
+    {
+      "id": "os-processus",
+      "title": "Processus",
+      "summary": "Création, états et contexte.",
+      "difficulty": 1
+    },
+    {
+      "id": "os-threads",
+      "title": "Threads",
+      "summary": "Partager un espace mémoire.",
+      "difficulty": 2
+    },
+    {
+      "id": "os-ordonnancement",
+      "title": "Ordonnancement",
+      "summary": "Comment le processeur est partagé.",
+      "difficulty": 2
+    }
+  ]
+}

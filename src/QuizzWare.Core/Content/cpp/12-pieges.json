@@ -1,0 +1,19 @@
+{
+  "id": "cpp-ch-pieges",
+  "title": "Pièges et comportements indéfinis",
+  "summary": "La synthèse d'entretien.",
+  "lessons": [
+    {
+      "id": "cpp-ub",
+      "title": "Comportements indéfinis",
+      "summary": "Les reconnaître et les éviter.",
+      "difficulty": 3
+    },
+    {
+      "id": "cpp-pieges-entretien",
+      "title": "Pièges classiques d'entretien",
+      "summary": "Questions piège et bonnes réponses.",
+      "difficulty": 3
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "cpp-ch-heritage",
+  "title": "Héritage et polymorphisme",
+  "summary": "virtual, vtable et pièges.",
+  "lessons": [
+    {
+      "id": "cpp-heritage",
+      "title": "Héritage",
+      "summary": "Public, protégé, privé.",
+      "difficulty": 1
+    },
+    {
+      "id": "cpp-virtual",
+      "title": "Fonctions virtuelles",
+      "summary": "Polymorphisme dynamique, override, final.",
+      "difficulty": 2
+    },
+    {
+      "id": "cpp-slicing",
+      "title": "Pièges du polymorphisme",
+      "summary": "Slicing et destructeur virtuel.",
+      "difficulty": 3
+    }
+  ]
+}

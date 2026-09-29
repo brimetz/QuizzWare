@@ -1,0 +1,101 @@
+{
+  "id": "c-ch-memoire",
+  "title": "Pointeurs et mémoire",
+  "summary": "Adresses, allocation et comportements indéfinis.",
+  "lessons": [
+    {
+      "id": "c-pointeurs",
+      "title": "Pointeurs et mémoire",
+      "summary": "Adresses, allocation dynamique et comportements indéfinis.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Adresses et pointeurs",
+          "body": "L'opérateur & donne l'adresse d'une variable, l'opérateur * déréférence un pointeur. L'arithmétique de pointeurs se fait en nombre d'éléments : p + 1 avance de sizeof(*p) octets.",
+          "code": "int arr[3] = {10, 20, 30};\nint *p = arr;      // pointe sur arr[0]\nprintf(\"%d\", *(p + 1)); // 20"
+        },
+        {
+          "title": "Allocation dynamique",
+          "body": "malloc alloue de la mémoire sur le tas, qui doit être libérée avec free. Oublier free provoque une fuite ; utiliser la mémoire après free est un use-after-free."
+        },
+        {
+          "title": "Comportement indéfini",
+          "body": "Lire ou écrire hors des bornes d'un tableau, déréférencer un pointeur nul ou libérer deux fois la même zone sont des comportements indéfinis : le programme peut sembler fonctionner, planter, ou être exploitable."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-pointeurs-q1",
+          "prompt": "Que renvoie l'expression &x ?",
+          "choices": [
+            "La valeur de x",
+            "L'adresse de x",
+            "La taille de x",
+            "Une copie de x"
+          ],
+          "answerIndex": 1,
+          "explanation": "& est l'opérateur d'adresse ; * permet ensuite de déréférencer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-pointeurs-q2",
+          "prompt": "Avec quelle fonction libérer une zone allouée par malloc ?",
+          "choices": [
+            "delete",
+            "free",
+            "release",
+            "dispose"
+          ],
+          "answerIndex": 1,
+          "explanation": "En C, malloc/calloc/realloc vont de pair avec free. delete est un opérateur C++.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-pointeurs-q3",
+          "prompt": "Que vaut sizeof(char) ?",
+          "choices": [
+            "1",
+            "2",
+            "4",
+            "Dépend de la plateforme"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le standard C garantit que sizeof(char) vaut toujours 1.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-pointeurs-q4",
+          "prompt": "Que se passe-t-il avec ce code ?",
+          "code": "int arr[5];\narr[5] = 1;",
+          "choices": [
+            "arr[5] vaut 1",
+            "Erreur de compilation",
+            "Comportement indéfini",
+            "Le tableau est agrandi"
+          ],
+          "answerIndex": 2,
+          "explanation": "Les indices valides vont de 0 à 4 : écrire en arr[5] déborde du tableau, ce qui est un comportement indéfini.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-pointeurs-q5",
+          "prompt": "Si p est un int* et que sizeof(int) vaut 4, de combien d'octets p + 1 avance-t-il ?",
+          "choices": [
+            "1",
+            "4",
+            "8",
+            "Cela dépend de la valeur pointée"
+          ],
+          "answerIndex": 1,
+          "explanation": "L'arithmétique de pointeurs se fait en éléments : p + 1 avance de sizeof(int) octets.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "unlockedBy": "os-ch-processus",
+  "nodes": [
+    {
+      "id": "os-spe-linux",
+      "title": "Linux",
+      "summary": "Le système qui fait tourner le cloud.",
+      "icon": "LNX",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "os-spe-noyau",
+          "title": "Noyau Linux",
+          "summary": "Modules, pilotes, espace noyau et espace utilisateur.",
+          "icon": "KRNL",
+          "kind": "techno",
+          "linkTo": "c/c-spe-noyau"
+        },
+        {
+          "id": "os-spe-admin",
+          "title": "Administration Linux",
+          "summary": "Processus, systemd, permissions, disques et journaux.",
+          "icon": "SYSD",
+          "kind": "concept",
+          "linkTo": "architecture-infra/infra-spe-admin-linux"
+        }
+      ]
+    },
+    {
+      "id": "os-spe-virtualisation",
+      "title": "Virtualisation",
+      "summary": "Plusieurs systèmes sur une même machine.",
+      "icon": "VM",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "os-spe-hyperviseurs",
+          "title": "Hyperviseurs",
+          "summary": "KVM, Hyper-V et machines virtuelles.",
+          "icon": "HYP",
+          "kind": "concept"
+        },
+        {
+          "id": "os-spe-isolation",
+          "title": "Namespaces et cgroups",
+          "summary": "Les briques des conteneurs.",
+          "icon": "CGRP",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "os-spe-temps-reel",
+      "title": "Systèmes temps réel",
+      "summary": "Des garanties de délai.",
+      "icon": "RT",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "os-spe-rtos",
+          "title": "FreeRTOS",
+          "summary": "Tâches, ordonnancement temps réel, files et sémaphores.",
+          "icon": "RTOS",
+          "kind": "techno",
+          "linkTo": "c/c-spe-freertos"
+        }
+      ]
+    },
+    {
+      "id": "os-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "os-spe-porte-c",
+          "title": "C",
+          "summary": "Le langage des systèmes d'exploitation.",
+          "icon": "C",
+          "kind": "porte",
+          "linkTo": "c"
+        },
+        {
+          "id": "os-spe-porte-archi",
+          "title": "Architecture système",
+          "summary": "Des systèmes aux systèmes distribués.",
+          "icon": "SYS",
+          "kind": "porte",
+          "linkTo": "architecture-systeme"
+        }
+      ]
+    }
+  ]
+}

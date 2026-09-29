@@ -1,0 +1,9 @@
+{
+  "id": "bases-de-donnees",
+  "order": 8,
+  "name": "Bases de données",
+  "description": "SQL, familles de bases (relationnel, NoSQL, spécialisées), modélisation, performance, transactions et mise à l'échelle.",
+  "icon": "DB",
+  "color": "#EF5350",
+  "language": "sql"
+}

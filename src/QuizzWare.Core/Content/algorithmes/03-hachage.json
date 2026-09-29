@@ -1,0 +1,19 @@
+{
+  "id": "algo-ch-hachage",
+  "title": "Tables de hachage",
+  "summary": "L'accès en temps constant.",
+  "lessons": [
+    {
+      "id": "algo-hachage",
+      "title": "Fonctionnement",
+      "summary": "Fonctions de hachage et collisions.",
+      "difficulty": 2
+    },
+    {
+      "id": "algo-hachage-problemes",
+      "title": "Problèmes classiques",
+      "summary": "Two sum, anagrammes, fréquences.",
+      "difficulty": 2
+    }
+  ]
+}

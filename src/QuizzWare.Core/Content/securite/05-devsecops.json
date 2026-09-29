@@ -1,0 +1,19 @@
+{
+  "id": "sec-ch-devsecops",
+  "title": "Sécurité dans le cycle de développement",
+  "summary": "DevSecOps.",
+  "lessons": [
+    {
+      "id": "sec-dependances",
+      "title": "Dépendances et supply chain",
+      "summary": "CVE et SBOM.",
+      "difficulty": 2
+    },
+    {
+      "id": "sec-analyses",
+      "title": "Analyses automatiques",
+      "summary": "SAST, DAST et détection de secrets.",
+      "difficulty": 2
+    }
+  ]
+}

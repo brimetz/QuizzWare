@@ -1,0 +1,25 @@
+{
+  "id": "java-ch-collections",
+  "title": "Collections et génériques",
+  "summary": "List, Map, Set et Streams.",
+  "lessons": [
+    {
+      "id": "java-collections",
+      "title": "Le framework Collections",
+      "summary": "Choisir la bonne collection.",
+      "difficulty": 1
+    },
+    {
+      "id": "java-equals-hashcode",
+      "title": "equals et hashCode",
+      "summary": "Le contrat à respecter.",
+      "difficulty": 2
+    },
+    {
+      "id": "java-streams",
+      "title": "Streams",
+      "summary": "map, filter et collect.",
+      "difficulty": 2
+    }
+  ]
+}

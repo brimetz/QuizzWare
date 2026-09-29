@@ -1,0 +1,19 @@
+{
+  "id": "infra-ch-securite",
+  "title": "Sécurité de l'infrastructure",
+  "summary": "Protéger la plateforme.",
+  "lessons": [
+    {
+      "id": "infra-sec-secrets",
+      "title": "Gestion des secrets",
+      "summary": "Coffres-forts et rotation.",
+      "difficulty": 2
+    },
+    {
+      "id": "infra-sec-supply-chain",
+      "title": "Chaîne d'approvisionnement",
+      "summary": "Images, dépendances, signatures.",
+      "difficulty": 3
+    }
+  ]
+}

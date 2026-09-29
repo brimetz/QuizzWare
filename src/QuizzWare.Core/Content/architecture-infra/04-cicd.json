@@ -1,0 +1,25 @@
+{
+  "id": "infra-ch-cicd",
+  "title": "CI/CD",
+  "summary": "Construire, tester et livrer automatiquement.",
+  "lessons": [
+    {
+      "id": "infra-cicd-pipelines",
+      "title": "Pipelines d'intégration continue",
+      "summary": "Build, tests, artefacts.",
+      "difficulty": 1
+    },
+    {
+      "id": "infra-cicd-deploiement",
+      "title": "Stratégies de déploiement",
+      "summary": "Rolling, blue / green, canary.",
+      "difficulty": 2
+    },
+    {
+      "id": "infra-cicd-gitops",
+      "title": "GitOps",
+      "summary": "Le dépôt Git comme source de vérité.",
+      "difficulty": 2
+    }
+  ]
+}

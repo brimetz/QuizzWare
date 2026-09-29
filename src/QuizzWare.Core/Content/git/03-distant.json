@@ -1,0 +1,19 @@
+{
+  "id": "git-ch-distant",
+  "title": "Travail à distance",
+  "summary": "Remotes, push et pull.",
+  "lessons": [
+    {
+      "id": "git-remotes",
+      "title": "Remotes",
+      "summary": "fetch, pull et push.",
+      "difficulty": 1
+    },
+    {
+      "id": "git-pull-requests",
+      "title": "Pull requests et revue de code",
+      "summary": "Collaborer sur GitHub ou GitLab.",
+      "difficulty": 1
+    }
+  ]
+}

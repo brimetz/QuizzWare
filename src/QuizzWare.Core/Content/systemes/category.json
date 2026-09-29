@@ -1,0 +1,9 @@
+{
+  "id": "systemes",
+  "order": 15,
+  "name": "Systèmes d'exploitation",
+  "description": "Processus, mémoire, fichiers et concurrence : ce qui se passe sous le code.",
+  "icon": "OS",
+  "color": "#8D6E63",
+  "language": "c"
+}

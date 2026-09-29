@@ -1,0 +1,19 @@
+{
+  "id": "mob-ch-publication",
+  "title": "Publication",
+  "summary": "Des stores aux mises à jour.",
+  "lessons": [
+    {
+      "id": "mob-stores",
+      "title": "Signature et stores",
+      "summary": "App Store et Google Play.",
+      "difficulty": 1
+    },
+    {
+      "id": "mob-cicd",
+      "title": "CI/CD mobile",
+      "summary": "Des builds et déploiements automatisés.",
+      "difficulty": 2
+    }
+  ]
+}

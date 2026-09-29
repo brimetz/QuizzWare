@@ -1,0 +1,19 @@
+{
+  "id": "cs-ch-dotnet",
+  "title": "L'écosystème .NET",
+  "summary": "Runtime, injection de dépendances et outillage.",
+  "lessons": [
+    {
+      "id": "cs-runtime",
+      "title": "Runtime et compilation",
+      "summary": "IL, JIT et AOT.",
+      "difficulty": 3
+    },
+    {
+      "id": "cs-injection",
+      "title": "Injection de dépendances",
+      "summary": "Le conteneur de .NET.",
+      "difficulty": 2
+    }
+  ]
+}

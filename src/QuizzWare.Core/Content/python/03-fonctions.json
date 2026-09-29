@@ -1,0 +1,25 @@
+{
+  "id": "py-ch-fonctions",
+  "title": "Fonctions",
+  "summary": "Arguments, portée et closures.",
+  "lessons": [
+    {
+      "id": "py-arguments",
+      "title": "Arguments",
+      "summary": "Positionnels, nommés, *args et **kwargs.",
+      "difficulty": 1
+    },
+    {
+      "id": "py-portee",
+      "title": "Portée (LEGB)",
+      "summary": "global et nonlocal.",
+      "difficulty": 2
+    },
+    {
+      "id": "py-closures",
+      "title": "Closures",
+      "summary": "Des fonctions qui capturent leur contexte.",
+      "difficulty": 2
+    }
+  ]
+}

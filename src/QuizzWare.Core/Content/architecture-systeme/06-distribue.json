@@ -1,0 +1,103 @@
+{
+  "id": "archi-ch-distribue",
+  "title": "Systèmes distribués",
+  "summary": "Découpage, cohérence et résilience.",
+  "lessons": [
+    {
+      "id": "archi-distribuee",
+      "title": "Monolithe, microservices et systèmes distribués",
+      "summary": "Découper un système et gérer les défis de la distribution.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Monolithe vs microservices",
+          "body": "Un monolithe est déployé comme une seule unité : simple à développer et à tester au début. Les microservices découpent le système en services autonomes, déployables et scalables indépendamment, au prix d'une complexité opérationnelle (réseau, observabilité, cohérence des données)."
+        },
+        {
+          "title": "API Gateway",
+          "body": "Une API Gateway est le point d'entrée unique des clients : routage vers les services, authentification, rate limiting, agrégation de réponses."
+        },
+        {
+          "title": "Théorème CAP",
+          "body": "Un système distribué ne peut garantir simultanément Cohérence (C), Disponibilité (A) et tolérance au Partitionnement (P). Les partitions réseau étant inévitables, il faut choisir entre C et A lorsqu'une partition survient."
+        },
+        {
+          "title": "Transactions distribuées et résilience",
+          "body": "Le pattern Saga remplace une transaction distribuée par une suite de transactions locales, avec des actions compensatoires en cas d'échec. Le Circuit Breaker coupe temporairement les appels vers un service défaillant pour éviter les pannes en cascade."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "archi-distrib-q1",
+          "prompt": "Quel est l'avantage principal des microservices par rapport à un monolithe ?",
+          "choices": [
+            "Moins de code à écrire",
+            "Déploiement et scalabilité indépendants par service",
+            "Pas besoin de réseau",
+            "Transactions plus simples"
+          ],
+          "answerIndex": 1,
+          "explanation": "Chaque service peut être déployé, mis à l'échelle et faire évoluer sa stack indépendamment.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "archi-distrib-q2",
+          "prompt": "Quel est le rôle principal d'une API Gateway ?",
+          "choices": [
+            "Stocker les données des services",
+            "Servir de point d'entrée unique vers les services",
+            "Compiler les microservices",
+            "Remplacer la base de données"
+          ],
+          "answerIndex": 1,
+          "explanation": "La gateway centralise le routage, l'authentification et d'autres préoccupations transverses.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "archi-distrib-q3",
+          "prompt": "D'après le théorème CAP, lors d'une partition réseau, il faut choisir entre...",
+          "choices": [
+            "Cohérence et Disponibilité",
+            "Performance et Sécurité",
+            "Latence et Débit",
+            "Scalabilité et Coût"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le P étant subi, un système doit privilégier soit la cohérence (CP), soit la disponibilité (AP) pendant la partition.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "archi-distrib-q4",
+          "prompt": "Quel pattern gère une transaction métier répartie sur plusieurs services via des actions compensatoires ?",
+          "choices": [
+            "Singleton",
+            "Observer",
+            "Saga",
+            "Decorator"
+          ],
+          "answerIndex": 2,
+          "explanation": "Une Saga enchaîne des transactions locales et exécute des compensations si une étape échoue.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "archi-distrib-q5",
+          "prompt": "Dans quel état un Circuit Breaker laisse-t-il passer quelques requêtes de test pour vérifier si le service est rétabli ?",
+          "choices": [
+            "Closed",
+            "Open",
+            "Half-Open",
+            "Faulted"
+          ],
+          "answerIndex": 2,
+          "explanation": "Closed = trafic normal, Open = appels bloqués, Half-Open = quelques appels d'essai avant de refermer ou rouvrir le circuit.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ]
+}

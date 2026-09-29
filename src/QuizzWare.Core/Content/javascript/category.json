@@ -1,0 +1,9 @@
+{
+  "id": "javascript",
+  "order": 10,
+  "name": "JavaScript et TypeScript",
+  "description": "Le langage du web, côté navigateur et serveur, et son typage avec TypeScript.",
+  "icon": "JS",
+  "color": "#3178C6",
+  "language": "javascript"
+}

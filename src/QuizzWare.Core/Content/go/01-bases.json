@@ -1,0 +1,25 @@
+{
+  "id": "go-ch-bases",
+  "title": "Bases du langage",
+  "summary": "Types, fonctions et erreurs.",
+  "lessons": [
+    {
+      "id": "go-types",
+      "title": "Types et variables",
+      "summary": "Déclarations et valeurs zéro.",
+      "difficulty": 1
+    },
+    {
+      "id": "go-fonctions",
+      "title": "Fonctions et erreurs",
+      "summary": "Retours multiples et type error.",
+      "difficulty": 1
+    },
+    {
+      "id": "go-slices-maps",
+      "title": "Slices et maps",
+      "summary": "Capacité, append et pièges.",
+      "difficulty": 2
+    }
+  ]
+}

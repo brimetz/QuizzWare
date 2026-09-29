@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:QuizzWare.ViewModels"
+             xmlns:controls="clr-namespace:QuizzWare.Views.Controls"
+             x:Class="QuizzWare.Views.TrackPage"
+             x:DataType="vm:TrackViewModel"
+             Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16,8,16,32" Spacing="16">
+
+            <Border Style="{StaticResource Card}" Stroke="{StaticResource Primary}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="56,*" ColumnSpacing="14">
+                        <Border Style="{StaticResource Badge}" BackgroundColor="{StaticResource SurfaceRaised}">
+                            <Label Text="{Binding Badge}" FontAttributes="Bold" FontSize="13" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding KindLabel}" TextColor="{StaticResource Primary}" FontSize="12" FontAttributes="Bold" />
+                            <Label Text="{Binding Title}" Style="{StaticResource HeaderLabel}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Label Text="{Binding Summary}" Style="{StaticResource BodyLabel}" />
+                    <Label Text="{Binding RelatedText}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                    <ProgressBar Progress="{Binding Progress}" />
+                    <Label Text="{Binding ProgressText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                </VerticalStackLayout>
+            </Border>
+
+            <controls:PathView Chapters="{Binding Chapters}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

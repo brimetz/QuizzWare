@@ -1,0 +1,19 @@
+{
+  "id": "py-ch-erreurs",
+  "title": "Erreurs et tests",
+  "summary": "Exceptions et pytest.",
+  "lessons": [
+    {
+      "id": "py-exceptions",
+      "title": "Exceptions",
+      "summary": "try, except, finally et exceptions personnalisées.",
+      "difficulty": 1
+    },
+    {
+      "id": "py-tests",
+      "title": "Tests avec pytest",
+      "summary": "Fixtures et assertions.",
+      "difficulty": 2
+    }
+  ]
+}

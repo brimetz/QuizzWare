@@ -1,0 +1,25 @@
+{
+  "id": "go-ch-types",
+  "title": "Structs et interfaces",
+  "summary": "La composition plutôt que l'héritage.",
+  "lessons": [
+    {
+      "id": "go-structs",
+      "title": "Structs et méthodes",
+      "summary": "Receveurs valeur ou pointeur.",
+      "difficulty": 2
+    },
+    {
+      "id": "go-interfaces",
+      "title": "Interfaces",
+      "summary": "Une implémentation implicite.",
+      "difficulty": 2
+    },
+    {
+      "id": "go-generiques",
+      "title": "Génériques",
+      "summary": "Paramètres de type.",
+      "difficulty": 3
+    }
+  ]
+}

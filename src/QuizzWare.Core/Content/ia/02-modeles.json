@@ -1,0 +1,25 @@
+{
+  "id": "ia-ch-modeles",
+  "title": "Modèles classiques",
+  "summary": "Régressions, arbres et clustering.",
+  "lessons": [
+    {
+      "id": "ia-regression",
+      "title": "Régression linéaire et logistique",
+      "summary": "Les bases.",
+      "difficulty": 2
+    },
+    {
+      "id": "ia-arbres",
+      "title": "Arbres et forêts",
+      "summary": "Random forest et gradient boosting.",
+      "difficulty": 2
+    },
+    {
+      "id": "ia-clustering",
+      "title": "Clustering",
+      "summary": "k-means et consorts.",
+      "difficulty": 2
+    }
+  ]
+}

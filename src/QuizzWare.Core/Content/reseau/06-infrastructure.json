@@ -1,0 +1,25 @@
+{
+  "id": "net-ch-infrastructure",
+  "title": "Infrastructure réseau des applications",
+  "summary": "Répartiteurs, proxys et CDN.",
+  "lessons": [
+    {
+      "id": "net-load-balancing",
+      "title": "Répartition de charge",
+      "summary": "Couche 4 ou couche 7.",
+      "difficulty": 2
+    },
+    {
+      "id": "net-proxy",
+      "title": "Proxys et reverse proxys",
+      "summary": "Rôles et usages.",
+      "difficulty": 2
+    },
+    {
+      "id": "net-cdn",
+      "title": "CDN",
+      "summary": "Le cache géographique.",
+      "difficulty": 2
+    }
+  ]
+}

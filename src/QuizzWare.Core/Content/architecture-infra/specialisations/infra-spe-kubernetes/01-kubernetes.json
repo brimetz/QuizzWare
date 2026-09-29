@@ -1,0 +1,373 @@
+{
+  "id": "k8s-ch-essentiel",
+  "title": "Kubernetes : l'essentiel",
+  "summary": "Déployer, configurer, exploiter et dépanner.",
+  "lessons": [
+    {
+      "id": "k8s-deploiement",
+      "title": "Déployer une application",
+      "summary": "Deployments, Services et kubectl.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un modèle déclaratif",
+          "body": "On décrit l'état voulu dans des manifestes YAML ; kubectl apply l'envoie à l'API, et des contrôleurs font converger en permanence l'état réel vers l'état voulu. Un Pod supprimé par erreur est recréé par son Deployment."
+        },
+        {
+          "title": "Le Deployment",
+          "body": "Un Deployment gère un ReplicaSet, qui maintient le nombre de Pods voulu. Le selector doit correspondre aux labels du template des Pods.",
+          "code": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: api\n  template:\n    metadata:\n      labels:\n        app: api\n    spec:\n      containers:\n        - name: api\n          image: registry/api:1.4.2\n          ports:\n            - containerPort: 8080"
+        },
+        {
+          "title": "Le Service",
+          "body": "Le Service donne une adresse stable et un nom DNS (ici api) aux Pods qui portent le label app: api. Le type par défaut, ClusterIP, n'est accessible que dans le cluster ; un LoadBalancer ou un Ingress l'expose à l'extérieur.",
+          "code": "apiVersion: v1\nkind: Service\nmetadata:\n  name: api\nspec:\n  selector:\n    app: api\n  ports:\n    - port: 80\n      targetPort: 8080"
+        },
+        {
+          "title": "kubectl au quotidien",
+          "body": "apply pour déployer, get pour lister, logs pour lire les journaux, describe pour voir la configuration et surtout les événements d'une ressource.",
+          "code": "kubectl apply -f api.yaml\nkubectl get pods -l app=api\nkubectl logs deploy/api\nkubectl describe pod api-7d9f-x2k4",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "k8s-dep-q1",
+          "prompt": "Que fait kubectl apply -f api.yaml ?",
+          "choices": [
+            "Il envoie l'état voulu à l'API ; les contrôleurs font ensuite converger le cluster",
+            "Il exécute un script sur chaque nœud",
+            "Il construit l'image Docker",
+            "Il redémarre le cluster"
+          ],
+          "answerIndex": 0,
+          "explanation": "Kubernetes est déclaratif : on dit « je veux 3 Pods de cette image », pas « lance 3 conteneurs ».",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "k8s-dep-q2",
+          "prompt": "Un Pod d'un Deployment à 3 réplicas est supprimé à la main. Que se passe-t-il ?",
+          "choices": [
+            "Un nouveau Pod est créé pour revenir à 3",
+            "Le Deployment passe à 2 réplicas",
+            "Le Deployment est supprimé",
+            "Rien jusqu'au prochain kubectl apply"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le contrôleur compare en boucle l'état réel (2 Pods) à l'état voulu (3) et corrige l'écart.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "k8s-dep-q3",
+          "prompt": "L'API refuse ce Deployment. Touche une ligne en cause.",
+          "code": "spec:\n  replicas: 2\n  selector:\n    matchLabels:\n      app: api\n  template:\n    metadata:\n      labels:\n        app: web",
+          "bugLines": [5, 9],
+          "explanation": "Le selector (app: api) ne correspond pas aux labels du template (app: web) : le Deployment ne pourrait jamais retrouver ses propres Pods, l'API le rejette donc.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "k8s-dep-q4",
+          "prompt": "Complète : le Service écoute sur le port 80 et transmet au port 8080 des conteneurs.",
+          "code": "spec:\n  selector:\n    app: api\n  ports:\n    - ___: 80\n      ___: 8080",
+          "answers": ["port", "targetPort"],
+          "distractors": ["containerPort", "nodePort", "hostPort"],
+          "explanation": "port : le port du Service ; targetPort : le port sur lequel les conteneurs écoutent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "k8s-dep-q5",
+          "prompt": "Comment un autre Pod du même namespace joint-il le Service api ?",
+          "choices": ["Par son nom DNS : http://api", "Par l'IP d'un Pod choisi au hasard", "Seulement via kubectl proxy", "C'est impossible sans Ingress"],
+          "answerIndex": 0,
+          "explanation": "Le DNS du cluster résout api (ou api.<namespace>.svc.cluster.local) vers l'IP stable du Service, qui répartit ensuite vers les Pods.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "k8s-dep-q6",
+          "prompt": "Quels types de Service existent ?",
+          "choices": ["ClusterIP", "NodePort", "LoadBalancer", "PublicIP"],
+          "answerIndices": [0, 1, 2],
+          "explanation": "ClusterIP (interne), NodePort (un port ouvert sur chaque nœud), LoadBalancer (répartiteur du fournisseur cloud). Il existe aussi ExternalName, un simple alias DNS.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "k8s-config",
+      "title": "Configuration, ressources et santé",
+      "summary": "ConfigMaps, Secrets, requests, limits et probes.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "ConfigMap et Secret",
+          "body": "La configuration sort de l'image : une ConfigMap pour les valeurs ordinaires, un Secret pour les données sensibles. Attention : un Secret n'est qu'encodé en base64, pas chiffré ; il faut restreindre son accès (RBAC) et activer le chiffrement au repos.",
+          "code": "env:\n  - name: LOG_LEVEL\n    valueFrom:\n      configMapKeyRef:\n        name: api-config\n        key: log_level\n  - name: DB_PASSWORD\n    valueFrom:\n      secretKeyRef:\n        name: api-secrets\n        key: db_password"
+        },
+        {
+          "title": "Requests et limits",
+          "body": "requests : ce que le scheduler réserve pour placer le Pod sur un nœud. limits : le plafond. Dépasser la limite mémoire tue le conteneur (OOMKilled) ; dépasser la limite CPU le ralentit (throttling).",
+          "code": "resources:\n  requests:\n    cpu: 250m\n    memory: 256Mi\n  limits:\n    memory: 512Mi"
+        },
+        {
+          "title": "Les probes",
+          "body": "readinessProbe : le Pod peut-il recevoir du trafic ? livenessProbe : faut-il redémarrer le conteneur ? startupProbe : laisse à une application lente le temps de démarrer avant les autres vérifications.",
+          "code": "readinessProbe:\n  httpGet:\n    path: /health/ready\n    port: 8080\nlivenessProbe:\n  httpGet:\n    path: /health/live\n    port: 8080\n  periodSeconds: 10"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "k8s-cfg-q1",
+          "prompt": "Où stocker le mot de passe de la base de données ?",
+          "choices": ["Dans un Secret", "En clair dans l'image", "Dans une ConfigMap", "Dans le nom du Pod"],
+          "answerIndex": 0,
+          "explanation": "Le Secret sépare les données sensibles, permet des droits d'accès dédiés et peut être alimenté par un coffre-fort externe (Vault, Key Vault…).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "k8s-cfg-q2",
+          "prompt": "Un Secret Kubernetes est-il chiffré ?",
+          "choices": [
+            "Non : il est seulement encodé en base64 ; il faut RBAC et le chiffrement au repos",
+            "Oui, toujours, en AES-256",
+            "Oui, mais seulement dans les Pods",
+            "Non, et il est impossible de le protéger"
+          ],
+          "answerIndex": 0,
+          "explanation": "echo … | base64 -d suffit à le lire. Quiconque peut lire les Secrets d'un namespace peut lire les mots de passe.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "k8s-cfg-q3",
+          "prompt": "Un conteneur dépasse sa limite mémoire. Que se passe-t-il ?",
+          "choices": ["Il est tué (OOMKilled), puis redémarré", "Il est simplement ralenti", "Le nœud entier s'arrête", "Rien"],
+          "answerIndex": 0,
+          "explanation": "La mémoire ne peut pas être « ralentie » : le noyau tue le processus. Pour le CPU, en revanche, le dépassement est limité par throttling.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "k8s-cfg-q4",
+          "prompt": "Quand la base de données tombe, tous les Pods redémarrent en boucle, ce qui aggrave la panne. Touche la ligne en cause.",
+          "code": "livenessProbe:\n  httpGet:\n    path: /health/dependances  # teste aussi la base\n    port: 8080\nreadinessProbe:\n  httpGet:\n    path: /health/ready\n    port: 8080",
+          "bugLines": [3],
+          "explanation": "La liveness ne doit vérifier que le processus lui-même : redémarrer l'application ne réparera pas la base. Les dépendances relèvent de la readiness, qui retire le Pod du trafic sans le tuer.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "k8s-cfg-q5",
+          "prompt": "Complète : réserver un quart de cœur CPU pour le placement du Pod.",
+          "code": "resources:\n  ___:\n    cpu: ___",
+          "answers": ["requests", "250m"],
+          "distractors": ["limits", "0.25m", "250"],
+          "explanation": "250m signifie 250 millicœurs, soit 0,25 CPU. « 250 » tout court demanderait 250 cœurs !",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "k8s-cfg-q6",
+          "prompt": "Quelles affirmations sur les probes sont vraies ?",
+          "choices": [
+            "Un échec de readiness retire le Pod des destinations du Service",
+            "Des échecs répétés de liveness redémarrent le conteneur",
+            "La startupProbe suspend les autres probes tant que l'application démarre",
+            "Un échec de readiness supprime définitivement le Pod"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Readiness : « ne m'envoie pas de trafic ». Liveness : « redémarre-moi ». Startup : « je démarre encore, patience ».",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "k8s-exploitation",
+      "title": "Mises à jour, scaling et dépannage",
+      "summary": "Rolling updates, autoscaling et états des Pods.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le rolling update",
+          "body": "Changer l'image d'un Deployment remplace les Pods progressivement (paramètres maxSurge et maxUnavailable). Avec une readinessProbe, le trafic ne bascule que vers des Pods prêts ; kubectl rollout undo revient à la version précédente.",
+          "code": "kubectl set image deploy/api api=registry/api:1.5.0\nkubectl rollout status deploy/api\nkubectl rollout undo deploy/api",
+          "language": "shell"
+        },
+        {
+          "title": "L'autoscaling",
+          "body": "Le HorizontalPodAutoscaler ajuste le nombre de réplicas selon une métrique, par exemple l'utilisation CPU en pourcentage des requests. Sans requests CPU, ce pourcentage est impossible à calculer.",
+          "code": "apiVersion: autoscaling/v2\nkind: HorizontalPodAutoscaler\nmetadata:\n  name: api\nspec:\n  scaleTargetRef:\n    apiVersion: apps/v1\n    kind: Deployment\n    name: api\n  minReplicas: 2\n  maxReplicas: 10\n  metrics:\n    - type: Resource\n      resource:\n        name: cpu\n        target:\n          type: Utilization\n          averageUtilization: 70"
+        },
+        {
+          "title": "Dépanner un Pod",
+          "body": "Pending : aucun nœud n'a assez de ressources, ou un volume manque. ImagePullBackOff : image introuvable ou accès au registre refusé. CrashLoopBackOff : le conteneur démarre puis plante en boucle. OOMKilled : limite mémoire dépassée. Réflexe : kubectl describe pod (les événements), puis kubectl logs --previous."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "k8s-ops-q1",
+          "prompt": "Un Pod est en ImagePullBackOff. Quelle est la cause probable ?",
+          "choices": [
+            "L'image ou son tag n'existe pas, ou l'accès au registre est refusé",
+            "Le conteneur plante au démarrage",
+            "Le nœud manque de CPU",
+            "La readinessProbe échoue"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le conteneur n'a même pas démarré : Kubernetes n'arrive pas à télécharger l'image. Il faut vérifier le nom, le tag et le secret d'accès au registre (imagePullSecrets).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "k8s-ops-q2",
+          "prompt": "Un Pod est en CrashLoopBackOff. Quelle commande montre les logs de la dernière exécution, celle qui a planté ?",
+          "choices": ["kubectl logs <pod> --previous", "kubectl get pods -w", "kubectl rollout undo", "kubectl delete pod <pod>"],
+          "answerIndex": 0,
+          "explanation": "Sans --previous, on lit les logs du conteneur en cours, qui vient peut-être de redémarrer et n'a encore rien écrit.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "k8s-ops-q3",
+          "prompt": "Remets dans l'ordre : déployer une nouvelle version, puis revenir en arrière.",
+          "language": "shell",
+          "lines": [
+            "kubectl set image deploy/api api=registry/api:1.5.0",
+            "kubectl rollout status deploy/api",
+            "# les métriques montrent des erreurs 500",
+            "kubectl rollout undo deploy/api"
+          ],
+          "explanation": "rollout status suit le déploiement ; rollout undo revient au ReplicaSet précédent, toujours conservé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "k8s-ops-q4",
+          "prompt": "Un Pod reste Pending. Que regardes-tu en premier ?",
+          "choices": [
+            "Les événements de kubectl describe pod : ressources insuffisantes, volume, contraintes de placement",
+            "Les logs du conteneur",
+            "Le code de l'application",
+            "La version de kubectl"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un Pod Pending n'a pas encore démarré : il n'a pas de logs. Les événements du scheduler disent pourquoi il n'est placé nulle part.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "k8s-ops-q5",
+          "prompt": "L'autoscaler (cible : 70 % de CPU) ne réagit jamais pour ce Deployment. Touche une ligne en cause.",
+          "code": "containers:\n  - name: api\n    image: registry/api:1.5.0\n    resources:\n      limits:\n        memory: 512Mi",
+          "bugLines": [4, 5, 6],
+          "explanation": "L'utilisation CPU se calcule en pourcentage des requests CPU : sans requests.cpu, l'autoscaler ne peut rien calculer (il signale « missing request for cpu »).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "k8s-ops-q6",
+          "prompt": "Pendant un rolling update, qu'est-ce qui évite d'interrompre le service ?",
+          "choices": [
+            "Une readinessProbe fiable",
+            "maxUnavailable à 0 (avec maxSurge d'au moins 1)",
+            "Plusieurs réplicas",
+            "Supprimer tous les anciens Pods avant de créer les nouveaux"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "La dernière option correspond à la stratégie Recreate : elle provoque justement une coupure.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "k8s-defi",
+    "title": "Défi entretien : Kubernetes en production",
+    "summary": "Du Service muet au manifeste à revoir.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "k8s-defi-q1",
+        "prompt": "Cas pratique 1/3 — Après un déploiement, les Pods sont Running, mais le Service ne répond pas. Que vérifies-tu d'abord ?",
+        "choices": [
+          "Que les labels des Pods correspondent au selector du Service (kubectl get endpoints api)",
+          "Redémarrer le cluster",
+          "Changer l'image",
+          "Augmenter le nombre de réplicas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un Service sans endpoints ne sélectionne aucun Pod : c'est la cause la plus fréquente.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "k8s-defi-q2",
+        "prompt": "Cas pratique 2/3 — Les Pods portent le label app: api. Touche la ligne en cause.",
+        "code": "kind: Service\nmetadata:\n  name: api\nspec:\n  selector:\n    app: api-v2\n  ports:\n    - port: 80\n      targetPort: 8080",
+        "bugLines": [6],
+        "explanation": "Le selector cherche app: api-v2 : aucun Pod ne correspond, la liste des endpoints est vide.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "k8s-defi-q3",
+        "prompt": "Cas pratique 3/3 — Les endpoints sont corrects, mais les requêtes échouent : l'application écoute sur le port 5000. Que corriger ?",
+        "choices": [
+          "Le targetPort du Service (et le containerPort) : 5000",
+          "Le port du Service : 5000",
+          "Ajouter un Ingress",
+          "Passer le Service en NodePort"
+        ],
+        "answerIndex": 0,
+        "explanation": "targetPort doit être le port réellement écouté par l'application. Le port du Service peut rester 80 pour les clients.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "k8s-defi-q4",
+        "prompt": "Revue de manifeste : coche tous les problèmes.",
+        "code": "containers:\n  - name: api\n    image: registry/api:latest\n    env:\n      - name: DB_PASSWORD\n        value: \"S3cret!\"",
+        "choices": [
+          "Le tag latest rend les déploiements non reproductibles",
+          "Le mot de passe est en clair dans le manifeste : il faut un Secret",
+          "Aucune requests ni limits de ressources",
+          "Le nom du conteneur doit être en majuscules"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "Un tag immuable (1.5.0, ou le digest) permet de savoir ce qui tourne et de revenir en arrière. Les requests rendent le placement et l'autoscaling possibles.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "k8s-defi-q5",
+        "prompt": "Une application qui met 90 s à démarrer est tuée en boucle par sa livenessProbe. Quelle est la meilleure correction ?",
+        "choices": ["Ajouter une startupProbe", "Supprimer toutes les probes", "Augmenter la mémoire", "Passer à un seul réplica"],
+        "answerIndex": 0,
+        "explanation": "La startupProbe donne un délai généreux au démarrage, puis la liveness reprend avec ses réglages normaux, réactifs.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "k8s-defi-q6",
+        "prompt": "Remets dans l'ordre le trajet d'une requête venue d'Internet.",
+        "language": "text",
+        "lines": [
+          "Le client appelle https://api.exemple.fr",
+          "Le contrôleur Ingress reçoit la requête et applique ses règles",
+          "Le Service api sélectionne un Pod prêt",
+          "Le conteneur répond sur son targetPort"
+        ],
+        "explanation": "L'Ingress route selon l'hôte et le chemin (et termine souvent TLS) ; le Service répartit ensuite entre les Pods prêts.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "js-ch-asynchrone",
+  "title": "Asynchrone",
+  "summary": "Boucle d'événements, promesses et async/await.",
+  "lessons": [
+    {
+      "id": "js-event-loop",
+      "title": "La boucle d'événements",
+      "summary": "Tâches et microtâches.",
+      "difficulty": 3
+    },
+    {
+      "id": "js-promesses",
+      "title": "Promesses",
+      "summary": "then, catch et Promise.all.",
+      "difficulty": 2
+    },
+    {
+      "id": "js-async-await",
+      "title": "async / await",
+      "summary": "Du code asynchrone lisible.",
+      "difficulty": 2
+    }
+  ]
+}

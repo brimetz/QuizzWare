@@ -1,0 +1,25 @@
+{
+  "id": "sys-ch-donnees",
+  "title": "Données à l'échelle",
+  "summary": "Cache, réplication et partitionnement.",
+  "lessons": [
+    {
+      "id": "sys-cache",
+      "title": "Stratégies de cache",
+      "summary": "Cache-aside, write-through, invalidation.",
+      "difficulty": 2
+    },
+    {
+      "id": "sys-cap",
+      "title": "CAP et PACELC",
+      "summary": "Choisir entre cohérence, disponibilité et latence.",
+      "difficulty": 3
+    },
+    {
+      "id": "sys-partitionnement",
+      "title": "Partitionnement",
+      "summary": "Répartir les données et la charge.",
+      "difficulty": 3
+    }
+  ]
+}

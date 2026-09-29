@@ -1,0 +1,19 @@
+{
+  "id": "js-ch-navigateur",
+  "title": "Le navigateur",
+  "summary": "DOM, événements et stockage.",
+  "lessons": [
+    {
+      "id": "js-dom",
+      "title": "Le DOM",
+      "summary": "Sélectionner et modifier la page.",
+      "difficulty": 1
+    },
+    {
+      "id": "js-evenements",
+      "title": "Événements",
+      "summary": "Propagation et délégation.",
+      "difficulty": 2
+    }
+  ]
+}

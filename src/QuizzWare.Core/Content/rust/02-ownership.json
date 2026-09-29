@@ -1,0 +1,25 @@
+{
+  "id": "rust-ch-ownership",
+  "title": "Ownership et emprunts",
+  "summary": "Le cœur de Rust.",
+  "lessons": [
+    {
+      "id": "rust-ownership",
+      "title": "Ownership",
+      "summary": "Déplacement et copie.",
+      "difficulty": 2
+    },
+    {
+      "id": "rust-emprunts",
+      "title": "Références et emprunts",
+      "summary": "& et &mut, et leurs règles.",
+      "difficulty": 2
+    },
+    {
+      "id": "rust-lifetimes",
+      "title": "Durées de vie",
+      "summary": "Annotations de lifetimes.",
+      "difficulty": 3
+    }
+  ]
+}

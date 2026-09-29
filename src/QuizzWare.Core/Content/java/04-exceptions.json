@@ -1,0 +1,13 @@
+{
+  "id": "java-ch-exceptions",
+  "title": "Exceptions",
+  "summary": "Checked et unchecked.",
+  "lessons": [
+    {
+      "id": "java-exceptions",
+      "title": "Exceptions",
+      "summary": "try-with-resources et bonnes pratiques.",
+      "difficulty": 1
+    }
+  ]
+}

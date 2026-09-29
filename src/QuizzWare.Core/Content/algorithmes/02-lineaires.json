@@ -1,0 +1,25 @@
+{
+  "id": "algo-ch-lineaires",
+  "title": "Structures linéaires",
+  "summary": "Tableaux, listes, piles et files.",
+  "lessons": [
+    {
+      "id": "algo-tableaux",
+      "title": "Tableaux dynamiques",
+      "summary": "Accès, insertion et redimensionnement.",
+      "difficulty": 1
+    },
+    {
+      "id": "algo-listes",
+      "title": "Listes chaînées",
+      "summary": "Simples, doubles et leurs pièges.",
+      "difficulty": 1
+    },
+    {
+      "id": "algo-piles-files",
+      "title": "Piles et files",
+      "summary": "LIFO, FIFO et usages.",
+      "difficulty": 1
+    }
+  ]
+}

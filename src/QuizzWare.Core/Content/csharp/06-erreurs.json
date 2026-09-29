@@ -1,0 +1,19 @@
+{
+  "id": "cs-ch-erreurs",
+  "title": "Exceptions et nullabilité",
+  "summary": "Des programmes robustes.",
+  "lessons": [
+    {
+      "id": "cs-exceptions",
+      "title": "Exceptions",
+      "summary": "throw, filtres et bonnes pratiques.",
+      "difficulty": 1
+    },
+    {
+      "id": "cs-nullable",
+      "title": "Nullable reference types",
+      "summary": "Annotations et avertissements.",
+      "difficulty": 2
+    }
+  ]
+}

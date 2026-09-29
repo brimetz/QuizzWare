@@ -1,0 +1,19 @@
+{
+  "id": "cs-ch-moderne",
+  "title": "C# moderne",
+  "summary": "Pattern matching et nouveautés.",
+  "lessons": [
+    {
+      "id": "cs-pattern-matching",
+      "title": "Pattern matching",
+      "summary": "switch expressions et patterns de propriétés.",
+      "difficulty": 2
+    },
+    {
+      "id": "cs-nouveautes",
+      "title": "Nouveautés récentes",
+      "summary": "Primary constructors, collection expressions…",
+      "difficulty": 2
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- Garder synchronisé avec ViewModels/Palette.cs -->
+    <Color x:Key="Primary">#7C4DFF</Color>
+    <Color x:Key="PrimaryDark">#5A2FD6</Color>
+    <Color x:Key="Background">#0F1221</Color>
+    <Color x:Key="Surface">#1A1F36</Color>
+    <Color x:Key="SurfaceRaised">#242A47</Color>
+    <Color x:Key="Stroke">#2F365A</Color>
+    <Color x:Key="TextPrimary">#E8EAF6</Color>
+    <Color x:Key="TextMuted">#9AA0C3</Color>
+    <Color x:Key="Success">#2ECC71</Color>
+    <Color x:Key="Error">#FF5370</Color>
+    <Color x:Key="Warning">#FFC857</Color>
+    <Color x:Key="CodeBackground">#0A0D18</Color>
+
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Surface}" />
+
+</ResourceDictionary>

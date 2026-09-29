@@ -1,0 +1,124 @@
+{
+  "unlockedBy": "sec-ch-fondamentaux",
+  "nodes": [
+    {
+      "id": "sec-spe-offensif",
+      "title": "Sécurité offensive",
+      "summary": "Penser comme un attaquant.",
+      "icon": "RED",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sec-spe-pentest",
+          "title": "Tests d'intrusion",
+          "summary": "Méthodologie et outils du pentest.",
+          "icon": "PEN",
+          "kind": "concept"
+        },
+        {
+          "id": "sec-spe-ctf",
+          "title": "CTF",
+          "summary": "S'entraîner sur des challenges de sécurité.",
+          "icon": "CTF",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "sec-spe-defensif",
+      "title": "Sécurité défensive",
+      "summary": "Détecter et répondre.",
+      "icon": "BLUE",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sec-spe-soc",
+          "title": "Détection et réponse",
+          "summary": "SOC, SIEM et gestion d'incident de sécurité.",
+          "icon": "SOC",
+          "kind": "concept"
+        },
+        {
+          "id": "sec-spe-forensic",
+          "title": "Investigation numérique",
+          "summary": "Comprendre ce qui s'est passé après une attaque.",
+          "icon": "DFIR",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "sec-spe-identite",
+      "title": "Identités",
+      "summary": "Qui est qui, et qui a le droit de quoi.",
+      "icon": "IAM",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sec-spe-keycloak",
+          "title": "Keycloak",
+          "summary": "Un fournisseur d'identité open source.",
+          "icon": "KC",
+          "kind": "techno"
+        },
+        {
+          "id": "sec-spe-oauth",
+          "title": "OAuth et OIDC en profondeur",
+          "summary": "Flux, jetons, scopes et pièges d'implémentation.",
+          "icon": "OIDC",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "sec-spe-transverse",
+      "title": "Sécurité par domaine",
+      "summary": "La sécurité vue depuis les autres catégories.",
+      "icon": "DOM",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sec-spe-tls",
+          "title": "TLS et PKI",
+          "summary": "Certificats, handshake et mTLS.",
+          "icon": "TLS",
+          "kind": "concept",
+          "linkTo": "reseau/net-spe-tls"
+        },
+        {
+          "id": "sec-spe-memoire",
+          "title": "Failles mémoire et défenses",
+          "summary": "Débordements de tampon, use-after-free, ASLR.",
+          "icon": "PWN",
+          "kind": "concept",
+          "linkTo": "c/c-spe-exploitation"
+        }
+      ]
+    },
+    {
+      "id": "sec-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sec-spe-porte-reseau",
+          "title": "Réseau",
+          "summary": "Les fondations de la sécurité réseau.",
+          "icon": "NET",
+          "kind": "porte",
+          "linkTo": "reseau"
+        },
+        {
+          "id": "sec-spe-porte-infra",
+          "title": "Architecture infra",
+          "summary": "Sécuriser la plateforme.",
+          "icon": "INF",
+          "kind": "porte",
+          "linkTo": "architecture-infra"
+        }
+      ]
+    }
+  ]
+}

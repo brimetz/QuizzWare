@@ -1,0 +1,280 @@
+{
+  "id": "db-ch-sql-avance",
+  "title": "SQL avancé",
+  "summary": "Sous-requêtes, CTE et fonctions de fenêtrage.",
+  "lessons": [
+    {
+      "id": "db-sousrequetes",
+      "title": "Sous-requêtes et CTE",
+      "summary": "Découper une requête complexe en étapes lisibles.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les sous-requêtes",
+          "body": "Une requête dans une requête : dans WHERE (IN, EXISTS), dans FROM (table dérivée) ou dans SELECT (valeur scalaire). Une sous-requête corrélée fait référence à la requête externe : elle est évaluée, logiquement, pour chaque ligne.",
+          "code": "SELECT nom FROM clients c\nWHERE EXISTS (\n    SELECT 1 FROM commandes cmd\n    WHERE cmd.client_id = c.id\n);"
+        },
+        {
+          "title": "Les CTE (WITH)",
+          "body": "Une CTE (Common Table Expression) nomme une sous-requête pour structurer la requête en étapes lisibles, et pour la réutiliser.",
+          "code": "WITH ca AS (\n    SELECT client_id, SUM(total) AS montant\n    FROM commandes GROUP BY client_id\n)\nSELECT c.nom, ca.montant\nFROM clients c JOIN ca ON ca.client_id = c.id\nWHERE ca.montant > 1000;"
+        },
+        {
+          "title": "Les CTE récursives",
+          "body": "WITH RECURSIVE parcourt une hiérarchie (organigramme, catégories imbriquées) : une partie initiale, puis une partie récursive qui se joint au résultat précédent, jusqu'à ce qu'aucune nouvelle ligne n'apparaisse."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-cte-q1",
+          "prompt": "À quoi sert une CTE (WITH) ?",
+          "choices": [
+            "Nommer une sous-requête pour structurer et réutiliser",
+            "Créer une table permanente",
+            "Créer un index temporaire",
+            "Verrouiller des lignes"
+          ],
+          "answerIndex": 0,
+          "explanation": "La CTE n'existe que le temps de la requête. Elle rend lisible une requête en plusieurs étapes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-cte-q2",
+          "prompt": "Qu'est-ce qu'une sous-requête corrélée ?",
+          "choices": [
+            "Une sous-requête qui fait référence à une colonne de la requête externe",
+            "Une sous-requête placée dans le FROM",
+            "Une sous-requête qui renvoie une seule ligne",
+            "Une sous-requête exécutée en parallèle"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans l'exemple EXISTS, cmd.client_id = c.id relie la sous-requête à chaque client de la requête externe.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-cte-q3",
+          "prompt": "EXISTS ou IN : quelle affirmation est vraie ?",
+          "choices": [
+            "NOT EXISTS gère correctement les NULL, contrairement à NOT IN",
+            "EXISTS renvoie les valeurs trouvées",
+            "IN ne fonctionne qu'avec des nombres",
+            "EXISTS est interdit dans un WHERE"
+          ],
+          "answerIndex": 0,
+          "explanation": "EXISTS teste seulement la présence d'une ligne : un NULL dans la sous-requête ne rend pas la condition inconnue, contrairement à NOT IN.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "db-cte-q4",
+          "prompt": "Complète la CTE.",
+          "code": "___ gros_clients ___ (\n    SELECT client_id FROM commandes\n    GROUP BY client_id\n    HAVING SUM(total) > 1000\n)\nSELECT * FROM gros_clients;",
+          "answers": ["WITH", "AS"],
+          "distractors": ["CREATE", "VIEW", "TEMP"],
+          "explanation": "Syntaxe : WITH nom AS (requête), puis la requête principale qui utilise nom comme une table.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "db-cte-q5",
+          "prompt": "Cette requête échoue dès qu'un client a plusieurs commandes. Touche une ligne en cause.",
+          "code": "SELECT nom,\n       (SELECT total FROM commandes cmd\n        WHERE cmd.client_id = c.id) AS total\nFROM clients c;",
+          "bugLines": [2, 3],
+          "explanation": "Une sous-requête dans le SELECT doit renvoyer au plus une valeur. Avec plusieurs commandes, le moteur lève une erreur : il faut agréger (SUM(total)) ou choisir une ligne précise.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "db-cte-q6",
+          "prompt": "Remets dans l'ordre une CTE récursive qui liste l'employé 7 et tous ses supérieurs.",
+          "lines": [
+            "WITH RECURSIVE chaine AS (",
+            "    SELECT id, manager_id, nom FROM employes WHERE id = 7",
+            "    UNION ALL",
+            "    SELECT e.id, e.manager_id, e.nom",
+            "    FROM employes e JOIN chaine ch ON e.id = ch.manager_id",
+            ")",
+            "SELECT nom FROM chaine;"
+          ],
+          "explanation": "La partie initiale sélectionne l'employé 7 ; la partie récursive ajoute le manager de chaque ligne déjà trouvée, jusqu'au sommet (manager_id NULL).",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "db-fenetrage",
+      "title": "Les fonctions de fenêtrage",
+      "summary": "Classements, cumuls et comparaisons entre lignes.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "OVER",
+          "body": "Une fonction de fenêtrage calcule une valeur sur un ensemble de lignes liées à la ligne courante, sans les regrouper : chaque ligne reste dans le résultat, contrairement à GROUP BY. PARTITION BY découpe la fenêtre en groupes.",
+          "code": "SELECT vendeur, mois, montant,\n       SUM(montant) OVER (PARTITION BY vendeur)\n         AS total_vendeur\nFROM ventes;"
+        },
+        {
+          "title": "Les classements",
+          "body": "ROW_NUMBER() numérote 1, 2, 3, 4 ; RANK() donne le même rang aux ex æquo puis saute des rangs (1, 2, 2, 4) ; DENSE_RANK() ne saute pas (1, 2, 2, 3)."
+        },
+        {
+          "title": "Le top N par groupe",
+          "body": "Un grand classique d'entretien : numéroter dans chaque groupe, puis filtrer dans une requête englobante.",
+          "code": "SELECT * FROM (\n    SELECT vendeur, montant,\n           ROW_NUMBER() OVER (\n               PARTITION BY vendeur\n               ORDER BY montant DESC) AS rn\n    FROM ventes\n) t\nWHERE rn <= 3;"
+        },
+        {
+          "title": "LAG, LEAD et cumuls",
+          "body": "LAG(col) lit la valeur de la ligne précédente (par exemple pour calculer l'évolution d'un mois sur l'autre), LEAD celle de la ligne suivante. SUM(…) OVER (ORDER BY date) calcule un cumul."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-window-q1",
+          "prompt": "Quelle est la différence entre GROUP BY et une fonction de fenêtrage ?",
+          "choices": [
+            "La fonction de fenêtrage conserve chaque ligne dans le résultat",
+            "GROUP BY est plus récent",
+            "Une fonction de fenêtrage ne peut pas calculer de somme",
+            "Il n'y a aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "GROUP BY réduit chaque groupe à une ligne ; OVER ajoute une valeur calculée à chaque ligne, sans en supprimer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-window-q2",
+          "prompt": "Que renvoie la colonne RANK() ?",
+          "code": "-- scores : 100, 90, 90, 80\nSELECT score,\n       RANK() OVER (ORDER BY score DESC)\nFROM resultats;",
+          "choices": ["1, 2, 2, 4", "1, 2, 3, 4", "1, 2, 2, 3", "1, 1, 2, 3"],
+          "answerIndex": 0,
+          "explanation": "Les deux 90 sont ex æquo au rang 2 ; le rang suivant est 4, car deux lignes le précèdent déjà. DENSE_RANK aurait donné 3.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-window-q3",
+          "prompt": "Quelle fonction numérote 1, 2, 2, 3 pour les scores 100, 90, 90, 80 ?",
+          "choices": ["DENSE_RANK()", "RANK()", "ROW_NUMBER()", "NTILE(4)"],
+          "answerIndex": 0,
+          "explanation": "DENSE_RANK donne le même rang aux ex æquo sans laisser de trou ensuite.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "db-window-q4",
+          "prompt": "On veut les 3 plus grosses ventes de chaque vendeur, mais la requête est refusée. Touche la ligne en cause.",
+          "code": "SELECT vendeur, montant,\n       ROW_NUMBER() OVER (PARTITION BY vendeur\n                          ORDER BY montant DESC) AS rn\nFROM ventes\nWHERE rn <= 3;",
+          "bugLines": [5],
+          "explanation": "Les fonctions de fenêtrage sont calculées après WHERE : rn n'y existe pas encore. On calcule rn dans une sous-requête ou une CTE, puis on filtre à l'extérieur (certains moteurs proposent QUALIFY).",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "db-window-q5",
+          "prompt": "Complète : l'écart de chiffre d'affaires de chaque mois avec le mois précédent.",
+          "code": "SELECT mois, ca,\n       ca - ___(ca) OVER (___ BY mois)\n         AS evolution\nFROM ventes_mensuelles;",
+          "answers": ["LAG", "ORDER"],
+          "distractors": ["LEAD", "PARTITION", "GROUP"],
+          "explanation": "LAG(ca) lit le ca de la ligne précédente dans l'ordre des mois. LEAD lirait le mois suivant ; PARTITION BY mois créerait un groupe par mois, sans « précédent ».",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "db-window-q6",
+          "prompt": "Lesquelles de ces fonctions s'utilisent comme fonctions de fenêtrage (avec OVER) ?",
+          "choices": ["ROW_NUMBER()", "LAG(col)", "SUM(col)", "COALESCE(a, b)"],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Les agrégats classiques (SUM, AVG, COUNT…) deviennent des fonctions de fenêtrage avec OVER. COALESCE est une simple fonction scalaire.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "db-defi-sql-avance",
+    "title": "Défi entretien : les requêtes classiques",
+    "summary": "Les exercices SQL qui reviennent le plus en entretien.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "db-defi7-q1",
+        "prompt": "Que renvoie cette requête ?",
+        "code": "SELECT MAX(salaire)\nFROM employes\nWHERE salaire < (SELECT MAX(salaire) FROM employes);",
+        "choices": [
+          "Le deuxième salaire le plus élevé (en valeurs distinctes)",
+          "Le salaire le plus élevé",
+          "Le salaire le plus bas",
+          "Une erreur : deux MAX dans la même requête"
+        ],
+        "answerIndex": 0,
+        "explanation": "La sous-requête trouve le maximum ; la requête externe prend le maximum des salaires strictement inférieurs. La version générale utilise DENSE_RANK() = N.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "db-defi7-q2",
+        "prompt": "Cas pratique 1/2 — On veut le dernier achat de chaque client, mais deux achats le même jour produisent des doublons. Touche la ligne en cause.",
+        "code": "SELECT * FROM (\n    SELECT client_id, produit, date_achat,\n           RANK() OVER (PARTITION BY client_id\n                        ORDER BY date_achat DESC) AS r\n    FROM achats\n) t\nWHERE r = 1;",
+        "bugLines": [3],
+        "explanation": "RANK donne le rang 1 à tous les ex æquo : deux achats à la même date sont gardés tous les deux.",
+        "difficulty": 3
+      },
+      {
+        "type": "fill",
+        "id": "db-defi7-q3",
+        "prompt": "Cas pratique 2/2 — Corrige pour garantir une seule ligne par client, de façon déterministe.",
+        "code": "___() OVER (PARTITION BY client_id\n           ORDER BY date_achat DESC, ___ DESC) AS r",
+        "answers": ["ROW_NUMBER", "id"],
+        "distractors": ["DENSE_RANK", "RANK", "client_id"],
+        "explanation": "ROW_NUMBER ne produit jamais d'ex æquo, et le critère secondaire (id) rend le choix déterministe entre deux achats du même jour.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "db-defi7-q4",
+        "prompt": "Remets dans l'ordre : trouver les emails en double dans utilisateurs.",
+        "lines": [
+          "SELECT email, COUNT(*) AS nb",
+          "FROM utilisateurs",
+          "GROUP BY email",
+          "HAVING COUNT(*) > 1",
+          "ORDER BY nb DESC;"
+        ],
+        "explanation": "On regroupe par email et on garde les groupes de plus d'une ligne.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi7-q5",
+        "prompt": "Pour supprimer les doublons d'email en gardant la ligne au plus petit id, quelle requête est correcte ?",
+        "choices": [
+          "DELETE FROM utilisateurs u WHERE EXISTS (SELECT 1 FROM utilisateurs v WHERE v.email = u.email AND v.id < u.id)",
+          "DELETE FROM utilisateurs WHERE COUNT(email) > 1",
+          "DELETE DISTINCT email FROM utilisateurs",
+          "DELETE FROM utilisateurs GROUP BY email HAVING COUNT(*) > 1"
+        ],
+        "answerIndex": 0,
+        "explanation": "On supprime chaque ligne pour laquelle il existe une autre ligne de même email avec un id plus petit : seule la plus ancienne survit. Ensuite, on ajoute une contrainte UNIQUE pour que cela ne se reproduise pas.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "db-defi7-q6",
+        "prompt": "Quelles expressions calculent un cumul du chiffre d'affaires, jour après jour ?",
+        "choices": [
+          "SUM(ca) OVER (ORDER BY jour)",
+          "SUM(ca) … GROUP BY jour",
+          "Une sous-requête corrélée : SUM(ca) des jours <= jour courant",
+          "MAX(ca) OVER (ORDER BY jour)"
+        ],
+        "answerIndices": [0, 2],
+        "explanation": "La fonction de fenêtrage est la solution idiomatique et efficace ; la sous-requête corrélée donne le même résultat, mais relit les jours précédents pour chaque ligne.",
+        "difficulty": 3
+      }
+    ]
+  }
+}

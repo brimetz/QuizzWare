@@ -1,0 +1,101 @@
+{
+  "id": "csharp-ch-linq-async",
+  "title": "LINQ et asynchrone",
+  "summary": "Requêtes sur les collections et async/await.",
+  "lessons": [
+    {
+      "id": "csharp-linq-async",
+      "title": "LINQ et async/await",
+      "summary": "Requêtes sur les collections et programmation asynchrone.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "LINQ et exécution différée",
+          "body": "La plupart des opérateurs LINQ (Where, Select...) ne s'exécutent pas immédiatement : ils décrivent une requête évaluée au moment de l'énumération (foreach, ToList, Count...). Énumérer deux fois exécute donc la requête deux fois.",
+          "code": "var nums = new[] { 1, 2, 3, 4 };\nvar result = nums.Where(x => x > 2).Select(x => x * 2);\n// rien n'est encore calculé\nvar list = result.ToList(); // [6, 8]"
+        },
+        {
+          "title": "async / await",
+          "body": "await ne bloque pas le thread : il libère le thread pendant l'attente et reprend la suite de la méthode quand la tâche est terminée. On évite async void (exceptions non observables), sauf pour les gestionnaires d'événements."
+        },
+        {
+          "title": "ConfigureAwait(false)",
+          "body": "Par défaut, la suite d'un await reprend sur le contexte de synchronisation capturé (ex. le thread UI). ConfigureAwait(false) indique que ce n'est pas nécessaire : utile dans le code de bibliothèque pour éviter des deadlocks et gagner en performance."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "csharp-async-q1",
+          "prompt": "Que contient list ?",
+          "code": "var list = new[] { 1, 2, 3, 4 }\n    .Where(x => x > 2)\n    .Select(x => x * 2)\n    .ToList();",
+          "choices": [
+            "[2, 4, 6, 8]",
+            "[3, 4]",
+            "[6, 8]",
+            "[4, 6, 8]"
+          ],
+          "answerIndex": 2,
+          "explanation": "Where garde 3 et 4, puis Select les double : [6, 8].",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "csharp-async-q2",
+          "prompt": "Que fait await pendant qu'une tâche est en cours ?",
+          "choices": [
+            "Il bloque le thread courant",
+            "Il libère le thread et reprendra la méthode plus tard",
+            "Il crée toujours un nouveau thread",
+            "Il annule la tâche"
+          ],
+          "answerIndex": 1,
+          "explanation": "await suspend la méthode sans bloquer le thread, qui peut traiter d'autres travaux.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "csharp-async-q3",
+          "prompt": "Quand une requête LINQ comme Where(...).Select(...) est-elle exécutée ?",
+          "choices": [
+            "À sa déclaration",
+            "Lors de son énumération",
+            "À la compilation",
+            "Au démarrage de l'application"
+          ],
+          "answerIndex": 1,
+          "explanation": "C'est l'exécution différée : la requête est évaluée quand on l'énumère (foreach, ToList...).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "csharp-async-q4",
+          "prompt": "Dans quel cas async void est-il acceptable ?",
+          "choices": [
+            "Jamais",
+            "Pour les gestionnaires d'événements",
+            "Pour toutes les méthodes publiques",
+            "Pour les constructeurs"
+          ],
+          "answerIndex": 1,
+          "explanation": "Les handlers d'événements imposent une signature void ; ailleurs on retourne Task pour pouvoir attendre et observer les exceptions.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "csharp-async-q5",
+          "prompt": "Que signifie ConfigureAwait(false) ?",
+          "choices": [
+            "Annuler la tâche si elle échoue",
+            "Ne pas reprendre sur le contexte de synchronisation capturé",
+            "Exécuter la tâche de manière synchrone",
+            "Désactiver les exceptions"
+          ],
+          "answerIndex": 1,
+          "explanation": "La suite de la méthode peut reprendre sur n'importe quel thread du pool, sans repasser par le contexte d'origine.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ]
+}

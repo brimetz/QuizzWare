@@ -1,0 +1,9 @@
+{
+  "id": "git",
+  "order": 16,
+  "name": "Git et collaboration",
+  "description": "Versionner, collaborer et livrer en équipe.",
+  "icon": "GIT",
+  "color": "#EC407A",
+  "language": "shell"
+}

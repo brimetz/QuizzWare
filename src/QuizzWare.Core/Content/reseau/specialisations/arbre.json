@@ -1,0 +1,201 @@
+{
+  "unlockedBy": "reseau-ch-fondamentaux",
+  "nodes": [
+    {
+      "id": "net-spe-web",
+      "title": "Protocoles du web",
+      "summary": "Ce qui transporte les applications modernes.",
+      "icon": "WEB",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "net-spe-http",
+          "title": "HTTP/2 et HTTP/3",
+          "summary": "Multiplexage, compression d'en-têtes, QUIC et fin du blocage en tête de file.",
+          "icon": "H3",
+          "kind": "concept"
+        },
+        {
+          "id": "net-spe-websocket",
+          "title": "WebSocket et temps réel",
+          "summary": "Connexions bidirectionnelles, Server-Sent Events et long polling.",
+          "icon": "WS",
+          "kind": "concept"
+        },
+        {
+          "id": "net-spe-grpc",
+          "title": "gRPC",
+          "summary": "Contrats Protobuf et streaming sur HTTP/2.",
+          "icon": "gRPC",
+          "kind": "techno",
+          "linkTo": "architecture-systeme/sys-spe-grpc"
+        }
+      ]
+    },
+    {
+      "id": "net-spe-securite",
+      "title": "Sécurité réseau",
+      "summary": "Protéger les échanges et les infrastructures.",
+      "icon": "SEC",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "net-spe-tls",
+          "title": "TLS et PKI",
+          "summary": "Certificats, autorités de certification, handshake, mTLS et renouvellement.",
+          "icon": "TLS",
+          "kind": "concept"
+        },
+        {
+          "id": "net-spe-vpn",
+          "title": "Pare-feu et VPN",
+          "summary": "Filtrage, NAT, WireGuard, IPsec et zero trust.",
+          "icon": "VPN",
+          "kind": "concept"
+        },
+        {
+          "id": "net-spe-attaques",
+          "title": "Attaques réseau",
+          "summary": "DDoS, homme du milieu, usurpation DNS : comprendre pour se défendre.",
+          "icon": "ATK",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "net-spe-infra",
+      "title": "Réseau d'infrastructure",
+      "summary": "Du datacenter au cloud.",
+      "icon": "INFR",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "net-spe-cloud",
+          "title": "Réseau cloud",
+          "summary": "VPC, sous-réseaux publics et privés, tables de routage, peering.",
+          "icon": "VPC",
+          "kind": "concept"
+        },
+        {
+          "id": "net-spe-lb",
+          "title": "Nginx : reverse proxy et load balancing",
+          "summary": "Répartir la charge, terminer TLS et mettre en cache.",
+          "icon": "NGX",
+          "kind": "techno",
+          "linkTo": "architecture-infra/infra-spe-nginx"
+        },
+        {
+          "id": "net-spe-cdn",
+          "title": "CDN et edge",
+          "summary": "Cache géographique, invalidation et calcul en périphérie.",
+          "icon": "CDN",
+          "kind": "concept"
+        },
+        {
+          "id": "net-spe-dns-avance",
+          "title": "DNS avancé",
+          "summary": "Anycast, DNSSEC, routage géographique.",
+          "icon": "DNS",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "net-spe-sans-fil",
+      "title": "Réseaux sans fil et mobiles",
+      "summary": "Les réseaux que l'on ne voit pas.",
+      "icon": "WIFI",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "net-spe-wifi",
+          "title": "Wi-Fi",
+          "summary": "Normes, canaux, sécurité WPA.",
+          "icon": "WIFI",
+          "kind": "concept"
+        },
+        {
+          "id": "net-spe-cellulaire",
+          "title": "Réseaux cellulaires",
+          "summary": "De la 4G à la 5G.",
+          "icon": "5G",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "net-spe-diagnostic",
+      "title": "Diagnostic",
+      "summary": "Trouver pourquoi « ça ne répond pas ».",
+      "icon": "DIAG",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "net-spe-wireshark",
+          "title": "Wireshark et tcpdump",
+          "summary": "Capturer et lire des paquets : handshake, retransmissions, TLS.",
+          "icon": "PCAP",
+          "kind": "techno",
+          "language": "text"
+        },
+        {
+          "id": "net-spe-outils",
+          "title": "curl, dig et traceroute",
+          "summary": "Les outils du quotidien pour tester HTTP, DNS et les routes.",
+          "icon": "CLI",
+          "kind": "techno",
+          "language": "shell"
+        }
+      ]
+    },
+    {
+      "id": "net-spe-programmation",
+      "title": "Programmation réseau",
+      "summary": "Écrire des clients et des serveurs.",
+      "icon": "SOCK",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "net-spe-sockets",
+          "title": "Sockets",
+          "summary": "TCP et UDP en code : bind, listen, accept, E/S non bloquantes.",
+          "icon": "SOCK",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "net-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "net-spe-porte-securite",
+          "title": "Sécurité applicative",
+          "summary": "Des failles réseau aux failles applicatives.",
+          "icon": "SEC",
+          "kind": "porte",
+          "linkTo": "securite"
+        },
+        {
+          "id": "net-spe-porte-systemes",
+          "title": "Systèmes d'exploitation",
+          "summary": "La pile réseau vue du noyau.",
+          "icon": "OS",
+          "kind": "porte",
+          "linkTo": "systemes"
+        },
+        {
+          "id": "net-spe-porte-infra",
+          "title": "Architecture infra",
+          "summary": "Mettre en œuvre le réseau dans le cloud.",
+          "icon": "INF",
+          "kind": "porte",
+          "linkTo": "architecture-infra"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "id": "archi-ch-conception",
+  "title": "Principes de conception",
+  "summary": "SOLID, couplage et cohésion.",
+  "lessons": [
+    {
+      "id": "archi-solid",
+      "title": "Les principes SOLID",
+      "summary": "Cinq principes pour un code orienté objet maintenable.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "S — Single Responsibility",
+          "body": "Une classe ne doit avoir qu'une seule raison de changer. Si une classe gère à la fois la logique métier, la persistance et l'envoi d'e-mails, chaque évolution de l'une de ces responsabilités risque de casser les autres."
+        },
+        {
+          "title": "O — Open/Closed",
+          "body": "Un module doit être ouvert à l'extension mais fermé à la modification. On ajoute un comportement en ajoutant du code (nouvelle implémentation d'une interface, stratégie...), pas en modifiant du code existant et testé."
+        },
+        {
+          "title": "L — Liskov Substitution",
+          "body": "Un sous-type doit pouvoir remplacer son type parent sans altérer le comportement attendu. L'exemple classique : un Carré qui hérite de Rectangle casse les attentes si on modifie la largeur et la hauteur indépendamment."
+        },
+        {
+          "title": "I — Interface Segregation",
+          "body": "Mieux vaut plusieurs interfaces spécifiques qu'une interface « fourre-tout ». Un client ne doit pas dépendre de méthodes qu'il n'utilise pas."
+        },
+        {
+          "title": "D — Dependency Inversion",
+          "body": "Les modules de haut niveau ne doivent pas dépendre des modules de bas niveau : les deux dépendent d'abstractions. C'est ce qui rend l'injection de dépendances et les tests unitaires possibles.",
+          "code": "public class OrderService(IOrderRepository repository)\n{\n    // dépend d'une abstraction, pas de SqlOrderRepository\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "archi-solid-q1",
+          "prompt": "Que signifie le « S » de SOLID ?",
+          "choices": [
+            "Single Responsibility Principle",
+            "Separation of Concerns",
+            "Single Source of Truth",
+            "Static Responsibility"
+          ],
+          "answerIndex": 0,
+          "explanation": "S = Single Responsibility Principle : une classe ne doit avoir qu'une seule raison de changer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "archi-solid-q2",
+          "prompt": "Selon le principe Open/Closed, un module doit être...",
+          "choices": [
+            "Fermé à l'extension, ouvert à la modification",
+            "Ouvert à l'extension, fermé à la modification",
+            "Ouvert à tout le monde (public)",
+            "Fermé à l'héritage"
+          ],
+          "answerIndex": 1,
+          "explanation": "On étend le comportement en ajoutant du code (nouvelles implémentations), sans modifier le code existant.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "archi-solid-q3",
+          "prompt": "Quel principe dit qu'il faut dépendre d'abstractions plutôt que d'implémentations concrètes ?",
+          "choices": [
+            "Liskov Substitution",
+            "Interface Segregation",
+            "Dependency Inversion",
+            "Single Responsibility"
+          ],
+          "answerIndex": 2,
+          "explanation": "Le Dependency Inversion Principle : haut et bas niveau dépendent tous deux d'abstractions.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "archi-solid-q4",
+          "prompt": "Une classe Carre hérite de Rectangle et force largeur = hauteur dans ses setters. Quel principe est violé ?",
+          "choices": [
+            "Open/Closed",
+            "Liskov Substitution",
+            "Interface Segregation",
+            "Aucun"
+          ],
+          "answerIndex": 1,
+          "explanation": "Un code qui manipule un Rectangle s'attend à pouvoir changer la largeur sans toucher la hauteur : Carre ne peut pas le remplacer sans surprise.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "archi-solid-q5",
+          "prompt": "Une interface IWorker expose Work(), Eat() et Sleep(), mais un Robot ne mange ni ne dort. Quelle est la bonne correction ?",
+          "choices": [
+            "Lever NotImplementedException dans Robot",
+            "Découper en IWorkable, IFeedable, ISleepable",
+            "Rendre les méthodes virtuelles",
+            "Utiliser l'héritage multiple"
+          ],
+          "answerIndex": 1,
+          "explanation": "Interface Segregation : plusieurs petites interfaces ciblées évitent aux clients de dépendre de méthodes inutiles.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ]
+}

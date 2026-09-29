@@ -1,0 +1,9 @@
+{
+  "id": "rust",
+  "order": 13,
+  "name": "Rust",
+  "description": "La sûreté mémoire sans ramasse-miettes : ownership, emprunts et performance.",
+  "icon": "RS",
+  "color": "#B7410E",
+  "language": "rust"
+}

@@ -1,0 +1,438 @@
+{
+  "id": "cpp-ch-references-pointeurs",
+  "title": "Références et pointeurs",
+  "summary": "Adresses, indirection et const.",
+  "lessons": [
+    {
+      "id": "cpp-references",
+      "title": "Les références",
+      "summary": "Des alias sûrs vers des objets existants.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un alias",
+          "body": "Une référence est un autre nom pour une variable existante. Elle doit être initialisée, ne peut pas être nulle et ne peut pas être « redirigée » : une affectation modifie l'objet référencé.",
+          "code": "int a = 5;\nint& r = a;  // r est un alias de a\nr = 10;      // a vaut maintenant 10"
+        },
+        {
+          "title": "Référence const et temporaires",
+          "body": "Une référence const peut se lier à un temporaire, dont la durée de vie est alors prolongée à celle de la référence. Une référence non const ne le peut pas.",
+          "code": "const std::string& a = std::string(\"tmp\"); // OK\nstd::string& b = std::string(\"tmp\");       // erreur"
+        },
+        {
+          "title": "Références pendantes",
+          "body": "Une référence doit toujours désigner un objet vivant. Piège classique : un push_back sur un vector peut réallouer son stockage et invalider toutes les références, pointeurs et itérateurs vers ses éléments.",
+          "code": "std::vector<int> v{1, 2, 3};\nint& premier = v[0];\nv.push_back(4);        // peut réallouer\nstd::cout << premier;  // comportement indéfini !"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-references-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int a = 5;\nint& r = a;\nr = 10;\nstd::cout << a;",
+          "choices": [
+            "10",
+            "5",
+            "15",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "r est un alias de a : modifier r modifie a.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-references-q2",
+          "prompt": "Quelle affirmation sur les références est vraie ?",
+          "choices": [
+            "Une référence doit être initialisée à sa déclaration",
+            "Une référence peut valoir nullptr",
+            "Une référence peut être redirigée vers une autre variable",
+            "Une référence occupe toujours 8 octets"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une référence est liée à un objet dès sa déclaration et le reste toute sa vie.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-references-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int a = 1, b = 2;\nint& r = a;\nr = b;\nb = 3;\nstd::cout << a << r;",
+          "choices": [
+            "22",
+            "23",
+            "12",
+            "13"
+          ],
+          "answerIndex": 0,
+          "explanation": "r = b ne redirige pas la référence : cela copie la valeur de b (2) dans a. Modifier b ensuite n'a aucun effet sur a ni r.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-references-q4",
+          "prompt": "Ce code a un comportement indéfini. Touche la ligne qui invalide la référence.",
+          "code": "std::vector<std::string> noms{\"Ada\", \"Linus\"};\nstd::string& premier = noms[0];\nnoms.push_back(\"Grace\");\nstd::cout << premier << '\\n';",
+          "bugLines": [
+            3
+          ],
+          "explanation": "push_back peut réallouer le stockage du vector : premier désigne alors une zone libérée. Solutions : copier la valeur, réserver la capacité (reserve) avant, ou reprendre la référence après l'ajout.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cpp-references-q5",
+          "prompt": "Lesquelles de ces lignes compilent ?",
+          "choices": [
+            "const int& a = 42;",
+            "int& b = 42;",
+            "const std::string& s = std::string(\"x\");",
+            "int x = 1; int& c = x;"
+          ],
+          "answerIndices": [
+            0,
+            2,
+            3
+          ],
+          "explanation": "Un littéral ou un temporaire ne peut se lier qu'à une référence const (ou à une référence rvalue &&). int& b = 42; ne compile pas.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-references-q6",
+          "prompt": "Complète pour que la fonction mette en majuscules la chaîne de l'appelant.",
+          "code": "void enMajuscules(std::string___ s) {\n    for (char___ c : s) {\n        c = std::toupper(c);\n    }\n}",
+          "answers": [
+            "&",
+            "&"
+          ],
+          "distractors": [
+            "const",
+            "*"
+          ],
+          "explanation": "Il faut une référence à deux niveaux : sur le paramètre (sinon on modifie une copie de la chaîne) et dans la boucle (sinon on modifie une copie de chaque caractère).",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "cpp-pointeurs",
+      "title": "Les pointeurs",
+      "summary": "Adresses, nullptr, arithmétique et allocation.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Adresse et déréférencement",
+          "body": "&x donne l'adresse de x, *p accède à l'objet pointé. Contrairement à une référence, un pointeur peut être nul et être redirigé.",
+          "code": "int x = 5;\nint* p = &x;  // p contient l'adresse de x\n*p = 8;       // x vaut 8\np = nullptr;  // p ne pointe plus sur rien"
+        },
+        {
+          "title": "nullptr plutôt que NULL",
+          "body": "nullptr (C++11) a son propre type, std::nullptr_t. Contrairement à NULL (souvent défini comme 0), il ne peut pas être pris pour un entier lors du choix d'une surcharge."
+        },
+        {
+          "title": "Pointeurs et tableaux",
+          "body": "Un tableau se convertit implicitement en pointeur vers son premier élément. p + 1 avance d'un élément (sizeof(T) octets) et p[i] équivaut à *(p + i).",
+          "code": "int t[3] = {10, 20, 30};\nint* p = t;             // &t[0]\nstd::cout << *(p + 2);  // 30\nstd::cout << p[1];      // 20"
+        },
+        {
+          "title": "new et delete (et pourquoi les éviter)",
+          "body": "new alloue sur le tas et delete libère ; un tableau alloué avec new[] se libère avec delete[]. Oublier delete provoque une fuite, libérer deux fois est un comportement indéfini. En C++ moderne, on préfère les conteneurs et les pointeurs intelligents (chapitre « Mémoire et RAII »)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-pointeurs-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int x = 5;\nint* p = &x;\n*p = 8;\nstd::cout << x;",
+          "choices": [
+            "8",
+            "5",
+            "L'adresse de x",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "*p désigne x lui-même : *p = 8 modifie x.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-pointeurs-q2",
+          "prompt": "Pourquoi préférer nullptr à NULL ?",
+          "choices": [
+            "nullptr a un type dédié et ne peut pas être confondu avec un entier",
+            "nullptr est plus rapide à l'exécution",
+            "NULL n'existe pas en C++",
+            "nullptr libère automatiquement la mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec f(int) et f(char*), f(NULL) peut appeler f(int) ; f(nullptr) appelle toujours la version pointeur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-pointeurs-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int t[4] = {1, 2, 3, 4};\nint* p = t + 1;\nstd::cout << *p + p[2];",
+          "choices": [
+            "6",
+            "5",
+            "4",
+            "7"
+          ],
+          "answerIndex": 0,
+          "explanation": "p pointe sur t[1] (2) et p[2] vaut t[3] (4) : 2 + 4 = 6.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-pointeurs-q4",
+          "prompt": "Cette mémoire est mal libérée. Touche la ligne fautive.",
+          "code": "int* creerTableau(int n) {\n    return new int[n];\n}\n\nint* t = creerTableau(10);\nt[0] = 42;\ndelete t;",
+          "bugLines": [
+            7
+          ],
+          "explanation": "Un tableau alloué avec new[] doit être libéré avec delete[]. Encore mieux : utiliser std::vector<int> et ne rien libérer à la main.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-pointeurs-q5",
+          "prompt": "Déréférencement dangereux : touche la ligne fautive.",
+          "code": "int* trouver(std::vector<int>& v, int cible) {\n    for (int& x : v)\n        if (x == cible) return &x;\n    return nullptr;\n}\n\nint* p = trouver(valeurs, 7);\nstd::cout << *p;",
+          "bugLines": [
+            8
+          ],
+          "explanation": "trouver peut renvoyer nullptr : déréférencer sans vérifier est un comportement indéfini. Il faut tester if (p) avant d'utiliser *p.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "cpp-pointeurs-q6",
+          "prompt": "Remets dans l'ordre une fonction qui échange deux entiers via des pointeurs.",
+          "lines": [
+            "void echanger(int* a, int* b) {",
+            "    int tmp = *a;",
+            "    *a = *b;",
+            "    *b = tmp;",
+            "}"
+          ],
+          "explanation": "On sauvegarde *a, on écrase *a avec *b, puis on place l'ancienne valeur dans *b.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "cpp-const-pointeurs",
+      "title": "const, pointeurs et tableaux",
+      "summary": "Lire les déclarations et éviter les pièges des tableaux C.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Lire une déclaration de droite à gauche",
+          "body": "const s'applique à ce qui se trouve à sa gauche (ou à sa droite s'il est en premier). const int* p : pointeur vers un int constant, on ne peut pas modifier *p. int* const p : pointeur constant, on ne peut pas rediriger p. const int* const p : les deux.",
+          "code": "int a = 1, b = 2;\nconst int* p1 = &a;  // *p1 = 5; interdit\np1 = &b;             // OK\nint* const p2 = &a;  // p2 = &b; interdit\n*p2 = 5;             // OK"
+        },
+        {
+          "title": "Tableaux C et std::array",
+          "body": "Passé à une fonction, un tableau C devient un simple pointeur et perd sa taille : sizeof ne donne plus la taille du tableau. std::array<T, N> garde sa taille et se copie ou se compare comme une valeur.",
+          "code": "void f(int t[]) {\n    // ici sizeof(t) == sizeof(int*)\n}\n\nstd::array<int, 3> a{1, 2, 3};\nstd::cout << a.size(); // 3"
+        },
+        {
+          "title": "const-correctness",
+          "body": "Marquer const tout ce qui ne doit pas changer (paramètres, variables, méthodes) documente l'intention et laisse le compilateur détecter les modifications accidentelles."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-const-q1",
+          "prompt": "Avec const int* p, qu'est-ce qui est interdit ?",
+          "choices": [
+            "Modifier *p",
+            "Modifier p",
+            "Les deux",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le const porte sur l'int pointé : on peut rediriger p mais pas modifier la valeur pointée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-const-q2",
+          "prompt": "Avec int* const p = &a;, laquelle de ces instructions ne compile pas ?",
+          "choices": [
+            "p = &b;",
+            "*p = 5;",
+            "int x = *p;",
+            "std::cout << p;"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le const porte sur le pointeur lui-même : il ne peut pas être redirigé, mais la valeur pointée reste modifiable.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-const-q3",
+          "prompt": "Pour const int* const p = &a;, quelles instructions sont interdites ?",
+          "choices": [
+            "*p = 3;",
+            "p = &b;",
+            "int x = *p;",
+            "if (p) { }"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "Les deux const interdisent de modifier la valeur pointée et de rediriger le pointeur. Lire *p ou tester p reste permis.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cpp-const-q4",
+          "prompt": "Qu'affiche ce code sur une plateforme 64 bits où int fait 4 octets ?",
+          "code": "void taille(int t[]) {\n    std::cout << sizeof(t) / sizeof(t[0]);\n}\n\nint tab[8] = {};\nstd::cout << sizeof(tab) / sizeof(tab[0]) << ' ';\ntaille(tab);",
+          "choices": [
+            "8 2",
+            "8 8",
+            "2 2",
+            "8 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans la fonction, t est un int* : sizeof(t) vaut 8 et sizeof(t[0]) vaut 4, d'où 2. Le tableau a perdu sa taille en étant passé en paramètre.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cpp-const-q5",
+          "prompt": "Complète : un pointeur que l'on peut rediriger, mais qui ne permet pas de modifier la valeur pointée.",
+          "code": "___ int___ p = &a;\np = &b;     // doit compiler\n// *p = 3;  // ne doit pas compiler",
+          "answers": [
+            "const",
+            "*"
+          ],
+          "distractors": [
+            "&",
+            "constexpr",
+            "* const"
+          ],
+          "explanation": "const int* p : la valeur pointée est constante, le pointeur ne l'est pas. int* const p serait l'inverse.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-const-q6",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "void afficher(const std::vector<int>& v) {\n    for (int& x : v) {\n        std::cout << x << ' ';\n    }\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "v est const, ses éléments aussi : ils ne peuvent pas être liés à un int& non const. Il faut const int& x (ou int x).",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "cpp-defi-pointeurs",
+    "title": "Défi entretien : références et pointeurs",
+    "summary": "Indirection, durée de vie et signatures idiomatiques.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi2-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "int a = 1;\nint* p = &a;\nint** pp = &p;\n**pp = 5;\nstd::cout << a;",
+        "choices": [
+          "5",
+          "1",
+          "L'adresse de p",
+          "Erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "*pp est p, et **pp est donc a : l'affectation modifie a.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi2-q2",
+        "prompt": "Cas pratique 1/2 — La liste de l'appelant reste vide. Touche la ligne en cause.",
+        "code": "void ajouter(std::vector<int> v, int x) {\n    v.push_back(x);\n}\n\nstd::vector<int> liste;\najouter(liste, 42);\nstd::cout << liste.size(); // 0",
+        "bugLines": [
+          1
+        ],
+        "explanation": "v est passé par valeur : la fonction ajoute l'élément à une copie, détruite à la fin de l'appel.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi2-q3",
+        "prompt": "Cas pratique 2/2 — Quelle signature corrige le problème de la façon la plus idiomatique ?",
+        "choices": [
+          "void ajouter(std::vector<int>& v, int x)",
+          "void ajouter(const std::vector<int>& v, int x)",
+          "void ajouter(std::vector<int>* v, int x)",
+          "void ajouter(std::vector<int>&& v, int x)"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une référence non const exprime « je modifie ton objet ». const& interdit la modification, && n'accepte pas une variable nommée comme liste, et le pointeur fonctionne mais oblige à gérer le cas nullptr.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi2-q4",
+        "prompt": "Revue de code : coche tous les problèmes de cette fonction.",
+        "code": "int* plusGrand(int* t, int n) {\n    int* max = t;\n    for (int i = 1; i <= n; ++i)\n        if (t[i] > *max) max = &t[i];\n    return max;\n}",
+        "choices": [
+          "La boucle lit t[n], hors limites",
+          "Si n vaut 0, la fonction renvoie un pointeur vers un élément qui n'existe pas",
+          "Renvoyer &t[i] crée un pointeur pendant car t est local",
+          "int* max = t; ne compile pas car t est un tableau"
+        ],
+        "answerIndices": [
+          0,
+          1
+        ],
+        "explanation": "La condition doit être i < n, et le cas n == 0 doit être traité (renvoyer nullptr par exemple). Les éléments appartiennent à l'appelant : &t[i] reste valide après le retour.",
+        "difficulty": 3
+      },
+      {
+        "type": "fill",
+        "id": "cpp-defi2-q5",
+        "prompt": "Complète : parcourir un tableau C avec un pointeur, du début jusqu'à la fin.",
+        "code": "int t[4] = {1, 2, 3, 4};\nint somme = 0;\nfor (int* p = t; p != t ___ 4; ++p) {\n    somme += ___p;\n}",
+        "answers": [
+          "+",
+          "*"
+        ],
+        "distractors": [
+          "&",
+          "-",
+          "[]"
+        ],
+        "explanation": "t + 4 pointe juste après le dernier élément (c'est la « fin », comme end() pour les conteneurs), et *p lit l'élément courant.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi2-q6",
+        "prompt": "Pourquoi ce code est-il dangereux ?",
+        "code": "const char* nom() {\n    std::string s = \"Ada\";\n    return s.c_str();\n}",
+        "choices": [
+          "Le pointeur renvoyé désigne le buffer d'une string détruite",
+          "c_str() renvoie une copie qu'il faut libérer avec delete",
+          "Une fonction ne peut pas renvoyer un const char*",
+          "Aucun problème : le littéral \"Ada\" est statique"
+        ],
+        "answerIndex": 0,
+        "explanation": "c_str() pointe dans le buffer interne de s, détruit à la sortie de la fonction. Le littéral est statique, mais s en a fait une copie. Il faut renvoyer un std::string.",
+        "difficulty": 3
+      }
+    ]
+  }
+}

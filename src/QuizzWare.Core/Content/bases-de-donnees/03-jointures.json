@@ -1,0 +1,278 @@
+{
+  "id": "db-ch-jointures",
+  "title": "Jointures et agrégats",
+  "summary": "Combiner des tables et résumer des données.",
+  "lessons": [
+    {
+      "id": "db-jointures",
+      "title": "Les jointures",
+      "summary": "INNER, LEFT, CROSS… et leurs pièges.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "INNER JOIN",
+          "body": "Ne garde que les lignes qui ont une correspondance des deux côtés. JOIN seul est un INNER JOIN.",
+          "code": "SELECT c.nom, cmd.total\nFROM clients c\nJOIN commandes cmd ON cmd.client_id = c.id;"
+        },
+        {
+          "title": "LEFT JOIN",
+          "body": "Garde toutes les lignes de la table de gauche ; les colonnes de droite valent NULL quand il n'y a pas de correspondance. Idéal pour trouver ce qui manque, comme les clients sans commande.",
+          "code": "SELECT c.nom\nFROM clients c\nLEFT JOIN commandes cmd ON cmd.client_id = c.id\nWHERE cmd.id IS NULL;"
+        },
+        {
+          "title": "Les autres jointures",
+          "body": "RIGHT JOIN est le symétrique du LEFT JOIN. FULL OUTER JOIN garde tout des deux côtés. CROSS JOIN fait le produit cartésien : chaque ligne avec chaque ligne. Une condition de jointure oubliée ou incomplète provoque une explosion du nombre de lignes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-join-q1",
+          "prompt": "Que retourne un INNER JOIN ?",
+          "choices": [
+            "Les lignes qui ont une correspondance dans les deux tables",
+            "Toutes les lignes des deux tables",
+            "Toutes les lignes de la table de gauche",
+            "Le produit cartésien des deux tables"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une ligne sans correspondance de l'autre côté disparaît du résultat. Pour la conserver, il faut une jointure externe (LEFT, RIGHT ou FULL).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-join-q2",
+          "prompt": "Comment lister les clients qui n'ont jamais commandé ?",
+          "choices": [
+            "LEFT JOIN commandes, puis WHERE commande IS NULL",
+            "INNER JOIN commandes",
+            "CROSS JOIN commandes",
+            "C'est impossible en une requête"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le LEFT JOIN garde tous les clients ; ceux sans commande ont des colonnes de commande à NULL. NOT EXISTS est une alternative tout aussi correcte.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-join-q3",
+          "prompt": "clients contient 3 lignes et commandes en contient 4. Combien de lignes renvoie un CROSS JOIN ?",
+          "choices": ["12", "7", "4", "3"],
+          "answerIndex": 0,
+          "explanation": "Le produit cartésien associe chaque ligne de gauche à chaque ligne de droite : 3 × 4 = 12.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "db-join-q4",
+          "prompt": "On veut tous les clients, avec leurs commandes de 2024 s'ils en ont. Mais les clients sans commande disparaissent. Touche la ligne en cause.",
+          "code": "SELECT c.nom, cmd.total\nFROM clients c\nLEFT JOIN commandes cmd ON cmd.client_id = c.id\nWHERE cmd.annee = 2024;",
+          "bugLines": [4],
+          "explanation": "Pour un client sans commande, cmd.annee vaut NULL : le WHERE élimine la ligne, et le LEFT JOIN se comporte comme un INNER JOIN. La condition doit aller dans le ON : ON cmd.client_id = c.id AND cmd.annee = 2024.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "db-join-q5",
+          "prompt": "Complète : chaque commande avec le nom de son client.",
+          "code": "SELECT cmd.id, c.nom\nFROM commandes cmd\n___ clients c ___ c.id = cmd.client_id;",
+          "answers": ["JOIN", "ON"],
+          "distractors": ["WHERE", "WITH", "BY"],
+          "explanation": "JOIN indique la table à joindre, ON la condition de correspondance.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "db-join-q6",
+          "prompt": "Quelles requêtes renvoient chaque client ayant au moins une commande, une seule fois ?",
+          "choices": [
+            "SELECT DISTINCT c.* FROM clients c JOIN commandes cmd ON cmd.client_id = c.id",
+            "SELECT * FROM clients c WHERE EXISTS (SELECT 1 FROM commandes cmd WHERE cmd.client_id = c.id)",
+            "SELECT c.* FROM clients c JOIN commandes cmd ON cmd.client_id = c.id",
+            "SELECT * FROM clients c LEFT JOIN commandes cmd ON cmd.client_id = c.id"
+          ],
+          "answerIndices": [0, 1],
+          "explanation": "La jointure simple répète le client pour chacune de ses commandes. Le LEFT JOIN inclut aussi les clients sans commande. EXISTS est souvent la formulation la plus claire (une « semi-jointure »).",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "db-agregats",
+      "title": "GROUP BY et agrégats",
+      "summary": "Compter, sommer, filtrer des groupes.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Agréger",
+          "body": "COUNT, SUM, AVG, MIN et MAX résument plusieurs lignes en une valeur. GROUP BY calcule ces agrégats pour chaque groupe.",
+          "code": "SELECT client_id, COUNT(*) AS nb, SUM(total) AS ca\nFROM commandes\nGROUP BY client_id;"
+        },
+        {
+          "title": "WHERE ou HAVING",
+          "body": "WHERE filtre les lignes avant le regroupement ; HAVING filtre les groupes après, et peut donc utiliser des agrégats.",
+          "code": "SELECT client_id, COUNT(*) AS nb\nFROM commandes\nWHERE statut = 'payee'\nGROUP BY client_id\nHAVING COUNT(*) > 5;"
+        },
+        {
+          "title": "La règle du GROUP BY",
+          "body": "Toute colonne du SELECT qui n'est pas dans un agrégat doit figurer dans le GROUP BY, sinon sa valeur serait ambiguë. MySQL, en mode permissif, l'accepte et renvoie une valeur arbitraire du groupe : un bug silencieux."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-agg-q1",
+          "prompt": "Quelle clause filtre les résultats après un GROUP BY ?",
+          "choices": ["HAVING", "WHERE", "ORDER BY", "FILTER BY"],
+          "answerIndex": 0,
+          "explanation": "WHERE agit sur les lignes avant le regroupement, HAVING sur les groupes après.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "db-agg-q2",
+          "prompt": "PostgreSQL refuse cette requête. Touche une ligne en cause.",
+          "code": "SELECT client_id, ville, SUM(total)\nFROM commandes\nGROUP BY client_id;",
+          "bugLines": [1, 3],
+          "explanation": "ville n'est ni agrégée ni dans le GROUP BY : quelle ville afficher pour un client qui en a plusieurs ? Il faut l'ajouter au GROUP BY ou l'agréger (MAX(ville)…).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-agg-q3",
+          "prompt": "Que renvoie cette requête ?",
+          "code": "-- ventes(vendeur, montant) :\n-- ('A', 100), ('A', 50), ('B', 30)\nSELECT vendeur, SUM(montant)\nFROM ventes\nGROUP BY vendeur\nHAVING SUM(montant) > 40;",
+          "choices": ["A | 150", "A | 150 et B | 30", "A | 100 et A | 50", "B | 30"],
+          "answerIndex": 0,
+          "explanation": "Les groupes valent A = 150 et B = 30 ; HAVING ne garde que les groupes dont la somme dépasse 40.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "db-agg-q4",
+          "prompt": "Complète : les villes qui comptent plus de 100 clients.",
+          "code": "SELECT ville, COUNT(*)\nFROM clients\n___ BY ville\n___ COUNT(*) > 100;",
+          "answers": ["GROUP", "HAVING"],
+          "distractors": ["ORDER", "WHERE", "FILTER"],
+          "explanation": "On regroupe par ville, puis on filtre les groupes sur leur effectif : c'est le rôle de HAVING, car WHERE ne connaît pas encore COUNT(*).",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "db-agg-q5",
+          "prompt": "Remets dans l'ordre : le chiffre d'affaires 2024 par client, du plus grand au plus petit.",
+          "lines": [
+            "SELECT client_id, SUM(total) AS ca",
+            "FROM commandes",
+            "WHERE annee = 2024",
+            "GROUP BY client_id",
+            "ORDER BY ca DESC;"
+          ],
+          "explanation": "On filtre l'année avec WHERE (avant le regroupement), on agrège par client, puis on trie sur l'alias.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "db-agg-q6",
+          "prompt": "Quelles affirmations sur COUNT sont vraies ?",
+          "choices": [
+            "COUNT(*) compte toutes les lignes, NULL compris",
+            "COUNT(col) ignore les NULL de col",
+            "COUNT(DISTINCT col) compte les valeurs distinctes non NULL",
+            "COUNT(*) est plus lent que COUNT(1)"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "COUNT(*) et COUNT(1) sont traités de la même façon par les moteurs modernes : c'est une idée reçue.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "db-defi-jointures",
+    "title": "Défi entretien : jointures et agrégats",
+    "summary": "Le piège des jointures qui multiplient les lignes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "db-defi3-q1",
+        "prompt": "Combien de lignes renvoie cette requête ?",
+        "code": "-- clients : (1, 'Ada'), (2, 'Linus')\n-- commandes(client_id, total) :\n--   (1, 10), (1, 20), (3, 99)\nSELECT c.nom, cmd.total\nFROM clients c\nLEFT JOIN commandes cmd\n  ON cmd.client_id = c.id;",
+        "choices": ["3", "2", "4", "5"],
+        "answerIndex": 0,
+        "explanation": "Ada apparaît deux fois (10 et 20), Linus une fois avec NULL. La commande du client 3 n'a pas de client à gauche : elle n'apparaît pas.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi3-q2",
+        "prompt": "Cas pratique 1/3 — Ce rapport donne, par client, le CA et le nombre de tickets de support. Le CA est gonflé. Pourquoi ?",
+        "code": "SELECT c.id, SUM(cmd.total) AS ca,\n       COUNT(t.id) AS tickets\nFROM clients c\nJOIN commandes cmd ON cmd.client_id = c.id\nJOIN tickets t ON t.client_id = c.id\nGROUP BY c.id;",
+        "choices": [
+          "Chaque commande est répétée pour chaque ticket du client",
+          "SUM compte les NULL",
+          "GROUP BY c.id est invalide",
+          "COUNT(t.id) modifie la somme"
+        ],
+        "answerIndex": 0,
+        "explanation": "Joindre deux relations 1-N indépendantes produit leur produit : un client avec 3 commandes et 4 tickets donne 12 lignes, et chaque commande est sommée 4 fois (le nombre de tickets est aussi faussé).",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "db-defi3-q3",
+        "prompt": "Cas pratique 2/3 — Quelle correction est la plus sûre ?",
+        "choices": [
+          "Agréger commandes et tickets séparément (CTE ou sous-requêtes), puis joindre les résultats",
+          "Remplacer SUM(cmd.total) par SUM(DISTINCT cmd.total)",
+          "Ajouter DISTINCT après SELECT",
+          "Remplacer les JOIN par des LEFT JOIN"
+        ],
+        "answerIndex": 0,
+        "explanation": "On agrège chaque relation à son grain (une ligne par client), puis on joint des résultats 1-1. SUM(DISTINCT) fausserait le calcul dès que deux commandes ont le même montant.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "db-defi3-q4",
+        "prompt": "Cas pratique 3/3 — Remets dans l'ordre la première brique de la correction : le CA agrégé à part.",
+        "lines": [
+          "WITH ca AS (",
+          "    SELECT client_id, SUM(total) AS montant",
+          "    FROM commandes GROUP BY client_id",
+          ")",
+          "SELECT c.id, ca.montant",
+          "FROM clients c",
+          "JOIN ca ON ca.client_id = c.id;"
+        ],
+        "explanation": "La CTE produit une ligne par client ; la jointure qui suit ne peut plus multiplier les lignes. On ferait de même pour les tickets.",
+        "difficulty": 3
+      },
+      {
+        "type": "fill",
+        "id": "db-defi3-q5",
+        "prompt": "Complète : le nom des clients qui n'ont jamais commandé.",
+        "code": "SELECT c.nom\nFROM clients c\n___ JOIN commandes cmd ON cmd.client_id = c.id\nWHERE cmd.id ___ NULL;",
+        "answers": ["LEFT", "IS"],
+        "distractors": ["INNER", "=", "CROSS"],
+        "explanation": "Le LEFT JOIN conserve tous les clients ; IS NULL garde ceux sans correspondance (on teste la clé primaire de la table de droite, jamais NULL sinon).",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "db-defi3-q6",
+        "prompt": "Revue de code : coche tous les problèmes de cette requête de reporting.",
+        "code": "SELECT *\nFROM commandes, clients\nWHERE commandes.total > 100\nORDER BY 3;",
+        "choices": [
+          "Aucune condition ne lie les deux tables : produit cartésien",
+          "SELECT * ramène des colonnes inutiles",
+          "ORDER BY 3 dépend de la position des colonnes, c'est fragile",
+          "WHERE ne peut pas filtrer une colonne numérique"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "La syntaxe « FROM a, b » est une jointure implicite ; sans condition, chaque commande est associée à chaque client. On préfère JOIN … ON, des colonnes explicites et un ORDER BY sur un nom.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

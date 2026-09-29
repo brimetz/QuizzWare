@@ -1,0 +1,301 @@
+{
+  "id": "db-ch-echelle",
+  "title": "Mise à l'échelle",
+  "summary": "Réplication, cache, partitionnement et sharding.",
+  "lessons": [
+    {
+      "id": "db-replication",
+      "title": "Réplication et cache",
+      "summary": "Répartir les lectures et survivre à une panne.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Primaire et répliques",
+          "body": "Les écritures vont sur le primaire, qui les transmet aux répliques ; les lectures peuvent être réparties sur les répliques. On gagne en capacité de lecture et en disponibilité : si le primaire tombe, une réplique peut être promue."
+        },
+        {
+          "title": "Synchrone ou asynchrone",
+          "body": "Asynchrone : le primaire confirme sans attendre les répliques. C'est rapide, mais une réplique peut être en retard (replication lag), et les dernières écritures peuvent être perdues en cas de bascule. Synchrone : pas de perte, mais chaque écriture attend le réseau."
+        },
+        {
+          "title": "Lire ses propres écritures",
+          "body": "Avec des répliques asynchrones, un utilisateur peut modifier son profil puis relire l'ancienne version depuis une réplique en retard. Solution courante : lire sur le primaire juste après une écriture de l'utilisateur."
+        },
+        {
+          "title": "Le cache",
+          "body": "Motif « cache-aside » : lire dans le cache ; en cas d'absence, lire en base puis remplir le cache avec une durée de vie (TTL) ; supprimer l'entrée quand la donnée change. Comme le dit l'adage : il n'y a que deux choses difficiles en informatique, l'invalidation de cache et le nommage.",
+          "code": "p = cache.get(cle)\nif p is None:\n    p = db.charger(produit_id)\n    cache.set(cle, p, ex=300)\nreturn p",
+          "language": "python"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-repl-q1",
+          "prompt": "Avec une réplication primaire / répliques, où vont les écritures ?",
+          "choices": ["Sur le primaire", "Sur n'importe quelle réplique", "Sur toutes les répliques en même temps", "Dans le cache"],
+          "answerIndex": 0,
+          "explanation": "Le primaire est le seul à accepter les écritures ; il les propage ensuite aux répliques.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-repl-q2",
+          "prompt": "Un utilisateur change son pseudo, recharge la page et voit l'ancien. Quelle est la cause probable ?",
+          "choices": [
+            "La lecture est servie par une réplique asynchrone en retard",
+            "Le pseudo n'est pas indexé",
+            "Le navigateur a un bug",
+            "La transaction a été annulée"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le replication lag. On garantit la lecture de ses propres écritures en lisant sur le primaire pendant quelques secondes après une modification.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "db-repl-q3",
+          "prompt": "Complète le motif cache-aside.",
+          "code": "p = cache.___(cle)\nif p is None:\n    p = db.charger(produit_id)\n    cache.___(cle, p, ex=300)\nreturn p",
+          "language": "python",
+          "answers": ["get", "set"],
+          "distractors": ["delete", "flush", "commit"],
+          "explanation": "On lit le cache, on retombe sur la base en cas d'absence, puis on remplit le cache avec une expiration de 300 secondes.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "db-repl-q4",
+          "prompt": "Quels gains apporte la réplication ?",
+          "choices": [
+            "Répartir les lectures sur plusieurs serveurs",
+            "Basculer sur une réplique si le primaire tombe",
+            "Multiplier la capacité d'écriture",
+            "Se passer de sauvegardes"
+          ],
+          "answerIndices": [0, 1],
+          "explanation": "Toutes les écritures passent encore par le primaire. Et une réplique n'est pas une sauvegarde : un DELETE accidentel est répliqué aussitôt.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-repl-q5",
+          "prompt": "En réplication asynchrone, le primaire tombe juste après avoir confirmé une écriture. Quel est le risque ?",
+          "choices": [
+            "L'écriture est perdue si la réplique promue ne l'avait pas encore reçue",
+            "Aucun : l'écriture est toujours sur toutes les répliques",
+            "La base devient accessible en lecture seule pour toujours",
+            "Les index sont corrompus"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le prix de l'asynchrone. La réplication synchrone (ou semi-synchrone) évite cette perte, au prix de la latence.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "db-repl-q6",
+          "prompt": "Qu'est-ce que le replication lag ?",
+          "choices": [
+            "Le retard d'une réplique sur le primaire",
+            "Le temps de création d'une réplique",
+            "La latence réseau entre le client et la base",
+            "Le délai avant l'expiration d'un cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il se mesure en secondes (ou en octets de journal) : c'est la fenêtre pendant laquelle une réplique renvoie des données périmées.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "db-sharding",
+      "title": "Partitionnement et sharding",
+      "summary": "Découper les données quand une machine ne suffit plus.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Partitionner une table",
+          "body": "On découpe une grosse table en partitions (par mois, par région) sur le même serveur. Les requêtes ciblées ne lisent que les partitions utiles, et supprimer une vieille partition est instantané.",
+          "code": "CREATE TABLE mesures (\n    capteur_id INT,\n    mesure_le  TIMESTAMP,\n    valeur     REAL\n) PARTITION BY RANGE (mesure_le);"
+        },
+        {
+          "title": "Le sharding",
+          "body": "On répartit les données sur plusieurs serveurs selon une clé de sharding (par exemple client_id). Chaque serveur ne porte qu'une partie des données et de la charge d'écriture."
+        },
+        {
+          "title": "Bien choisir la clé",
+          "body": "Une bonne clé répartit uniformément les données et la charge, et correspond aux requêtes principales. Une mauvaise clé crée un shard « chaud », ou oblige à interroger tous les shards pour chaque requête. Les jointures et transactions entre shards deviennent coûteuses."
+        },
+        {
+          "title": "Par plages ou par hachage",
+          "body": "Par plages (A-M / N-Z, ou par date) : les requêtes de plage sont efficaces, mais des points chauds apparaissent. Par hachage : la répartition est uniforme, mais une requête de plage touche tous les shards. Le hachage cohérent limite les données à déplacer quand on ajoute un serveur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-shard-q1",
+          "prompt": "Quelle est la différence entre réplication et sharding ?",
+          "choices": [
+            "La réplication copie les mêmes données ; le sharding les répartit",
+            "Le sharding copie les mêmes données ; la réplication les répartit",
+            "Ce sont deux noms pour la même chose",
+            "La réplication ne concerne que les index"
+          ],
+          "answerIndex": 0,
+          "explanation": "On les combine souvent : chaque shard a lui-même des répliques.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-shard-q2",
+          "prompt": "Pourquoi partitionner une table de logs par mois ?",
+          "choices": [
+            "Une requête sur une période ne lit que les partitions concernées, et purger un mois est instantané",
+            "Pour pouvoir stocker plus de colonnes",
+            "Pour se passer d'index",
+            "Pour répartir la table sur plusieurs serveurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Supprimer une partition entière (DROP) est quasi instantané, alors qu'un DELETE de millions de lignes est long et fragmente la table.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-shard-q3",
+          "prompt": "On sharde des commandes par date de création. Quel problème apparaît ?",
+          "choices": [
+            "Toutes les nouvelles écritures arrivent sur le même shard",
+            "Les commandes d'un client sont regroupées",
+            "Les données sont trop bien réparties",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le shard du mois courant reçoit toute la charge d'écriture, les autres presque rien : c'est un point chaud.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "db-shard-q4",
+          "prompt": "Après un sharding par client_id, qu'est-ce qui devient difficile ?",
+          "choices": [
+            "Les jointures entre données de clients placés sur des shards différents",
+            "Les transactions qui touchent plusieurs clients",
+            "Les requêtes globales (top 10 des produits, tous clients confondus)",
+            "Lire les commandes d'un client donné"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Tout ce qui concerne un seul client reste simple (un seul shard). Tout ce qui traverse plusieurs clients demande d'interroger plusieurs shards et d'agréger les résultats.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "db-shard-q5",
+          "prompt": "Quel est l'avantage du hachage cohérent ?",
+          "choices": [
+            "Ajouter un serveur ne déplace qu'une petite partie des données",
+            "Les requêtes de plage deviennent plus rapides",
+            "Il n'est plus nécessaire de choisir une clé",
+            "Il chiffre les données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un simple hash(clé) % N, changer N déplace presque toutes les clés ; avec le hachage cohérent, seulement environ 1/N d'entre elles.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "db-shard-q6",
+          "prompt": "Complète : partitionner la table par plages de dates.",
+          "code": "CREATE TABLE logs (\n    id      BIGINT,\n    cree_le TIMESTAMP\n) ___ BY ___ (cree_le);",
+          "answers": ["PARTITION", "RANGE"],
+          "distractors": ["GROUP", "ORDER", "LIST"],
+          "explanation": "PARTITION BY RANGE découpe par intervalles de valeurs ; LIST découpe par valeurs explicites (pays, statut…) et HASH par hachage.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "db-defi-echelle",
+    "title": "Défi entretien : passer à l'échelle",
+    "summary": "Faire grandir une base étape par étape, sans sur-ingénierie.",
+    "questions": [
+      {
+        "type": "order",
+        "id": "db-defi8-q1",
+        "prompt": "Cas pratique 1/4 — La base sature. Remets les mesures dans l'ordre, de la plus simple à la plus lourde.",
+        "language": "text",
+        "lines": [
+          "Optimiser les requêtes lentes (plans, index)",
+          "Ajouter un cache pour les lectures fréquentes",
+          "Ajouter des répliques en lecture",
+          "Partitionner les plus grosses tables",
+          "Sharder les données sur plusieurs serveurs"
+        ],
+        "explanation": "On commence par ce qui ne change pas l'architecture. Le sharding arrive en dernier : il est puissant, mais complique durablement tout le reste.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi8-q2",
+        "prompt": "Cas pratique 2/4 — 90 % des requêtes sont des lectures du catalogue de produits. Quelle solution est la plus efficace ?",
+        "choices": ["Un cache et des répliques en lecture", "Sharder immédiatement", "Passer à une base graphe", "Augmenter le niveau d'isolation"],
+        "answerIndex": 0,
+        "explanation": "Une charge dominée par les lectures se traite en multipliant les copies lisibles, pas en découpant les données.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi8-q3",
+        "prompt": "Cas pratique 3/4 — Ce sont maintenant les écritures de commandes qui saturent le primaire. Quelle clé de sharding choisir ?",
+        "choices": [
+          "client_id : les commandes d'un client restent ensemble et la charge est répartie",
+          "La date de la commande",
+          "Le pays du client (80 % sont en France)",
+          "Le statut de la commande"
+        ],
+        "answerIndex": 0,
+        "explanation": "La date crée un point chaud, le pays et le statut sont très mal répartis. client_id est très variée et correspond à la requête principale (« les commandes de ce client »).",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "db-defi8-q4",
+        "prompt": "Cas pratique 4/4 — Quels nouveaux problèmes le sharding apporte-t-il ?",
+        "choices": [
+          "Rééquilibrer les données quand on ajoute des shards",
+          "Des requêtes multi-shards plus lentes et plus complexes",
+          "Générer des identifiants uniques sans collision entre shards",
+          "L'impossibilité de créer des index"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "Les identifiants auto-incrémentés par serveur entrent en collision : on utilise des UUID ou des générateurs distribués (type Snowflake).",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "db-defi8-q5",
+        "prompt": "« Nous avons une réplique, donc nous n'avons pas besoin de sauvegardes. » Qu'en penses-tu ?",
+        "choices": [
+          "Faux : un DELETE accidentel est répliqué aussitôt ; il faut des sauvegardes restaurables et testées",
+          "Vrai : la réplique est une copie complète",
+          "Vrai, à condition que la réplique soit synchrone",
+          "Faux, car une réplique ne contient que les index"
+        ],
+        "answerIndex": 0,
+        "explanation": "La réplication protège d'une panne matérielle, pas d'une erreur humaine ou logicielle. Les sauvegardes, avec restauration à un instant donné (PITR), protègent de ces dernières.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "db-defi8-q6",
+        "prompt": "Juste après une modification, l'utilisateur voit parfois son ancien profil. Touche une ligne en cause.",
+        "code": "def lire_profil(user_id):\n    return replica.query(\n        \"SELECT * FROM profils WHERE id = %s\", user_id)\n\ndef modifier_profil(user_id, data):\n    primary.execute(\"UPDATE profils SET ...\", data)\n    return lire_profil(user_id)",
+        "language": "python",
+        "bugLines": [2, 7],
+        "explanation": "La relecture qui suit l'écriture passe par une réplique, peut-être en retard. Après une écriture, on relit sur le primaire (ou on renvoie directement les données écrites).",
+        "difficulty": 3
+      }
+    ]
+  }
+}

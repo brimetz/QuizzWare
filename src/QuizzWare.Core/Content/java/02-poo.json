@@ -1,0 +1,19 @@
+{
+  "id": "java-ch-poo",
+  "title": "Orienté objet",
+  "summary": "Héritage, interfaces et records.",
+  "lessons": [
+    {
+      "id": "java-heritage",
+      "title": "Héritage et interfaces",
+      "summary": "abstract et méthodes par défaut.",
+      "difficulty": 2
+    },
+    {
+      "id": "java-records",
+      "title": "Records et sealed classes",
+      "summary": "Le Java moderne.",
+      "difficulty": 2
+    }
+  ]
+}

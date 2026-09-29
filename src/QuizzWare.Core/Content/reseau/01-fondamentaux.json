@@ -1,0 +1,103 @@
+{
+  "id": "reseau-ch-fondamentaux",
+  "title": "Fondamentaux des réseaux",
+  "summary": "Couches, TCP/UDP et ports.",
+  "lessons": [
+    {
+      "id": "reseau-osi",
+      "title": "Modèle OSI et TCP/IP",
+      "summary": "Les couches réseau et les protocoles de transport.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les 7 couches OSI",
+          "body": "1 Physique, 2 Liaison, 3 Réseau (IP), 4 Transport (TCP, UDP), 5 Session, 6 Présentation, 7 Application (HTTP, DNS...). Le modèle TCP/IP, utilisé en pratique, regroupe ces couches en 4 niveaux."
+        },
+        {
+          "title": "TCP vs UDP",
+          "body": "TCP est orienté connexion : il garantit la livraison, l'ordre et le contrôle de flux, au prix d'une latence plus élevée. UDP envoie des datagrammes sans garantie : idéal pour la voix, la vidéo ou les jeux, où la fraîcheur prime sur la fiabilité."
+        },
+        {
+          "title": "Le three-way handshake",
+          "body": "Une connexion TCP s'établit en trois étapes : le client envoie SYN, le serveur répond SYN-ACK, le client confirme avec ACK."
+        },
+        {
+          "title": "Ports courants",
+          "body": "22 SSH, 53 DNS, 80 HTTP, 443 HTTPS, 5432 PostgreSQL, 3306 MySQL."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "reseau-osi-q1",
+          "prompt": "Combien de couches compte le modèle OSI ?",
+          "choices": [
+            "4",
+            "5",
+            "7",
+            "9"
+          ],
+          "answerIndex": 2,
+          "explanation": "Physique, Liaison, Réseau, Transport, Session, Présentation, Application.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "reseau-osi-q2",
+          "prompt": "À quelle couche OSI appartient TCP ?",
+          "choices": [
+            "Réseau (3)",
+            "Transport (4)",
+            "Session (5)",
+            "Application (7)"
+          ],
+          "answerIndex": 1,
+          "explanation": "TCP et UDP sont des protocoles de la couche Transport ; IP est en couche Réseau.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "reseau-osi-q3",
+          "prompt": "Quelle garantie TCP offre-t-il qu'UDP n'offre pas ?",
+          "choices": [
+            "Un chiffrement des données",
+            "La livraison ordonnée et fiable",
+            "Une latence plus faible",
+            "Le multicast"
+          ],
+          "answerIndex": 1,
+          "explanation": "TCP retransmet les paquets perdus et les remet dans l'ordre ; UDP n'offre aucune de ces garanties.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "reseau-osi-q4",
+          "prompt": "Quel est le port par défaut de HTTPS ?",
+          "choices": [
+            "80",
+            "8080",
+            "443",
+            "22"
+          ],
+          "answerIndex": 2,
+          "explanation": "HTTPS utilise le port 443, HTTP le port 80.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "reseau-osi-q5",
+          "prompt": "Quelle est la séquence du three-way handshake TCP ?",
+          "choices": [
+            "SYN, ACK, FIN",
+            "SYN, SYN-ACK, ACK",
+            "HELLO, ACK, READY",
+            "ACK, SYN, SYN-ACK"
+          ],
+          "answerIndex": 1,
+          "explanation": "Le client envoie SYN, le serveur répond SYN-ACK, le client termine avec ACK.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "id": "infra-ch-orchestration",
+  "title": "Orchestration et scalabilité",
+  "summary": "Kubernetes, probes et Infrastructure as Code.",
+  "lessons": [
+    {
+      "id": "infra-kubernetes",
+      "title": "Kubernetes et scalabilité",
+      "summary": "Orchestrer des conteneurs et faire monter en charge.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les objets de base",
+          "body": "Un Pod est la plus petite unité déployable (un ou plusieurs conteneurs partageant réseau et stockage). Un Deployment maintient un nombre voulu de réplicas de Pods. Un Service expose un ensemble de Pods derrière une adresse stable et répartit la charge."
+        },
+        {
+          "title": "Scalabilité",
+          "body": "Scaler verticalement = donner plus de ressources à une instance. Scaler horizontalement = ajouter des instances. L'horizontal est privilégié pour les services sans état, et automatisable avec le Horizontal Pod Autoscaler."
+        },
+        {
+          "title": "Probes",
+          "body": "La liveness probe détecte un conteneur bloqué : Kubernetes le redémarre. La readiness probe indique si le Pod peut recevoir du trafic : en cas d'échec, il est retiré du Service sans être redémarré."
+        },
+        {
+          "title": "Infrastructure as Code",
+          "body": "Décrire l'infrastructure dans des fichiers versionnés (Terraform, Pulumi, Bicep...) rend les environnements reproductibles, relisibles en code review et automatisables en CI/CD."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-k8s-q1",
+          "prompt": "Quelle est la plus petite unité déployable dans Kubernetes ?",
+          "choices": [
+            "Node",
+            "Pod",
+            "Container",
+            "Cluster"
+          ],
+          "answerIndex": 1,
+          "explanation": "Kubernetes ne déploie pas des conteneurs seuls mais des Pods, qui en contiennent un ou plusieurs.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-k8s-q2",
+          "prompt": "Scaler horizontalement une application consiste à...",
+          "choices": [
+            "Ajouter du CPU et de la RAM à la machine",
+            "Ajouter des instances de l'application",
+            "Réduire le nombre de requêtes",
+            "Changer de langage"
+          ],
+          "answerIndex": 1,
+          "explanation": "Horizontal = plus d'instances ; vertical = des instances plus puissantes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-k8s-q3",
+          "prompt": "Quel outil est un standard de l'Infrastructure as Code multi-cloud ?",
+          "choices": [
+            "Terraform",
+            "Webpack",
+            "Gradle",
+            "Postman"
+          ],
+          "answerIndex": 0,
+          "explanation": "Terraform décrit l'infrastructure de façon déclarative et supporte de nombreux fournisseurs cloud.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-k8s-q4",
+          "prompt": "Quel objet Kubernetes fournit une adresse stable devant un ensemble de Pods ?",
+          "choices": [
+            "ConfigMap",
+            "Service",
+            "Secret",
+            "Namespace"
+          ],
+          "answerIndex": 1,
+          "explanation": "Les Pods sont éphémères et changent d'IP ; le Service offre un point d'accès stable et répartit la charge.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-k8s-q5",
+          "prompt": "Que se passe-t-il quand la readiness probe d'un Pod échoue ?",
+          "choices": [
+            "Le Pod est redémarré",
+            "Le Pod est supprimé définitivement",
+            "Le Pod ne reçoit plus de trafic du Service",
+            "Le cluster s'arrête"
+          ],
+          "answerIndex": 2,
+          "explanation": "La readiness contrôle le routage du trafic ; c'est l'échec de la liveness probe qui provoque un redémarrage.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ]
+}

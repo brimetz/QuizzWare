@@ -1,0 +1,9 @@
+{
+  "id": "csharp",
+  "order": 5,
+  "name": "C#",
+  "description": "Le langage C# et l'écosystème .NET.",
+  "icon": "C#",
+  "color": "#AB47BC",
+  "language": "csharp"
+}

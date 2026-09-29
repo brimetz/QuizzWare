@@ -1,0 +1,19 @@
+{
+  "id": "c-ch-bas-niveau",
+  "title": "Bas niveau",
+  "summary": "Bits, endianness et volatile.",
+  "lessons": [
+    {
+      "id": "c-bits",
+      "title": "Opérations bit à bit",
+      "summary": "Masques et décalages.",
+      "difficulty": 2
+    },
+    {
+      "id": "c-endianness",
+      "title": "Endianness",
+      "summary": "L'ordre des octets.",
+      "difficulty": 2
+    }
+  ]
+}

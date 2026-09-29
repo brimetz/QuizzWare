@@ -1,0 +1,76 @@
+{
+  "unlockedBy": "git-ch-bases",
+  "nodes": [
+    {
+      "id": "git-spe-plateformes",
+      "title": "Plateformes",
+      "summary": "Héberger et collaborer.",
+      "icon": "PLT",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "git-spe-github",
+          "title": "GitHub",
+          "summary": "Pull requests, issues, protections de branches.",
+          "icon": "GH",
+          "kind": "techno"
+        },
+        {
+          "id": "git-spe-gitlab",
+          "title": "GitLab",
+          "summary": "Merge requests, groupes et intégration continue.",
+          "icon": "GL",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "git-spe-automatisation",
+      "title": "Automatisation",
+      "summary": "Du commit au déploiement.",
+      "icon": "CI",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "git-spe-actions",
+          "title": "GitHub Actions",
+          "summary": "Workflows, jobs, matrices, secrets et déploiements.",
+          "icon": "GHA",
+          "kind": "techno",
+          "linkTo": "architecture-infra/infra-spe-github-actions"
+        },
+        {
+          "id": "git-spe-gitlab-ci",
+          "title": "GitLab CI",
+          "summary": "Pipelines, stages, runners et environnements.",
+          "icon": "GLCI",
+          "kind": "techno",
+          "linkTo": "architecture-infra/infra-spe-gitlab-ci"
+        }
+      ]
+    },
+    {
+      "id": "git-spe-echelle",
+      "title": "Grands dépôts",
+      "summary": "Git à grande échelle.",
+      "icon": "MONO",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "git-spe-monorepo",
+          "title": "Monorepos",
+          "summary": "Un dépôt pour tous les projets : outils et compromis.",
+          "icon": "MONO",
+          "kind": "concept"
+        },
+        {
+          "id": "git-spe-lfs",
+          "title": "Git LFS",
+          "summary": "Versionner de gros fichiers.",
+          "icon": "LFS",
+          "kind": "techno"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "algo-ch-arbres",
+  "title": "Arbres",
+  "summary": "Arbres binaires, de recherche et tas.",
+  "lessons": [
+    {
+      "id": "algo-arbres-binaires",
+      "title": "Arbres binaires",
+      "summary": "Parcours en profondeur et en largeur.",
+      "difficulty": 2
+    },
+    {
+      "id": "algo-abr",
+      "title": "Arbres binaires de recherche",
+      "summary": "Insertion, recherche et équilibrage.",
+      "difficulty": 2
+    },
+    {
+      "id": "algo-tas",
+      "title": "Tas et files de priorité",
+      "summary": "Top K et médiane.",
+      "difficulty": 3
+    }
+  ]
+}

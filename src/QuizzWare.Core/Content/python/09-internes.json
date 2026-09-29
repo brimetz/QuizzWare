@@ -1,0 +1,19 @@
+{
+  "id": "py-ch-internes",
+  "title": "Fonctionnement interne",
+  "summary": "CPython, mémoire et GIL.",
+  "lessons": [
+    {
+      "id": "py-cpython",
+      "title": "CPython",
+      "summary": "Bytecode et interprétation.",
+      "difficulty": 3
+    },
+    {
+      "id": "py-memoire",
+      "title": "Gestion de la mémoire",
+      "summary": "Comptage de références et ramasse-miettes.",
+      "difficulty": 3
+    }
+  ]
+}

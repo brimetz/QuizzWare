@@ -1,0 +1,19 @@
+{
+  "id": "js-ch-modules",
+  "title": "Modules et outillage",
+  "summary": "ESM, npm et bundlers.",
+  "lessons": [
+    {
+      "id": "js-modules",
+      "title": "Modules",
+      "summary": "import, export, ESM et CommonJS.",
+      "difficulty": 2
+    },
+    {
+      "id": "js-npm",
+      "title": "npm et les dépendances",
+      "summary": "package.json et versions.",
+      "difficulty": 1
+    }
+  ]
+}

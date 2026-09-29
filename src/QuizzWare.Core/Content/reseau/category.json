@@ -1,0 +1,8 @@
+{
+  "id": "reseau",
+  "order": 3,
+  "name": "Réseau",
+  "description": "Modèle OSI, TCP/IP, DNS, HTTP et adressage.",
+  "icon": "NET",
+  "color": "#29B6F6"
+}

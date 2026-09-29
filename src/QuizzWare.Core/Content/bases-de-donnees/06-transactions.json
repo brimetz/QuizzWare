@@ -1,0 +1,376 @@
+{
+  "id": "db-ch-transactions",
+  "title": "Transactions et concurrence",
+  "summary": "ACID, niveaux d'isolation, verrous et deadlocks.",
+  "lessons": [
+    {
+      "id": "db-acid",
+      "title": "Transactions et ACID",
+      "summary": "Tout ou rien, même en cas de panne.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Une transaction",
+          "body": "Un groupe d'opérations qui réussit ou échoue en bloc. BEGIN la démarre, COMMIT la valide, ROLLBACK annule tout ce qu'elle a fait.",
+          "code": "BEGIN;\nUPDATE comptes SET solde = solde - 100 WHERE id = 1;\nUPDATE comptes SET solde = solde + 100 WHERE id = 2;\nCOMMIT;"
+        },
+        {
+          "title": "ACID",
+          "body": "Atomicité : tout ou rien. Cohérence : les contraintes restent respectées. Isolation : les transactions concurrentes ne se perturbent pas (selon le niveau choisi). Durabilité : une transaction validée survit à une panne."
+        },
+        {
+          "title": "Durabilité et journal",
+          "body": "Avant de confirmer un COMMIT, le moteur écrit les changements dans un journal sur disque (WAL, write-ahead log). Après un crash, il rejoue ce journal : rien de ce qui a été validé n'est perdu."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-acid-q1",
+          "prompt": "Dans ACID, que signifie le « A » ?",
+          "choices": ["Atomicité", "Availability (disponibilité)", "Authentification", "Asynchrone"],
+          "answerIndex": 0,
+          "explanation": "Atomicité : toutes les opérations de la transaction sont appliquées, ou aucune.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-acid-q2",
+          "prompt": "Que fait ROLLBACK ?",
+          "choices": [
+            "Il annule toutes les modifications de la transaction en cours",
+            "Il annule seulement la dernière requête",
+            "Il valide la transaction",
+            "Il restaure la dernière sauvegarde"
+          ],
+          "answerIndex": 0,
+          "explanation": "La base revient à l'état d'avant le BEGIN. Pour annuler seulement une partie, on utilise des points de sauvegarde (SAVEPOINT).",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "db-acid-q3",
+          "prompt": "Remets dans l'ordre : créer une commande et sa ligne de façon atomique (lignes référence commandes).",
+          "lines": [
+            "BEGIN;",
+            "INSERT INTO commandes (id, client_id) VALUES (7, 42);",
+            "INSERT INTO lignes (commande_id, produit_id) VALUES (7, 3);",
+            "COMMIT;"
+          ],
+          "explanation": "La ligne référence la commande : la commande doit exister avant. Le tout est encadré par BEGIN et COMMIT pour ne jamais laisser une commande sans ligne.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-acid-q4",
+          "prompt": "Le serveur plante juste après avoir confirmé un COMMIT. La transaction est-elle perdue ?",
+          "choices": [
+            "Non : elle a été écrite dans le journal (WAL) avant la confirmation",
+            "Oui, toujours",
+            "Seulement si elle contenait un DELETE",
+            "Cela dépend du nombre de lignes modifiées"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la durabilité : le COMMIT n'est confirmé qu'une fois le journal écrit sur disque, puis rejoué au redémarrage.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "db-acid-q5",
+          "prompt": "Si le second UPDATE échoue, 100 € disparaissent. Touche la ligne qui pose problème.",
+          "code": "db.execute(\"UPDATE comptes SET solde = solde - 100 WHERE id = 1\")\ndb.commit()\ndb.execute(\"UPDATE comptes SET solde = solde + 100 WHERE id = 2\")\ndb.commit()",
+          "language": "python",
+          "bugLines": [2],
+          "explanation": "Le premier commit valide le débit seul : le virement n'est plus atomique. Il faut un unique commit après les deux UPDATE (et un rollback en cas d'erreur).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "db-acid-q6",
+          "prompt": "Quelles propriétés font partie d'ACID ?",
+          "choices": ["Atomicité", "Cohérence", "Isolation", "Durabilité", "Disponibilité"],
+          "answerIndices": [0, 1, 2, 3],
+          "explanation": "La disponibilité appartient au théorème CAP ou au modèle BASE, pas à ACID.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "db-isolation",
+      "title": "Les niveaux d'isolation",
+      "summary": "Ce que voient deux transactions qui s'exécutent en même temps.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les anomalies",
+          "body": "Lecture sale : lire une modification pas encore validée. Lecture non répétable : relire une ligne et obtenir une autre valeur. Lecture fantôme : relancer une requête et voir apparaître de nouvelles lignes. Mise à jour perdue : deux transactions modifient la même donnée et l'une écrase l'autre."
+        },
+        {
+          "title": "Les quatre niveaux",
+          "body": "Read Uncommitted < Read Committed < Repeatable Read < Serializable. Plus le niveau est élevé, moins il y a d'anomalies, mais plus il y a d'attente ou de transactions à rejouer. Par défaut : Read Committed pour PostgreSQL, Oracle et SQL Server ; Repeatable Read pour MySQL (InnoDB)."
+        },
+        {
+          "title": "MVCC",
+          "body": "PostgreSQL, Oracle ou InnoDB conservent plusieurs versions des lignes : chaque transaction lit un instantané cohérent. Les lectures ne bloquent pas les écritures, et inversement. Les anciennes versions doivent ensuite être nettoyées (VACUUM dans PostgreSQL)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-iso-q1",
+          "prompt": "Qu'est-ce qu'une lecture sale (dirty read) ?",
+          "choices": [
+            "Lire une modification pas encore validée par une autre transaction",
+            "Lire une ligne supprimée par erreur",
+            "Lire une table sans index",
+            "Lire des données corrompues sur le disque"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si l'autre transaction fait ensuite un ROLLBACK, on a lu une valeur qui n'a jamais existé. Seul Read Uncommitted l'autorise.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-iso-q2",
+          "prompt": "Quel est le niveau d'isolation par défaut de PostgreSQL ?",
+          "choices": ["Read Committed", "Serializable", "Read Uncommitted", "Repeatable Read"],
+          "answerIndex": 0,
+          "explanation": "Chaque requête voit les données validées au moment où elle démarre. MySQL (InnoDB) utilise Repeatable Read par défaut.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-iso-q3",
+          "prompt": "En Read Committed, que lit T1 à la dernière ligne ?",
+          "code": "T1: BEGIN;\nT1: SELECT solde FROM comptes WHERE id = 1; -- 100\nT2: UPDATE comptes SET solde = 50 WHERE id = 1;\nT2: COMMIT;\nT1: SELECT solde FROM comptes WHERE id = 1; -- ?",
+          "choices": ["50", "100", "Une erreur", "NULL"],
+          "answerIndex": 0,
+          "explanation": "En Read Committed, chaque requête voit les dernières données validées : c'est une lecture non répétable. En Repeatable Read, T1 aurait relu 100.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "db-iso-q4",
+          "prompt": "Selon le standard SQL, quel niveau d'isolation empêche les lectures fantômes ?",
+          "choices": ["Serializable", "Repeatable Read", "Read Committed", "Read Uncommitted"],
+          "answerIndex": 0,
+          "explanation": "Le standard ne les exclut qu'en Serializable. En pratique, PostgreSQL les évite aussi en Repeatable Read grâce à ses instantanés.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "db-iso-q5",
+          "prompt": "Complète pour exécuter la transaction au niveau d'isolation le plus strict.",
+          "code": "BEGIN;\nSET TRANSACTION ISOLATION LEVEL ___;\n-- ...\nCOMMIT;",
+          "answers": ["SERIALIZABLE"],
+          "distractors": ["STRICT", "READ COMMITTED", "LOCKED"],
+          "explanation": "En Serializable, le résultat est le même que si les transactions s'étaient exécutées l'une après l'autre ; certaines peuvent échouer et doivent être rejouées.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "db-iso-q6",
+          "prompt": "Quels sont les effets de MVCC ?",
+          "choices": [
+            "Les lectures ne bloquent pas les écritures",
+            "Chaque transaction lit un instantané cohérent",
+            "Les anciennes versions de lignes doivent être nettoyées",
+            "Deux écritures sur la même ligne ne sont plus détectées"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Les écritures concurrentes sur une même ligne restent sérialisées par des verrous : la seconde attend la fin de la première.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "db-verrous",
+      "title": "Verrous et deadlocks",
+      "summary": "Mises à jour perdues, verrous optimistes et pessimistes.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La mise à jour perdue",
+          "body": "Lire une valeur, la modifier dans l'application, puis l'écrire : si deux requêtes le font en même temps, les deux lisent 1 et écrivent 0. Un article est vendu deux fois.",
+          "code": "stock = db.scalar(\"SELECT stock FROM produits WHERE id = 7\")\ndb.execute(\"UPDATE produits SET stock = %s WHERE id = 7\",\n           stock - 1)",
+          "language": "python"
+        },
+        {
+          "title": "Les solutions",
+          "body": "Une mise à jour atomique (SET stock = stock - 1), un verrou pessimiste (SELECT … FOR UPDATE, qui fait attendre les autres), ou un verrou optimiste : une colonne version vérifiée au moment d'écrire.",
+          "code": "UPDATE produits\nSET stock = stock - 1, version = version + 1\nWHERE id = 7 AND version = 12;\n-- 0 ligne modifiée : conflit, relire et réessayer"
+        },
+        {
+          "title": "Les deadlocks",
+          "body": "T1 verrouille A puis attend B ; T2 verrouille B puis attend A : c'est un interblocage. Le moteur le détecte et annule l'une des transactions, qui doit être rejouée. Prévention : verrouiller les ressources toujours dans le même ordre et garder les transactions courtes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-lock-q1",
+          "prompt": "Qu'est-ce qu'un deadlock ?",
+          "choices": [
+            "Deux transactions attendent chacune un verrou détenu par l'autre",
+            "Une requête trop longue",
+            "Une table verrouillée par une sauvegarde",
+            "Un index corrompu"
+          ],
+          "answerIndex": 0,
+          "explanation": "Aucune ne peut avancer. Le moteur détecte le cycle d'attente et annule l'une des deux transactions.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "db-lock-q2",
+          "prompt": "Deux achats simultanés vendent deux fois le dernier article. Touche une ligne à l'origine du problème.",
+          "code": "stock = db.scalar(\"SELECT stock FROM produits WHERE id = 7\")\nif stock > 0:\n    db.execute(\"UPDATE produits SET stock = %s WHERE id = 7\",\n               stock - 1)\n    confirmer_achat()",
+          "language": "python",
+          "bugLines": [1, 3],
+          "explanation": "Les deux requêtes lisent stock = 1 avant que l'une écrive : c'est une mise à jour perdue. Il faut une mise à jour atomique et conditionnelle (voir question suivante) ou un SELECT … FOR UPDATE.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "db-lock-q3",
+          "prompt": "Complète : décrémenter le stock de façon atomique, seulement s'il en reste.",
+          "code": "UPDATE produits\nSET stock = ___ - 1\nWHERE id = 7 AND stock ___ 0;",
+          "answers": ["stock", ">"],
+          "distractors": ["%s", "=", "<"],
+          "explanation": "Le calcul se fait dans la base, sur la valeur courante, et la condition empêche de passer sous zéro. Si 0 ligne est modifiée, l'article est épuisé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-lock-q4",
+          "prompt": "Comment fonctionne le verrouillage optimiste ?",
+          "choices": [
+            "On vérifie à l'écriture qu'une colonne version n'a pas changé depuis la lecture",
+            "On verrouille la table entière avant de lire",
+            "On suppose qu'il n'y aura pas de conflit et on ne vérifie rien",
+            "On reporte toutes les écritures à la nuit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pas de verrou pendant la réflexion de l'utilisateur ; le conflit est détecté au moment d'écrire (0 ligne modifiée) et on relit puis réessaie. Idéal quand les conflits sont rares.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-lock-q5",
+          "prompt": "Comment réduire le risque de deadlock ?",
+          "choices": [
+            "Accéder aux lignes toujours dans le même ordre et garder les transactions courtes",
+            "Augmenter le délai d'attente des verrous",
+            "Ne plus utiliser de transactions",
+            "Passer en Read Uncommitted"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un ordre global (par exemple par id croissant) rend le cycle d'attente impossible ; des transactions courtes réduisent les fenêtres de conflit.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "db-lock-q6",
+          "prompt": "Que fait SELECT … FOR UPDATE ?",
+          "choices": [
+            "Il verrouille les lignes lues jusqu'à la fin de la transaction",
+            "Il fait attendre les autres transactions qui veulent modifier ces lignes",
+            "Il met à jour les lignes automatiquement",
+            "Il pose un verrou qui survit à la fin de la transaction"
+          ],
+          "answerIndices": [0, 1],
+          "explanation": "C'est le verrou pessimiste : lire en annonçant qu'on va écrire. Le verrou est libéré au COMMIT ou au ROLLBACK.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "db-defi-transactions",
+    "title": "Défi entretien : la concurrence",
+    "summary": "Deadlocks, transactions longues et verrous optimistes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "db-defi6-q1",
+        "prompt": "Cas pratique 1/3 — Deux virements s'exécutent en même temps. Que se passe-t-il à la dernière ligne ?",
+        "code": "T1: UPDATE comptes SET ... WHERE id = 1;\nT2: UPDATE comptes SET ... WHERE id = 2;\nT1: UPDATE comptes SET ... WHERE id = 2;\nT2: UPDATE comptes SET ... WHERE id = 1;",
+        "choices": [
+          "Deadlock : le moteur annule l'une des deux transactions",
+          "T2 écrase silencieusement T1",
+          "Les deux transactions se terminent normalement",
+          "La base redémarre"
+        ],
+        "answerIndex": 0,
+        "explanation": "T1 détient 1 et attend 2 ; T2 détient 2 et attend 1. Le moteur détecte le cycle et annule l'une des transactions avec une erreur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi6-q2",
+        "prompt": "Cas pratique 2/3 — Ce sont des virements de 1 vers 2 et de 2 vers 1. Quelle correction évite le problème ?",
+        "choices": [
+          "Verrouiller les deux comptes par id croissant, quel que soit le sens du virement",
+          "Passer en Read Uncommitted",
+          "Ajouter un index sur comptes.id",
+          "Faire un COMMIT après chaque UPDATE"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec un ordre global, les deux transactions demandent d'abord le compte 1 : la seconde attend la première, sans cycle. Un COMMIT intermédiaire casserait l'atomicité du virement.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "db-defi6-q3",
+        "prompt": "Cas pratique 3/3 — Côté application, que faut-il prévoir ?",
+        "choices": [
+          "Rejouer la transaction quand le moteur l'annule (deadlock, erreur de sérialisation)",
+          "Garder les transactions courtes, sans appel externe au milieu",
+          "Garder une transaction ouverte pendant toute la session de l'utilisateur",
+          "Ignorer l'erreur : la base corrige seule les données"
+        ],
+        "answerIndices": [0, 1],
+        "explanation": "Une transaction annulée n'a rien modifié : on peut la rejouer en toute sécurité, idéalement avec un nombre d'essais limité.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "db-defi6-q4",
+        "prompt": "Cette transaction provoque des blocages aux heures de pointe. Touche la ligne en cause.",
+        "code": "with db.transaction():\n    commande = creer_commande(panier)\n    paiement = banque.debiter(carte, total)  # 2 à 30 s\n    enregistrer_paiement(commande, paiement)",
+        "language": "python",
+        "bugLines": [3],
+        "explanation": "Un appel réseau externe dans une transaction garde les verrous pendant des secondes. On crée la commande « en attente », on valide, on appelle la banque hors transaction, puis on enregistre le résultat dans une seconde transaction.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "db-defi6-q5",
+        "prompt": "En Serializable, PostgreSQL renvoie « could not serialize access due to concurrent update ». Que faire ?",
+        "choices": [
+          "Rejouer la transaction : c'est un comportement attendu à ce niveau",
+          "Baisser définitivement le niveau d'isolation",
+          "Redémarrer la base",
+          "Supprimer les index de la table"
+        ],
+        "answerIndex": 0,
+        "explanation": "Serializable garantit la cohérence en annulant les transactions qui la violeraient : l'application doit être prête à les rejouer.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "db-defi6-q6",
+        "prompt": "Remets dans l'ordre les étapes du verrouillage optimiste.",
+        "language": "text",
+        "lines": [
+          "Lire la ligne avec sa version (version = 12)",
+          "Modifier les données côté application",
+          "UPDATE … SET version = 13 WHERE id = 7 AND version = 12",
+          "Si 0 ligne est modifiée : relire et réessayer"
+        ],
+        "explanation": "Si quelqu'un a modifié la ligne entre-temps, sa version n'est plus 12 : l'UPDATE ne touche aucune ligne et le conflit est détecté.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

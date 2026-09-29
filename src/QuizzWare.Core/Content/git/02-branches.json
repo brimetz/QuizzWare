@@ -1,0 +1,25 @@
+{
+  "id": "git-ch-branches",
+  "title": "Branches et fusions",
+  "summary": "Travailler en parallèle.",
+  "lessons": [
+    {
+      "id": "git-branches",
+      "title": "Branches",
+      "summary": "Créer, basculer et supprimer.",
+      "difficulty": 1
+    },
+    {
+      "id": "git-merge-rebase",
+      "title": "merge ou rebase",
+      "summary": "Deux façons d'intégrer.",
+      "difficulty": 2
+    },
+    {
+      "id": "git-conflits",
+      "title": "Résoudre les conflits",
+      "summary": "Méthode et outils.",
+      "difficulty": 2
+    }
+  ]
+}

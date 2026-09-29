@@ -1,0 +1,82 @@
+{
+  "unlockedBy": "mob-ch-fondamentaux",
+  "nodes": [
+    {
+      "id": "mob-spe-natif",
+      "title": "Natif",
+      "summary": "Au plus près de chaque plateforme.",
+      "icon": "NAT",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "mob-spe-android",
+          "title": "Android et Kotlin",
+          "summary": "Jetpack Compose, activités et architecture recommandée.",
+          "icon": "AND",
+          "kind": "techno"
+        },
+        {
+          "id": "mob-spe-ios",
+          "title": "iOS et Swift",
+          "summary": "SwiftUI, cycle de vie et publication.",
+          "icon": "iOS",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "mob-spe-multi",
+      "title": "Multiplateforme",
+      "summary": "Une base de code, plusieurs plateformes.",
+      "icon": "MULT",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "mob-spe-flutter",
+          "title": "Flutter",
+          "summary": "Dart, widgets et rendu propre.",
+          "icon": "FLT",
+          "kind": "techno"
+        },
+        {
+          "id": "mob-spe-react-native",
+          "title": "React Native",
+          "summary": "Des applications natives en JavaScript.",
+          "icon": "RN",
+          "kind": "techno"
+        },
+        {
+          "id": "mob-spe-maui",
+          "title": ".NET MAUI",
+          "summary": "Une base de code pour Android, iOS, Windows et macOS.",
+          "icon": "MAUI",
+          "kind": "techno",
+          "linkTo": "csharp/cs-spe-maui"
+        }
+      ]
+    },
+    {
+      "id": "mob-spe-services",
+      "title": "Services mobiles",
+      "summary": "Ce qui entoure l'application.",
+      "icon": "SVC",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "mob-spe-notifications",
+          "title": "Notifications push",
+          "summary": "APNs, FCM et bonnes pratiques.",
+          "icon": "PUSH",
+          "kind": "concept"
+        },
+        {
+          "id": "mob-spe-firebase",
+          "title": "Firebase",
+          "summary": "Authentification, base temps réel et analytics.",
+          "icon": "FB",
+          "kind": "techno"
+        }
+      ]
+    }
+  ]
+}

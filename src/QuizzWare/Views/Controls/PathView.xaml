@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:QuizzWare.ViewModels"
+             x:Class="QuizzWare.Views.Controls.PathView">
+
+    <!-- Un parcours : chapitres, leçons et défis entretien -->
+    <VerticalStackLayout x:Name="ChaptersHost" Spacing="24">
+        <BindableLayout.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChapterViewModel">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding Number}" TextColor="{StaticResource Primary}" FontAttributes="Bold" FontSize="13" />
+                            <Label Text="{Binding Title}" Style="{StaticResource HeaderLabel}" />
+                            <Label Text="{Binding Summary}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <Border Grid.Column="1" Style="{StaticResource Pill}" VerticalOptions="Start">
+                            <Label Text="{Binding ProgressText}" FontSize="13" FontAttributes="Bold" />
+                        </Border>
+                    </Grid>
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" Spacing="10">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:UnitItemViewModel">
+                                <Border Style="{StaticResource Card}" Stroke="{Binding StrokeColor}" Opacity="{Binding Opacity}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="40,*" ColumnSpacing="12">
+                                        <Border BackgroundColor="{Binding BadgeColor}" StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 20" WidthRequest="40" HeightRequest="40" VerticalOptions="Start">
+                                            <Label Text="{Binding Badge}" FontAttributes="Bold" FontSize="13" TextColor="{Binding BadgeTextColor}"
+                                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                                        </Border>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                            <Label Text="{Binding Title}" Style="{StaticResource SubHeaderLabel}" />
+                                            <Label Text="{Binding Summary}" Style="{StaticResource MutedLabel}" />
+                                            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                                <Label Text="{Binding StatusText}" TextColor="{Binding StatusColor}" FontSize="13" />
+                                                <Label Grid.Column="1" Text="{Binding DifficultyText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                            </Grid>
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </DataTemplate>
+        </BindableLayout.ItemTemplate>
+    </VerticalStackLayout>
+
+</ContentView>

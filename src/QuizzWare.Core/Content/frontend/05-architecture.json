@@ -1,0 +1,19 @@
+{
+  "id": "fe-ch-architecture",
+  "title": "Architecture frontend",
+  "summary": "Rendu et gestion de l'état.",
+  "lessons": [
+    {
+      "id": "fe-modes-rendu",
+      "title": "CSR, SSR et SSG",
+      "summary": "Où la page est-elle rendue ?",
+      "difficulty": 2
+    },
+    {
+      "id": "fe-etat",
+      "title": "Gestion de l'état",
+      "summary": "Local, global et serveur.",
+      "difficulty": 2
+    }
+  ]
+}

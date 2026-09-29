@@ -1,0 +1,25 @@
+{
+  "id": "cpp-ch-copie-deplacement",
+  "title": "Copie et déplacement",
+  "summary": "Les règles des 3, 5 et 0.",
+  "lessons": [
+    {
+      "id": "cpp-copie",
+      "title": "Copie profonde et superficielle",
+      "summary": "Constructeur et affectation par copie.",
+      "difficulty": 2
+    },
+    {
+      "id": "cpp-deplacement",
+      "title": "Sémantique de déplacement",
+      "summary": "rvalues et std::move.",
+      "difficulty": 3
+    },
+    {
+      "id": "cpp-regle-zero",
+      "title": "La règle du zéro",
+      "summary": "Déléguer aux types RAII.",
+      "difficulty": 2
+    }
+  ]
+}

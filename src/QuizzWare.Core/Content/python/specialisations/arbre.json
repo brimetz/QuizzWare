@@ -1,0 +1,199 @@
+{
+  "unlockedBy": "python-ch-bases",
+  "nodes": [
+    {
+      "id": "py-spe-web",
+      "title": "Développement web",
+      "summary": "Des API et des sites en Python.",
+      "icon": "WEB",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "py-spe-django",
+          "title": "Django",
+          "summary": "Le framework « batteries incluses » : ORM, admin, vues, templates.",
+          "icon": "DJ",
+          "kind": "techno"
+        },
+        {
+          "id": "py-spe-fastapi",
+          "title": "FastAPI",
+          "summary": "Des API asynchrones typées : Pydantic, dépendances, OpenAPI automatique.",
+          "icon": "FAPI",
+          "kind": "techno"
+        },
+        {
+          "id": "py-spe-flask",
+          "title": "Flask",
+          "summary": "Le micro-framework : routes, blueprints et extensions.",
+          "icon": "FLSK",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "py-spe-data",
+      "title": "Data et IA",
+      "summary": "Analyser des données et entraîner des modèles.",
+      "icon": "DATA",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "py-spe-numpy",
+          "title": "NumPy",
+          "summary": "Tableaux multidimensionnels, vectorisation et broadcasting.",
+          "icon": "NP",
+          "kind": "lib"
+        },
+        {
+          "id": "py-spe-pandas",
+          "title": "pandas",
+          "summary": "DataFrames : filtrer, regrouper, joindre et nettoyer des données.",
+          "icon": "PD",
+          "kind": "lib"
+        },
+        {
+          "id": "py-spe-polars",
+          "title": "Polars",
+          "summary": "Des DataFrames rapides, en Rust, avec évaluation paresseuse.",
+          "icon": "PL",
+          "kind": "lib"
+        },
+        {
+          "id": "py-spe-sklearn",
+          "title": "scikit-learn",
+          "summary": "Apprentissage automatique classique : pipelines, validation croisée, métriques.",
+          "icon": "SKL",
+          "kind": "lib"
+        },
+        {
+          "id": "py-spe-pytorch",
+          "title": "PyTorch",
+          "summary": "Tenseurs, autograd et entraînement de réseaux de neurones.",
+          "icon": "PT",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "py-spe-donnees",
+      "title": "Accès aux données",
+      "summary": "Parler aux bases de données depuis Python.",
+      "icon": "SQL",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "py-spe-sqlalchemy",
+          "title": "SQLAlchemy",
+          "summary": "L'ORM et la boîte à outils SQL de référence en Python.",
+          "icon": "SQLA",
+          "kind": "lib",
+          "linkTo": "bases-de-donnees/db-spe-sqlalchemy"
+        }
+      ]
+    },
+    {
+      "id": "py-spe-async",
+      "title": "Asynchrone",
+      "summary": "La concurrence avec asyncio.",
+      "icon": "ASYN",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "py-spe-asyncio",
+          "title": "asyncio en profondeur",
+          "summary": "Boucle d'événements, tâches, annulation et bibliothèques asynchrones.",
+          "icon": "AIO",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "py-spe-automatisation",
+      "title": "Automatisation",
+      "summary": "Scripts, outils en ligne de commande et collecte de données.",
+      "icon": "AUTO",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "py-spe-scripts",
+          "title": "Scripts et CLI",
+          "summary": "pathlib, subprocess, argparse et Typer pour des outils robustes.",
+          "icon": "CLI",
+          "kind": "concept"
+        },
+        {
+          "id": "py-spe-requests",
+          "title": "HTTP et scraping",
+          "summary": "requests, httpx et BeautifulSoup : consommer des API et des pages web.",
+          "icon": "HTTP",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "py-spe-qualite",
+      "title": "Qualité et outillage",
+      "summary": "Du code Python fiable et maintenable.",
+      "icon": "QA",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "py-spe-pytest",
+          "title": "pytest",
+          "summary": "Fixtures, paramétrage, mocks et couverture.",
+          "icon": "PYT",
+          "kind": "lib"
+        },
+        {
+          "id": "py-spe-typage",
+          "title": "Typage et mypy",
+          "summary": "Type hints, génériques, Protocol et vérification statique.",
+          "icon": "MYPY",
+          "kind": "lib"
+        },
+        {
+          "id": "py-spe-packaging",
+          "title": "Packaging",
+          "summary": "pyproject.toml, environnements virtuels, uv et publication.",
+          "icon": "PKG",
+          "kind": "techno",
+          "language": "text"
+        }
+      ]
+    },
+    {
+      "id": "py-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "py-spe-porte-ia",
+          "title": "Intelligence artificielle",
+          "summary": "Le terrain de jeu favori de Python.",
+          "icon": "IA",
+          "kind": "porte",
+          "linkTo": "ia"
+        },
+        {
+          "id": "py-spe-porte-algo",
+          "title": "Algorithmes et structures de données",
+          "summary": "Les exercices d'entretien, en Python.",
+          "icon": "ALGO",
+          "kind": "porte",
+          "linkTo": "algorithmes"
+        },
+        {
+          "id": "py-spe-porte-tests",
+          "title": "Tests et qualité",
+          "summary": "Au-delà de pytest.",
+          "icon": "QA",
+          "kind": "porte",
+          "linkTo": "tests"
+        }
+      ]
+    }
+  ]
+}

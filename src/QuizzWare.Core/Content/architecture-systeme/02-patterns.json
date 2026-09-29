@@ -1,0 +1,25 @@
+{
+  "id": "sys-ch-patterns",
+  "title": "Design patterns",
+  "summary": "Les solutions éprouvées aux problèmes récurrents.",
+  "lessons": [
+    {
+      "id": "sys-patterns-creation",
+      "title": "Patterns de création",
+      "summary": "Factory, Builder, Singleton et leurs pièges.",
+      "difficulty": 1
+    },
+    {
+      "id": "sys-patterns-structure",
+      "title": "Patterns de structure",
+      "summary": "Adapter, Decorator, Facade, Proxy.",
+      "difficulty": 2
+    },
+    {
+      "id": "sys-patterns-comportement",
+      "title": "Patterns de comportement",
+      "summary": "Strategy, Observer, Command, State.",
+      "difficulty": 2
+    }
+  ]
+}

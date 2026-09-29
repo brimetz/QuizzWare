@@ -1,0 +1,99 @@
+{
+  "unlockedBy": "rust-ch-bases",
+  "nodes": [
+    {
+      "id": "rust-spe-web",
+      "title": "Web et services",
+      "summary": "Des services rapides et sûrs.",
+      "icon": "WEB",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "rust-spe-axum",
+          "title": "Axum",
+          "summary": "Le framework web de l'écosystème Tokio.",
+          "icon": "AXUM",
+          "kind": "lib"
+        },
+        {
+          "id": "rust-spe-tokio",
+          "title": "Tokio",
+          "summary": "Le runtime asynchrone de référence.",
+          "icon": "TOK",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "rust-spe-systeme",
+      "title": "Programmation système",
+      "summary": "Le terrain naturel de Rust.",
+      "icon": "SYS",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "rust-spe-embarque",
+          "title": "Rust embarqué",
+          "summary": "Microcontrôleurs sans système d'exploitation.",
+          "icon": "EMB",
+          "kind": "concept"
+        },
+        {
+          "id": "rust-spe-wasm",
+          "title": "WebAssembly",
+          "summary": "Compiler Rust pour le navigateur et au-delà.",
+          "icon": "WASM",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "rust-spe-avance",
+      "title": "Rust avancé",
+      "summary": "Les recoins du langage.",
+      "icon": "ADV",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "rust-spe-unsafe",
+          "title": "unsafe et FFI",
+          "summary": "Sortir des garanties, en connaissance de cause.",
+          "icon": "FFI",
+          "kind": "concept"
+        },
+        {
+          "id": "rust-spe-macros",
+          "title": "Macros",
+          "summary": "Macros déclaratives et procédurales.",
+          "icon": "MAC",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "rust-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "rust-spe-porte-cpp",
+          "title": "C++",
+          "summary": "Comparer les approches de la sûreté mémoire.",
+          "icon": "C++",
+          "kind": "porte",
+          "linkTo": "cpp"
+        },
+        {
+          "id": "rust-spe-porte-systemes",
+          "title": "Systèmes d'exploitation",
+          "summary": "Ce que Rust permet de construire.",
+          "icon": "OS",
+          "kind": "porte",
+          "linkTo": "systemes"
+        }
+      ]
+    }
+  ]
+}

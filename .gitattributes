@@ -1,0 +1,7 @@
+# Fins de ligne normalisées (LF) dans le dépôt, converties selon le système à l'extraction.
+* text=auto
+
+# Fichiers binaires
+*.png binary
+*.jpg binary
+*.ttf binary

@@ -1,0 +1,19 @@
+{
+  "id": "java-ch-jvm",
+  "title": "La JVM",
+  "summary": "Mémoire, GC et bytecode.",
+  "lessons": [
+    {
+      "id": "java-memoire",
+      "title": "Mémoire et garbage collectors",
+      "summary": "Heap, stack et GC.",
+      "difficulty": 3
+    },
+    {
+      "id": "java-bytecode",
+      "title": "Bytecode et JIT",
+      "summary": "De la source à l'exécution.",
+      "difficulty": 3
+    }
+  ]
+}

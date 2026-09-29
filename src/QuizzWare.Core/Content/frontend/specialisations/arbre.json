@@ -1,0 +1,125 @@
+{
+  "unlockedBy": "fe-ch-html",
+  "nodes": [
+    {
+      "id": "fe-spe-frameworks",
+      "title": "Frameworks",
+      "summary": "Les grandes bibliothèques d'interface.",
+      "icon": "FW",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "fe-spe-react",
+          "title": "React",
+          "summary": "Composants, hooks, état et rendu.",
+          "icon": "RCT",
+          "kind": "techno",
+          "linkTo": "javascript/js-spe-react"
+        },
+        {
+          "id": "fe-spe-vue",
+          "title": "Vue",
+          "summary": "Composants, réactivité et Composition API.",
+          "icon": "VUE",
+          "kind": "techno",
+          "linkTo": "javascript/js-spe-vue"
+        },
+        {
+          "id": "fe-spe-angular",
+          "title": "Angular",
+          "summary": "Composants, services et signaux.",
+          "icon": "NG",
+          "kind": "techno",
+          "linkTo": "javascript/js-spe-angular"
+        }
+      ]
+    },
+    {
+      "id": "fe-spe-meta",
+      "title": "Méta-frameworks",
+      "summary": "Rendu serveur et routage intégrés.",
+      "icon": "META",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "fe-spe-nextjs",
+          "title": "Next.js",
+          "summary": "Le méta-framework de React.",
+          "icon": "NEXT",
+          "kind": "techno"
+        },
+        {
+          "id": "fe-spe-nuxt",
+          "title": "Nuxt",
+          "summary": "Le méta-framework de Vue.",
+          "icon": "NUXT",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "fe-spe-css",
+      "title": "Outils CSS",
+      "summary": "Écrire du CSS à grande échelle.",
+      "icon": "CSS",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "fe-spe-tailwind",
+          "title": "Tailwind CSS",
+          "summary": "Des classes utilitaires.",
+          "icon": "TW",
+          "kind": "lib"
+        },
+        {
+          "id": "fe-spe-sass",
+          "title": "Sass",
+          "summary": "Variables, imbrication et mixins.",
+          "icon": "SASS",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "fe-spe-design",
+      "title": "Design et UX",
+      "summary": "Travailler avec les designers.",
+      "icon": "UX",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "fe-spe-design-systems",
+          "title": "Design systems",
+          "summary": "Composants, jetons de design et documentation.",
+          "icon": "DS",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "fe-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "fe-spe-porte-js",
+          "title": "JavaScript et TypeScript",
+          "summary": "Le langage derrière les interfaces.",
+          "icon": "JS",
+          "kind": "porte",
+          "linkTo": "javascript"
+        },
+        {
+          "id": "fe-spe-porte-mobile",
+          "title": "Développement mobile",
+          "summary": "Des interfaces pour les petits écrans.",
+          "icon": "MOB",
+          "kind": "porte",
+          "linkTo": "mobile"
+        }
+      ]
+    }
+  ]
+}

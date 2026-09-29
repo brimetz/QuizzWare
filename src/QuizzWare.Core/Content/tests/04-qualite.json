@@ -1,0 +1,25 @@
+{
+  "id": "qa-ch-qualite",
+  "title": "Qualité du code",
+  "summary": "Lisibilité, revue et dette technique.",
+  "lessons": [
+    {
+      "id": "qa-code-lisible",
+      "title": "Code lisible",
+      "summary": "Nommage, fonctions et duplication.",
+      "difficulty": 1
+    },
+    {
+      "id": "qa-revue",
+      "title": "Revue de code",
+      "summary": "Donner et recevoir des retours.",
+      "difficulty": 1
+    },
+    {
+      "id": "qa-refactoring",
+      "title": "Refactoring",
+      "summary": "Améliorer sans casser.",
+      "difficulty": 2
+    }
+  ]
+}

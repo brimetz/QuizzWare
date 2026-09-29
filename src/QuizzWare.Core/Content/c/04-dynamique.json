@@ -1,0 +1,25 @@
+{
+  "id": "c-ch-dynamique",
+  "title": "Mémoire dynamique",
+  "summary": "malloc, realloc et free.",
+  "lessons": [
+    {
+      "id": "c-malloc",
+      "title": "Allouer et libérer",
+      "summary": "malloc, calloc et free.",
+      "difficulty": 1
+    },
+    {
+      "id": "c-realloc",
+      "title": "realloc et tableaux dynamiques",
+      "summary": "Faire grandir un tableau.",
+      "difficulty": 2
+    },
+    {
+      "id": "c-fuites",
+      "title": "Fuites et double free",
+      "summary": "Les erreurs classiques.",
+      "difficulty": 2
+    }
+  ]
+}

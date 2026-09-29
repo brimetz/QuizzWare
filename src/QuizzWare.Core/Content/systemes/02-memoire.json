@@ -1,0 +1,25 @@
+{
+  "id": "os-ch-memoire",
+  "title": "Mémoire",
+  "summary": "Mémoire virtuelle et pagination.",
+  "lessons": [
+    {
+      "id": "os-memoire-virtuelle",
+      "title": "Mémoire virtuelle",
+      "summary": "Les espaces d'adressage.",
+      "difficulty": 2
+    },
+    {
+      "id": "os-pagination",
+      "title": "Pagination et TLB",
+      "summary": "Traduire les adresses.",
+      "difficulty": 3
+    },
+    {
+      "id": "os-allocation",
+      "title": "Allocation mémoire",
+      "summary": "Pile, tas et mmap.",
+      "difficulty": 2
+    }
+  ]
+}

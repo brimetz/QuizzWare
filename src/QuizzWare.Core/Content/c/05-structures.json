@@ -1,0 +1,25 @@
+{
+  "id": "c-ch-structures",
+  "title": "Structures de données",
+  "summary": "struct, union et enum.",
+  "lessons": [
+    {
+      "id": "c-struct",
+      "title": "Structures",
+      "summary": "Déclaration, alignement et padding.",
+      "difficulty": 2
+    },
+    {
+      "id": "c-union-enum",
+      "title": "Unions et énumérations",
+      "summary": "Partager la mémoire.",
+      "difficulty": 2
+    },
+    {
+      "id": "c-listes",
+      "title": "Listes chaînées",
+      "summary": "Implémenter une structure dynamique.",
+      "difficulty": 2
+    }
+  ]
+}

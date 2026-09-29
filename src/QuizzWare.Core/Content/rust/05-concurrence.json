@@ -1,0 +1,19 @@
+{
+  "id": "rust-ch-concurrence",
+  "title": "Concurrence",
+  "summary": "Threads, Send, Sync et async.",
+  "lessons": [
+    {
+      "id": "rust-threads",
+      "title": "Threads, Arc et Mutex",
+      "summary": "Partager en sécurité.",
+      "difficulty": 3
+    },
+    {
+      "id": "rust-async",
+      "title": "async et Tokio",
+      "summary": "L'asynchrone en Rust.",
+      "difficulty": 3
+    }
+  ]
+}

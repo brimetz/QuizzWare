@@ -1,0 +1,9 @@
+{
+  "id": "architecture-systeme",
+  "order": 1,
+  "name": "Architecture système",
+  "description": "Principes de conception, patterns et architectures distribuées.",
+  "icon": "SYS",
+  "color": "#7C4DFF",
+  "language": "csharp"
+}

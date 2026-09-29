@@ -1,0 +1,9 @@
+{
+  "id": "python",
+  "order": 7,
+  "name": "Python",
+  "description": "Structures de données, idiomes et concurrence en Python.",
+  "icon": "PY",
+  "color": "#FFCA28",
+  "language": "python"
+}

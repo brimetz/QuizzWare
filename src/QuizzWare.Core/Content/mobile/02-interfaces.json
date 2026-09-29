@@ -1,0 +1,19 @@
+{
+  "id": "mob-ch-interfaces",
+  "title": "Interfaces mobiles",
+  "summary": "Navigation et mise en page.",
+  "lessons": [
+    {
+      "id": "mob-navigation",
+      "title": "Navigation",
+      "summary": "Piles, onglets et liens profonds.",
+      "difficulty": 1
+    },
+    {
+      "id": "mob-layout",
+      "title": "Mises en page adaptatives",
+      "summary": "Tailles d'écran et orientation.",
+      "difficulty": 2
+    }
+  ]
+}

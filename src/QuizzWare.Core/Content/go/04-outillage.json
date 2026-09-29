@@ -1,0 +1,19 @@
+{
+  "id": "go-ch-outillage",
+  "title": "Outillage et tests",
+  "summary": "Modules, tests et benchmarks.",
+  "lessons": [
+    {
+      "id": "go-modules",
+      "title": "Modules",
+      "summary": "go.mod et dépendances.",
+      "difficulty": 1
+    },
+    {
+      "id": "go-tests",
+      "title": "Tests et benchmarks",
+      "summary": "go test.",
+      "difficulty": 2
+    }
+  ]
+}

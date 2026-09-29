@@ -1,0 +1,108 @@
+{
+  "unlockedBy": "qa-ch-fondamentaux",
+  "nodes": [
+    {
+      "id": "qa-spe-frameworks",
+      "title": "Frameworks de test",
+      "summary": "Les outils de chaque langage.",
+      "icon": "FW",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "qa-spe-xunit",
+          "title": "xUnit (C#)",
+          "summary": "Tests unitaires et d'intégration en .NET.",
+          "icon": "XU",
+          "kind": "lib",
+          "linkTo": "csharp/cs-spe-tests"
+        },
+        {
+          "id": "qa-spe-pytest",
+          "title": "pytest (Python)",
+          "summary": "Fixtures, paramétrage, mocks et couverture.",
+          "icon": "PYT",
+          "kind": "lib",
+          "linkTo": "python/py-spe-pytest"
+        },
+        {
+          "id": "qa-spe-junit",
+          "title": "JUnit (Java)",
+          "summary": "Tests unitaires et doublures en Java.",
+          "icon": "JU",
+          "kind": "lib",
+          "linkTo": "java/java-spe-junit"
+        },
+        {
+          "id": "qa-spe-googletest",
+          "title": "GoogleTest (C++)",
+          "summary": "Tests unitaires, fixtures et mocks en C++.",
+          "icon": "GT",
+          "kind": "lib",
+          "linkTo": "cpp/cpp-spe-tests"
+        }
+      ]
+    },
+    {
+      "id": "qa-spe-e2e",
+      "title": "Tests de bout en bout",
+      "summary": "Piloter de vrais navigateurs.",
+      "icon": "E2E",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "qa-spe-playwright",
+          "title": "Playwright",
+          "summary": "Tests multi-navigateurs fiables.",
+          "icon": "PW",
+          "kind": "techno"
+        },
+        {
+          "id": "qa-spe-cypress",
+          "title": "Cypress",
+          "summary": "Tests de bout en bout dans le navigateur.",
+          "icon": "CY",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "qa-spe-performance",
+      "title": "Performance",
+      "summary": "Tenir la charge.",
+      "icon": "PERF",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "qa-spe-k6",
+          "title": "k6",
+          "summary": "Des tests de charge écrits en JavaScript.",
+          "icon": "K6",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "qa-spe-pratiques",
+      "title": "Pratiques",
+      "summary": "Au-delà des outils.",
+      "icon": "PRA",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "qa-spe-bdd",
+          "title": "BDD",
+          "summary": "Des spécifications exécutables.",
+          "icon": "BDD",
+          "kind": "concept"
+        },
+        {
+          "id": "qa-spe-contrats",
+          "title": "Tests de contrat",
+          "summary": "Vérifier les échanges entre services.",
+          "icon": "PACT",
+          "kind": "concept"
+        }
+      ]
+    }
+  ]
+}

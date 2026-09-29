@@ -1,0 +1,19 @@
+{
+  "id": "qa-ch-fondamentaux",
+  "title": "Fondamentaux des tests",
+  "summary": "Pourquoi et quoi tester.",
+  "lessons": [
+    {
+      "id": "qa-pyramide",
+      "title": "La pyramide des tests",
+      "summary": "Unitaires, intégration, bout en bout.",
+      "difficulty": 1
+    },
+    {
+      "id": "qa-bons-tests",
+      "title": "Un bon test",
+      "summary": "Rapide, isolé, lisible, déterministe.",
+      "difficulty": 1
+    }
+  ]
+}

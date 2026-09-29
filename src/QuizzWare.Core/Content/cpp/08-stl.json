@@ -1,0 +1,25 @@
+{
+  "id": "cpp-ch-stl",
+  "title": "La bibliothèque standard",
+  "summary": "Conteneurs, itérateurs et algorithmes.",
+  "lessons": [
+    {
+      "id": "cpp-conteneurs",
+      "title": "Conteneurs",
+      "summary": "vector, map, unordered_map…",
+      "difficulty": 1
+    },
+    {
+      "id": "cpp-iterateurs",
+      "title": "Itérateurs et invalidation",
+      "summary": "Ce qui casse quand on modifie un conteneur.",
+      "difficulty": 2
+    },
+    {
+      "id": "cpp-algorithmes",
+      "title": "Algorithmes",
+      "summary": "sort, find_if, transform et ranges.",
+      "difficulty": 2
+    }
+  ]
+}

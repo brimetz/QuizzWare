@@ -1,0 +1,19 @@
+{
+  "id": "mob-ch-fondamentaux",
+  "title": "Fondamentaux",
+  "summary": "Les spécificités du mobile.",
+  "lessons": [
+    {
+      "id": "mob-cycle-vie",
+      "title": "Cycle de vie des applications",
+      "summary": "Premier plan, arrière-plan et suspension.",
+      "difficulty": 1
+    },
+    {
+      "id": "mob-contraintes",
+      "title": "Contraintes mobiles",
+      "summary": "Batterie, réseau et mémoire.",
+      "difficulty": 1
+    }
+  ]
+}

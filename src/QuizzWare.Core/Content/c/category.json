@@ -1,0 +1,9 @@
+{
+  "id": "c",
+  "order": 6,
+  "name": "C",
+  "description": "Pointeurs, mémoire et programmation bas niveau.",
+  "icon": "C",
+  "color": "#78909C",
+  "language": "c"
+}

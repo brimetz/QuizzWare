@@ -1,0 +1,101 @@
+{
+  "id": "c-ch-avance",
+  "title": "Chaînes, préprocesseur et mots-clés",
+  "summary": "Les pièges classiques du C.",
+  "lessons": [
+    {
+      "id": "c-avance",
+      "title": "Chaînes, préprocesseur et mots-clés",
+      "summary": "Les pièges classiques du C.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Chaînes de caractères",
+          "body": "Une chaîne C est un tableau de char terminé par le caractère nul '\\0'. strlen compte les caractères avant ce terminateur ; il faut donc prévoir un octet de plus lors de l'allocation."
+        },
+        {
+          "title": "Macros du préprocesseur",
+          "body": "Une macro est une substitution textuelle, faite avant la compilation. Sans parenthèses, les priorités d'opérateurs réservent des surprises.",
+          "code": "#define SQUARE(x) x * x\nSQUARE(1 + 2)   // devient 1 + 2 * 1 + 2 = 5\n\n#define SQUARE_OK(x) ((x) * (x))"
+        },
+        {
+          "title": "static et volatile",
+          "body": "Une variable locale static conserve sa valeur entre les appels de la fonction. volatile indique que la variable peut changer hors du flux du programme (registre matériel, interruption) : le compilateur ne doit pas optimiser ses accès."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-avance-q1",
+          "prompt": "Par quel caractère se termine une chaîne C ?",
+          "choices": [
+            "'\\n'",
+            "'\\0'",
+            "EOF",
+            "Aucun"
+          ],
+          "answerIndex": 1,
+          "explanation": "Le caractère nul '\\0' marque la fin de la chaîne.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-avance-q2",
+          "prompt": "Que renvoie strlen(\"abc\") ?",
+          "choices": [
+            "2",
+            "3",
+            "4",
+            "sizeof(char*)"
+          ],
+          "answerIndex": 1,
+          "explanation": "strlen ne compte pas le '\\0' final : 3 caractères. Le tableau, lui, occupe 4 octets.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-avance-q3",
+          "prompt": "Que vaut SQUARE(1 + 2) ?",
+          "code": "#define SQUARE(x) x * x",
+          "choices": [
+            "9",
+            "5",
+            "6",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 1,
+          "explanation": "La substitution donne 1 + 2 * 1 + 2 = 5. Il faut écrire ((x) * (x)).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-avance-q4",
+          "prompt": "Quel est l'effet de static sur une variable locale ?",
+          "choices": [
+            "Elle devient constante",
+            "Elle conserve sa valeur entre les appels",
+            "Elle devient globale et visible partout",
+            "Elle est allouée sur le tas"
+          ],
+          "answerIndex": 1,
+          "explanation": "Sa durée de vie devient celle du programme, mais sa portée reste limitée à la fonction.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-avance-q5",
+          "prompt": "À quoi sert le mot-clé volatile ?",
+          "choices": [
+            "Rendre une variable thread-safe",
+            "Empêcher le compilateur d'optimiser les accès à la variable",
+            "Allouer la variable en mémoire partagée",
+            "Rendre la variable modifiable"
+          ],
+          "answerIndex": 1,
+          "explanation": "Chaque lecture/écriture est réellement effectuée en mémoire. Attention : volatile ne garantit pas l'atomicité.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ]
+}

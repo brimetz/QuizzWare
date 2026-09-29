@@ -1,0 +1,9 @@
+{
+  "id": "ia",
+  "order": 20,
+  "name": "Intelligence artificielle",
+  "description": "Apprentissage automatique, deep learning et intégration des LLM dans les applications.",
+  "icon": "IA",
+  "color": "#E040FB",
+  "language": "python"
+}

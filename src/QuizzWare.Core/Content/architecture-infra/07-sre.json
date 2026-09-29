@@ -1,0 +1,25 @@
+{
+  "id": "infra-ch-sre",
+  "title": "Observabilité et SRE",
+  "summary": "Mesurer et améliorer la fiabilité.",
+  "lessons": [
+    {
+      "id": "infra-sre-monitoring",
+      "title": "Supervision et alertes",
+      "summary": "Métriques, seuils et alertes utiles.",
+      "difficulty": 2
+    },
+    {
+      "id": "infra-sre-slo",
+      "title": "SLI, SLO et budgets d'erreur",
+      "summary": "Quantifier la fiabilité.",
+      "difficulty": 2
+    },
+    {
+      "id": "infra-sre-incidents",
+      "title": "Gestion d'incident",
+      "summary": "Astreinte, communication, post-mortem.",
+      "difficulty": 2
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "mob-ch-donnees",
+  "title": "Données et réseau",
+  "summary": "Stockage local et synchronisation.",
+  "lessons": [
+    {
+      "id": "mob-stockage",
+      "title": "Stockage local",
+      "summary": "Fichiers, SQLite et préférences.",
+      "difficulty": 1
+    },
+    {
+      "id": "mob-hors-ligne",
+      "title": "Mode hors ligne",
+      "summary": "Synchroniser sans perdre de données.",
+      "difficulty": 3
+    }
+  ]
+}

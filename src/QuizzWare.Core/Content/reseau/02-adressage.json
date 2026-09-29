@@ -1,0 +1,25 @@
+{
+  "id": "net-ch-adressage",
+  "title": "Adressage IP",
+  "summary": "IPv4, IPv6, sous-réseaux et NAT.",
+  "lessons": [
+    {
+      "id": "net-ipv4-cidr",
+      "title": "IPv4 et CIDR",
+      "summary": "Masques et calcul de sous-réseaux.",
+      "difficulty": 2
+    },
+    {
+      "id": "net-ipv6",
+      "title": "IPv6",
+      "summary": "Adresses, notation et cohabitation avec IPv4.",
+      "difficulty": 2
+    },
+    {
+      "id": "net-nat",
+      "title": "NAT et adresses privées",
+      "summary": "Traduire des adresses.",
+      "difficulty": 2
+    }
+  ]
+}

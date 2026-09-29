@@ -1,0 +1,19 @@
+{
+  "id": "js-ch-objets",
+  "title": "Objets et prototypes",
+  "summary": "Le modèle objet de JavaScript.",
+  "lessons": [
+    {
+      "id": "js-objets",
+      "title": "Objets et déstructuration",
+      "summary": "Spread et rest.",
+      "difficulty": 1
+    },
+    {
+      "id": "js-prototypes",
+      "title": "Prototypes et classes",
+      "summary": "L'héritage prototypal.",
+      "difficulty": 3
+    }
+  ]
+}

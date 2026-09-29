@@ -1,0 +1,193 @@
+{
+  "unlockedBy": "csharp-ch-bases",
+  "nodes": [
+    {
+      "id": "cs-spe-web",
+      "title": "Web et API",
+      "summary": "Construire des services et des applications web en .NET.",
+      "icon": "WEB",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cs-spe-aspnet",
+          "title": "ASP.NET Core",
+          "summary": "Minimal APIs, contrôleurs, middlewares, injection de dépendances et authentification.",
+          "icon": "ASP",
+          "kind": "techno"
+        },
+        {
+          "id": "cs-spe-blazor",
+          "title": "Blazor",
+          "summary": "Des interfaces web en C# : composants, rendu serveur et WebAssembly.",
+          "icon": "BLZ",
+          "kind": "techno"
+        },
+        {
+          "id": "cs-spe-signalr",
+          "title": "SignalR",
+          "summary": "Le temps réel en .NET : hubs, groupes et reconnexion.",
+          "icon": "SIGR",
+          "kind": "lib"
+        },
+        {
+          "id": "cs-spe-grpc",
+          "title": "gRPC en .NET",
+          "summary": "Services gRPC avec ASP.NET Core.",
+          "icon": "gRPC",
+          "kind": "techno",
+          "linkTo": "architecture-systeme/sys-spe-grpc"
+        }
+      ]
+    },
+    {
+      "id": "cs-spe-donnees",
+      "title": "Accès aux données",
+      "summary": "Lire et écrire en base depuis .NET.",
+      "icon": "DATA",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cs-spe-efcore",
+          "title": "Entity Framework Core",
+          "summary": "L'ORM de .NET : DbContext, LINQ traduit en SQL, migrations et relations.",
+          "icon": "EF",
+          "kind": "lib",
+          "linkTo": "bases-de-donnees/db-spe-efcore"
+        },
+        {
+          "id": "cs-spe-dapper",
+          "title": "Dapper",
+          "summary": "Le micro-ORM : du SQL écrit à la main, mappé vers des objets.",
+          "icon": "DAP",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "cs-spe-applications",
+      "title": "Applications et jeux",
+      "summary": "Du mobile au bureau, jusqu'au jeu vidéo.",
+      "icon": "APP",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cs-spe-maui",
+          "title": ".NET MAUI",
+          "summary": "Une base de code pour Android, iOS, Windows et macOS : XAML, MVVM, Shell.",
+          "icon": "MAUI",
+          "kind": "techno"
+        },
+        {
+          "id": "cs-spe-wpf",
+          "title": "WPF",
+          "summary": "Les applications de bureau Windows : XAML, bindings et MVVM.",
+          "icon": "WPF",
+          "kind": "techno"
+        },
+        {
+          "id": "cs-spe-unity",
+          "title": "Unity",
+          "summary": "Le jeu vidéo en C# : GameObjects, MonoBehaviour, cycle de vie et physique.",
+          "icon": "UNTY",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "cs-spe-cloud",
+      "title": ".NET et cloud",
+      "summary": "Des services .NET pensés pour le cloud.",
+      "icon": "CLD",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cs-spe-aspire",
+          "title": ".NET Aspire",
+          "summary": "Orchestrer et observer une application distribuée en local.",
+          "icon": "ASPR",
+          "kind": "techno"
+        },
+        {
+          "id": "cs-spe-azure-functions",
+          "title": "Azure Functions",
+          "summary": "Le serverless en C#.",
+          "icon": "FUNC",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "cs-spe-qualite",
+      "title": "Qualité et performance",
+      "summary": "Tester, mesurer et optimiser.",
+      "icon": "QA",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cs-spe-tests",
+          "title": "xUnit et tests",
+          "summary": "Tests unitaires et d'intégration, mocks et WebApplicationFactory.",
+          "icon": "XU",
+          "kind": "lib"
+        },
+        {
+          "id": "cs-spe-perf",
+          "title": "Performance .NET",
+          "summary": "Span<T>, allocations, GC, BenchmarkDotNet et async efficace.",
+          "icon": "PERF",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "cs-spe-architecture",
+      "title": "Architecture .NET",
+      "summary": "Structurer une application .NET qui dure.",
+      "icon": "ARCH",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cs-spe-clean",
+          "title": "Clean architecture et hexagonale",
+          "summary": "Isoler le métier de l'infrastructure : ports, adaptateurs et règle de dépendance.",
+          "icon": "HEX",
+          "kind": "concept",
+          "linkTo": "architecture-systeme/sys-spe-clean"
+        }
+      ]
+    },
+    {
+      "id": "cs-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cs-spe-porte-java",
+          "title": "Java",
+          "summary": "Le cousin de C# sur la JVM.",
+          "icon": "JAVA",
+          "kind": "porte",
+          "linkTo": "java"
+        },
+        {
+          "id": "cs-spe-porte-mobile",
+          "title": "Développement mobile",
+          "summary": "Aller plus loin que MAUI.",
+          "icon": "MOB",
+          "kind": "porte",
+          "linkTo": "mobile"
+        },
+        {
+          "id": "cs-spe-porte-tests",
+          "title": "Tests et qualité",
+          "summary": "Les pratiques au-delà des frameworks.",
+          "icon": "QA",
+          "kind": "porte",
+          "linkTo": "tests"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "py-ch-iterateurs",
+  "title": "Itérateurs et générateurs",
+  "summary": "Traiter les données paresseusement.",
+  "lessons": [
+    {
+      "id": "py-iterateurs",
+      "title": "Le protocole d'itération",
+      "summary": "__iter__ et __next__.",
+      "difficulty": 2
+    },
+    {
+      "id": "py-generateurs",
+      "title": "Générateurs",
+      "summary": "yield et expressions génératrices.",
+      "difficulty": 2
+    }
+  ]
+}

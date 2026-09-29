@@ -1,0 +1,113 @@
+{
+  "unlockedBy": "algo-ch-complexite",
+  "nodes": [
+    {
+      "id": "algo-spe-entretiens",
+      "title": "Préparation aux entretiens",
+      "summary": "S'entraîner méthodiquement.",
+      "icon": "INT",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "algo-spe-patterns",
+          "title": "Problèmes par patterns",
+          "summary": "Reconnaître le bon pattern en quelques minutes.",
+          "icon": "PAT",
+          "kind": "concept"
+        },
+        {
+          "id": "algo-spe-live-coding",
+          "title": "Coder en direct",
+          "summary": "Réfléchir à voix haute et communiquer pendant l'exercice.",
+          "icon": "LIVE",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "algo-spe-avancees",
+      "title": "Structures avancées",
+      "summary": "Au-delà des classiques.",
+      "icon": "ADV",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "algo-spe-trie",
+          "title": "Tries et arbres de suffixes",
+          "summary": "Rechercher dans des chaînes.",
+          "icon": "TRIE",
+          "kind": "concept"
+        },
+        {
+          "id": "algo-spe-union-find",
+          "title": "Union-Find",
+          "summary": "Composantes connexes en temps quasi constant.",
+          "icon": "UF",
+          "kind": "concept"
+        },
+        {
+          "id": "algo-spe-segment-tree",
+          "title": "Arbres de segments",
+          "summary": "Requêtes sur des intervalles.",
+          "icon": "SEG",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "algo-spe-domaines",
+      "title": "Algorithmes par domaine",
+      "summary": "Des algorithmes spécialisés.",
+      "icon": "DOM",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "algo-spe-texte",
+          "title": "Algorithmes sur les chaînes",
+          "summary": "KMP, Rabin-Karp, distance d'édition.",
+          "icon": "STR",
+          "kind": "concept"
+        },
+        {
+          "id": "algo-spe-geometrie",
+          "title": "Géométrie algorithmique",
+          "summary": "Enveloppes convexes et intersections.",
+          "icon": "GEO",
+          "kind": "concept"
+        },
+        {
+          "id": "algo-spe-probabilistes",
+          "title": "Structures probabilistes",
+          "summary": "Filtres de Bloom, HyperLogLog.",
+          "icon": "PROB",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "algo-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "algo-spe-porte-ia",
+          "title": "Intelligence artificielle",
+          "summary": "Quand les algorithmes apprennent.",
+          "icon": "IA",
+          "kind": "porte",
+          "linkTo": "ia"
+        },
+        {
+          "id": "algo-spe-porte-archi",
+          "title": "Architecture système",
+          "summary": "Des algorithmes aux systèmes.",
+          "icon": "SYS",
+          "kind": "porte",
+          "linkTo": "architecture-systeme"
+        }
+      ]
+    }
+  ]
+}

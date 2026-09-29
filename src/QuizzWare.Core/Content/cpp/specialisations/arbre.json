@@ -1,0 +1,184 @@
+{
+  "unlockedBy": "cpp-ch-references-pointeurs",
+  "nodes": [
+    {
+      "id": "cpp-spe-bibliotheques",
+      "title": "Frameworks et bibliothèques",
+      "summary": "L'écosystème au-delà de la bibliothèque standard.",
+      "icon": "LIB",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cpp-spe-qt",
+          "title": "Qt",
+          "summary": "Interfaces graphiques multiplateformes : signaux, slots, QML.",
+          "icon": "Qt",
+          "kind": "lib"
+        },
+        {
+          "id": "cpp-spe-boost",
+          "title": "Boost",
+          "summary": "Les bibliothèques qui préfigurent souvent le standard : Asio, filesystem…",
+          "icon": "BST",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "cpp-spe-jeu",
+      "title": "Jeu vidéo et temps réel",
+      "summary": "Performance et rendu à 60 images par seconde.",
+      "icon": "GAME",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cpp-spe-unreal",
+          "title": "Unreal Engine",
+          "summary": "Acteurs, composants, UObject, réflexion et Blueprints.",
+          "icon": "UE",
+          "kind": "techno"
+        },
+        {
+          "id": "cpp-spe-graphique",
+          "title": "Programmation graphique",
+          "summary": "OpenGL, Vulkan, pipeline de rendu et shaders.",
+          "icon": "GPU",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "cpp-spe-performance",
+      "title": "Performance",
+      "summary": "Écrire du C++ vraiment rapide, et le prouver.",
+      "icon": "PERF",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cpp-spe-optimisation",
+          "title": "Profilage et optimisation",
+          "summary": "Caches CPU, localité des données, allocations et mesures.",
+          "icon": "PROF",
+          "kind": "concept"
+        },
+        {
+          "id": "cpp-spe-concurrence",
+          "title": "Concurrence avancée",
+          "summary": "Modèle mémoire, atomics, structures sans verrou.",
+          "icon": "ATOM",
+          "kind": "concept"
+        },
+        {
+          "id": "cpp-spe-simd",
+          "title": "SIMD et vectorisation",
+          "summary": "Traiter plusieurs données par instruction.",
+          "icon": "SIMD",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "cpp-spe-embarque",
+      "title": "Systèmes embarqués",
+      "summary": "Du C++ sous contraintes de mémoire et de temps réel.",
+      "icon": "EMB",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cpp-spe-cpp-embarque",
+          "title": "C++ embarqué",
+          "summary": "Sans allocation dynamique ni exceptions : constexpr, templates et registres.",
+          "icon": "MCU",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "cpp-spe-domaines",
+      "title": "Domaines d'application",
+      "summary": "Là où le C++ règne.",
+      "icon": "DOM",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cpp-spe-finance",
+          "title": "Finance à basse latence",
+          "summary": "Trading haute fréquence : chaque microseconde compte.",
+          "icon": "HFT",
+          "kind": "concept"
+        },
+        {
+          "id": "cpp-spe-audio",
+          "title": "Audio et temps réel",
+          "summary": "Traitement du signal sans jamais rater une échéance.",
+          "icon": "DSP",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "cpp-spe-outillage",
+      "title": "Outillage",
+      "summary": "Compiler, tester et déboguer efficacement.",
+      "icon": "TOOL",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cpp-spe-cmake",
+          "title": "CMake",
+          "summary": "Cibles, dépendances, options et gestion de paquets (vcpkg, Conan).",
+          "icon": "CMK",
+          "kind": "techno",
+          "language": "text"
+        },
+        {
+          "id": "cpp-spe-sanitizers",
+          "title": "Sanitizers et débogage",
+          "summary": "AddressSanitizer, UBSan, Valgrind et gdb pour traquer les comportements indéfinis.",
+          "icon": "ASAN",
+          "kind": "techno"
+        },
+        {
+          "id": "cpp-spe-tests",
+          "title": "GoogleTest",
+          "summary": "Tests unitaires, fixtures et mocks en C++.",
+          "icon": "GT",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "cpp-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "cpp-spe-porte-c",
+          "title": "C",
+          "summary": "Les racines du C++.",
+          "icon": "C",
+          "kind": "porte",
+          "linkTo": "c"
+        },
+        {
+          "id": "cpp-spe-porte-rust",
+          "title": "Rust",
+          "summary": "La sûreté mémoire garantie par le compilateur.",
+          "icon": "RS",
+          "kind": "porte",
+          "linkTo": "rust"
+        },
+        {
+          "id": "cpp-spe-porte-algo",
+          "title": "Algorithmes et structures de données",
+          "summary": "Ce que la STL implémente pour vous.",
+          "icon": "ALGO",
+          "kind": "porte",
+          "linkTo": "algorithmes"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "cs-ch-poo",
+  "title": "Programmation orientée objet",
+  "summary": "Classes, héritage, interfaces et records.",
+  "lessons": [
+    {
+      "id": "cs-classes",
+      "title": "Classes et propriétés",
+      "summary": "Constructeurs, propriétés, init.",
+      "difficulty": 1
+    },
+    {
+      "id": "cs-heritage-interfaces",
+      "title": "Héritage et interfaces",
+      "summary": "abstract, virtual, méthodes d'interface par défaut.",
+      "difficulty": 2
+    },
+    {
+      "id": "cs-records-struct",
+      "title": "Records et structs",
+      "summary": "Égalité par valeur et expressions with.",
+      "difficulty": 2
+    }
+  ]
+}

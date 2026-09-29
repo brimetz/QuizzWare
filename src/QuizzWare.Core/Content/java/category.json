@@ -1,0 +1,9 @@
+{
+  "id": "java",
+  "order": 11,
+  "name": "Java",
+  "description": "Le langage de la JVM : orienté objet, collections, concurrence et écosystème Spring.",
+  "icon": "JAVA",
+  "color": "#B07219",
+  "language": "java"
+}

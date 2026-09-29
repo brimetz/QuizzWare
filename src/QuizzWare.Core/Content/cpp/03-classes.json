@@ -1,0 +1,25 @@
+{
+  "id": "cpp-ch-classes",
+  "title": "Classes et objets",
+  "summary": "Encapsulation, constructeurs et destructeur.",
+  "lessons": [
+    {
+      "id": "cpp-classes-bases",
+      "title": "Classes et encapsulation",
+      "summary": "Membres, accès et méthodes const.",
+      "difficulty": 1
+    },
+    {
+      "id": "cpp-constructeurs",
+      "title": "Constructeurs et destructeur",
+      "summary": "Listes d'initialisation et explicit.",
+      "difficulty": 2
+    },
+    {
+      "id": "cpp-surcharge-operateurs",
+      "title": "Surcharge d'opérateurs",
+      "summary": "Opérateurs arithmétiques, de comparaison et <=>.",
+      "difficulty": 2
+    }
+  ]
+}

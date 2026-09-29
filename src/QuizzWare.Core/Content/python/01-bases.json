@@ -1,0 +1,107 @@
+{
+  "id": "python-ch-bases",
+  "title": "Bases du langage",
+  "summary": "Structures de données, mutabilité et idiomes.",
+  "lessons": [
+    {
+      "id": "python-bases",
+      "title": "Bases et structures de données",
+      "summary": "Listes, dictionnaires, mutabilité et compréhensions.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Mutable vs immuable",
+          "body": "list, dict et set sont mutables. int, str, tuple et frozenset sont immuables : toute « modification » crée un nouvel objet."
+        },
+        {
+          "title": "Compréhensions",
+          "body": "Les compréhensions construisent une collection de façon concise et lisible.",
+          "code": "carres = [x * x for x in range(5)]      # [0, 1, 4, 9, 16]\npairs = {x: x % 2 == 0 for x in range(3)} # {0: True, 1: False, 2: True}"
+        },
+        {
+          "title": "is vs ==",
+          "body": "== compare les valeurs, is compare l'identité (le même objet en mémoire). On utilise is surtout pour None : if x is None."
+        },
+        {
+          "title": "Piège : argument par défaut mutable",
+          "body": "Les valeurs par défaut sont évaluées une seule fois, à la définition de la fonction. Une liste par défaut est donc partagée entre les appels.",
+          "code": "def ajouter(x, l=[]):\n    l.append(x)\n    return l\n\najouter(1)  # [1]\najouter(2)  # [1, 2] !\n\n# Correct :\ndef ajouter(x, l=None):\n    l = [] if l is None else l"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "python-bases-q1",
+          "prompt": "Lequel de ces types est mutable ?",
+          "choices": [
+            "tuple",
+            "str",
+            "list",
+            "frozenset"
+          ],
+          "answerIndex": 2,
+          "explanation": "list est mutable ; tuple, str et frozenset sont immuables.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "python-bases-q2",
+          "prompt": "Que vaut cette expression ?",
+          "code": "[x * 2 for x in range(3)]",
+          "choices": [
+            "[2, 4, 6]",
+            "[0, 2, 4]",
+            "[0, 1, 2]",
+            "[0, 2, 4, 6]"
+          ],
+          "answerIndex": 1,
+          "explanation": "range(3) produit 0, 1, 2 ; doublés : [0, 2, 4].",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "python-bases-q3",
+          "prompt": "Quelle est la complexité moyenne d'un accès par clé dans un dict ?",
+          "choices": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n log n)"
+          ],
+          "answerIndex": 0,
+          "explanation": "dict est une table de hachage : accès en temps constant en moyenne.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "python-bases-q4",
+          "prompt": "Que compare l'opérateur is ?",
+          "choices": [
+            "Les valeurs",
+            "Les types",
+            "L'identité des objets",
+            "Les hash"
+          ],
+          "answerIndex": 2,
+          "explanation": "is vérifie que les deux noms désignent le même objet ; == compare les valeurs.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "python-bases-q5",
+          "prompt": "Que renvoie le second appel ?",
+          "code": "def f(a, l=[]):\n    l.append(a)\n    return l\n\nf(1)\nf(2)",
+          "choices": [
+            "[2]",
+            "[1, 2]",
+            "[1]",
+            "Une erreur"
+          ],
+          "answerIndex": 1,
+          "explanation": "La liste par défaut est créée une seule fois et partagée entre les appels.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ]
+}

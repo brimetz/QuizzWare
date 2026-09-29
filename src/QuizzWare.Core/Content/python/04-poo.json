@@ -1,0 +1,25 @@
+{
+  "id": "py-ch-poo",
+  "title": "Programmation orientée objet",
+  "summary": "Classes, méthodes spéciales et dataclasses.",
+  "lessons": [
+    {
+      "id": "py-classes",
+      "title": "Classes",
+      "summary": "self, attributs et méthodes.",
+      "difficulty": 1
+    },
+    {
+      "id": "py-dunder",
+      "title": "Méthodes spéciales",
+      "summary": "__repr__, __eq__, __len__…",
+      "difficulty": 2
+    },
+    {
+      "id": "py-dataclasses",
+      "title": "Dataclasses et héritage",
+      "summary": "MRO et super().",
+      "difficulty": 2
+    }
+  ]
+}

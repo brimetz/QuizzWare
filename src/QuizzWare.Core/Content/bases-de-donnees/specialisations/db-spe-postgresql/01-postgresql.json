@@ -1,0 +1,376 @@
+{
+  "id": "pg-ch-essentiel",
+  "title": "PostgreSQL : l'essentiel",
+  "summary": "Types riches, index avancés et exploitation.",
+  "lessons": [
+    {
+      "id": "pg-types",
+      "title": "Types et fonctionnalités propres à PostgreSQL",
+      "summary": "TIMESTAMPTZ, JSONB, RETURNING et upsert.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des types riches",
+          "body": "Au-delà du standard : les colonnes IDENTITY pour les clés auto-incrémentées, UUID, TIMESTAMPTZ (horodatage avec fuseau, à préférer à TIMESTAMP), les tableaux (TEXT[]), les énumérations, les intervalles et JSONB.",
+          "code": "CREATE TABLE commandes (\n    id      BIGINT GENERATED ALWAYS AS IDENTITY\n            PRIMARY KEY,\n    cree_le TIMESTAMPTZ NOT NULL DEFAULT now(),\n    tags    TEXT[] DEFAULT '{}',\n    details JSONB\n);"
+        },
+        {
+          "title": "JSONB",
+          "body": "JSONB stocke du JSON sous forme binaire, interrogeable et indexable. -> renvoie du JSON, ->> renvoie du texte, @> teste l'inclusion d'un document (et profite d'un index GIN).",
+          "code": "SELECT details->>'client' AS client\nFROM commandes\nWHERE details @> '{\"statut\": \"payee\"}';\n\nCREATE INDEX ON commandes USING GIN (details);"
+        },
+        {
+          "title": "RETURNING et upsert",
+          "body": "RETURNING renvoie les lignes écrites, sans seconde requête. ON CONFLICT transforme une insertion en mise à jour si la clé existe déjà (upsert), de façon atomique. EXCLUDED désigne la ligne qu'on tentait d'insérer.",
+          "code": "INSERT INTO stocks (produit_id, quantite)\nVALUES (7, 10)\nON CONFLICT (produit_id)\nDO UPDATE SET quantite = stocks.quantite + EXCLUDED.quantite\nRETURNING quantite;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pg-types-q1",
+          "prompt": "Quel type privilégier pour l'horodatage d'un événement ?",
+          "choices": ["TIMESTAMPTZ", "TIMESTAMP", "VARCHAR", "DATE"],
+          "answerIndex": 0,
+          "explanation": "TIMESTAMPTZ stocke un instant absolu (en UTC) et le convertit dans le fuseau de la session. TIMESTAMP sans fuseau devient ambigu dès que serveurs et utilisateurs sont dans des fuseaux différents.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "pg-types-q2",
+          "prompt": "Quelle différence entre -> et ->> sur une colonne JSONB ?",
+          "choices": ["-> renvoie du JSON, ->> renvoie du texte", "-> renvoie du texte, ->> renvoie du JSON", "Aucune", "->> ne fonctionne que sur les tableaux"],
+          "answerIndex": 0,
+          "explanation": "details->'client' renvoie \"Ada\" en JSON (avec les guillemets) ; details->>'client' renvoie le texte Ada, comparable à une chaîne SQL.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "pg-types-q3",
+          "prompt": "Complète : insérer le stock, ou ajouter la quantité si le produit existe déjà.",
+          "code": "INSERT INTO stocks (produit_id, quantite)\nVALUES (7, 10)\nON ___ (produit_id)\nDO UPDATE SET quantite = stocks.quantite + ___.quantite;",
+          "answers": ["CONFLICT", "EXCLUDED"],
+          "distractors": ["DUPLICATE", "NEW", "INSERTED"],
+          "explanation": "ON CONFLICT … DO UPDATE est l'upsert de PostgreSQL. MySQL utilise ON DUPLICATE KEY UPDATE, SQL Server MERGE.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "pg-types-q4",
+          "prompt": "Malgré l'index GIN, cette requête lit toute la table. Touche la ligne en cause.",
+          "code": "CREATE INDEX ON commandes USING GIN (details);\n\nSELECT id FROM commandes\nWHERE details->>'statut' = 'payee';",
+          "bugLines": [4],
+          "explanation": "L'index GIN par défaut sert les opérateurs d'inclusion et d'existence (@>, ?), pas une égalité sur ->>. Il faut écrire details @> '{\"statut\": \"payee\"}', ou créer un index d'expression sur (details->>'statut').",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "pg-types-q5",
+          "prompt": "Que fait RETURNING id à la fin d'un INSERT ?",
+          "choices": [
+            "Il renvoie l'id des lignes insérées, sans seconde requête",
+            "Il annule l'insertion si l'id existe",
+            "Il renvoie le nombre de lignes de la table",
+            "Il verrouille la ligne"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pratique pour récupérer une clé générée, et cela marche aussi avec UPDATE et DELETE.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "pg-types-q6",
+          "prompt": "Lesquelles de ces fonctionnalités sont caractéristiques de PostgreSQL ?",
+          "choices": [
+            "JSONB indexable avec GIN",
+            "Les colonnes de type tableau (TEXT[])",
+            "Les extensions (PostGIS, pgvector, TimescaleDB…)",
+            "La clause SELECT"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Les extensions sont une grande force de PostgreSQL : géographie, vecteurs, séries temporelles… sans changer de base.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "pg-index",
+      "title": "Index et plans avancés",
+      "summary": "B-tree, GIN, BRIN, index partiels et EXPLAIN.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les types d'index",
+          "body": "B-tree, le défaut : égalité, plages, tri. GIN : JSONB, tableaux, recherche plein texte. GiST : géométrie, plages de valeurs. BRIN : très grandes tables naturellement ordonnées, comme des logs par date ; minuscule et efficace. Hash : égalité seule."
+        },
+        {
+          "title": "Index partiels, d'expression et couvrants",
+          "body": "Un index partiel ne couvre qu'une partie des lignes ; un index d'expression indexe un calcul ; un index couvrant (INCLUDE) contient des colonnes supplémentaires pour répondre sans lire la table.",
+          "code": "-- partiel : seulement les commandes en attente\nCREATE INDEX ON commandes (cree_le)\n    WHERE statut = 'en_attente';\n-- d'expression : email insensible à la casse\nCREATE INDEX ON clients (lower(email));\n-- couvrant : répond sans lire la table\nCREATE INDEX ON commandes (client_id) INCLUDE (total);"
+        },
+        {
+          "title": "Lire EXPLAIN (ANALYZE, BUFFERS)",
+          "body": "Comparer les lignes estimées (rows) aux lignes réelles : un grand écart signale des statistiques périmées (ANALYZE les met à jour). Index Only Scan : réponse depuis l'index seul. Bitmap Heap Scan : l'index repère beaucoup de lignes, lues ensuite par blocs."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pg-index-q1",
+          "prompt": "Des milliards de lignes de logs, insérées dans l'ordre chronologique, interrogées par plage de dates. Quel index ?",
+          "choices": ["BRIN", "GIN", "Hash", "GiST"],
+          "answerIndex": 0,
+          "explanation": "BRIN stocke seulement le minimum et le maximum de chaque bloc de pages : quelques Mo au lieu de dizaines de Go pour un B-tree, et très efficace quand l'ordre physique suit la colonne.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "pg-index-q2",
+          "prompt": "L'index sur email n'est pas utilisé par cette recherche. Touche une ligne en cause.",
+          "code": "CREATE INDEX ON clients (email);\n\nSELECT * FROM clients\nWHERE lower(email) = lower('Ada@Exemple.fr');",
+          "bugLines": [1, 4],
+          "explanation": "L'index porte sur email, la requête filtre sur lower(email). Il faut un index d'expression : CREATE INDEX ON clients (lower(email)). Autre option : le type citext.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "pg-index-q3",
+          "prompt": "Complète : un index uniquement sur les commandes non livrées.",
+          "code": "CREATE INDEX ON commandes (cree_le)\n___ statut ___ 'livree';",
+          "answers": ["WHERE", "<>"],
+          "distractors": ["HAVING", "=", "ON"],
+          "explanation": "Un index partiel reste petit si les commandes non livrées sont peu nombreuses, et sert les requêtes qui reprennent la même condition.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pg-index-q4",
+          "prompt": "EXPLAIN ANALYZE affiche rows=10 estimées pour rows=2000000 réelles. Que faire d'abord ?",
+          "choices": [
+            "Mettre à jour les statistiques (ANALYZE) : l'optimiseur se trompe d'estimation",
+            "Supprimer tous les index",
+            "Augmenter max_connections",
+            "Passer en isolation Serializable"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec une estimation fausse, l'optimiseur choisit un mauvais plan (boucle imbriquée au lieu d'une jointure par hachage, par exemple). L'autovacuum lance aussi ANALYZE, mais parfois trop tard après un gros chargement.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "pg-index-q5",
+          "prompt": "Que signifie Index Only Scan dans un plan ?",
+          "choices": [
+            "La réponse est lue dans l'index seul, sans visiter la table",
+            "L'index est parcouru en entier",
+            "Seul l'index de clé primaire est utilisé",
+            "La table n'a qu'un index"
+          ],
+          "answerIndex": 0,
+          "explanation": "Possible quand toutes les colonnes demandées sont dans l'index (INCLUDE aide) et que la carte de visibilité est à jour (grâce à VACUUM).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "pg-index-q6",
+          "prompt": "À quoi sert un index GIN ?",
+          "choices": [
+            "L'opérateur @> sur une colonne JSONB",
+            "La recherche dans des tableaux (tags @> ARRAY['sql'])",
+            "La recherche plein texte (tsvector)",
+            "Trier par date croissante"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "GIN (Generalized Inverted Index) est un index inversé : pour chaque élément (clé JSON, élément de tableau, mot), la liste des lignes qui le contiennent. Pour trier, on utilise un B-tree.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "pg-exploitation",
+      "title": "MVCC, VACUUM et exploitation",
+      "summary": "Ce qu'il faut savoir pour faire tourner PostgreSQL en production.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "MVCC et VACUUM",
+          "body": "Un UPDATE écrit une nouvelle version de la ligne ; l'ancienne devient une ligne morte, conservée tant qu'une transaction peut encore la voir. VACUUM, automatisé par l'autovacuum, récupère cet espace. Une transaction ouverte pendant des heures empêche ce nettoyage : les tables gonflent (bloat)."
+        },
+        {
+          "title": "Les connexions",
+          "body": "Chaque connexion est un processus du serveur, qui consomme de la mémoire : quelques centaines de connexions actives suffisent à le saturer. On utilise un pool côté application et, souvent, PgBouncer devant le serveur."
+        },
+        {
+          "title": "Sauvegarde et réplication",
+          "body": "pg_dump produit une sauvegarde logique (portable, mais lente à restaurer sur une grosse base). Une sauvegarde physique, plus l'archivage continu du WAL, permet de restaurer la base à un instant précis (PITR). La réplication en streaming alimente des répliques en lecture."
+        },
+        {
+          "title": "Les verrous à surveiller",
+          "body": "Certaines opérations bloquent les écritures : on préfère leurs variantes non bloquantes, et on surveille l'activité.",
+          "code": "-- sans bloquer les écritures pendant la création :\nCREATE INDEX CONCURRENTLY idx_cmd_client\n    ON commandes (client_id);\n\n-- qui fait quoi, qui attend ?\nSELECT pid, state, wait_event_type, query\nFROM pg_stat_activity\nWHERE state <> 'idle';"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pg-ops-q1",
+          "prompt": "Que fait VACUUM ?",
+          "choices": [
+            "Il récupère l'espace des versions de lignes mortes laissées par UPDATE et DELETE",
+            "Il supprime les tables inutilisées",
+            "Il défragmente le disque",
+            "Il sauvegarde la base"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la contrepartie du MVCC. VACUUM rend l'espace réutilisable dans la table ; VACUUM FULL la réécrit entièrement, mais sous verrou exclusif.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pg-ops-q2",
+          "prompt": "Une table grossit sans cesse alors que son nombre de lignes est stable. Quelle est la cause fréquente ?",
+          "choices": [
+            "Une transaction restée ouverte (idle in transaction) empêche VACUUM de nettoyer",
+            "Un index manquant",
+            "Trop de colonnes",
+            "Le type TEXT"
+          ],
+          "answerIndex": 0,
+          "explanation": "Tant qu'une vieille transaction peut encore voir d'anciennes versions, VACUUM ne peut pas les supprimer. pg_stat_activity montre les sessions « idle in transaction ».",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "pg-ops-q3",
+          "prompt": "Pourquoi placer PgBouncer devant PostgreSQL ?",
+          "choices": [
+            "Chaque connexion est un processus coûteux : un pooler partage quelques connexions réelles entre de nombreux clients",
+            "Pour chiffrer les données",
+            "Pour remplacer les index",
+            "Pour sauvegarder la base"
+          ],
+          "answerIndex": 0,
+          "explanation": "Indispensable avec de nombreuses instances applicatives ou des fonctions serverless, qui ouvrent chacune leurs connexions.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "pg-ops-q4",
+          "prompt": "Complète : créer l'index sans bloquer les écritures sur la table.",
+          "code": "CREATE INDEX ___ idx_cmd_client\n    ON commandes (client_id);",
+          "answers": ["CONCURRENTLY"],
+          "distractors": ["ONLINE", "NOLOCK", "ASYNC"],
+          "explanation": "La création est plus longue, ne peut pas se faire dans une transaction, et laisse un index invalide en cas d'échec (à supprimer puis recréer). Mais la production continue d'écrire.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "pg-ops-q5",
+          "prompt": "Ce traitement nocturne dure des heures et bloque le nettoyage de toute la base. Touche une ligne en cause.",
+          "code": "conn = psycopg.connect(DSN)\ncur = conn.cursor()\ncur.execute(\"SELECT id FROM commandes\")\nfor (cid,) in cur.fetchall():\n    envoyer_facture(cid)  # 2 s par commande\nconn.commit()",
+          "language": "python",
+          "bugLines": [3, 5, 6],
+          "explanation": "Le SELECT ouvre une transaction, qui reste ouverte pendant toute la boucle, jusqu'au commit final : VACUUM ne peut rien nettoyer pendant des heures. Il faut valider juste après la lecture (ou utiliser l'autocommit), puis traiter.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "pg-ops-q6",
+          "prompt": "Lesquelles de ces solutions permettent de restaurer la base telle qu'elle était à 14 h 32 précisément ?",
+          "choices": [
+            "Une sauvegarde physique et l'archivage continu du WAL (PITR)",
+            "Un pg_dump quotidien, fait à minuit",
+            "Une réplique en streaming, seule",
+            "Un outil comme pgBackRest ou Barman, qui gère sauvegardes et WAL"
+          ],
+          "answerIndices": [0, 3],
+          "explanation": "Le pg_dump ne permet de revenir qu'à minuit. La réplique, elle, a déjà rejoué l'erreur (un DELETE accidentel, par exemple).",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "pg-defi",
+    "title": "Défi entretien : PostgreSQL en production",
+    "summary": "Connexions saturées, migrations et recherche insensible à la casse.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "pg-defi-q1",
+        "prompt": "Cas pratique 1/3 — L'application renvoie « FATAL: sorry, too many clients already ». Quelle est la cause ?",
+        "choices": [
+          "Plus de connexions que max_connections : il faut un pool (et PgBouncer), pas seulement augmenter la limite",
+          "Le disque est plein",
+          "Une requête est trop lente",
+          "Un index est corrompu"
+        ],
+        "answerIndex": 0,
+        "explanation": "Augmenter max_connections repousse le problème et consomme de la mémoire sur le serveur ; le vrai remède est de partager les connexions.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "pg-defi-q2",
+        "prompt": "Cas pratique 2/3 — Chaque appel ouvre une connexion qui n'est jamais fermée. Touche la ligne en cause.",
+        "code": "def lire_client(cid):\n    conn = psycopg.connect(DSN)\n    return conn.execute(\n        \"SELECT * FROM clients WHERE id = %s\", (cid,)\n    ).fetchone()",
+        "language": "python",
+        "bugLines": [2],
+        "explanation": "Une connexion par appel, jamais fermée : les connexions s'accumulent jusqu'à la limite. On utilise un pool (psycopg_pool) et un bloc with, qui rend la connexion au pool.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "pg-defi-q3",
+        "prompt": "Cas pratique 3/3 — Quelles mesures sont durables ?",
+        "choices": [
+          "Un pool de connexions dans l'application",
+          "PgBouncer en mode transaction devant PostgreSQL",
+          "Fermer systématiquement les connexions (with, using)",
+          "Régler max_connections à 10000"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "Avec 10 000 processus, le serveur s'effondrerait bien avant d'atteindre la limite.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "pg-defi-q4",
+        "prompt": "Tu ajoutes une colonne NOT NULL avec une valeur par défaut constante à une table de 500 millions de lignes. Depuis PostgreSQL 11, que se passe-t-il ?",
+        "choices": [
+          "C'est quasi instantané : la valeur par défaut est stockée dans le catalogue, sans réécrire la table",
+          "La table est entièrement réécrite, et bloquée pendant des heures",
+          "C'est interdit",
+          "Les anciennes lignes restent à NULL"
+        ],
+        "answerIndex": 0,
+        "explanation": "Vrai pour une valeur par défaut constante (ou non volatile). Avec DEFAULT random() ou clock_timestamp(), la table serait réécrite. Connaître ces détails rassure en entretien sur des migrations en production.",
+        "difficulty": 3
+      },
+      {
+        "type": "fill",
+        "id": "pg-defi-q5",
+        "prompt": "Complète : une recherche d'email insensible à la casse, qui utilise un index.",
+        "code": "CREATE INDEX ON clients (___(email));\n\nSELECT * FROM clients\nWHERE ___(email) = 'ada@exemple.fr';",
+        "answers": ["lower", "lower"],
+        "distractors": ["trim", "length", "ILIKE"],
+        "explanation": "La requête doit utiliser exactement la même expression que l'index. ILIKE ne peut pas utiliser un B-tree classique.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pg-defi-q6",
+        "prompt": "Pourquoi PostgreSQL est-il souvent un bon choix par défaut en entretien de system design ?",
+        "choices": [
+          "SGBDR ACID robuste et riche (JSONB, recherche plein texte, extensions) : il couvre beaucoup de besoins avant d'ajouter d'autres bases",
+          "C'est la seule base qui comprend SQL",
+          "Il se répartit sur plusieurs serveurs sans aucun effort",
+          "Il n'a pas besoin de sauvegardes"
+        ],
+        "answerIndex": 0,
+        "explanation": "La réponse attendue : commencer par PostgreSQL, puis ajouter un cache, une réplique ou une base spécialisée quand un besoin mesuré le justifie. Le sharding de PostgreSQL demande, lui, des outils dédiés (Citus…).",
+        "difficulty": 2
+      }
+    ]
+  }
+}

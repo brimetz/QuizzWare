@@ -1,0 +1,25 @@
+{
+  "id": "net-ch-transport",
+  "title": "TCP et UDP en profondeur",
+  "summary": "Fiabilité, flux et congestion.",
+  "lessons": [
+    {
+      "id": "net-tcp-connexion",
+      "title": "Cycle de vie d'une connexion TCP",
+      "summary": "Handshake, fermeture, TIME_WAIT.",
+      "difficulty": 2
+    },
+    {
+      "id": "net-tcp-flux",
+      "title": "Contrôle de flux et de congestion",
+      "summary": "Fenêtres et slow start.",
+      "difficulty": 3
+    },
+    {
+      "id": "net-udp-quic",
+      "title": "UDP et QUIC",
+      "summary": "Quand la fiabilité passe au second plan.",
+      "difficulty": 2
+    }
+  ]
+}

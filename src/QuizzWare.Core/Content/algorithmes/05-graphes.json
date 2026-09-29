@@ -1,0 +1,25 @@
+{
+  "id": "algo-ch-graphes",
+  "title": "Graphes",
+  "summary": "Représentation et parcours.",
+  "lessons": [
+    {
+      "id": "algo-graphes-representation",
+      "title": "Représenter un graphe",
+      "summary": "Listes et matrices d'adjacence.",
+      "difficulty": 2
+    },
+    {
+      "id": "algo-bfs-dfs",
+      "title": "BFS et DFS",
+      "summary": "Les parcours et leurs applications.",
+      "difficulty": 2
+    },
+    {
+      "id": "algo-plus-court-chemin",
+      "title": "Plus court chemin",
+      "summary": "Dijkstra et consorts.",
+      "difficulty": 3
+    }
+  ]
+}

@@ -1,0 +1,449 @@
+{
+  "id": "cpp-ch-fondamentaux",
+  "title": "Les fondamentaux",
+  "summary": "Types, contrôle du flux et fonctions.",
+  "lessons": [
+    {
+      "id": "cpp-types",
+      "title": "Types, variables et constantes",
+      "summary": "Déclarer et initialiser correctement ses variables.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les types de base",
+          "body": "int, double, char, bool... La taille de int n'est pas fixée par le standard (au moins 16 bits, 32 en pratique). Quand la taille compte, on utilise les types de <cstdint> : std::int32_t, std::uint64_t...",
+          "code": "int age = 30;\ndouble prix = 9.99;\nbool actif = true;\nchar lettre = 'A';\nstd::int64_t grand = 1'000'000'000'000;"
+        },
+        {
+          "title": "Initialiser avec des accolades",
+          "body": "L'initialisation avec {} interdit les conversions avec perte (narrowing) : le compilateur refuse int b{3.7}; alors que int a = 3.7; tronque silencieusement. Une variable locale non initialisée a une valeur indéterminée : la lire est un comportement indéfini.",
+          "code": "int a = 3.7;   // compile : a vaut 3\nint b{3.7};    // erreur : narrowing\nint c{};       // c vaut 0\nint d;         // valeur indéterminée !"
+        },
+        {
+          "title": "auto",
+          "body": "auto déduit le type à partir de l'initialiseur ; le typage reste statique. Attention : auto retire les références et le const « de premier niveau ».",
+          "code": "auto x = 42;    // int\nauto y = 42.0;  // double\nauto z = 42u;   // unsigned int\nconst int c = 1;\nauto w = c;     // int : le const est retiré"
+        },
+        {
+          "title": "const et constexpr",
+          "body": "const : la valeur ne changera plus après l'initialisation, qui peut avoir lieu à l'exécution. constexpr : la valeur est calculée à la compilation, et peut donc servir là où une constante de compilation est exigée (taille de tableau, paramètre de template...).",
+          "code": "const int max = lireConfig(); // connu à l'exécution\nconstexpr int taille = 16;    // connu à la compilation\nint tableau[taille];"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-types-q1",
+          "prompt": "Que se passe-t-il avec cette ligne ?",
+          "code": "int b{3.7};",
+          "choices": [
+            "Erreur de compilation : conversion avec perte",
+            "b vaut 3",
+            "b vaut 4",
+            "b vaut 3.7"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'initialisation par accolades interdit le narrowing. Avec int b = 3.7; le code aurait compilé et b vaudrait 3.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-types-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int a = 7 / 2;\ndouble b = 7 / 2;\ndouble c = 7 / 2.0;\nstd::cout << a << ' ' << b << ' ' << c;",
+          "choices": [
+            "3 3 3.5",
+            "3 3.5 3.5",
+            "3.5 3.5 3.5",
+            "3 3 3"
+          ],
+          "answerIndex": 0,
+          "explanation": "7 / 2 est une division entière (deux int) qui vaut 3, même si le résultat est ensuite stocké dans un double. Il suffit qu'un opérande soit flottant : 7 / 2.0 vaut 3.5.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cpp-types-q3",
+          "prompt": "Quelles affirmations sur auto sont vraies ?",
+          "choices": [
+            "auto z = 42u; déclare un unsigned int",
+            "auto retire le const de premier niveau",
+            "auto rend la variable dynamiquement typée",
+            "auto x; sans initialiseur est valide"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "auto déduit le type à la compilation depuis l'initialiseur (obligatoire) : le typage reste statique. Il retire le const et la référence de premier niveau.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-types-q4",
+          "prompt": "Cette fonction renvoie parfois n'importe quoi. Touche la ligne fautive.",
+          "code": "int somme(const std::vector<int>& v) {\n    int total;\n    for (int x : v) {\n        total += x;\n    }\n    return total;\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "total n'est pas initialisé : sa valeur de départ est indéterminée et la lire est un comportement indéfini. Il faut écrire int total = 0; (ou int total{};).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-types-q5",
+          "prompt": "Complète : une constante calculée à la compilation, puis un entier de exactement 64 bits.",
+          "code": "___ int taille = 16;\nstd::___ compteur = 0;",
+          "answers": [
+            "constexpr",
+            "int64_t"
+          ],
+          "distractors": [
+            "volatile",
+            "int32",
+            "extern"
+          ],
+          "explanation": "constexpr garantit une évaluation à la compilation ; std::int64_t (de <cstdint>) fait exactement 64 bits.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-types-q6",
+          "prompt": "Quel est le type de w ?",
+          "code": "const int c = 1;\nauto w = c;",
+          "choices": [
+            "int",
+            "const int",
+            "const int&",
+            "int&"
+          ],
+          "answerIndex": 0,
+          "explanation": "auto ignore le const de premier niveau : w est une copie modifiable. Pour le conserver : const auto w = c;",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "cpp-controle",
+      "title": "Contrôle du flux",
+      "summary": "Conditions, boucles et leurs pièges.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "if et switch",
+          "body": "Dans un switch, chaque case doit se terminer par break : sinon l'exécution « tombe » dans le case suivant (fallthrough). Quand c'est volontaire, on l'indique avec [[fallthrough]].",
+          "code": "switch (code) {\n    case 1:\n        std::cout << \"un\";\n        break;\n    case 2:\n        std::cout << \"deux\";\n        [[fallthrough]];\n    default:\n        std::cout << \"autre\";\n}"
+        },
+        {
+          "title": "Les boucles",
+          "body": "for classique, while, do-while (le corps s'exécute au moins une fois) et la boucle sur intervalle (range-based for). Dans cette dernière, le type de la variable décide si l'on copie, modifie ou lit seulement les éléments.",
+          "code": "std::vector<int> v{1, 2, 3};\nfor (int x : v) { }        // copie\nfor (int& x : v) { x *= 2; } // modifie v\nfor (const auto& x : v) { }  // lecture seule"
+        },
+        {
+          "title": "Piège : signé et non signé",
+          "body": "v.size() renvoie un std::size_t, non signé. Mélanger signé et non signé donne des résultats surprenants : si v est vide, v.size() - 1 ne vaut pas -1 mais la plus grande valeur possible de size_t."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-controle-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int x = 2;\nswitch (x) {\n    case 1: std::cout << \"A\";\n    case 2: std::cout << \"B\";\n    case 3: std::cout << \"C\";\n        break;\n    default: std::cout << \"D\";\n}",
+          "choices": [
+            "BC",
+            "B",
+            "BCD",
+            "ABC"
+          ],
+          "answerIndex": 0,
+          "explanation": "On entre au case 2, puis sans break l'exécution continue dans le case 3 jusqu'au break : BC.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-controle-q2",
+          "prompt": "Quelle boucle exécute toujours son corps au moins une fois ?",
+          "choices": [
+            "do { } while (cond);",
+            "while (cond) { }",
+            "for (; cond; ) { }",
+            "for (auto x : v) { }"
+          ],
+          "answerIndex": 0,
+          "explanation": "do-while teste la condition après le corps : celui-ci s'exécute au moins une fois.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-controle-q3",
+          "prompt": "Cette boucle devait doubler chaque élément, mais v reste inchangé. Touche la ligne en cause.",
+          "code": "std::vector<int> v{1, 2, 3};\nfor (int x : v) {\n    x *= 2;\n}\nafficher(v); // 1 2 3",
+          "bugLines": [
+            2
+          ],
+          "explanation": "int x est une copie de chaque élément : on double la copie. Il faut une référence : for (int& x : v).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-controle-q4",
+          "prompt": "Ce code lit hors du tableau quand v est vide. Touche la ligne fautive.",
+          "code": "void sansDernier(const std::vector<int>& v) {\n    for (std::size_t i = 0; i < v.size() - 1; ++i) {\n        std::cout << v[i] << '\\n';\n    }\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Si v est vide, v.size() - 1 est calculé en non signé : 0 - 1 donne la valeur maximale de size_t, et la boucle lit hors limites. Correction : i + 1 < v.size().",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "cpp-controle-q5",
+          "prompt": "Remets les lignes dans l'ordre pour afficher les nombres pairs de 0 à 8.",
+          "lines": [
+            "for (int i = 0; i <= 8; ++i) {",
+            "    if (i % 2 != 0) {",
+            "        continue;",
+            "    }",
+            "    std::cout << i << ' ';",
+            "}"
+          ],
+          "explanation": "continue passe directement à l'itération suivante quand i est impair ; seuls les pairs atteignent l'affichage.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "cpp-controle-q6",
+          "prompt": "Complète pour parcourir noms sans copier ni modifier les éléments.",
+          "code": "for (___ auto___ nom : noms) {\n    std::cout << nom;\n}",
+          "answers": [
+            "const",
+            "&"
+          ],
+          "distractors": [
+            "*",
+            "mutable",
+            "&&"
+          ],
+          "explanation": "const auto& lie une référence (pas de copie) en lecture seule (pas de modification).",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "cpp-fonctions",
+      "title": "Fonctions",
+      "summary": "Passage des paramètres, surcharge et valeurs de retour.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Passage des paramètres",
+          "body": "Par valeur, la fonction reçoit une copie. Par référence (T&), elle peut modifier l'original. Par référence constante (const T&), il n'y a ni copie ni modification : c'est le choix par défaut pour lire un objet coûteux à copier (string, vector...).",
+          "code": "void parValeur(std::string s);          // copie\nvoid parRef(std::string& s);            // peut modifier\nvoid parRefConst(const std::string& s); // lecture seule"
+        },
+        {
+          "title": "Surcharge et arguments par défaut",
+          "body": "Plusieurs fonctions peuvent porter le même nom si leurs paramètres diffèrent. Le type de retour seul ne suffit pas à les distinguer. Les arguments par défaut se placent en fin de liste.",
+          "code": "int aire(int cote);\nint aire(int largeur, int hauteur);\nvoid log(const std::string& msg, int niveau = 1);"
+        },
+        {
+          "title": "Ne jamais renvoyer une référence vers une variable locale",
+          "body": "Une variable locale est détruite à la sortie de la fonction : une référence ou un pointeur vers elle devient pendant (dangling), et l'utiliser est un comportement indéfini. Renvoyer par valeur est sûr et efficace grâce à l'élision de copie (RVO) et au déplacement.",
+          "code": "const std::string& mauvais() {\n    std::string s = \"boom\";\n    return s; // référence pendante !\n}\n\nstd::string bon() {\n    std::string s = \"ok\";\n    return s; // pas de copie (RVO)\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-fonctions-q1",
+          "prompt": "Quel type de paramètre privilégier pour lire un gros std::vector sans le modifier ?",
+          "choices": [
+            "const std::vector<int>&",
+            "std::vector<int>",
+            "std::vector<int>&",
+            "std::vector<int>*"
+          ],
+          "answerIndex": 0,
+          "explanation": "const& évite la copie et garantit que la fonction ne modifie pas le vecteur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-fonctions-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "void incr(int n) { n++; }\nvoid incrRef(int& n) { n++; }\n\nint a = 1;\nincr(a);\nincrRef(a);\nstd::cout << a;",
+          "choices": [
+            "2",
+            "1",
+            "3",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "incr modifie une copie ; seul incrRef modifie a. Résultat : 2.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cpp-fonctions-q3",
+          "prompt": "Lesquelles de ces déclarations peuvent coexister avec int aire(int cote); ?",
+          "choices": [
+            "int aire(int largeur, int hauteur);",
+            "double aire(double cote);",
+            "double aire(int cote);",
+            "int aire(const std::string& forme);"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Une surcharge doit différer par ses paramètres. double aire(int cote) ne change que le type de retour : c'est une erreur de compilation.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-fonctions-q4",
+          "prompt": "Cette fonction provoque un comportement indéfini chez l'appelant. Touche la ligne en cause.",
+          "code": "const std::string& salutation(const std::string& nom) {\n    std::string msg = \"Bonjour \" + nom;\n    return msg;\n}",
+          "bugLines": [
+            1,
+            3
+          ],
+          "explanation": "msg est détruite à la fin de la fonction : on renvoie une référence pendante. Il faut renvoyer par valeur : std::string salutation(...).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-fonctions-q5",
+          "prompt": "Complète la signature : la fonction doit échanger les deux entiers de l'appelant.",
+          "code": "void echanger(int___ a, int___ b) {\n    int tmp = a;\n    a = b;\n    b = tmp;\n}",
+          "answers": [
+            "&",
+            "&"
+          ],
+          "distractors": [
+            "*",
+            "&&",
+            "const"
+          ],
+          "explanation": "Avec int& les paramètres sont des alias des variables de l'appelant. Avec int* il faudrait écrire *a et *b dans le corps.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-fonctions-q6",
+          "prompt": "Pourquoi renvoyer un std::string par valeur n'est-il généralement pas coûteux ?",
+          "choices": [
+            "Grâce à l'élision de copie (RVO) et, à défaut, au déplacement",
+            "Parce qu'un std::string est toujours stocké sur la pile",
+            "Parce que le compilateur transforme le retour en référence",
+            "C'est faux : il faut toujours renvoyer un pointeur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Depuis C++17 l'élision est garantie pour un temporaire renvoyé ; pour une variable nommée (NRVO) elle est très courante, et sinon l'objet est déplacé plutôt que copié.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "cpp-defi-fondamentaux",
+    "title": "Défi entretien : les fondamentaux",
+    "summary": "Lis, débogue et corrige du code comme en entretien.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi1-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "int t[3] = {10, 20, 30};\nint i = 0, s = 0;\nwhile (i < 3) {\n    s += t[i++];\n}\nstd::cout << s << ' ' << i;",
+        "choices": [
+          "60 3",
+          "60 2",
+          "30 3",
+          "50 3"
+        ],
+        "answerIndex": 0,
+        "explanation": "t[i++] utilise i puis l'incrémente : on additionne t[0], t[1], t[2] = 60, et i finit à 3.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi1-q2",
+        "prompt": "Cas pratique 1/3 — Cette fonction doit renvoyer la moyenne, mais pour {1, 2} elle renvoie 1. Touche la ligne fautive.",
+        "code": "double moyenne(const std::vector<int>& v) {\n    int somme = 0;\n    for (int x : v) somme += x;\n    return somme / v.size();\n}",
+        "bugLines": [
+          4
+        ],
+        "explanation": "somme / v.size() est une division entière (int divisé par size_t) : le résultat est tronqué avant d'être converti en double.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi1-q3",
+        "prompt": "Cas pratique 2/3 — Quel correctif de la ligne 4 est le bon ?",
+        "code": "double moyenne(const std::vector<int>& v) {\n    int somme = 0;\n    for (int x : v) somme += x;\n    return somme / v.size();\n}",
+        "choices": [
+          "return static_cast<double>(somme) / v.size();",
+          "return (double)(somme / v.size());",
+          "return somme / (int)v.size();",
+          "return double(somme / v.size());"
+        ],
+        "answerIndex": 0,
+        "explanation": "Il faut convertir un opérande avant la division. Les autres versions convertissent le résultat d'une division déjà entière.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi1-q4",
+        "prompt": "Cas pratique 3/3 — Une fois corrigée, que renvoie moyenne sur un vecteur vide ?",
+        "code": "return static_cast<double>(somme) / v.size();",
+        "choices": [
+          "NaN (0.0 divisé par 0)",
+          "Une exception std::domain_error",
+          "Crash : division entière par zéro",
+          "0"
+        ],
+        "answerIndex": 0,
+        "explanation": "La division est flottante : 0.0 / 0 donne NaN selon IEEE 754, sans crash. En entretien, on mentionne qu'il vaut mieux traiter le cas vide explicitement.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi1-q5",
+        "prompt": "Revue de code : coche tous les problèmes de cette fonction.",
+        "code": "std::string trouver(std::vector<std::string> noms,\n                    std::string cible) {\n    for (int i = 0; i <= noms.size(); i++) {\n        if (noms[i] == cible) return noms[i];\n    }\n    return \"\";\n}",
+        "choices": [
+          "noms et cible sont copiés inutilement : préférer const&",
+          "i <= noms.size() lit un élément hors limites",
+          "i (signé) est comparé à noms.size() (non signé)",
+          "== ne permet pas de comparer deux std::string"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les paramètres devraient être des const std::string& / const std::vector<...>&, la condition doit être i < size, et l'index devrait être un std::size_t. std::string supporte bien ==.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "cpp-defi1-q6",
+        "prompt": "Remets dans l'ordre une fonction qui compte les voyelles d'un mot.",
+        "lines": [
+          "int compterVoyelles(const std::string& mot) {",
+          "    int n = 0;",
+          "    for (char c : mot) {",
+          "        if (estVoyelle(c)) {",
+          "            ++n;",
+          "        }",
+          "    }",
+          "    return n;",
+          "}"
+        ],
+        "explanation": "Initialiser le compteur, parcourir, tester, incrémenter, puis renvoyer après la boucle.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

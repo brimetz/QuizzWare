@@ -1,0 +1,104 @@
+{
+  "id": "reseau-ch-web",
+  "title": "Le web : DNS, HTTP et TLS",
+  "summary": "Ce qui se passe quand on tape une URL.",
+  "lessons": [
+    {
+      "id": "reseau-web",
+      "title": "DNS, HTTP et adressage IP",
+      "summary": "Ce qui se passe quand on tape une URL.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "DNS",
+          "body": "Le DNS traduit un nom de domaine en adresse IP. Enregistrements courants : A (IPv4), AAAA (IPv6), CNAME (alias vers un autre nom), MX (serveurs mail), TXT (texte libre, ex. vérifications SPF)."
+        },
+        {
+          "title": "HTTP",
+          "body": "Méthodes : GET (lire), POST (créer / action), PUT (remplacer), PATCH (modifier partiellement), DELETE (supprimer). GET, PUT et DELETE sont idempotents : les répéter produit le même état. Codes : 2xx succès (200 OK, 201 Created), 3xx redirection, 4xx erreur client (400, 401, 403, 404), 5xx erreur serveur (500, 503)."
+        },
+        {
+          "title": "Adressage et CIDR",
+          "body": "Une notation /24 signifie que 24 bits sur 32 identifient le réseau : il reste 8 bits, soit 256 adresses, dont 254 utilisables pour des hôtes (l'adresse réseau et le broadcast étant réservés).",
+          "code": "192.168.1.0/24\n  réseau    : 192.168.1.0\n  hôtes     : 192.168.1.1 → 192.168.1.254\n  broadcast : 192.168.1.255"
+        },
+        {
+          "title": "TLS",
+          "body": "TLS authentifie le serveur (certificat) et chiffre les échanges. TLS 1.3 réduit la négociation d'une nouvelle connexion à un seul aller-retour (1-RTT)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "reseau-web-q1",
+          "prompt": "Quel enregistrement DNS associe un nom à une adresse IPv4 ?",
+          "choices": [
+            "AAAA",
+            "A",
+            "MX",
+            "CNAME"
+          ],
+          "answerIndex": 1,
+          "explanation": "A pour IPv4, AAAA pour IPv6, MX pour les mails, CNAME pour les alias.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "reseau-web-q2",
+          "prompt": "Quel code HTTP indique qu'une ressource a bien été créée ?",
+          "choices": [
+            "200",
+            "201",
+            "204",
+            "302"
+          ],
+          "answerIndex": 1,
+          "explanation": "201 Created est la réponse typique d'un POST qui crée une ressource.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "reseau-web-q3",
+          "prompt": "Parmi ces méthodes HTTP, laquelle n'est PAS idempotente ?",
+          "choices": [
+            "GET",
+            "PUT",
+            "DELETE",
+            "POST"
+          ],
+          "answerIndex": 3,
+          "explanation": "Répéter un POST peut créer plusieurs ressources ; GET, PUT et DELETE laissent le même état.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "reseau-web-q4",
+          "prompt": "Combien d'adresses d'hôtes utilisables dans le réseau 192.168.1.0/24 ?",
+          "choices": [
+            "256",
+            "255",
+            "254",
+            "24"
+          ],
+          "answerIndex": 2,
+          "explanation": "8 bits d'hôte = 256 adresses, moins l'adresse réseau et le broadcast = 254.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "reseau-web-q5",
+          "prompt": "Combien d'allers-retours faut-il à TLS 1.3 pour établir une nouvelle connexion ?",
+          "choices": [
+            "0-RTT",
+            "1-RTT",
+            "2-RTT",
+            "3-RTT"
+          ],
+          "answerIndex": 1,
+          "explanation": "TLS 1.3 négocie une nouvelle connexion en 1-RTT (contre 2 pour TLS 1.2). Le 0-RTT n'est possible qu'en reprise de session.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ]
+}

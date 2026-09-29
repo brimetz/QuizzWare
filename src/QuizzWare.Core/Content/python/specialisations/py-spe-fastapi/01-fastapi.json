@@ -1,0 +1,374 @@
+{
+  "id": "fastapi-ch-essentiel",
+  "title": "FastAPI : l'essentiel",
+  "summary": "Validation par les types, asynchrone et mise en production.",
+  "lessons": [
+    {
+      "id": "fastapi-bases",
+      "title": "Routes, paramètres et validation",
+      "summary": "Les annotations de type font le travail.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Une API minimale",
+          "body": "Les annotations de type font tout : article_id vient du chemin et doit être un entier ; detail vient de la query string (?detail=true). Une valeur invalide renvoie automatiquement une erreur 422 détaillée. La documentation interactive est générée sur /docs (OpenAPI).",
+          "code": "from fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get(\"/articles/{article_id}\")\nasync def lire(article_id: int, detail: bool = False):\n    return {\"id\": article_id, \"detail\": detail}"
+        },
+        {
+          "title": "Pydantic",
+          "body": "Un modèle Pydantic en paramètre est lu depuis le corps JSON et validé : types, contraintes, valeurs par défaut.",
+          "code": "from pydantic import BaseModel, Field\n\nclass ArticleIn(BaseModel):\n    titre: str = Field(min_length=3)\n    prix: float = Field(gt=0)\n    tags: list[str] = []\n\n@app.post(\"/articles\", status_code=201)\nasync def creer(article: ArticleIn):\n    return article"
+        },
+        {
+          "title": "Les modèles de sortie",
+          "body": "Le type de retour (ou response_model) filtre et documente la réponse : on renvoie un ArticleOut sans les champs internes (hash de mot de passe, notes privées…). Séparer modèle d'entrée, modèle de sortie et modèle de base de données est une bonne pratique."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fastapi-bases-q1",
+          "prompt": "La route attend article_id: int. Que renvoie GET /articles/abc ?",
+          "choices": ["422 avec le détail de l'erreur de validation", "404", "500", "La route est appelée avec article_id = 0"],
+          "answerIndex": 0,
+          "explanation": "FastAPI valide les paramètres avant d'appeler la fonction : « abc » n'est pas un entier, d'où une erreur 422 Unprocessable Entity décrivant le problème.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fastapi-bases-q2",
+          "prompt": "Pour la route /articles/{article_id}, d'où vient le paramètre detail ?",
+          "code": "async def lire(article_id: int, detail: bool = False):",
+          "choices": ["De la query string (?detail=true)", "Du corps JSON", "D'un en-tête HTTP", "Du chemin"],
+          "answerIndex": 0,
+          "explanation": "Un paramètre présent dans le chemin vient du chemin ; un type simple absent du chemin vient de la query string ; un modèle Pydantic vient du corps.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "fastapi-bases-q3",
+          "prompt": "Complète : le prix doit être strictement positif.",
+          "code": "class ArticleIn(BaseModel):\n    titre: str\n    prix: float = ___(___=0)",
+          "answers": ["Field", "gt"],
+          "distractors": ["Query", "ge", "min"],
+          "explanation": "gt = greater than (strictement supérieur) ; ge accepterait 0.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "fastapi-bases-q4",
+          "prompt": "Cette route expose le hash du mot de passe des utilisateurs. Touche une ligne à corriger.",
+          "code": "class Utilisateur(BaseModel):\n    email: str\n    mot_de_passe_hash: str\n\n@app.get(\"/utilisateurs/{uid}\")\nasync def lire(uid: int) -> Utilisateur:\n    return await depot.trouver(uid)",
+          "bugLines": [3, 6],
+          "explanation": "Le type de retour sert de modèle de réponse : tous ses champs sont renvoyés. Il faut un modèle de sortie dédié, UtilisateurOut, sans le hash.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fastapi-bases-q5",
+          "prompt": "Qu'apporte FastAPI automatiquement à partir des annotations de type ?",
+          "choices": [
+            "La validation des entrées, avec des erreurs 422 détaillées",
+            "Une documentation OpenAPI interactive sur /docs",
+            "La conversion des types (\"42\" devient 42)",
+            "Le chiffrement des réponses"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Un seul endroit, les types, sert à la fois à valider, convertir et documenter. Le chiffrement relève de TLS, en amont.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fastapi-bases-q6",
+          "prompt": "Quel code de statut renvoie par défaut une route @app.post sans status_code ?",
+          "choices": ["200", "201", "204", "202"],
+          "answerIndex": 0,
+          "explanation": "FastAPI renvoie 200 par défaut, même pour un POST : pour une création, on précise status_code=201.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "fastapi-async",
+      "title": "Async, dépendances et base de données",
+      "summary": "Ne jamais bloquer la boucle d'événements.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "async def ou def ?",
+          "body": "Une route async def s'exécute dans la boucle d'événements : elle ne doit faire que des appels non bloquants (avec await). Un appel bloquant (requests, time.sleep, pilote de base synchrone) y gèle toutes les requêtes du processus. Une route def classique est exécutée dans un pool de threads : c'est le bon choix pour du code bloquant.",
+          "code": "@app.get(\"/lent\")\nasync def lent():\n    time.sleep(2)          # bloque la boucle !\n    await asyncio.sleep(2) # correct en async"
+        },
+        {
+          "title": "Les dépendances",
+          "body": "Depends injecte une ressource dans la route. Avec yield, le code placé après le yield s'exécute à la fin de la requête (fermeture de session, commit…). Les dépendances se composent : utilisateur_courant peut elle-même dépendre de get_session.",
+          "code": "async def get_session():\n    async with SessionLocal() as session:\n        yield session\n\n@app.get(\"/articles\")\nasync def lister(session: AsyncSession = Depends(get_session)):\n    ..."
+        },
+        {
+          "title": "Les tâches de fond",
+          "body": "BackgroundTasks lance un travail léger après l'envoi de la réponse, comme un e-mail de bienvenue. Pour un travail lourd, ou qui doit être fiable (reprises, file d'attente), on passe à un vrai système de tâches : Celery, RQ, Arq…"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fastapi-async-q1",
+          "prompt": "Une route async def appelle requests.get (bloquant) vers une API lente. Conséquence ?",
+          "choices": [
+            "Toutes les autres requêtes du processus sont gelées pendant l'appel",
+            "Rien : FastAPI parallélise automatiquement",
+            "Une erreur de syntaxe",
+            "La requête est rejouée"
+          ],
+          "answerIndex": 0,
+          "explanation": "La boucle d'événements est un seul thread : tant que requests.get bloque, elle ne peut servir aucune autre requête.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "fastapi-async-q2",
+          "prompt": "Complète pour attendre une seconde sans bloquer.",
+          "code": "@app.get(\"/pause\")\nasync def pause():\n    ___ asyncio.___(1)\n    return {\"ok\": True}",
+          "answers": ["await", "sleep"],
+          "distractors": ["yield", "wait", "time"],
+          "explanation": "await asyncio.sleep(1) rend la main à la boucle pendant l'attente ; time.sleep(1) la bloquerait.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "fastapi-async-q3",
+          "prompt": "Sous charge, toute l'API ralentit dès que cette route est appelée. Touche la ligne en cause.",
+          "code": "@app.get(\"/meteo\")\nasync def meteo(ville: str):\n    r = requests.get(f\"https://api.meteo/{ville}\")\n    return r.json()",
+          "bugLines": [3],
+          "explanation": "requests est bloquant. Deux corrections : un client asynchrone (async with httpx.AsyncClient() as c: r = await c.get(...)), ou déclarer la route avec def pour qu'elle s'exécute dans un thread.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "fastapi-async-q4",
+          "prompt": "Quel est le rôle de yield dans une dépendance ?",
+          "choices": [
+            "Fournir la ressource, puis exécuter le nettoyage à la fin de la requête",
+            "Rendre la route asynchrone",
+            "Mettre la réponse en cache",
+            "Renvoyer la réponse morceau par morceau"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'équivalent d'un context manager : la session est ouverte, fournie à la route, puis fermée quoi qu'il arrive.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fastapi-async-q5",
+          "prompt": "Comment envoyer un e-mail de bienvenue sans faire attendre la réponse d'inscription ?",
+          "choices": [
+            "Avec BackgroundTasks, ou une file de tâches pour un travail lourd",
+            "Avec time.sleep avant de répondre",
+            "En créant un thread à la main dans la route",
+            "En renvoyant 202 sans rien envoyer"
+          ],
+          "answerIndex": 0,
+          "explanation": "BackgroundTasks s'exécute dans le même processus après la réponse : simple, mais la tâche est perdue si le processus redémarre. D'où une vraie file pour ce qui doit être garanti.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "fastapi-async-q6",
+          "prompt": "Quand préférer def à async def pour une route ?",
+          "choices": [
+            "Le code utilise une bibliothèque bloquante sans équivalent asynchrone",
+            "Le traitement utilise un pilote de base de données synchrone",
+            "Le code n'appelle que des fonctions asynchrones avec await",
+            "Toujours, def est plus rapide"
+          ],
+          "answerIndices": [0, 1],
+          "explanation": "Règle simple : async def si tout ce qui attend est « awaitable » ; def si le code bloque. FastAPI exécute alors la route dans un thread.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "fastapi-production",
+      "title": "Sécurité et production",
+      "summary": "Authentification, erreurs et déploiement.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "L'authentification",
+          "body": "OAuth2PasswordBearer extrait le jeton Bearer de l'en-tête Authorization. Une dépendance utilisateur_courant vérifie le jeton (un JWT signé, par exemple) et renvoie l'utilisateur, ou lève une erreur 401. Les mots de passe sont stockés hachés (bcrypt, argon2), jamais en clair.",
+          "code": "oauth2 = OAuth2PasswordBearer(tokenUrl=\"token\")\n\nasync def utilisateur_courant(token: str = Depends(oauth2)):\n    user = verifier_jwt(token)\n    if user is None:\n        raise HTTPException(status_code=401)\n    return user"
+        },
+        {
+          "title": "Les erreurs",
+          "body": "HTTPException(status_code=404, detail=…) produit une réponse d'erreur JSON propre. Des gestionnaires d'exceptions globaux (@app.exception_handler) traduisent les erreurs métier en réponses HTTP cohérentes."
+        },
+        {
+          "title": "Déployer",
+          "body": "En production : un serveur ASGI (uvicorn, avec plusieurs workers), un reverse proxy (Nginx) pour TLS, la configuration par variables d'environnement (pydantic-settings) et des tests avec TestClient.",
+          "code": "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fastapi-prod-q1",
+          "prompt": "Comment renvoyer proprement une erreur 404 depuis une route ?",
+          "choices": [
+            "raise HTTPException(status_code=404, detail=\"Article introuvable\")",
+            "return 404",
+            "print(404)",
+            "raise Exception(404)"
+          ],
+          "answerIndex": 0,
+          "explanation": "HTTPException est interceptée par FastAPI et transformée en réponse JSON avec le bon code. Une exception quelconque produirait une erreur 500.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fastapi-prod-q2",
+          "prompt": "Comment stocker les mots de passe des utilisateurs ?",
+          "choices": [
+            "Hachés avec un algorithme lent et salé (bcrypt, argon2)",
+            "En clair",
+            "Chiffrés avec une clé stockée en variable d'environnement",
+            "Hachés en MD5"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un hachage lent et salé rend les attaques par force brute coûteuses, même si la base fuit. MD5 et SHA-1 sont bien trop rapides ; un chiffrement réversible expose tout si la clé fuit.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "fastapi-prod-q3",
+          "prompt": "N'importe qui peut supprimer des articles. Touche la ligne à modifier.",
+          "code": "@app.delete(\"/articles/{aid}\")\nasync def supprimer(aid: int):\n    await depot.supprimer(aid)\n    return {\"ok\": True}",
+          "bugLines": [2],
+          "explanation": "Il faut exiger un utilisateur authentifié, et vérifier ses droits : async def supprimer(aid: int, user = Depends(utilisateur_courant)).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "fastapi-prod-q4",
+          "prompt": "Complète : la route exige un utilisateur authentifié.",
+          "code": "@app.get(\"/moi\")\nasync def moi(user = ___(utilisateur_courant)):\n    return user",
+          "answers": ["Depends"],
+          "distractors": ["Inject", "Body", "Query"],
+          "explanation": "Si utilisateur_courant lève une erreur 401, la route n'est jamais exécutée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fastapi-prod-q5",
+          "prompt": "Comment exécuter FastAPI en production ?",
+          "choices": [
+            "Avec un serveur ASGI comme uvicorn, plusieurs workers, derrière un reverse proxy",
+            "Avec le serveur de développement de Flask",
+            "Dans un notebook Jupyter",
+            "Avec pip install"
+          ],
+          "answerIndex": 0,
+          "explanation": "Plusieurs workers exploitent plusieurs cœurs ; le reverse proxy gère TLS, la compression et les fichiers statiques.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fastapi-prod-q6",
+          "prompt": "Quelles sont les bonnes pratiques de configuration en production ?",
+          "choices": [
+            "Lire les secrets depuis des variables d'environnement (pydantic-settings)",
+            "Ne jamais committer de secrets dans le dépôt",
+            "Désactiver ou protéger /docs si l'API est privée",
+            "Écrire la clé de signature JWT en dur dans le code"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Une clé JWT dans le code permet à quiconque lit le dépôt de forger des jetons valides.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "fastapi-defi",
+    "title": "Défi entretien : FastAPI sous charge",
+    "summary": "Boucle d'événements bloquée, injection SQL et choix du framework.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "fastapi-defi-q1",
+        "prompt": "Cas pratique 1/3 — Dès que 10 utilisateurs appellent /rapport, l'API met 5 s à répondre, alors qu'un rapport prend 0,5 s. Hypothèse la plus probable ?",
+        "code": "@app.get(\"/rapport\")\nasync def rapport():\n    donnees = db_sync.executer(REQUETE)  # pilote synchrone\n    return generer(donnees)",
+        "choices": [
+          "Un appel bloquant dans une route async def sérialise les requêtes sur la boucle d'événements",
+          "La base manque d'index",
+          "FastAPI limite le débit à 2 requêtes par seconde",
+          "Le JSON renvoyé est trop gros"
+        ],
+        "answerIndex": 0,
+        "explanation": "10 × 0,5 s = 5 s : les requêtes passent une par une. C'est la signature d'une boucle d'événements bloquée.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "fastapi-defi-q2",
+        "prompt": "Cas pratique 2/3 — Quelles corrections sont valables ?",
+        "choices": [
+          "Déclarer la route avec def, pour qu'elle s'exécute dans le pool de threads",
+          "Passer à un pilote asynchrone et utiliser await",
+          "Déléguer l'appel à un thread avec asyncio.to_thread",
+          "Ajouter time.sleep(0) avant l'appel"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "Les trois premières libèrent la boucle d'événements. time.sleep(0) ne change rien : l'appel qui suit reste bloquant.",
+        "difficulty": 3
+      },
+      {
+        "type": "fill",
+        "id": "fastapi-defi-q3",
+        "prompt": "Cas pratique 3/3 — Délègue l'appel bloquant à un thread.",
+        "code": "@app.get(\"/rapport\")\nasync def rapport():\n    donnees = ___ asyncio.___(db_sync.executer, REQUETE)\n    return generer(donnees)",
+        "answers": ["await", "to_thread"],
+        "distractors": ["yield", "run", "sleep"],
+        "explanation": "asyncio.to_thread (Python 3.9 et plus) exécute la fonction dans un thread et permet de l'attendre sans bloquer la boucle.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "fastapi-defi-q4",
+        "prompt": "Cette route contient une faille de sécurité. Touche la ligne en cause.",
+        "code": "@app.get(\"/recherche\")\nasync def recherche(q: str, session = Depends(get_session)):\n    sql = f\"SELECT * FROM articles WHERE titre LIKE '%{q}%'\"\n    return (await session.execute(text(sql))).all()",
+        "bugLines": [3],
+        "explanation": "Injection SQL : q est inséré tel quel dans la requête. Avec q = \"' OR 1=1 --\", tout est renvoyé, et pire est possible. Il faut un paramètre lié : text(\"… LIKE :motif\") avec {\"motif\": f\"%{q}%\"}.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "fastapi-defi-q5",
+        "prompt": "Comment tester une route FastAPI sans lancer de serveur ?",
+        "choices": [
+          "Avec TestClient (ou httpx.AsyncClient), qui appelle l'application en mémoire",
+          "En lançant uvicorn puis curl",
+          "C'est impossible",
+          "En appelant la fonction Python directement, sans validation"
+        ],
+        "answerIndex": 0,
+        "explanation": "TestClient passe par tout le pipeline (validation, dépendances, sérialisation), sans réseau. On peut remplacer une dépendance (app.dependency_overrides) pour isoler la base.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "fastapi-defi-q6",
+        "prompt": "En entretien : pourquoi choisir FastAPI plutôt que Flask pour une nouvelle API ?",
+        "choices": [
+          "Validation et sérialisation automatiques à partir des types (Pydantic)",
+          "Documentation OpenAPI générée automatiquement",
+          "Support natif de l'asynchrone (ASGI)",
+          "Flask ne peut pas renvoyer de JSON"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "Flask reste un excellent choix, simple et très répandu ; FastAPI réduit surtout le code de validation et de documentation pour une API.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

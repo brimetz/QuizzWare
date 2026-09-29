@@ -1,0 +1,25 @@
+{
+  "id": "net-ch-securite",
+  "title": "Sécurité réseau",
+  "summary": "Chiffrement, filtrage et attaques.",
+  "lessons": [
+    {
+      "id": "net-sec-tls",
+      "title": "TLS en détail",
+      "summary": "Certificats et chaîne de confiance.",
+      "difficulty": 2
+    },
+    {
+      "id": "net-sec-pare-feu",
+      "title": "Pare-feu et segmentation",
+      "summary": "Filtrer les flux.",
+      "difficulty": 2
+    },
+    {
+      "id": "net-sec-attaques",
+      "title": "Attaques courantes",
+      "summary": "DDoS, homme du milieu, usurpation.",
+      "difficulty": 3
+    }
+  ]
+}

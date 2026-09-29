@@ -1,0 +1,25 @@
+{
+  "id": "qa-ch-unitaires",
+  "title": "Tests unitaires",
+  "summary": "Isoler et vérifier.",
+  "lessons": [
+    {
+      "id": "qa-aaa",
+      "title": "Arrange, Act, Assert",
+      "summary": "Structurer un test.",
+      "difficulty": 1
+    },
+    {
+      "id": "qa-doublures",
+      "title": "Doublures de test",
+      "summary": "Stubs, mocks et fakes.",
+      "difficulty": 2
+    },
+    {
+      "id": "qa-tdd",
+      "title": "TDD",
+      "summary": "Écrire le test d'abord.",
+      "difficulty": 2
+    }
+  ]
+}

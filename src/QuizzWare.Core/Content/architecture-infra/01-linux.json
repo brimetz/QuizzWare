@@ -1,0 +1,25 @@
+{
+  "id": "infra-ch-linux",
+  "title": "Linux et shell",
+  "summary": "Le socle de l'infrastructure.",
+  "lessons": [
+    {
+      "id": "infra-linux-processus",
+      "title": "Processus et services",
+      "summary": "ps, signaux, systemd.",
+      "difficulty": 1
+    },
+    {
+      "id": "infra-linux-fichiers",
+      "title": "Fichiers et permissions",
+      "summary": "Arborescence, droits, utilisateurs.",
+      "difficulty": 1
+    },
+    {
+      "id": "infra-linux-shell",
+      "title": "Le shell",
+      "summary": "Pipes, redirections, variables.",
+      "difficulty": 1
+    }
+  ]
+}

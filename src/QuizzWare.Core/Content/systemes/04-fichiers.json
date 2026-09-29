@@ -1,0 +1,19 @@
+{
+  "id": "os-ch-fichiers",
+  "title": "Systèmes de fichiers",
+  "summary": "Stocker durablement.",
+  "lessons": [
+    {
+      "id": "os-inodes",
+      "title": "Fichiers et inodes",
+      "summary": "L'organisation sur disque.",
+      "difficulty": 2
+    },
+    {
+      "id": "os-journalisation",
+      "title": "Journalisation",
+      "summary": "Survivre aux crashs.",
+      "difficulty": 3
+    }
+  ]
+}

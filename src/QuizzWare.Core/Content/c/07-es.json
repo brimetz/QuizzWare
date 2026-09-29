@@ -1,0 +1,19 @@
+{
+  "id": "c-ch-es",
+  "title": "Entrées / sorties",
+  "summary": "Fichiers et formats.",
+  "lessons": [
+    {
+      "id": "c-stdio",
+      "title": "stdio",
+      "summary": "printf, scanf et leurs pièges.",
+      "difficulty": 1
+    },
+    {
+      "id": "c-fichiers",
+      "title": "Fichiers",
+      "summary": "fopen, fread et fwrite.",
+      "difficulty": 2
+    }
+  ]
+}

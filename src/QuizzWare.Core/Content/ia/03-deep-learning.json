@@ -1,0 +1,25 @@
+{
+  "id": "ia-ch-deep-learning",
+  "title": "Deep learning",
+  "summary": "Les réseaux de neurones.",
+  "lessons": [
+    {
+      "id": "ia-neurones",
+      "title": "Réseaux de neurones",
+      "summary": "Couches, activation et rétropropagation.",
+      "difficulty": 3
+    },
+    {
+      "id": "ia-architectures",
+      "title": "Architectures classiques",
+      "summary": "CNN et RNN.",
+      "difficulty": 3
+    },
+    {
+      "id": "ia-transformers",
+      "title": "Transformers",
+      "summary": "L'attention et les modèles de langage.",
+      "difficulty": 3
+    }
+  ]
+}

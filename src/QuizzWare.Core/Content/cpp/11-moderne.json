@@ -1,0 +1,25 @@
+{
+  "id": "cpp-ch-moderne",
+  "title": "C++ moderne",
+  "summary": "Lambdas, constexpr et nouveautés.",
+  "lessons": [
+    {
+      "id": "cpp-lambdas",
+      "title": "Lambdas",
+      "summary": "Captures et durée de vie.",
+      "difficulty": 2
+    },
+    {
+      "id": "cpp-constexpr",
+      "title": "constexpr et consteval",
+      "summary": "Calculer à la compilation.",
+      "difficulty": 3
+    },
+    {
+      "id": "cpp-cpp20",
+      "title": "De C++17 à C++23",
+      "summary": "Structured bindings, variant, ranges, modules.",
+      "difficulty": 2
+    }
+  ]
+}

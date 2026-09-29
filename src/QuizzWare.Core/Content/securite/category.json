@@ -1,0 +1,8 @@
+{
+  "id": "securite",
+  "order": 14,
+  "name": "Sécurité applicative",
+  "description": "Comprendre les attaques pour écrire et déployer du code sûr.",
+  "icon": "SEC",
+  "color": "#43A047"
+}

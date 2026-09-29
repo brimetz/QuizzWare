@@ -1,0 +1,19 @@
+{
+  "id": "fe-ch-performance",
+  "title": "Performance web",
+  "summary": "Des pages rapides.",
+  "lessons": [
+    {
+      "id": "fe-rendu",
+      "title": "Le rendu du navigateur",
+      "summary": "Chemin critique et reflow.",
+      "difficulty": 3
+    },
+    {
+      "id": "fe-web-vitals",
+      "title": "Core Web Vitals",
+      "summary": "LCP, INP et CLS.",
+      "difficulty": 2
+    }
+  ]
+}

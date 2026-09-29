@@ -1,0 +1,9 @@
+{
+  "id": "go",
+  "order": 12,
+  "name": "Go",
+  "description": "Un langage simple et concurrent, taillé pour les services et l'outillage cloud.",
+  "icon": "GO",
+  "color": "#00ADD8",
+  "language": "go"
+}

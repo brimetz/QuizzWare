@@ -1,0 +1,84 @@
+{
+  "unlockedBy": "go-ch-bases",
+  "nodes": [
+    {
+      "id": "go-spe-web",
+      "title": "Services web",
+      "summary": "Des API performantes en Go.",
+      "icon": "WEB",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "go-spe-net-http",
+          "title": "net/http",
+          "summary": "Le serveur HTTP de la bibliothèque standard.",
+          "icon": "HTTP",
+          "kind": "lib"
+        },
+        {
+          "id": "go-spe-gin",
+          "title": "Gin",
+          "summary": "Un framework web minimaliste et rapide.",
+          "icon": "GIN",
+          "kind": "lib"
+        },
+        {
+          "id": "go-spe-grpc",
+          "title": "gRPC en Go",
+          "summary": "Services et clients gRPC.",
+          "icon": "gRPC",
+          "kind": "techno",
+          "linkTo": "architecture-systeme/sys-spe-grpc"
+        }
+      ]
+    },
+    {
+      "id": "go-spe-cloud",
+      "title": "Outillage cloud",
+      "summary": "Go est le langage du cloud natif.",
+      "icon": "CLD",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "go-spe-cli",
+          "title": "Outils en ligne de commande",
+          "summary": "Cobra et la distribution de binaires.",
+          "icon": "CLI",
+          "kind": "lib"
+        },
+        {
+          "id": "go-spe-operators",
+          "title": "Opérateurs Kubernetes",
+          "summary": "Étendre Kubernetes avec ses propres contrôleurs.",
+          "icon": "OPS",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "go-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "go-spe-porte-infra",
+          "title": "Architecture infra",
+          "summary": "Là où tournent les outils écrits en Go.",
+          "icon": "INF",
+          "kind": "porte",
+          "linkTo": "architecture-infra"
+        },
+        {
+          "id": "go-spe-porte-rust",
+          "title": "Rust",
+          "summary": "L'autre langage système moderne.",
+          "icon": "RS",
+          "kind": "porte",
+          "linkTo": "rust"
+        }
+      ]
+    }
+  ]
+}

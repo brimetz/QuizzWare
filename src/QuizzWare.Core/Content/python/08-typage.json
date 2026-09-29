@@ -1,0 +1,19 @@
+{
+  "id": "py-ch-typage",
+  "title": "Typage et outillage",
+  "summary": "Type hints et packaging.",
+  "lessons": [
+    {
+      "id": "py-type-hints",
+      "title": "Type hints",
+      "summary": "Annotations et mypy.",
+      "difficulty": 2
+    },
+    {
+      "id": "py-packaging",
+      "title": "Environnements et paquets",
+      "summary": "venv, pip et pyproject.toml.",
+      "difficulty": 1
+    }
+  ]
+}

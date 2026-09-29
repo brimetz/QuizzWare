@@ -1,0 +1,122 @@
+{
+  "unlockedBy": "java-ch-bases",
+  "nodes": [
+    {
+      "id": "java-spe-spring",
+      "title": "Écosystème Spring",
+      "summary": "Le framework phare de Java.",
+      "icon": "SPR",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "java-spe-spring-boot",
+          "title": "Spring Boot",
+          "summary": "Applications autoconfigurées, starters et Actuator.",
+          "icon": "BOOT",
+          "kind": "techno"
+        },
+        {
+          "id": "java-spe-spring-data",
+          "title": "Spring Data JPA",
+          "summary": "Des dépôts générés au-dessus de JPA.",
+          "icon": "JPA",
+          "kind": "lib"
+        },
+        {
+          "id": "java-spe-spring-security",
+          "title": "Spring Security",
+          "summary": "Authentification et autorisation.",
+          "icon": "SEC",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "java-spe-donnees",
+      "title": "Accès aux données",
+      "summary": "Parler aux bases depuis Java.",
+      "icon": "DATA",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "java-spe-hibernate",
+          "title": "Hibernate",
+          "summary": "L'ORM de référence : entités, sessions et chargement.",
+          "icon": "HIB",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "java-spe-outillage",
+      "title": "Outillage",
+      "summary": "Construire et tester.",
+      "icon": "TOOL",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "java-spe-build",
+          "title": "Maven et Gradle",
+          "summary": "Dépendances et cycle de build.",
+          "icon": "MVN",
+          "kind": "techno"
+        },
+        {
+          "id": "java-spe-junit",
+          "title": "JUnit et Mockito",
+          "summary": "Tests unitaires et doublures.",
+          "icon": "JU",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "java-spe-jvm",
+      "title": "Langages de la JVM",
+      "summary": "D'autres langages sur la même plateforme.",
+      "icon": "JVM",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "java-spe-kotlin",
+          "title": "Kotlin",
+          "summary": "Concis, sûr face aux null, et langage officiel d'Android.",
+          "icon": "KT",
+          "kind": "techno"
+        },
+        {
+          "id": "java-spe-scala",
+          "title": "Scala",
+          "summary": "Programmation fonctionnelle et orientée objet.",
+          "icon": "SCL",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "java-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "java-spe-porte-mobile",
+          "title": "Développement mobile",
+          "summary": "Android, de Java à Kotlin.",
+          "icon": "MOB",
+          "kind": "porte",
+          "linkTo": "mobile"
+        },
+        {
+          "id": "java-spe-porte-csharp",
+          "title": "C#",
+          "summary": "Le cousin de Java sur .NET.",
+          "icon": "C#",
+          "kind": "porte",
+          "linkTo": "csharp"
+        }
+      ]
+    }
+  ]
+}

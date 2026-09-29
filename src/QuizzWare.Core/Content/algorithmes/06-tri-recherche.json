@@ -1,0 +1,19 @@
+{
+  "id": "algo-ch-tri-recherche",
+  "title": "Tri et recherche",
+  "summary": "Les algorithmes fondamentaux.",
+  "lessons": [
+    {
+      "id": "algo-tris",
+      "title": "Algorithmes de tri",
+      "summary": "Tri fusion, tri rapide, tri par tas.",
+      "difficulty": 2
+    },
+    {
+      "id": "algo-recherche-binaire",
+      "title": "Recherche binaire",
+      "summary": "Et ses nombreuses variantes.",
+      "difficulty": 2
+    }
+  ]
+}

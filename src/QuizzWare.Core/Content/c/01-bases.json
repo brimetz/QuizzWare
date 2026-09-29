@@ -1,0 +1,25 @@
+{
+  "id": "c-ch-bases",
+  "title": "Bases du langage",
+  "summary": "Types, opérateurs et contrôle.",
+  "lessons": [
+    {
+      "id": "c-types",
+      "title": "Types et tailles",
+      "summary": "int, char et stdint.h.",
+      "difficulty": 1
+    },
+    {
+      "id": "c-operateurs",
+      "title": "Opérateurs et promotions",
+      "summary": "Promotions entières et conversions.",
+      "difficulty": 2
+    },
+    {
+      "id": "c-controle",
+      "title": "Contrôle et fonctions",
+      "summary": "Boucles, fonctions et portée.",
+      "difficulty": 1
+    }
+  ]
+}

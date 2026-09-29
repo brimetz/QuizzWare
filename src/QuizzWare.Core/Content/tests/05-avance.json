@@ -1,0 +1,25 @@
+{
+  "id": "qa-ch-avance",
+  "title": "Tests avancés",
+  "summary": "Propriétés, mutations et performance.",
+  "lessons": [
+    {
+      "id": "qa-proprietes",
+      "title": "Tests par propriétés",
+      "summary": "Générer des cas de test.",
+      "difficulty": 3
+    },
+    {
+      "id": "qa-mutation",
+      "title": "Tests de mutation",
+      "summary": "Tester les tests.",
+      "difficulty": 3
+    },
+    {
+      "id": "qa-charge",
+      "title": "Tests de charge",
+      "summary": "Mesurer sous pression.",
+      "difficulty": 2
+    }
+  ]
+}

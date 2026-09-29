@@ -1,0 +1,220 @@
+{
+  "unlockedBy": "archi-ch-conception",
+  "nodes": [
+    {
+      "id": "sys-spe-conception",
+      "title": "Conception logicielle",
+      "summary": "Organiser le code pour qu'il reste simple à faire évoluer.",
+      "icon": "DES",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sys-spe-patterns",
+          "title": "Design patterns",
+          "summary": "Les patterns du Gang of Four, et quand ne pas les utiliser.",
+          "icon": "GOF",
+          "kind": "concept"
+        },
+        {
+          "id": "sys-spe-clean",
+          "title": "Clean architecture et hexagonale",
+          "summary": "Isoler le métier de l'infrastructure : ports, adaptateurs et règle de dépendance.",
+          "icon": "HEX",
+          "kind": "concept"
+        },
+        {
+          "id": "sys-spe-ddd",
+          "title": "Domain-Driven Design",
+          "summary": "Langage ubiquitaire, bounded contexts, agrégats et événements de domaine.",
+          "icon": "DDD",
+          "kind": "concept"
+        },
+        {
+          "id": "sys-spe-refactoring",
+          "title": "Refactoring et code legacy",
+          "summary": "Faire évoluer du code existant sans tout casser.",
+          "icon": "REF",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "sys-spe-apis",
+      "title": "APIs",
+      "summary": "Concevoir les contrats entre services et clients.",
+      "icon": "API",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sys-spe-rest",
+          "title": "REST",
+          "summary": "Ressources, verbes, codes de statut, pagination, versioning et idempotence.",
+          "icon": "REST",
+          "kind": "concept"
+        },
+        {
+          "id": "sys-spe-grpc",
+          "title": "gRPC",
+          "summary": "Contrats Protobuf, HTTP/2, streaming et communication entre microservices.",
+          "icon": "gRPC",
+          "kind": "techno"
+        },
+        {
+          "id": "sys-spe-graphql",
+          "title": "GraphQL",
+          "summary": "Un schéma typé où le client choisit les données : résolveurs, N+1 et DataLoader.",
+          "icon": "GQL",
+          "kind": "techno"
+        },
+        {
+          "id": "sys-spe-openapi",
+          "title": "OpenAPI et contrats",
+          "summary": "Décrire, documenter et générer des clients d'API.",
+          "icon": "OAS",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "sys-spe-distribue",
+      "title": "Systèmes distribués",
+      "summary": "Faire collaborer des services qui peuvent tomber à tout moment.",
+      "icon": "DIST",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sys-spe-kafka",
+          "title": "Kafka",
+          "summary": "Journal d'événements distribué : topics, partitions, groupes de consommateurs.",
+          "icon": "KFK",
+          "kind": "techno"
+        },
+        {
+          "id": "sys-spe-rabbitmq",
+          "title": "RabbitMQ",
+          "summary": "Files de messages : exchanges, routage, accusés de réception et dead letters.",
+          "icon": "RMQ",
+          "kind": "techno"
+        },
+        {
+          "id": "sys-spe-event-sourcing",
+          "title": "Event sourcing et CQRS",
+          "summary": "Stocker les événements plutôt que l'état, et séparer lecture et écriture.",
+          "icon": "ES",
+          "kind": "concept"
+        },
+        {
+          "id": "sys-spe-workflows",
+          "title": "Workflows durables",
+          "summary": "Orchestrer des processus longs et fiables (Temporal, sagas).",
+          "icon": "WF",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "sys-spe-cloud",
+      "title": "Architecture cloud",
+      "summary": "Concevoir pour le cloud.",
+      "icon": "CLD",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sys-spe-serverless",
+          "title": "Serverless",
+          "summary": "Fonctions, événements et facturation à l'usage.",
+          "icon": "FaaS",
+          "kind": "concept"
+        },
+        {
+          "id": "sys-spe-multi-region",
+          "title": "Multi-régions",
+          "summary": "Haute disponibilité et latence à l'échelle mondiale.",
+          "icon": "GEO",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "sys-spe-observabilite",
+      "title": "Observabilité",
+      "summary": "Comprendre ce qui se passe en production.",
+      "icon": "OBS",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sys-spe-opentelemetry",
+          "title": "OpenTelemetry",
+          "summary": "Le standard des traces, métriques et logs, instrumenté dans le code.",
+          "icon": "OTEL",
+          "kind": "techno"
+        },
+        {
+          "id": "sys-spe-prometheus",
+          "title": "Prometheus et Grafana",
+          "summary": "Métriques, requêtes PromQL, tableaux de bord et alertes.",
+          "icon": "PROM",
+          "kind": "techno",
+          "linkTo": "architecture-infra/infra-spe-prometheus"
+        }
+      ]
+    },
+    {
+      "id": "sys-spe-entretien",
+      "title": "System design d'entretien",
+      "summary": "La démarche attendue en entretien, étape par étape.",
+      "icon": "SD",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sys-spe-demarche",
+          "title": "Démarche et estimations",
+          "summary": "Clarifier le besoin, estimer la charge, proposer puis approfondir une architecture.",
+          "icon": "EST",
+          "kind": "concept",
+          "language": "text"
+        },
+        {
+          "id": "sys-spe-cas",
+          "title": "Études de cas",
+          "summary": "Raccourcisseur d'URL, fil d'actualité, messagerie, limiteur de débit…",
+          "icon": "CAS",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "sys-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "sys-spe-porte-securite",
+          "title": "Sécurité applicative",
+          "summary": "Concevoir des systèmes sûrs dès l'architecture.",
+          "icon": "SEC",
+          "kind": "porte",
+          "linkTo": "securite"
+        },
+        {
+          "id": "sys-spe-porte-algo",
+          "title": "Algorithmes et structures de données",
+          "summary": "Les fondations de tout système performant.",
+          "icon": "ALGO",
+          "kind": "porte",
+          "linkTo": "algorithmes"
+        },
+        {
+          "id": "sys-spe-porte-tests",
+          "title": "Tests et qualité",
+          "summary": "Garder un système maintenable dans la durée.",
+          "icon": "QA",
+          "kind": "porte",
+          "linkTo": "tests"
+        }
+      ]
+    }
+  ]
+}

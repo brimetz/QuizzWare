@@ -1,0 +1,19 @@
+{
+  "id": "fe-ch-accessibilite",
+  "title": "Accessibilité",
+  "summary": "Des interfaces pour tous.",
+  "lessons": [
+    {
+      "id": "fe-wcag",
+      "title": "Principes WCAG",
+      "summary": "Perceptible, utilisable, compréhensible, robuste.",
+      "difficulty": 1
+    },
+    {
+      "id": "fe-aria",
+      "title": "ARIA et navigation au clavier",
+      "summary": "Quand et comment.",
+      "difficulty": 2
+    }
+  ]
+}

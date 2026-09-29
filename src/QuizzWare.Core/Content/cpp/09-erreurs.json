@@ -1,0 +1,25 @@
+{
+  "id": "cpp-ch-erreurs",
+  "title": "Erreurs et exceptions",
+  "summary": "Garanties et noexcept.",
+  "lessons": [
+    {
+      "id": "cpp-exceptions",
+      "title": "Exceptions",
+      "summary": "throw, try et catch.",
+      "difficulty": 1
+    },
+    {
+      "id": "cpp-garanties",
+      "title": "Garanties d'exception",
+      "summary": "Basique, forte, nothrow.",
+      "difficulty": 3
+    },
+    {
+      "id": "cpp-expected",
+      "title": "Alternatives aux exceptions",
+      "summary": "optional et expected (C++23).",
+      "difficulty": 2
+    }
+  ]
+}

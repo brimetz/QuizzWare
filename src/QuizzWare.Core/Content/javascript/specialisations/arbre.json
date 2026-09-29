@@ -1,0 +1,120 @@
+{
+  "unlockedBy": "js-ch-bases",
+  "nodes": [
+    {
+      "id": "js-spe-frontend",
+      "title": "Frameworks frontend",
+      "summary": "Construire des interfaces riches.",
+      "icon": "FE",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "js-spe-react",
+          "title": "React",
+          "summary": "Composants, hooks, état et rendu.",
+          "icon": "RCT",
+          "kind": "techno"
+        },
+        {
+          "id": "js-spe-vue",
+          "title": "Vue",
+          "summary": "Composants, réactivité et Composition API.",
+          "icon": "VUE",
+          "kind": "techno"
+        },
+        {
+          "id": "js-spe-angular",
+          "title": "Angular",
+          "summary": "Composants, services, injection de dépendances et signaux.",
+          "icon": "NG",
+          "kind": "techno"
+        },
+        {
+          "id": "js-spe-svelte",
+          "title": "Svelte",
+          "summary": "Un framework compilé, sans DOM virtuel.",
+          "icon": "SVLT",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "js-spe-backend",
+      "title": "JavaScript côté serveur",
+      "summary": "Des API et des services en JavaScript.",
+      "icon": "BE",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "js-spe-node",
+          "title": "Node.js",
+          "summary": "Le runtime serveur : modules, streams, boucle d'événements.",
+          "icon": "NODE",
+          "kind": "techno"
+        },
+        {
+          "id": "js-spe-express",
+          "title": "Express et NestJS",
+          "summary": "Du micro-framework au framework structuré.",
+          "icon": "NEST",
+          "kind": "lib"
+        },
+        {
+          "id": "js-spe-deno-bun",
+          "title": "Deno et Bun",
+          "summary": "Les runtimes nouvelle génération.",
+          "icon": "BUN",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "js-spe-outillage",
+      "title": "Outillage",
+      "summary": "Construire et tester.",
+      "icon": "TOOL",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "js-spe-vite",
+          "title": "Vite et les bundlers",
+          "summary": "Serveur de développement et build de production.",
+          "icon": "VITE",
+          "kind": "techno"
+        },
+        {
+          "id": "js-spe-tests",
+          "title": "Vitest, Jest et Playwright",
+          "summary": "Tests unitaires et de bout en bout.",
+          "icon": "TEST",
+          "kind": "lib"
+        }
+      ]
+    },
+    {
+      "id": "js-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "js-spe-porte-frontend",
+          "title": "Développement web frontend",
+          "summary": "HTML, CSS, accessibilité et performance.",
+          "icon": "WEB",
+          "kind": "porte",
+          "linkTo": "frontend"
+        },
+        {
+          "id": "js-spe-porte-mobile",
+          "title": "Développement mobile",
+          "summary": "React Native et au-delà.",
+          "icon": "MOB",
+          "kind": "porte",
+          "linkTo": "mobile"
+        }
+      ]
+    }
+  ]
+}

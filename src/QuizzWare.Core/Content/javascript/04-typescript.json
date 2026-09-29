@@ -1,0 +1,25 @@
+{
+  "id": "js-ch-typescript",
+  "title": "TypeScript",
+  "summary": "Typer JavaScript.",
+  "lessons": [
+    {
+      "id": "ts-bases",
+      "title": "Types de base",
+      "summary": "Annotations et inférence.",
+      "difficulty": 1
+    },
+    {
+      "id": "ts-avance",
+      "title": "Types avancés",
+      "summary": "Unions, génériques et types utilitaires.",
+      "difficulty": 3
+    },
+    {
+      "id": "ts-narrowing",
+      "title": "Narrowing",
+      "summary": "Affiner les types.",
+      "difficulty": 2
+    }
+  ]
+}

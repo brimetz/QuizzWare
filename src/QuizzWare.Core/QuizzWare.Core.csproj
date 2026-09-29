@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>QuizzWare.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Le contenu pédagogique (cours + quizz) est embarqué dans l'assembly :
+         soit un fichier JSON par catégorie, soit un dossier par catégorie (category.json + un fichier par chapitre). -->
+    <EmbeddedResource Include="Content\**\*.json" LogicalName="Content/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

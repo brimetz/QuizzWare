@@ -1,0 +1,25 @@
+{
+  "id": "cs-ch-fonctionnel",
+  "title": "Délégués, événements et lambdas",
+  "summary": "Le C# fonctionnel.",
+  "lessons": [
+    {
+      "id": "cs-delegues",
+      "title": "Délégués, Func et Action",
+      "summary": "Passer du comportement en paramètre.",
+      "difficulty": 2
+    },
+    {
+      "id": "cs-evenements",
+      "title": "Événements",
+      "summary": "Publication et abonnement.",
+      "difficulty": 2
+    },
+    {
+      "id": "cs-closures",
+      "title": "Lambdas et closures",
+      "summary": "Captures et pièges.",
+      "difficulty": 3
+    }
+  ]
+}

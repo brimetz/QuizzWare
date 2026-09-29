@@ -1,0 +1,25 @@
+{
+  "id": "git-ch-avance",
+  "title": "Git avancé",
+  "summary": "Réparer et réécrire l'historique.",
+  "lessons": [
+    {
+      "id": "git-reset-revert",
+      "title": "reset, revert et reflog",
+      "summary": "Annuler proprement.",
+      "difficulty": 2
+    },
+    {
+      "id": "git-rebase-interactif",
+      "title": "Rebase interactif",
+      "summary": "Nettoyer une branche.",
+      "difficulty": 3
+    },
+    {
+      "id": "git-bisect",
+      "title": "bisect",
+      "summary": "Trouver le commit fautif.",
+      "difficulty": 2
+    }
+  ]
+}

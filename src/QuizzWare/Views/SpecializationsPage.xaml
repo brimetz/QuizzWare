@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:QuizzWare.ViewModels"
+             x:Class="QuizzWare.Views.SpecializationsPage"
+             x:DataType="vm:SpecializationsViewModel"
+             Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16,8,16,32">
+            <Label Text="{Binding Intro}" Style="{StaticResource MutedLabel}" FontSize="15" Margin="0,0,0,16" />
+
+            <!-- Arbre : une ligne par nœud, sans espacement pour que les traits se rejoignent -->
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Rows}" Spacing="0">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TreeRowViewModel">
+                        <Grid ColumnDefinitions="Auto,Auto,*">
+
+                            <!-- Traits verticaux des ancêtres -->
+                            <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Guides}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:TreeGuide">
+                                        <Grid ColumnDefinitions="10,2,10">
+                                            <BoxView Grid.Column="1" Color="{StaticResource Stroke}" IsVisible="{Binding HasLine}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+
+                            <!-- Coude ├─ / └─ vers le parent -->
+                            <Grid Grid.Column="1" ColumnDefinitions="10,2,10" RowDefinitions="*,2,*" IsVisible="{Binding HasElbow}">
+                                <!-- moitié haute du trait vertical + trait horizontal vers le nœud -->
+                                <BoxView Grid.Column="1" Grid.RowSpan="2" Color="{StaticResource Stroke}" />
+                                <BoxView Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2" Color="{StaticResource Stroke}" />
+                                <!-- moitié basse : seulement si d'autres frères suivent -->
+                                <BoxView Grid.Column="1" Grid.Row="2" Color="{StaticResource Stroke}" IsVisible="{Binding HasLineBelow}" />
+                            </Grid>
+
+                            <!-- Nœud -->
+                            <Border Grid.Column="2" Style="{StaticResource Card}" Stroke="{Binding StrokeColor}"
+                                    Opacity="{Binding Opacity}" Margin="0,5" Padding="12">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding OpenCommand}" />
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="44,*" ColumnSpacing="12">
+                                    <Border BackgroundColor="{Binding BadgeColor}" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                            WidthRequest="44" HeightRequest="44" VerticalOptions="Start">
+                                        <Label Text="{Binding Badge}" FontAttributes="Bold" FontSize="11" TextColor="White"
+                                               HorizontalOptions="Center" VerticalOptions="Center" />
+                                    </Border>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="3">
+                                        <Label Text="{Binding KindLabel}" TextColor="{StaticResource Primary}" FontSize="11"
+                                               FontAttributes="Bold" IsVisible="{Binding HasElbow}" />
+                                        <Label Text="{Binding Title}" Style="{StaticResource SubHeaderLabel}" />
+                                        <Label Text="{Binding Summary}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                        <Label Text="{Binding RelatedText}" Style="{StaticResource MutedLabel}" FontSize="12"
+                                               IsVisible="{Binding HasRelated}" />
+                                        <Label Text="{Binding StatusText}" TextColor="{Binding StatusColor}" FontSize="13" Margin="0,2,0,0" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

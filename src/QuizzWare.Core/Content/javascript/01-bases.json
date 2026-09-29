@@ -1,0 +1,25 @@
+{
+  "id": "js-ch-bases",
+  "title": "Bases du langage",
+  "summary": "Types, variables et fonctions.",
+  "lessons": [
+    {
+      "id": "js-types",
+      "title": "Types et coercition",
+      "summary": "typeof, == et ===.",
+      "difficulty": 1
+    },
+    {
+      "id": "js-variables",
+      "title": "let, const et portée",
+      "summary": "Hoisting et zone morte temporelle.",
+      "difficulty": 2
+    },
+    {
+      "id": "js-fonctions",
+      "title": "Fonctions",
+      "summary": "Fonctions fléchées, this et closures.",
+      "difficulty": 2
+    }
+  ]
+}

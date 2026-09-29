@@ -1,0 +1,25 @@
+{
+  "id": "py-ch-structures",
+  "title": "Structures de données",
+  "summary": "list, dict, set et tuple.",
+  "lessons": [
+    {
+      "id": "py-listes-tuples",
+      "title": "Listes et tuples",
+      "summary": "Opérations et complexités.",
+      "difficulty": 1
+    },
+    {
+      "id": "py-dict-set",
+      "title": "Dictionnaires et ensembles",
+      "summary": "Hachage et usages.",
+      "difficulty": 1
+    },
+    {
+      "id": "py-collections",
+      "title": "Le module collections",
+      "summary": "Counter, defaultdict, deque.",
+      "difficulty": 2
+    }
+  ]
+}

@@ -1,0 +1,277 @@
+{
+  "id": "db-ch-modelisation",
+  "title": "Modélisation et normalisation",
+  "summary": "Concevoir un schéma solide, et savoir quand s'en écarter.",
+  "lessons": [
+    {
+      "id": "db-modelisation",
+      "title": "Modéliser les relations",
+      "summary": "Cardinalités, tables d'association et types de données.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les cardinalités",
+          "body": "1-1 : un utilisateur, un profil. 1-N : un client, plusieurs commandes ; la clé étrangère se place du côté N. N-N : des étudiants suivent des cours, et chaque cours a plusieurs étudiants ; on crée une table d'association.",
+          "code": "CREATE TABLE inscriptions (\n    etudiant_id INT REFERENCES etudiants(id),\n    cours_id    INT REFERENCES cours(id),\n    PRIMARY KEY (etudiant_id, cours_id)\n);"
+        },
+        {
+          "title": "Choisir les types",
+          "body": "Choisir le type le plus précis : DECIMAL pour l'argent (ou un entier de centimes, jamais FLOAT), DATE ou TIMESTAMP pour les dates (pas du texte), BOOLEAN pour les indicateurs. Le type est une contrainte gratuite."
+        },
+        {
+          "title": "Pas de liste dans une colonne",
+          "body": "Une colonne tags = 'sql,perf,index' empêche de filtrer efficacement, d'indexer et de garantir l'intégrité (tag mal orthographié, tag supprimé…). On crée une table dédiée."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-model-q1",
+          "prompt": "Des étudiants suivent plusieurs cours, et chaque cours a plusieurs étudiants. Comment le modéliser ?",
+          "choices": [
+            "Une table d'association (etudiant_id, cours_id)",
+            "Une colonne cours_ids contenant une liste séparée par des virgules",
+            "Une clé étrangère cours_id dans etudiants",
+            "Deux tables sans lien entre elles"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une relation N-N se décompose en deux relations 1-N via une table d'association, qui peut aussi porter des attributs (date d'inscription, note…).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-model-q2",
+          "prompt": "Dans une relation 1-N clients → commandes, où place-t-on la clé étrangère ?",
+          "choices": ["Dans commandes (client_id)", "Dans clients (commande_id)", "Dans les deux tables", "Dans une table d'association obligatoire"],
+          "answerIndex": 0,
+          "explanation": "Chaque commande appartient à un seul client : c'est elle qui porte la référence. Côté client, il faudrait une liste, ce qui est impossible proprement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-model-q3",
+          "prompt": "Quel type choisir pour un prix en euros ?",
+          "choices": ["DECIMAL(10, 2)", "FLOAT", "VARCHAR(20)", "DATE"],
+          "answerIndex": 0,
+          "explanation": "DECIMAL stocke des valeurs décimales exactes. FLOAT est approximatif (0.1 + 0.2 ≠ 0.3). Stocker un entier de centimes est aussi une bonne pratique.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "db-model-q4",
+          "prompt": "Avec ce schéma, retrouver les articles d'un tag est lent et peu fiable. Touche la ligne en cause.",
+          "code": "CREATE TABLE articles (\n    id     INT PRIMARY KEY,\n    titre  VARCHAR(200) NOT NULL,\n    tags   VARCHAR(500), -- 'sql,perf,index'\n    publie BOOLEAN DEFAULT FALSE\n);",
+          "bugLines": [4],
+          "explanation": "Une liste dans une colonne viole la première forme normale : il faut LIKE '%sql%' (sans index, et « nosql » correspondrait aussi). On crée tags(id, nom) et articles_tags(article_id, tag_id).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "db-model-q5",
+          "prompt": "Complète la table d'association : un étudiant ne peut être inscrit qu'une fois à un cours.",
+          "code": "CREATE TABLE inscriptions (\n    etudiant_id INT REFERENCES etudiants(id),\n    cours_id    INT REFERENCES cours(id),\n    ___ ___ (etudiant_id, cours_id)\n);",
+          "answers": ["PRIMARY", "KEY"],
+          "distractors": ["FOREIGN", "INDEX", "CHECK"],
+          "explanation": "Une clé primaire composite garantit l'unicité du couple et interdit les NULL.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "db-model-q6",
+          "prompt": "Que garantit la clé primaire composite (etudiant_id, cours_id) ?",
+          "choices": [
+            "Un étudiant ne peut pas être inscrit deux fois au même cours",
+            "Aucun des deux identifiants ne peut être NULL",
+            "Un étudiant ne peut suivre qu'un seul cours",
+            "Chaque cours n'a qu'un seul étudiant"
+          ],
+          "answerIndices": [0, 1],
+          "explanation": "C'est le couple qui est unique, pas chaque colonne prise isolément : un étudiant peut suivre plusieurs cours, et un cours avoir plusieurs étudiants.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "db-normalisation",
+      "title": "La normalisation",
+      "summary": "1NF, 2NF, 3NF… et la dénormalisation assumée.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Pourquoi normaliser",
+          "body": "Une information stockée à plusieurs endroits finit par diverger. On parle d'anomalies de mise à jour (modifier une copie mais pas l'autre), d'insertion (impossible d'enregistrer un fait sans un autre) et de suppression (perdre une information en supprimant une ligne). La normalisation élimine ces redondances."
+        },
+        {
+          "title": "1NF, 2NF, 3NF",
+          "body": "1NF : valeurs atomiques, ni listes ni groupes répétés. 2NF : de plus, chaque attribut non-clé dépend de toute la clé, et pas seulement d'une partie d'une clé composite. 3NF : de plus, aucun attribut non-clé ne dépend d'un autre attribut non-clé (pas de dépendance transitive). Moyen mnémotechnique : « la clé, toute la clé, rien que la clé »."
+        },
+        {
+          "title": "Exemple de dépendance transitive",
+          "body": "Ici, client_ville dépend de client_id, qui n'est pas la clé : la ville est répétée dans chaque commande du client. On la déplace dans la table clients.",
+          "code": "-- commandes(id, client_id, client_ville, total)\n--   id → client_id → client_ville"
+        },
+        {
+          "title": "Dénormaliser en connaissance de cause",
+          "body": "Pour des lectures très fréquentes (tableaux de bord, compteurs), on duplique parfois volontairement des données. C'est un compromis : lectures plus rapides, mais écritures plus complexes et risque d'incohérence à maîtriser."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-norm-q1",
+          "prompt": "Quel problème la normalisation cherche-t-elle à éviter ?",
+          "choices": ["Les redondances et les anomalies de mise à jour", "Les requêtes lentes", "L'absence d'index", "Les tables trop petites"],
+          "answerIndex": 0,
+          "explanation": "Une donnée stockée une seule fois ne peut pas être incohérente avec elle-même.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-norm-q2",
+          "prompt": "Une colonne telephones contient '0601020304, 0708091011'. Quelle forme normale est violée ?",
+          "choices": ["1NF", "2NF", "3NF", "Aucune"],
+          "answerIndex": 0,
+          "explanation": "La 1NF exige des valeurs atomiques : une colonne ne doit pas contenir une liste.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-norm-q3",
+          "prompt": "La table lignes_commande(commande_id, produit_id, quantite, nom_produit) a pour clé (commande_id, produit_id). Quelle forme normale est violée ?",
+          "choices": ["2NF", "1NF", "3NF", "Aucune"],
+          "answerIndex": 0,
+          "explanation": "nom_produit dépend seulement de produit_id, une partie de la clé composite : c'est une dépendance partielle, interdite en 2NF. Le nom va dans la table produits.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "db-norm-q4",
+          "prompt": "Cette table viole la 3NF. Touche la colonne en cause.",
+          "code": "CREATE TABLE employes (\n    id          INT PRIMARY KEY,\n    nom         VARCHAR(100),\n    service_id  INT,\n    service_nom VARCHAR(100),\n    salaire     DECIMAL(10, 2)\n);",
+          "bugLines": [5],
+          "explanation": "service_nom dépend de service_id, pas de l'employé : dépendance transitive. Renommer un service obligerait à modifier chaque employé. Le nom va dans une table services.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-norm-q5",
+          "prompt": "Qu'interdit la 3NF, en plus des exigences de la 2NF ?",
+          "choices": [
+            "Les dépendances transitives entre attributs non-clés",
+            "Les valeurs NULL",
+            "Les clés composites",
+            "Les clés étrangères"
+          ],
+          "answerIndex": 0,
+          "explanation": "En 3NF, chaque attribut non-clé dépend de la clé, de toute la clé, et de rien d'autre que la clé.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "db-norm-q6",
+          "prompt": "Quels sont les coûts d'une dénormalisation ?",
+          "choices": [
+            "Les écritures doivent mettre à jour plusieurs copies",
+            "Un risque d'incohérence entre les copies",
+            "Plus d'espace de stockage",
+            "Des lectures toujours plus lentes"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "On dénormalise justement pour accélérer certaines lectures ; le prix se paie à l'écriture et en cohérence.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "db-defi-modelisation",
+    "title": "Défi entretien : concevoir un schéma",
+    "summary": "Critiquer, normaliser et justifier ses choix.",
+    "questions": [
+      {
+        "type": "multi",
+        "id": "db-defi4-q1",
+        "prompt": "Cas pratique 1/3 — Voici le schéma d'une bibliothèque. Quels problèmes vois-tu ?",
+        "code": "CREATE TABLE emprunts (\n    id           INT PRIMARY KEY,\n    livre_titre  VARCHAR(200),\n    livre_auteur VARCHAR(100),\n    membre_email VARCHAR(255),\n    date_emprunt VARCHAR(10)\n);",
+        "choices": [
+          "Titre et auteur sont répétés à chaque emprunt du même livre",
+          "Le membre est identifié par son email, qui peut changer",
+          "La date est stockée en texte",
+          "Un emprunt ne devrait pas avoir de clé primaire"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "Le livre et le membre sont des entités à part entière : ils méritent leurs propres tables, référencées par des clés techniques. La date doit être de type DATE.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi4-q2",
+        "prompt": "Cas pratique 2/3 — Quelles tables pour un schéma normalisé ?",
+        "choices": [
+          "livres, membres, et emprunts(livre_id, membre_id, date_emprunt)",
+          "Une seule table emprunts avec toutes les colonnes",
+          "livres et membres, avec une colonne listant les dates d'emprunt",
+          "emprunts et auteurs uniquement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque entité a sa table ; emprunts devient la table qui relie un livre à un membre à une date donnée.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "db-defi4-q3",
+        "prompt": "Cas pratique 3/3 — Complète la table emprunts.",
+        "code": "CREATE TABLE emprunts (\n    id        INT PRIMARY KEY,\n    livre_id  INT ___ livres(id),\n    membre_id INT REFERENCES membres(id),\n    emprunte  ___ NOT NULL\n);",
+        "answers": ["REFERENCES", "DATE"],
+        "distractors": ["VARCHAR(10)", "JOIN", "FLOAT"],
+        "explanation": "REFERENCES déclare la clé étrangère ; DATE permet de comparer et de calculer (retards, durées d'emprunt).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi4-q4",
+        "prompt": "Pourquoi utiliser DECIMAL plutôt que FLOAT pour des montants ?",
+        "code": "SELECT CAST(0.1 AS FLOAT) + CAST(0.2 AS FLOAT);\n-- PostgreSQL : 0.30000000000000004",
+        "choices": [
+          "FLOAT est un nombre binaire approché : 0.1 n'y est pas représentable exactement",
+          "FLOAT ne supporte pas les nombres négatifs",
+          "DECIMAL est toujours plus rapide",
+          "FLOAT est limité à 2 décimales"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les flottants binaires accumulent de petites erreurs d'arrondi, inacceptables en comptabilité. DECIMAL calcule en base 10, de façon exacte.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi4-q5",
+        "prompt": "Un tableau de bord affiche le nombre de commandes de chaque client, et le COUNT devient lent. Quelle dénormalisation est raisonnable ?",
+        "choices": [
+          "Une colonne nb_commandes dans clients mise à jour à chaque commande, ou une vue matérialisée",
+          "Supprimer la table commandes",
+          "Stocker toutes les commandes en JSON dans clients",
+          "Passer toutes les colonnes en VARCHAR"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un compteur maintenu à l'écriture (dans la même transaction, ou par trigger) ou une vue matérialisée rafraîchie régulièrement évite de recompter à chaque affichage.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "db-defi4-q6",
+        "prompt": "Remets dans l'ordre la démarche de modélisation.",
+        "language": "text",
+        "lines": [
+          "Lister les entités (livres, membres, emprunts)",
+          "Identifier les attributs de chaque entité",
+          "Définir les relations et leurs cardinalités",
+          "Choisir les clés primaires et étrangères",
+          "Vérifier la normalisation (jusqu'en 3NF)",
+          "Dénormaliser seulement si un besoin mesuré le justifie"
+        ],
+        "explanation": "On part du métier (entités, attributs, relations), on traduit en schéma (clés), on vérifie la normalisation, puis on optimise en connaissance de cause.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

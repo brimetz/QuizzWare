@@ -1,0 +1,25 @@
+{
+  "id": "sec-ch-web",
+  "title": "Vulnérabilités web",
+  "summary": "Le top 10 de l'OWASP.",
+  "lessons": [
+    {
+      "id": "sec-injections",
+      "title": "Injections",
+      "summary": "SQL, commandes système et autres.",
+      "difficulty": 2
+    },
+    {
+      "id": "sec-xss",
+      "title": "XSS",
+      "summary": "Des scripts injectés dans les pages.",
+      "difficulty": 2
+    },
+    {
+      "id": "sec-csrf-ssrf",
+      "title": "CSRF et SSRF",
+      "summary": "Des requêtes falsifiées.",
+      "difficulty": 3
+    }
+  ]
+}

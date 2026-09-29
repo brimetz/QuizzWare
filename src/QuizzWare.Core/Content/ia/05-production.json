@@ -1,0 +1,19 @@
+{
+  "id": "ia-ch-production",
+  "title": "L'IA en production",
+  "summary": "Déployer et surveiller.",
+  "lessons": [
+    {
+      "id": "ia-mlops",
+      "title": "MLOps",
+      "summary": "Versionner, entraîner et déployer.",
+      "difficulty": 2
+    },
+    {
+      "id": "ia-evaluation-llm",
+      "title": "Évaluer des LLM",
+      "summary": "Jeux d'évaluation et garde-fous.",
+      "difficulty": 3
+    }
+  ]
+}

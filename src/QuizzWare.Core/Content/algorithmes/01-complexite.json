@@ -1,0 +1,19 @@
+{
+  "id": "algo-ch-complexite",
+  "title": "Complexité",
+  "summary": "Mesurer le coût d'un algorithme.",
+  "lessons": [
+    {
+      "id": "algo-big-o",
+      "title": "La notation grand O",
+      "summary": "O(1), O(log n), O(n), O(n²)…",
+      "difficulty": 1
+    },
+    {
+      "id": "algo-analyse",
+      "title": "Analyser un algorithme",
+      "summary": "Boucles, récursion et coût amorti.",
+      "difficulty": 2
+    }
+  ]
+}

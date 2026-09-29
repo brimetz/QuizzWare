@@ -1,0 +1,25 @@
+{
+  "id": "net-ch-routage",
+  "title": "Routage et commutation",
+  "summary": "Comment un paquet trouve son chemin.",
+  "lessons": [
+    {
+      "id": "net-commutation",
+      "title": "Commutation et VLAN",
+      "summary": "Couche 2 et adresses MAC.",
+      "difficulty": 2
+    },
+    {
+      "id": "net-routage",
+      "title": "Routage IP",
+      "summary": "Tables de routage et passerelles.",
+      "difficulty": 2
+    },
+    {
+      "id": "net-bgp",
+      "title": "Internet et BGP",
+      "summary": "Comment les réseaux s'interconnectent.",
+      "difficulty": 3
+    }
+  ]
+}

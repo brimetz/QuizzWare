@@ -1,0 +1,25 @@
+{
+  "id": "sys-ch-architecture-applicative",
+  "title": "Architecture applicative",
+  "summary": "Organiser une application en couches et en modules.",
+  "lessons": [
+    {
+      "id": "sys-couches",
+      "title": "Architecture en couches",
+      "summary": "Présentation, métier, données : rôles et dépendances.",
+      "difficulty": 1
+    },
+    {
+      "id": "sys-hexagonale",
+      "title": "Hexagonale et clean architecture",
+      "summary": "Ports, adaptateurs et règle de dépendance.",
+      "difficulty": 2
+    },
+    {
+      "id": "sys-ddd-bases",
+      "title": "Les bases du DDD",
+      "summary": "Langage ubiquitaire, entités, objets valeur, agrégats.",
+      "difficulty": 3
+    }
+  ]
+}

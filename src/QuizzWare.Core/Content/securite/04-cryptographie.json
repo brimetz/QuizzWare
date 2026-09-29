@@ -1,0 +1,19 @@
+{
+  "id": "sec-ch-cryptographie",
+  "title": "Cryptographie appliquée",
+  "summary": "Utiliser la cryptographie sans se tromper.",
+  "lessons": [
+    {
+      "id": "sec-chiffrement",
+      "title": "Chiffrement symétrique et asymétrique",
+      "summary": "AES, RSA et courbes elliptiques.",
+      "difficulty": 2
+    },
+    {
+      "id": "sec-hachage-signatures",
+      "title": "Hachage et signatures",
+      "summary": "SHA-256, HMAC et signatures numériques.",
+      "difficulty": 2
+    }
+  ]
+}

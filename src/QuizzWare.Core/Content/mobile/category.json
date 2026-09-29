@@ -1,0 +1,8 @@
+{
+  "id": "mobile",
+  "order": 19,
+  "name": "Développement mobile",
+  "description": "Applications natives et multiplateformes pour Android et iOS.",
+  "icon": "MOB",
+  "color": "#F57C00"
+}

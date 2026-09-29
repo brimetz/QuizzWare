@@ -1,0 +1,25 @@
+{
+  "id": "sys-ch-apis",
+  "title": "Concevoir des APIs",
+  "summary": "Des contrats clairs, évolutifs et robustes.",
+  "lessons": [
+    {
+      "id": "sys-api-rest",
+      "title": "REST en pratique",
+      "summary": "Ressources, verbes, codes de statut, pagination.",
+      "difficulty": 1
+    },
+    {
+      "id": "sys-api-versioning",
+      "title": "Versioning et compatibilité",
+      "summary": "Faire évoluer une API sans casser les clients.",
+      "difficulty": 2
+    },
+    {
+      "id": "sys-api-idempotence",
+      "title": "Idempotence et nouvelles tentatives",
+      "summary": "Rejouer une requête sans effet de bord.",
+      "difficulty": 3
+    }
+  ]
+}

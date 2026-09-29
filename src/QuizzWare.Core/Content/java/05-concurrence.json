@@ -1,0 +1,25 @@
+{
+  "id": "java-ch-concurrence",
+  "title": "Concurrence",
+  "summary": "Threads, executors et virtual threads.",
+  "lessons": [
+    {
+      "id": "java-threads",
+      "title": "Threads et synchronized",
+      "summary": "Visibilité et verrous.",
+      "difficulty": 3
+    },
+    {
+      "id": "java-executors",
+      "title": "Executors et CompletableFuture",
+      "summary": "La programmation asynchrone.",
+      "difficulty": 3
+    },
+    {
+      "id": "java-virtual-threads",
+      "title": "Virtual threads",
+      "summary": "Le projet Loom.",
+      "difficulty": 2
+    }
+  ]
+}

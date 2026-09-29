@@ -1,0 +1,25 @@
+{
+  "id": "sys-ch-asynchrone",
+  "title": "Communication asynchrone",
+  "summary": "Messages, événements et cohérence à terme.",
+  "lessons": [
+    {
+      "id": "sys-messaging",
+      "title": "Files et topics",
+      "summary": "Point à point, publication et abonnement.",
+      "difficulty": 2
+    },
+    {
+      "id": "sys-livraison",
+      "title": "Garanties de livraison",
+      "summary": "Au plus une fois, au moins une fois, exactement une fois.",
+      "difficulty": 3
+    },
+    {
+      "id": "sys-outbox",
+      "title": "Outbox et idempotence",
+      "summary": "Publier un événement de façon fiable.",
+      "difficulty": 3
+    }
+  ]
+}

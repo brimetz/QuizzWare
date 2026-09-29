@@ -1,0 +1,31 @@
+{
+  "id": "algo-ch-techniques",
+  "title": "Techniques de résolution",
+  "summary": "Les patterns des entretiens.",
+  "lessons": [
+    {
+      "id": "algo-deux-pointeurs",
+      "title": "Deux pointeurs et fenêtre glissante",
+      "summary": "Parcourir intelligemment.",
+      "difficulty": 2
+    },
+    {
+      "id": "algo-backtracking",
+      "title": "Récursion et backtracking",
+      "summary": "Explorer les possibilités.",
+      "difficulty": 3
+    },
+    {
+      "id": "algo-programmation-dynamique",
+      "title": "Programmation dynamique",
+      "summary": "Mémoïsation et tabulation.",
+      "difficulty": 3
+    },
+    {
+      "id": "algo-glouton",
+      "title": "Algorithmes gloutons",
+      "summary": "Quand le choix local suffit.",
+      "difficulty": 3
+    }
+  ]
+}

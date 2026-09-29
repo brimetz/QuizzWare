@@ -1,0 +1,25 @@
+{
+  "id": "os-ch-synchronisation",
+  "title": "Synchronisation",
+  "summary": "Verrous, sémaphores et interblocages.",
+  "lessons": [
+    {
+      "id": "os-sections-critiques",
+      "title": "Sections critiques",
+      "summary": "Les conditions de course.",
+      "difficulty": 2
+    },
+    {
+      "id": "os-primitives",
+      "title": "Primitives de synchronisation",
+      "summary": "Mutex, sémaphores et variables de condition.",
+      "difficulty": 3
+    },
+    {
+      "id": "os-deadlocks",
+      "title": "Interblocages",
+      "summary": "Conditions et prévention.",
+      "difficulty": 3
+    }
+  ]
+}

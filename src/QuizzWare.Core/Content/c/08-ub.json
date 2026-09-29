@@ -1,0 +1,19 @@
+{
+  "id": "c-ch-ub",
+  "title": "Comportements indéfinis et sécurité",
+  "summary": "Écrire du C sûr.",
+  "lessons": [
+    {
+      "id": "c-ub-courants",
+      "title": "Comportements indéfinis courants",
+      "summary": "Débordements et pointeurs invalides.",
+      "difficulty": 3
+    },
+    {
+      "id": "c-buffer-overflow",
+      "title": "Débordements de tampon",
+      "summary": "Comprendre et prévenir.",
+      "difficulty": 3
+    }
+  ]
+}

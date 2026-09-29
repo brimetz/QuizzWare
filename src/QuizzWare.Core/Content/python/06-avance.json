@@ -1,0 +1,104 @@
+{
+  "id": "python-ch-avance",
+  "title": "Fonctions avancées et concurrence",
+  "summary": "Décorateurs, générateurs et GIL.",
+  "lessons": [
+    {
+      "id": "python-avance",
+      "title": "Fonctions avancées et concurrence",
+      "summary": "Décorateurs, générateurs, GIL et parallélisme.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "*args et **kwargs",
+          "body": "*args collecte les arguments positionnels supplémentaires dans un tuple, **kwargs collecte les arguments nommés dans un dict."
+        },
+        {
+          "title": "Décorateurs",
+          "body": "Un décorateur est une fonction qui prend une fonction et en renvoie une nouvelle, qui l'enveloppe pour ajouter un comportement (log, cache, contrôle d'accès...).",
+          "code": "import functools\n\ndef log(func):\n    @functools.wraps(func)\n    def wrapper(*args, **kwargs):\n        print(f\"appel de {func.__name__}\")\n        return func(*args, **kwargs)\n    return wrapper\n\n@log\ndef saluer(nom):\n    return f\"Bonjour {nom}\""
+        },
+        {
+          "title": "Générateurs",
+          "body": "Une fonction contenant yield est un générateur : elle produit ses valeurs à la demande, sans construire toute la séquence en mémoire."
+        },
+        {
+          "title": "Le GIL",
+          "body": "Dans CPython standard, le Global Interpreter Lock empêche plusieurs threads d'exécuter du bytecode Python en même temps. Les threads restent utiles pour l'I/O ; pour du calcul intensif (CPU-bound), on utilise multiprocessing ou des bibliothèques natives. (Python 3.13 propose un build expérimental sans GIL.)"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "python-avance-q1",
+          "prompt": "Dans def f(*args, **kwargs), quel est le type de kwargs ?",
+          "choices": [
+            "list",
+            "tuple",
+            "dict",
+            "set"
+          ],
+          "answerIndex": 2,
+          "explanation": "kwargs est un dict des arguments nommés ; args est un tuple.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "python-avance-q2",
+          "prompt": "Qu'est-ce qu'un décorateur en Python ?",
+          "choices": [
+            "Une classe abstraite",
+            "Une fonction qui enveloppe une autre fonction",
+            "Un commentaire spécial",
+            "Un type de boucle"
+          ],
+          "answerIndex": 1,
+          "explanation": "@decorateur au-dessus de f équivaut à f = decorateur(f).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "python-avance-q3",
+          "prompt": "Quel mot-clé transforme une fonction en générateur ?",
+          "choices": [
+            "return",
+            "async",
+            "yield",
+            "lambda"
+          ],
+          "answerIndex": 2,
+          "explanation": "yield suspend la fonction et produit une valeur ; l'exécution reprend au prochain next().",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "python-avance-q4",
+          "prompt": "Dans CPython standard, qu'empêche le GIL ?",
+          "choices": [
+            "L'utilisation de threads",
+            "L'exécution simultanée de bytecode Python par plusieurs threads",
+            "Les appels réseau concurrents",
+            "L'utilisation de plusieurs processus"
+          ],
+          "answerIndex": 1,
+          "explanation": "Un seul thread exécute du bytecode Python à la fois ; les threads bloqués sur de l'I/O libèrent le GIL.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "python-avance-q5",
+          "prompt": "Pour paralléliser un calcul intensif CPU en CPython standard, quel module utiliser ?",
+          "choices": [
+            "threading",
+            "asyncio",
+            "multiprocessing",
+            "queue"
+          ],
+          "answerIndex": 2,
+          "explanation": "multiprocessing utilise plusieurs processus, chacun avec son propre interpréteur et donc son propre GIL.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ]
+}

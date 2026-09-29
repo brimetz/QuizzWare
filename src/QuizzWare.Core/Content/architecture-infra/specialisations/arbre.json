@@ -1,0 +1,250 @@
+{
+  "unlockedBy": "infra-ch-conteneurs",
+  "nodes": [
+    {
+      "id": "infra-spe-conteneurs",
+      "title": "Conteneurs et orchestration",
+      "summary": "Empaqueter, déployer et faire tourner des applications à l'échelle.",
+      "icon": "K8S",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "infra-spe-docker",
+          "title": "Docker",
+          "summary": "Images optimisées, réseaux, volumes, Docker Compose et sécurité des images.",
+          "icon": "DKR",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-kubernetes",
+          "title": "Kubernetes",
+          "summary": "Deployments, Services, Ingress, ConfigMaps, autoscaling et dépannage.",
+          "icon": "K8S",
+          "kind": "techno",
+          "language": "yaml"
+        },
+        {
+          "id": "infra-spe-helm",
+          "title": "Helm",
+          "summary": "Le gestionnaire de paquets de Kubernetes : charts, valeurs et releases.",
+          "icon": "HELM",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-service-mesh",
+          "title": "Service mesh",
+          "summary": "Istio, Linkerd : trafic, sécurité et observabilité entre services.",
+          "icon": "MESH",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "infra-spe-cloud",
+      "title": "Cloud public",
+      "summary": "Calcul, stockage, réseau et identités chez les grands fournisseurs.",
+      "icon": "CLD",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "infra-spe-aws",
+          "title": "AWS",
+          "summary": "EC2, S3, VPC, IAM, Lambda et RDS : les services incontournables.",
+          "icon": "AWS",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-azure",
+          "title": "Azure",
+          "summary": "App Service, AKS, Entra ID, Storage et l'écosystème Microsoft.",
+          "icon": "AZ",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-gcp",
+          "title": "Google Cloud",
+          "summary": "Compute Engine, GKE, Cloud Run et BigQuery.",
+          "icon": "GCP",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "infra-spe-iac",
+      "title": "Infrastructure as Code",
+      "summary": "Décrire l'infrastructure dans des fichiers versionnés.",
+      "icon": "IaC",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "infra-spe-terraform",
+          "title": "Terraform",
+          "summary": "Providers, état, modules, plan / apply et travail en équipe.",
+          "icon": "TF",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-ansible",
+          "title": "Ansible",
+          "summary": "Configurer des serveurs sans agent : inventaires, playbooks, rôles.",
+          "icon": "ANS",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-pulumi",
+          "title": "Pulumi",
+          "summary": "L'infrastructure décrite dans un vrai langage de programmation.",
+          "icon": "PUL",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "infra-spe-cicd",
+      "title": "CI/CD",
+      "summary": "Construire, tester et déployer automatiquement.",
+      "icon": "CI",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "infra-spe-github-actions",
+          "title": "GitHub Actions",
+          "summary": "Workflows, jobs, matrices, secrets et déploiements.",
+          "icon": "GHA",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-gitlab-ci",
+          "title": "GitLab CI",
+          "summary": "Pipelines, stages, runners et environnements.",
+          "icon": "GLCI",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-argocd",
+          "title": "Argo CD et GitOps",
+          "summary": "Le dépôt Git comme source de vérité du cluster.",
+          "icon": "ARGO",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "infra-spe-sre",
+      "title": "Observabilité et SRE",
+      "summary": "Mesurer la fiabilité et réagir aux incidents.",
+      "icon": "SRE",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "infra-spe-prometheus",
+          "title": "Prometheus et Grafana",
+          "summary": "Métriques, requêtes PromQL, tableaux de bord et alertes.",
+          "icon": "PROM",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-logs",
+          "title": "Centralisation des logs",
+          "summary": "Loki, ELK : collecter, indexer et interroger les journaux.",
+          "icon": "LOG",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-slo",
+          "title": "SLI, SLO et gestion d'incident",
+          "summary": "Budgets d'erreur, astreinte et post-mortems sans reproche.",
+          "icon": "SLO",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "infra-spe-linux",
+      "title": "Systèmes Linux",
+      "summary": "Le socle de presque toute l'infrastructure.",
+      "icon": "LNX",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "infra-spe-admin-linux",
+          "title": "Administration Linux",
+          "summary": "Processus, systemd, permissions, disques et journaux.",
+          "icon": "SYSD",
+          "kind": "concept"
+        },
+        {
+          "id": "infra-spe-bash",
+          "title": "Bash et scripts",
+          "summary": "Pipes, redirections, variables et scripts robustes.",
+          "icon": "SH",
+          "kind": "techno",
+          "language": "shell"
+        },
+        {
+          "id": "infra-spe-nginx",
+          "title": "Nginx",
+          "summary": "Serveur web, reverse proxy, TLS et répartition de charge.",
+          "icon": "NGX",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "infra-spe-plateforme",
+      "title": "Platform engineering",
+      "summary": "Offrir une plateforme interne aux équipes produit.",
+      "icon": "PLAT",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "infra-spe-idp",
+          "title": "Portails développeurs",
+          "summary": "Backstage et les plateformes internes en libre-service.",
+          "icon": "IDP",
+          "kind": "techno"
+        },
+        {
+          "id": "infra-spe-finops",
+          "title": "FinOps",
+          "summary": "Comprendre et maîtriser les coûts du cloud.",
+          "icon": "€€",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "infra-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "infra-spe-porte-systemes",
+          "title": "Systèmes d'exploitation",
+          "summary": "Ce qui se passe sous les conteneurs.",
+          "icon": "OS",
+          "kind": "porte",
+          "linkTo": "systemes"
+        },
+        {
+          "id": "infra-spe-porte-securite",
+          "title": "Sécurité applicative",
+          "summary": "Sécuriser ce que l'on déploie.",
+          "icon": "SEC",
+          "kind": "porte",
+          "linkTo": "securite"
+        },
+        {
+          "id": "infra-spe-porte-git",
+          "title": "Git et collaboration",
+          "summary": "Le point de départ de toute chaîne CI/CD.",
+          "icon": "GIT",
+          "kind": "porte",
+          "linkTo": "git"
+        }
+      ]
+    }
+  ]
+}

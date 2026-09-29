@@ -1,0 +1,9 @@
+{
+  "id": "cpp",
+  "order": 4,
+  "name": "C++",
+  "description": "Apprendre le C++ moderne, des bases jusqu'aux questions d'entretien.",
+  "icon": "C++",
+  "color": "#5C6BC0",
+  "language": "cpp"
+}

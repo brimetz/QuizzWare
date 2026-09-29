@@ -1,0 +1,161 @@
+{
+  "unlockedBy": "c-ch-memoire",
+  "nodes": [
+    {
+      "id": "c-spe-systeme",
+      "title": "Programmation système",
+      "summary": "Parler directement au système d'exploitation.",
+      "icon": "SYS",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "c-spe-posix",
+          "title": "API POSIX",
+          "summary": "Processus (fork, exec), fichiers, signaux, threads et sockets.",
+          "icon": "POSX",
+          "kind": "lib"
+        },
+        {
+          "id": "c-spe-noyau",
+          "title": "Noyau Linux",
+          "summary": "Modules, pilotes, espace noyau et espace utilisateur.",
+          "icon": "KRNL",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "c-spe-embarque",
+      "title": "Systèmes embarqués",
+      "summary": "Le C au plus près du matériel.",
+      "icon": "EMB",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "c-spe-microcontroleurs",
+          "title": "Microcontrôleurs",
+          "summary": "Registres, GPIO, interruptions, timers (Arduino, STM32).",
+          "icon": "MCU",
+          "kind": "concept"
+        },
+        {
+          "id": "c-spe-freertos",
+          "title": "FreeRTOS",
+          "summary": "Tâches, ordonnancement temps réel, files et sémaphores.",
+          "icon": "RTOS",
+          "kind": "techno"
+        },
+        {
+          "id": "c-spe-zephyr",
+          "title": "Zephyr",
+          "summary": "Un RTOS moderne pour objets connectés.",
+          "icon": "ZEPH",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "c-spe-securite",
+      "title": "Sécurité",
+      "summary": "Les failles mémoire et comment les éviter.",
+      "icon": "SEC",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "c-spe-exploitation",
+          "title": "Failles mémoire et défenses",
+          "summary": "Débordements de tampon, use-after-free, ASLR, canaris de pile.",
+          "icon": "PWN",
+          "kind": "concept"
+        },
+        {
+          "id": "c-spe-code-sur",
+          "title": "Règles de code sûr",
+          "summary": "CERT C et MISRA C : écrire du C pour les systèmes critiques.",
+          "icon": "MSRA",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "c-spe-projets",
+      "title": "Projets classiques",
+      "summary": "Apprendre en construisant.",
+      "icon": "PRJ",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "c-spe-interpreteur",
+          "title": "Écrire un interpréteur",
+          "summary": "Analyse lexicale, syntaxique et évaluation.",
+          "icon": "INTP",
+          "kind": "concept"
+        },
+        {
+          "id": "c-spe-emulateur",
+          "title": "Écrire un émulateur",
+          "summary": "Simuler un processeur, instruction par instruction.",
+          "icon": "EMU",
+          "kind": "concept"
+        }
+      ]
+    },
+    {
+      "id": "c-spe-outillage",
+      "title": "Outillage",
+      "summary": "Compiler, construire et déboguer.",
+      "icon": "TOOL",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "c-spe-compilation",
+          "title": "GCC, Clang et Make",
+          "summary": "Étapes de compilation, édition de liens, options et Makefiles.",
+          "icon": "GCC",
+          "kind": "techno",
+          "language": "text"
+        },
+        {
+          "id": "c-spe-debogage",
+          "title": "GDB et Valgrind",
+          "summary": "Points d'arrêt, core dumps et détection de fuites mémoire.",
+          "icon": "GDB",
+          "kind": "techno"
+        }
+      ]
+    },
+    {
+      "id": "c-spe-horizons",
+      "title": "Autres horizons",
+      "summary": "Des catégories voisines pour élargir le regard.",
+      "icon": "🚪",
+      "kind": "famille",
+      "children": [
+        {
+          "id": "c-spe-porte-cpp",
+          "title": "C++",
+          "summary": "Le C, en plus riche et plus abstrait.",
+          "icon": "C++",
+          "kind": "porte",
+          "linkTo": "cpp"
+        },
+        {
+          "id": "c-spe-porte-rust",
+          "title": "Rust",
+          "summary": "Le bas niveau, sans les failles mémoire.",
+          "icon": "RS",
+          "kind": "porte",
+          "linkTo": "rust"
+        },
+        {
+          "id": "c-spe-porte-systemes",
+          "title": "Systèmes d'exploitation",
+          "summary": "Ce que le C permet de construire.",
+          "icon": "OS",
+          "kind": "porte",
+          "linkTo": "systemes"
+        }
+      ]
+    }
+  ]
+}

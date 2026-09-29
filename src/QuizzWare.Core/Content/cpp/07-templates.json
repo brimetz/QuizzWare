@@ -1,0 +1,25 @@
+{
+  "id": "cpp-ch-templates",
+  "title": "Templates",
+  "summary": "La programmation générique.",
+  "lessons": [
+    {
+      "id": "cpp-templates-fonctions",
+      "title": "Templates de fonctions",
+      "summary": "Déduction de types.",
+      "difficulty": 2
+    },
+    {
+      "id": "cpp-templates-classes",
+      "title": "Templates de classes",
+      "summary": "Spécialisation.",
+      "difficulty": 3
+    },
+    {
+      "id": "cpp-concepts",
+      "title": "Concepts (C++20)",
+      "summary": "Contraindre les templates.",
+      "difficulty": 3
+    }
+  ]
+}

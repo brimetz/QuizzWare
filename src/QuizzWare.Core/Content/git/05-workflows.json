@@ -1,0 +1,19 @@
+{
+  "id": "git-ch-workflows",
+  "title": "Workflows d'équipe",
+  "summary": "Organiser le travail.",
+  "lessons": [
+    {
+      "id": "git-strategies",
+      "title": "Stratégies de branches",
+      "summary": "Git flow et trunk-based development.",
+      "difficulty": 2
+    },
+    {
+      "id": "git-conventions",
+      "title": "Conventions",
+      "summary": "Messages de commit et versioning sémantique.",
+      "difficulty": 1
+    }
+  ]
+}

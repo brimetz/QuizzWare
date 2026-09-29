@@ -1,0 +1,19 @@
+{
+  "id": "fe-ch-html",
+  "title": "HTML",
+  "summary": "La structure des pages.",
+  "lessons": [
+    {
+      "id": "fe-semantique",
+      "title": "HTML sémantique",
+      "summary": "Les bonnes balises au bon endroit.",
+      "difficulty": 1
+    },
+    {
+      "id": "fe-formulaires",
+      "title": "Formulaires",
+      "summary": "Saisie et validation.",
+      "difficulty": 1
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "cs-ch-collections",
+  "title": "Collections et génériques",
+  "summary": "Choisir la bonne structure.",
+  "lessons": [
+    {
+      "id": "cs-collections",
+      "title": "Les collections",
+      "summary": "List, Dictionary, HashSet, Queue.",
+      "difficulty": 1
+    },
+    {
+      "id": "cs-generiques",
+      "title": "Génériques",
+      "summary": "Contraintes et variance.",
+      "difficulty": 3
+    },
+    {
+      "id": "cs-ienumerable",
+      "title": "IEnumerable et yield",
+      "summary": "Itérer paresseusement.",
+      "difficulty": 2
+    }
+  ]
+}

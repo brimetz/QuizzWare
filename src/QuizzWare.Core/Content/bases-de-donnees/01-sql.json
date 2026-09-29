@@ -1,0 +1,351 @@
+{
+  "id": "db-ch-sql",
+  "title": "Premiers pas en SQL",
+  "summary": "Tables, requêtes, valeurs NULL et contraintes.",
+  "lessons": [
+    {
+      "id": "db-sql-select",
+      "title": "Tables et SELECT",
+      "summary": "Interroger une table : filtrer, trier, limiter.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Tables, lignes, colonnes",
+          "body": "Une base relationnelle range les données dans des tables : chaque ligne est un enregistrement, chaque colonne un attribut typé. SQL est un langage déclaratif : on décrit le résultat voulu, et le moteur choisit comment l'obtenir.",
+          "code": "CREATE TABLE clients (\n    id      INT PRIMARY KEY,\n    nom     VARCHAR(100) NOT NULL,\n    ville   VARCHAR(50),\n    inscrit DATE\n);"
+        },
+        {
+          "title": "SELECT, WHERE, ORDER BY, LIMIT",
+          "body": "SELECT choisit les colonnes, FROM la table, WHERE filtre les lignes, ORDER BY trie (ASC par défaut, DESC pour décroissant) et LIMIT borne le nombre de résultats (TOP en SQL Server, FETCH FIRST dans le standard).",
+          "code": "SELECT nom, ville\nFROM clients\nWHERE ville = 'Lyon'\nORDER BY nom\nLIMIT 10;"
+        },
+        {
+          "title": "L'ordre d'exécution logique",
+          "body": "On écrit SELECT en premier, mais il est évalué après FROM et WHERE : FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT. C'est pourquoi un alias défini dans SELECT n'est pas utilisable dans WHERE, mais l'est dans ORDER BY."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-select-q1",
+          "prompt": "Quelle clause filtre les lignes d'une requête ?",
+          "choices": ["WHERE", "ORDER BY", "SELECT", "LIMIT"],
+          "answerIndex": 0,
+          "explanation": "WHERE ne garde que les lignes qui vérifient la condition. ORDER BY trie, SELECT choisit les colonnes et LIMIT borne le nombre de lignes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-select-q2",
+          "prompt": "SQL est un langage…",
+          "choices": ["Déclaratif : on décrit le résultat voulu", "Impératif : on décrit chaque étape", "Orienté objet", "Compilé en code machine par le développeur"],
+          "answerIndex": 0,
+          "explanation": "On exprime ce que l'on veut obtenir ; l'optimiseur du moteur décide comment (quel index, quel ordre de jointure…).",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "db-select-q3",
+          "prompt": "Remets les clauses dans l'ordre d'écriture de la requête.",
+          "lines": [
+            "SELECT ville, COUNT(*)",
+            "FROM clients",
+            "WHERE inscrit >= '2024-01-01'",
+            "GROUP BY ville",
+            "HAVING COUNT(*) > 10",
+            "ORDER BY ville;"
+          ],
+          "explanation": "L'ordre d'écriture est fixe : SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "db-select-q4",
+          "prompt": "Cette requête est refusée. Touche la ligne en cause.",
+          "code": "SELECT nom, prix * 1.2 AS prix_ttc\nFROM produits\nWHERE prix_ttc > 100\nORDER BY prix_ttc;",
+          "bugLines": [3],
+          "explanation": "WHERE est évalué avant SELECT : l'alias prix_ttc n'y existe pas encore. Il faut répéter l'expression (WHERE prix * 1.2 > 100). ORDER BY, évalué après SELECT, peut utiliser l'alias.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "db-select-q5",
+          "prompt": "Complète pour obtenir les 5 produits les plus chers.",
+          "code": "SELECT nom, prix\nFROM produits\n___ BY prix ___\nLIMIT 5;",
+          "answers": ["ORDER", "DESC"],
+          "distractors": ["GROUP", "ASC", "SORT"],
+          "explanation": "ORDER BY prix DESC trie du plus cher au moins cher, puis LIMIT 5 garde les 5 premiers.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "db-select-q6",
+          "prompt": "Lesquelles de ces conditions sélectionnent les clients de Lyon ou de Paris ?",
+          "choices": [
+            "WHERE ville IN ('Lyon', 'Paris')",
+            "WHERE ville = 'Lyon' OR ville = 'Paris'",
+            "WHERE ville = 'Lyon' AND ville = 'Paris'",
+            "WHERE ville = ('Lyon', 'Paris')"
+          ],
+          "answerIndices": [0, 1],
+          "explanation": "IN est un raccourci pour une suite de OR. Avec AND, une même ville devrait valoir les deux à la fois : aucune ligne.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "db-sql-null",
+      "title": "NULL et la logique à trois valeurs",
+      "summary": "Le piège le plus fréquent en SQL.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "NULL n'est pas une valeur",
+          "body": "NULL signifie « inconnu » ou « absent ». Toute comparaison avec NULL (=, <>, <…) donne UNKNOWN : ni vrai, ni faux. Or WHERE ne garde que les lignes pour lesquelles la condition est vraie.",
+          "code": "SELECT * FROM clients WHERE ville = NULL;  -- 0 ligne !\nSELECT * FROM clients WHERE ville IS NULL; -- correct"
+        },
+        {
+          "title": "Pièges fréquents",
+          "body": "Les agrégats (SUM, AVG, COUNT(colonne)…) ignorent les NULL, alors que COUNT(*) compte toutes les lignes. NOT IN avec une sous-requête qui contient un NULL ne renvoie aucune ligne.",
+          "code": "-- si une commande a un client_id NULL :\nSELECT * FROM clients\nWHERE id NOT IN (SELECT client_id FROM commandes);\n-- renvoie 0 ligne"
+        },
+        {
+          "title": "COALESCE",
+          "body": "COALESCE(a, b, …) renvoie le premier argument non NULL : pratique pour afficher une valeur par défaut.",
+          "code": "SELECT nom, COALESCE(ville, 'Inconnue') AS ville\nFROM clients;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-null-q1",
+          "prompt": "Comment tester qu'une colonne vaut NULL ?",
+          "choices": ["ville IS NULL", "ville = NULL", "ville == NULL", "ville EQUALS NULL"],
+          "answerIndex": 0,
+          "explanation": "ville = NULL vaut toujours UNKNOWN, donc n'est jamais vrai. Il faut IS NULL (ou IS NOT NULL).",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "db-null-q2",
+          "prompt": "Cette requête ne renvoie jamais rien. Touche la ligne fautive.",
+          "code": "SELECT id, nom\nFROM clients\nWHERE email = NULL;",
+          "bugLines": [3],
+          "explanation": "Une comparaison avec NULL donne UNKNOWN pour chaque ligne. Il faut écrire WHERE email IS NULL.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-null-q3",
+          "prompt": "Une colonne email contient 10 lignes, dont 3 à NULL. Que renvoie COUNT(email) ?",
+          "choices": ["7", "10", "3", "NULL"],
+          "answerIndex": 0,
+          "explanation": "COUNT(colonne) ignore les NULL ; COUNT(*) aurait renvoyé 10.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-null-q4",
+          "prompt": "Une commande a un client_id NULL. Pourquoi cette requête ne renvoie-t-elle aucune ligne ?",
+          "code": "SELECT * FROM clients\nWHERE id NOT IN (SELECT client_id FROM commandes);",
+          "choices": [
+            "Le NULL rend la condition NOT IN inconnue pour chaque client",
+            "NOT IN n'accepte pas de sous-requête",
+            "Il manque un GROUP BY",
+            "Tous les clients ont forcément une commande"
+          ],
+          "answerIndex": 0,
+          "explanation": "id NOT IN (1, 2, NULL) équivaut à id <> 1 AND id <> 2 AND id <> NULL ; la dernière comparaison est UNKNOWN, donc l'ensemble n'est jamais vrai. Utiliser NOT EXISTS, ou filtrer les NULL dans la sous-requête.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "db-null-q5",
+          "prompt": "Complète pour afficher 0 quand la remise est inconnue.",
+          "code": "SELECT id, ___(remise, 0) AS remise\nFROM commandes;",
+          "answers": ["COALESCE"],
+          "distractors": ["NULLIF", "DEFAULT", "CAST"],
+          "explanation": "COALESCE renvoie le premier argument non NULL. NULLIF fait l'inverse : il renvoie NULL si ses deux arguments sont égaux.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "db-null-q6",
+          "prompt": "Quand prix vaut NULL, quelles expressions valent UNKNOWN (ni vrai ni faux) ?",
+          "choices": ["prix = NULL", "prix > 10", "prix IS NULL", "NULL = NULL"],
+          "answerIndices": [0, 1, 3],
+          "explanation": "Toute comparaison impliquant NULL, même NULL = NULL, donne UNKNOWN. Seul IS NULL renvoie un vrai booléen (ici TRUE).",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "db-sql-cles",
+      "title": "Clés et contraintes",
+      "summary": "Faire garantir la cohérence par la base elle-même.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Clé primaire",
+          "body": "Elle identifie chaque ligne de manière unique et implique UNIQUE + NOT NULL. Clé naturelle (email, numéro SIRET) ou clé technique (id auto-incrémenté, UUID) : la clé technique ne change jamais, alors qu'une donnée métier peut évoluer."
+        },
+        {
+          "title": "Clé étrangère",
+          "body": "Une clé étrangère référence la clé primaire d'une autre table : le moteur refuse une commande vers un client inexistant (intégrité référentielle). ON DELETE CASCADE supprime les lignes dépendantes ; sans option, la suppression d'un client qui a des commandes est refusée.",
+          "code": "CREATE TABLE commandes (\n    id        INT PRIMARY KEY,\n    client_id INT NOT NULL REFERENCES clients(id)\n              ON DELETE CASCADE,\n    total     DECIMAL(10, 2) CHECK (total >= 0)\n);"
+        },
+        {
+          "title": "Les autres contraintes",
+          "body": "NOT NULL, UNIQUE, CHECK (condition), DEFAULT. Mieux vaut placer les règles dans le schéma que seulement dans le code applicatif : elles s'appliquent alors à tous les programmes qui écrivent dans la base."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-cles-q1",
+          "prompt": "Quelles propriétés a une clé primaire ?",
+          "choices": ["Unique et non nulle", "Unique, mais peut être nulle", "Toujours un entier auto-incrémenté", "Doit référencer une autre table"],
+          "answerIndex": 0,
+          "explanation": "Une clé primaire est UNIQUE et NOT NULL. Elle peut être de n'importe quel type, et même composée de plusieurs colonnes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-cles-q2",
+          "prompt": "Que garantit une clé étrangère ?",
+          "choices": [
+            "Que la valeur référence une ligne existante de l'autre table",
+            "Que la colonne ne contient pas de doublon",
+            "Que la colonne est indexée dans tous les SGBD",
+            "Que la table est chiffrée"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'intégrité référentielle. Attention : certains moteurs, comme PostgreSQL, n'indexent pas automatiquement la colonne de la clé étrangère.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-cles-q3",
+          "prompt": "commandes.client_id est déclaré avec ON DELETE CASCADE. Que se passe-t-il si on supprime un client ?",
+          "choices": ["Ses commandes sont supprimées aussi", "La suppression est refusée", "client_id passe à NULL", "Les commandes restent, orphelines"],
+          "answerIndex": 0,
+          "explanation": "CASCADE propage la suppression. SET NULL mettrait client_id à NULL, et le comportement par défaut (NO ACTION / RESTRICT) refuserait la suppression.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "db-cles-q4",
+          "prompt": "Rien n'empêche d'enregistrer un total négatif. Touche la ligne à compléter.",
+          "code": "CREATE TABLE commandes (\n    id        INT PRIMARY KEY,\n    client_id INT NOT NULL REFERENCES clients(id),\n    total     DECIMAL(10, 2)\n);",
+          "bugLines": [4],
+          "explanation": "Il manque une contrainte CHECK (total >= 0) : ainsi, aucun programme ne pourra insérer un total négatif, quel que soit le code applicatif.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "db-cles-q5",
+          "prompt": "Complète : l'email est obligatoire et sans doublon.",
+          "code": "CREATE TABLE utilisateurs (\n    id    INT PRIMARY KEY,\n    email VARCHAR(255) ___ NULL ___\n);",
+          "answers": ["NOT", "UNIQUE"],
+          "distractors": ["IS", "PRIMARY", "CHECK"],
+          "explanation": "NOT NULL rend la valeur obligatoire, UNIQUE interdit les doublons (et crée un index).",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "db-cles-q6",
+          "prompt": "Quels avantages a une clé technique (id, UUID) par rapport à une clé naturelle comme l'email ?",
+          "choices": [
+            "Elle ne change jamais, même si l'email change",
+            "Elle est compacte : jointures et index plus légers",
+            "Elle empêche les doublons d'email",
+            "Elle évite de recopier une donnée personnelle dans toutes les tables liées"
+          ],
+          "answerIndices": [0, 1, 3],
+          "explanation": "Une clé technique est stable et compacte. En revanche, elle n'empêche pas les doublons d'email : il faut garder une contrainte UNIQUE sur l'email.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "db-defi-sql",
+    "title": "Défi entretien : premières requêtes",
+    "summary": "NULL, agrégats et revue de schéma.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "db-defi1-q1",
+        "prompt": "Que renvoie cette requête ?",
+        "code": "-- produits(nom, prix) :\n-- ('A', 10), ('B', NULL), ('C', 30)\nSELECT COUNT(*), COUNT(prix), AVG(prix)\nFROM produits;",
+        "choices": ["3 | 2 | 20", "3 | 3 | 13.33", "3 | 2 | 13.33", "2 | 2 | 20"],
+        "answerIndex": 0,
+        "explanation": "COUNT(*) compte les 3 lignes, COUNT(prix) ignore le NULL (2), et AVG aussi : (10 + 30) / 2 = 20.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "db-defi1-q2",
+        "prompt": "Cas pratique 1/3 — On veut les clients sans téléphone, mais la requête renvoie 0 ligne. Touche une ligne fautive.",
+        "code": "SELECT nom, email\nFROM clients\nWHERE telephone <> NULL\n   OR telephone = NULL;",
+        "bugLines": [3, 4],
+        "explanation": "Les deux comparaisons avec NULL valent UNKNOWN : UNKNOWN OR UNKNOWN reste UNKNOWN, aucune ligne n'est retenue.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "db-defi1-q3",
+        "prompt": "Cas pratique 2/3 — Corrige la condition.",
+        "code": "SELECT nom, email\nFROM clients\nWHERE telephone ___ ___;",
+        "answers": ["IS", "NULL"],
+        "distractors": ["=", "NOT", "EMPTY"],
+        "explanation": "IS NULL est le seul test fiable de l'absence de valeur.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "db-defi1-q4",
+        "prompt": "Cas pratique 3/3 — Certains téléphones sont enregistrés vides ('') plutôt que NULL. Quelle condition les inclut aussi ?",
+        "choices": [
+          "telephone IS NULL OR telephone = ''",
+          "telephone IS NULL AND telephone = ''",
+          "LENGTH(telephone) = 0",
+          "telephone = NULL OR ''"
+        ],
+        "answerIndex": 0,
+        "explanation": "Il faut couvrir les deux cas. LENGTH(NULL) vaut NULL : la troisième version oublierait les NULL. Variante : COALESCE(telephone, '') = ''. Attention, Oracle traite la chaîne vide comme NULL.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "db-defi1-q5",
+        "prompt": "Revue de schéma : coche tous les problèmes.",
+        "code": "CREATE TABLE commandes (\n    id       INT,\n    client   VARCHAR(100),\n    montant  FLOAT,\n    date_cmd VARCHAR(20)\n);",
+        "choices": [
+          "Pas de clé primaire",
+          "Le client est désigné par son nom plutôt que par une clé étrangère",
+          "FLOAT expose les montants à des erreurs d'arrondi",
+          "Une date en texte empêche comparaisons et calculs fiables",
+          "Un VARCHAR ne peut pas dépasser 50 caractères"
+        ],
+        "answerIndices": [0, 1, 2, 3],
+        "explanation": "Il faut une PRIMARY KEY, un client_id REFERENCES clients(id), un DECIMAL(10, 2) pour l'argent et un type DATE ou TIMESTAMP. La limite d'un VARCHAR est bien plus élevée.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "db-defi1-q6",
+        "prompt": "Question d'entretien classique : pourquoi éviter SELECT * dans le code applicatif ?",
+        "choices": [
+          "Il transfère des colonnes inutiles (réseau, mémoire)",
+          "Il empêche le moteur de répondre avec un index couvrant",
+          "Le code peut casser si une colonne est ajoutée, renommée ou réordonnée",
+          "Il est interdit par le standard SQL"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "SELECT * est pratique pour explorer, mais en production on liste les colonnes utiles : moins de données, index couvrants possibles, et un contrat explicite avec le schéma.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

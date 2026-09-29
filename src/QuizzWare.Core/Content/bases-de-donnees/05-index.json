@@ -1,0 +1,295 @@
+{
+  "id": "db-ch-index",
+  "title": "Index et performance",
+  "summary": "Comprendre les index et diagnostiquer une requête lente.",
+  "lessons": [
+    {
+      "id": "db-index",
+      "title": "Comment fonctionne un index",
+      "summary": "B-tree, coût des index et index composites.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Sans index : le parcours complet",
+          "body": "Sans index, trouver WHERE email = '…' oblige à lire toute la table (full scan) : O(n). Avec un index B-tree, la recherche se fait en O(log n), c'est-à-dire en quelques lectures de pages même pour des millions de lignes."
+        },
+        {
+          "title": "Le B-tree",
+          "body": "Un B-tree est un arbre équilibré et trié. Il sert l'égalité, les plages (BETWEEN, <, >), le tri (ORDER BY) et les préfixes (LIKE 'abc%'), mais pas un motif qui commence par un joker (LIKE '%abc')."
+        },
+        {
+          "title": "Le coût d'un index",
+          "body": "Chaque INSERT, UPDATE ou DELETE doit aussi mettre à jour les index : plus d'index, ce sont des écritures plus lentes et plus d'espace disque. Une clé primaire et une contrainte UNIQUE créent automatiquement un index."
+        },
+        {
+          "title": "Les index composites",
+          "body": "Un index sur (nom, prenom) est trié par nom, puis par prénom. Il sert WHERE nom = … et WHERE nom = … AND prenom = …, mais pas WHERE prenom = … seul : c'est la règle du préfixe gauche, comme un annuaire trié par nom.",
+          "code": "CREATE INDEX idx_clients_nom_prenom\n    ON clients (nom, prenom);"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-index-q1",
+          "prompt": "Quelle est la complexité d'une recherche d'égalité via un index B-tree ?",
+          "choices": ["O(log n)", "O(1)", "O(n)", "O(n log n)"],
+          "answerIndex": 0,
+          "explanation": "On descend un arbre équilibré, de la racine à une feuille. Avec des centaines de clés par nœud, 3 ou 4 niveaux suffisent pour des millions de lignes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-index-q2",
+          "prompt": "Quel est le principal coût d'un index ?",
+          "choices": [
+            "Des écritures plus lentes et de l'espace disque",
+            "Des lectures plus lentes",
+            "Il empêche les jointures",
+            "Il désactive les transactions"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque modification de la table doit aussi modifier chacun de ses index. On indexe donc ce qui est réellement interrogé, pas toutes les colonnes.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "db-index-q3",
+          "prompt": "Avec un index sur (nom, prenom), quelles requêtes peuvent l'utiliser efficacement ?",
+          "choices": [
+            "WHERE nom = 'Durand'",
+            "WHERE nom = 'Durand' AND prenom = 'Léa'",
+            "WHERE prenom = 'Léa'",
+            "ORDER BY nom, prenom"
+          ],
+          "answerIndices": [0, 1, 3],
+          "explanation": "L'index est trié d'abord par nom : sans condition sur nom, les prénoms « Léa » sont éparpillés dans tout l'index. Le tri sur (nom, prenom) suit exactement l'ordre de l'index.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-index-q4",
+          "prompt": "Un index B-tree sur email peut-il accélérer cette requête ?",
+          "code": "SELECT * FROM clients\nWHERE email LIKE '%@gmail.com';",
+          "choices": [
+            "Non : un motif qui commence par % ne permet pas de descendre dans l'arbre trié",
+            "Oui, toujours",
+            "Oui, si la table est petite",
+            "Non : LIKE n'utilise jamais d'index"
+          ],
+          "answerIndex": 0,
+          "explanation": "LIKE 'abc%' peut utiliser l'index (c'est une plage), pas LIKE '%abc'. Solutions : stocker le domaine dans sa propre colonne, ou un index spécialisé (trigrammes dans PostgreSQL).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "db-index-q5",
+          "prompt": "Complète pour accélérer la recherche des commandes d'un client.",
+          "code": "___ ___ idx_commandes_client\n    ON commandes (client_id);",
+          "answers": ["CREATE", "INDEX"],
+          "distractors": ["ADD", "KEY", "TABLE"],
+          "explanation": "Une clé étrangère très utilisée dans les jointures et les filtres mérite presque toujours un index.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "db-index-q6",
+          "prompt": "La colonne actif vaut TRUE pour 99 % des lignes. Pourquoi un index sur actif est-il inutile pour WHERE actif = TRUE ?",
+          "choices": [
+            "Il n'est pas sélectif : lire toute la table est aussi rapide",
+            "Les booléens ne peuvent pas être indexés",
+            "L'index serait plus gros que la table",
+            "Le moteur ignore toujours les index sur les booléens"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un index est utile quand il élimine beaucoup de lignes. Pour cibler les 1 % inactifs, un index partiel (… WHERE actif = FALSE) est en revanche très efficace.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "db-perf",
+      "title": "Lire un plan et éviter les pièges",
+      "summary": "EXPLAIN, requêtes non indexables, N+1 et pagination.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "EXPLAIN",
+          "body": "EXPLAIN affiche le plan choisi par l'optimiseur : Seq Scan (lecture complète), Index Scan, type de jointure (Nested Loop, Hash Join…). EXPLAIN ANALYZE exécute réellement la requête et ajoute les temps et le nombre de lignes mesurés.",
+          "code": "EXPLAIN ANALYZE\nSELECT * FROM commandes WHERE client_id = 42;\n-- Index Scan using idx_commandes_client\n--   (actual time=0.03..0.05 rows=12)"
+        },
+        {
+          "title": "Les conditions non indexables",
+          "body": "Appliquer une fonction à une colonne indexée empêche en général d'utiliser l'index : EXTRACT(YEAR FROM date_cmd) = 2024 lit toute la table, alors qu'une plage de dates l'utilise. Même piège avec les conversions de type implicites.",
+          "code": "-- lit toute la table :\nWHERE EXTRACT(YEAR FROM date_cmd) = 2024\n-- utilise l'index :\nWHERE date_cmd >= '2024-01-01'\n  AND date_cmd <  '2025-01-01'"
+        },
+        {
+          "title": "Le problème N+1",
+          "body": "Un ORM charge une liste (1 requête), puis exécute une requête par élément pour charger une relation (N requêtes). On le corrige avec une jointure ou un chargement groupé (eager loading, WHERE id IN (…))."
+        },
+        {
+          "title": "La pagination",
+          "body": "OFFSET 100000 oblige à lire puis jeter 100 000 lignes. La pagination par curseur (WHERE id > dernier_id ORDER BY id LIMIT 20) reste rapide quelle que soit la page."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "db-perf-q1",
+          "prompt": "Que fait EXPLAIN ANALYZE ?",
+          "choices": [
+            "Il exécute la requête et affiche le plan avec les temps réels",
+            "Il affiche le plan sans rien exécuter",
+            "Il crée les index manquants",
+            "Il vérifie seulement la syntaxe"
+          ],
+          "answerIndex": 0,
+          "explanation": "EXPLAIN seul donne des estimations ; ANALYZE exécute vraiment. Attention donc avec un UPDATE ou un DELETE : l'encadrer d'une transaction annulée (ROLLBACK).",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "db-perf-q2",
+          "prompt": "date_cmd est indexée, mais cette requête lit toute la table. Touche la ligne en cause.",
+          "code": "SELECT id, total\nFROM commandes\nWHERE EXTRACT(YEAR FROM date_cmd) = 2024\nORDER BY id;",
+          "bugLines": [3],
+          "explanation": "L'index est trié sur date_cmd, pas sur EXTRACT(YEAR FROM date_cmd) : le moteur doit calculer l'expression pour chaque ligne. Il faut une plage de dates, ou un index sur l'expression.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "db-perf-q3",
+          "prompt": "Réécris la condition pour qu'elle utilise l'index sur date_cmd (toute l'année 2024).",
+          "code": "WHERE date_cmd ___ '2024-01-01'\n  AND date_cmd ___ '2025-01-01'",
+          "answers": [">=", "<"],
+          "distractors": ["<=", ">", "="],
+          "explanation": "Une plage semi-ouverte [début, fin[ couvre toute l'année, y compris le 31 décembre à 23 h 59, sans chevaucher 2025.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-perf-q4",
+          "prompt": "Un ORM charge 100 articles, puis exécute une requête par article pour charger son auteur. Comment s'appelle ce problème ?",
+          "choices": ["Problème N+1", "Deadlock", "Lecture fantôme", "Injection SQL"],
+          "answerIndex": 0,
+          "explanation": "1 requête pour la liste, plus N pour les relations : 101 allers-retours au lieu d'un ou deux.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "db-perf-q5",
+          "prompt": "Pourquoi cette requête est-elle lente ?",
+          "code": "SELECT * FROM articles\nORDER BY id\nLIMIT 20 OFFSET 100000;",
+          "choices": [
+            "Le moteur doit parcourir et ignorer les 100 000 premières lignes",
+            "LIMIT désactive les index",
+            "OFFSET trie la table deux fois",
+            "C'est une limite arbitraire du standard SQL"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le coût grandit avec le numéro de page. Avec un curseur (WHERE id > 100020 ORDER BY id LIMIT 20), l'index mène directement au bon endroit.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "db-perf-q6",
+          "prompt": "Remets dans l'ordre la démarche face à une requête lente.",
+          "language": "text",
+          "lines": [
+            "Reproduire et mesurer le temps de la requête",
+            "Lire le plan avec EXPLAIN ANALYZE",
+            "Repérer l'étape coûteuse (scan complet, tri, jointure)",
+            "Corriger : index ou réécriture de la requête",
+            "Mesurer à nouveau pour confirmer le gain"
+          ],
+          "explanation": "On ne devine pas, on mesure : avant, pendant (le plan) et après la correction.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "db-defi-index",
+    "title": "Défi entretien : la requête lente",
+    "summary": "Du symptôme au bon index, puis le N+1.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "db-defi5-q1",
+        "prompt": "Cas pratique 1/4 — Cette requête prend 4 s sur 10 millions de commandes. Que regardes-tu en premier ?",
+        "code": "SELECT * FROM commandes\nWHERE statut = 'en_attente'\n  AND client_id = 42\nORDER BY cree_le DESC\nLIMIT 20;",
+        "choices": ["Le plan d'exécution (EXPLAIN ANALYZE)", "La RAM du serveur", "La version du pilote SQL", "Le nombre de colonnes de la table"],
+        "answerIndex": 0,
+        "explanation": "Le plan dit où part le temps. Sans lui, on optimise à l'aveugle.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi5-q2",
+        "prompt": "Cas pratique 2/4 — Le plan affiche ceci. Qu'est-ce que cela signifie ?",
+        "code": "Seq Scan on commandes\n  Filter: (statut = 'en_attente'\n           AND client_id = 42)\n  Rows Removed by Filter: 9999980",
+        "language": "text",
+        "choices": [
+          "Toute la table est lue, faute d'index utilisable",
+          "La requête utilise l'index de la clé primaire",
+          "Les lignes sont lues en parallèle sur plusieurs disques",
+          "Le résultat vient du cache"
+        ],
+        "answerIndex": 0,
+        "explanation": "Seq Scan : lecture séquentielle de toute la table, puis 9 999 980 lignes jetées par le filtre pour en garder 20.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi5-q3",
+        "prompt": "Cas pratique 3/4 — Quel index est le plus adapté ?",
+        "choices": [
+          "(client_id, statut, cree_le)",
+          "(cree_le)",
+          "(statut)",
+          "Un index séparé sur chaque colonne de la table"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les colonnes filtrées par égalité d'abord, puis la colonne de tri : l'index mène directement aux commandes en attente du client 42, déjà triées par date, et LIMIT 20 s'arrête au bout de 20 entrées.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "db-defi5-q4",
+        "prompt": "Cas pratique 4/4 — Avant de créer cet index en production, que faut-il considérer ?",
+        "choices": [
+          "L'impact sur les écritures : chaque INSERT met l'index à jour",
+          "La création peut bloquer les écritures : utiliser CREATE INDEX CONCURRENTLY (PostgreSQL)",
+          "L'espace disque supplémentaire",
+          "Il faudra réécrire toutes les requêtes existantes"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "Un index est transparent pour les requêtes : rien à réécrire. Mais sa création sur une grosse table se prépare (verrous, durée, espace).",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "db-defi5-q5",
+        "prompt": "Ce code exécute une requête SQL par commande. Touche une ligne qui provoque le problème N+1.",
+        "code": "commandes = db.query(\"SELECT * FROM commandes LIMIT 100\")\nfor cmd in commandes:\n    client = db.query(\n        \"SELECT * FROM clients WHERE id = %s\",\n        cmd.client_id)\n    afficher(cmd, client)",
+        "language": "python",
+        "bugLines": [3, 4, 5],
+        "explanation": "La requête sur clients est dans la boucle : 1 + 100 requêtes et autant d'allers-retours réseau.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "db-defi5-q6",
+        "prompt": "Comment corriger ce N+1 ?",
+        "choices": [
+          "Une seule requête avec JOIN, ou charger tous les clients d'un coup avec WHERE id IN (…)",
+          "Ajouter un index sur commandes.id",
+          "Augmenter la taille du pool de connexions",
+          "Exécuter les 100 requêtes en parallèle"
+        ],
+        "answerIndex": 0,
+        "explanation": "On passe de 101 requêtes à 1 ou 2. Paralléliser ne fait que déplacer la charge vers la base.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

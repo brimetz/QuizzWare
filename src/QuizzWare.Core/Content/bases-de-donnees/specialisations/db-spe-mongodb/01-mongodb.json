@@ -1,0 +1,386 @@
+{
+  "id": "mongo-ch-essentiel",
+  "title": "MongoDB : l'essentiel",
+  "summary": "CRUD, modélisation par l'usage, index et agrégation.",
+  "lessons": [
+    {
+      "id": "mongo-crud",
+      "title": "Documents, collections et CRUD",
+      "summary": "Créer, lire, modifier et supprimer des documents.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Documents et collections",
+          "body": "Une base MongoDB contient des collections (l'équivalent des tables) de documents BSON, un JSON binaire enrichi de types (dates, ObjectId, décimaux…). Chaque document a un champ _id unique ; s'il est absent, MongoDB génère un ObjectId, qui contient notamment l'horodatage de création.",
+          "code": "{\n  _id: ObjectId(\"66f1c2a9...\"),\n  nom: \"Ada\",\n  langages: [\"C\", \"Python\"],\n  adresse: { ville: \"Lyon\", cp: \"69001\" }\n}"
+        },
+        {
+          "title": "Lire",
+          "body": "find prend un filtre et une projection optionnelle. Les opérateurs commencent par $ : $gt, $gte, $in, $ne… La notation pointée (\"adresse.ville\") interroge un champ de sous-document. Sur un champ tableau, un filtre d'égalité est vrai si l'un des éléments correspond.",
+          "code": "db.users.find({ age: { $gte: 30 } })\ndb.users.find({ \"adresse.ville\": \"Lyon\" })\ndb.users.find({ langages: \"Python\" })\ndb.users.findOne({ nom: \"Ada\" }, { nom: 1, _id: 0 })"
+        },
+        {
+          "title": "Créer, modifier, supprimer",
+          "body": "insertOne / insertMany créent des documents. updateOne / updateMany prennent un filtre et des opérateurs de mise à jour : $set, $inc, $push, $unset… Pour remplacer un document entier, on utilise replaceOne. deleteOne / deleteMany suppriment.",
+          "code": "db.users.insertOne({ nom: \"Ada\", age: 36 })\ndb.users.updateOne(\n  { nom: \"Ada\" },\n  { $set: { age: 37 }, $push: { langages: \"Rust\" } }\n)\ndb.users.deleteMany({ actif: false })"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mongo-crud-q1",
+          "prompt": "Quel champ chaque document MongoDB possède-t-il obligatoirement ?",
+          "choices": ["_id", "id", "key", "uuid"],
+          "answerIndex": 0,
+          "explanation": "_id est unique dans la collection et indexé automatiquement. S'il n'est pas fourni, MongoDB génère un ObjectId.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mongo-crud-q2",
+          "prompt": "Que renvoie cette requête ?",
+          "code": "db.users.find({ age: { $gte: 30 } })",
+          "choices": [
+            "Les utilisateurs de 30 ans ou plus",
+            "Les utilisateurs de plus de 30 ans, strictement",
+            "Le nombre d'utilisateurs de 30 ans",
+            "Une erreur de syntaxe"
+          ],
+          "answerIndex": 0,
+          "explanation": "$gte signifie « supérieur ou égal » (greater than or equal) ; $gt serait strictement supérieur.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "mongo-crud-q3",
+          "prompt": "Complète : ajouter 1 au compteur de vues de l'article 7.",
+          "code": "db.articles.updateOne(\n  { _id: 7 },\n  { ___: { vues: 1 } }\n)",
+          "answers": ["$inc"],
+          "distractors": ["$set", "$push", "$add"],
+          "explanation": "$inc incrémente de façon atomique côté serveur, sans lire la valeur au préalable : pas de mise à jour perdue. $set écraserait la valeur par 1.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "mongo-crud-q4",
+          "prompt": "Les adresses contiennent une ville, une rue et un code postal. Cette requête ne trouve pourtant aucun utilisateur de Lyon. Touche la ligne en cause.",
+          "code": "db.users.find({\n  adresse: { ville: \"Lyon\" }\n})",
+          "bugLines": [2],
+          "explanation": "Comparer à un sous-document exige une égalité exacte : mêmes champs, même ordre. Il faut la notation pointée : { \"adresse.ville\": \"Lyon\" }.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mongo-crud-q5",
+          "prompt": "Quelles affirmations sur les documents MongoDB sont vraies ?",
+          "choices": [
+            "Deux documents d'une même collection peuvent avoir des champs différents",
+            "Un document peut contenir des tableaux et des sous-documents",
+            "Un document est limité à 16 Mo",
+            "Chaque collection impose obligatoirement un schéma fixe"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Le schéma est libre par défaut. On peut toutefois en imposer un avec la validation de schéma ($jsonSchema), souvent utile en production.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mongo-crud-q6",
+          "prompt": "Que sélectionne ce filtre ?",
+          "code": "db.users.find({ langages: { $in: [\"Rust\", \"Go\"] } })",
+          "choices": [
+            "Les utilisateurs dont langages contient Rust ou Go",
+            "Les utilisateurs dont langages contient Rust et Go",
+            "Les utilisateurs dont langages vaut exactement [\"Rust\", \"Go\"]",
+            "Rien : $in ne s'applique pas aux tableaux"
+          ],
+          "answerIndex": 0,
+          "explanation": "$in est vrai si au moins une valeur correspond. Pour exiger les deux, on utiliserait $all.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mongo-modelisation",
+      "title": "Modéliser pour MongoDB",
+      "summary": "Imbriquer ou référencer : partir des accès.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Imbriquer ou référencer",
+          "body": "Imbriquer : les données lues ensemble sont stockées ensemble, en une seule lecture, et la mise à jour du document est atomique. Référencer : on stocke l'_id d'un autre document, comme une clé étrangère, quand les données sont partagées, volumineuses ou lues séparément."
+        },
+        {
+          "title": "Modéliser selon l'accès",
+          "body": "En relationnel, on normalise d'abord. En MongoDB, on part des requêtes de l'application. Une relation « 1 à quelques-uns » (les adresses d'un client) s'imbrique ; une relation « 1 à beaucoup », non bornée (les commandes d'un client, des logs), se référence.",
+          "code": "// imbriqué : 1 à quelques-uns\n{ _id: 1, nom: \"Ada\",\n  adresses: [{ ville: \"Lyon\" }, { ville: \"Paris\" }] }\n\n// référencé : 1 à beaucoup\n{ _id: 501, client_id: 1, total: 42 }"
+        },
+        {
+          "title": "Jointures et transactions",
+          "body": "$lookup, une étape du pipeline d'agrégation, joint deux collections, mais coûte plus cher qu'une jointure relationnelle. L'écriture d'un seul document est toujours atomique ; les transactions multi-documents existent, mais un bon modèle en a rarement besoin."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mongo-model-q1",
+          "prompt": "Un client a 1 à 3 adresses, toujours affichées avec son profil. Comment les stocker ?",
+          "choices": [
+            "Imbriquées dans le document du client",
+            "Dans une collection séparée, avec une référence",
+            "Dans une base relationnelle à part",
+            "Dans un champ texte séparé par des virgules"
+          ],
+          "answerIndex": 0,
+          "explanation": "Peu nombreuses, toujours lues avec le client : l'imbrication donne tout en une lecture.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mongo-model-q2",
+          "prompt": "Un capteur envoie une mesure par seconde, pendant des années. Où stocker les mesures ?",
+          "choices": [
+            "Dans une collection séparée (idéalement une collection time series), chaque mesure référençant le capteur",
+            "Dans un tableau du document capteur",
+            "Dans un seul document par année",
+            "Dans le champ _id du capteur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un tableau dans le document capteur grossirait sans limite (16 Mo au maximum). Les collections time series (MongoDB 5.0 et plus) sont optimisées pour ce cas.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mongo-model-q3",
+          "prompt": "Quelle opération est toujours atomique, sans transaction explicite ?",
+          "choices": [
+            "L'écriture d'un seul document, sous-documents compris",
+            "Un updateMany sur plusieurs documents",
+            "Toute suite d'opérations sur une même connexion",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "updateMany est atomique document par document, pas dans son ensemble. D'où l'intérêt d'imbriquer ce qui doit changer ensemble.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mongo-model-q4",
+          "prompt": "Ce modèle va poser problème avec le temps. Touche la ligne en cause.",
+          "code": "{\n  _id: \"client-1\",\n  nom: \"Ada\",\n  commandes: [\n    { total: 42, lignes: [/* ... */] },\n    { total: 17, lignes: [/* ... */] }\n    // ... des milliers d'autres\n  ]\n}",
+          "bugLines": [4],
+          "explanation": "Les commandes d'un client ne sont pas bornées : le document grossit sans fin (16 Mo au maximum) et chaque lecture du profil charge tout l'historique. On les place dans une collection commandes avec un client_id.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mongo-model-q5",
+          "prompt": "Dans quels cas préférer une référence à un sous-document imbriqué ?",
+          "choices": [
+            "La donnée est partagée par de nombreux documents (un produit présent dans des milliers de commandes)",
+            "La liste peut grandir sans limite",
+            "La donnée est souvent lue indépendamment de son parent",
+            "Les données sont peu nombreuses et toujours lues avec le parent"
+          ],
+          "answerIndices": [0, 1, 2],
+          "explanation": "Nuance classique : dans une commande, on copie quand même le nom et le prix du produit au moment de l'achat, parce que ce sont des données historiques qui ne doivent pas changer.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "mongo-model-q6",
+          "prompt": "Complète : joindre chaque commande à son client dans un pipeline d'agrégation.",
+          "code": "db.commandes.aggregate([\n  { ___: {\n      from: \"clients\",\n      localField: \"client_id\",\n      foreignField: \"_id\",\n      as: \"client\"\n  } }\n])",
+          "answers": ["$lookup"],
+          "distractors": ["$join", "$match", "$group"],
+          "explanation": "$lookup ajoute au document un tableau client contenant les documents correspondants de la collection clients.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mongo-index-agregation",
+      "title": "Index et agrégation",
+      "summary": "Requêtes rapides et calculs côté serveur.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les index",
+          "body": "Comme en SQL, sans index MongoDB parcourt toute la collection (COLLSCAN). createIndex crée un index B-tree. Un index composé suit la règle du préfixe, et l'ordre recommandé de ses champs est Égalité, Tri, Plage (ESR). explain(\"executionStats\") indique IXSCAN ou COLLSCAN.",
+          "code": "db.commandes.createIndex({ client_id: 1, date: -1 })\n\ndb.commandes.find({ client_id: 42 })\n  .sort({ date: -1 })\n  .explain(\"executionStats\")"
+        },
+        {
+          "title": "Le pipeline d'agrégation",
+          "body": "aggregate enchaîne des étapes : $match (filtrer), $group (regrouper), $sort, $project (façonner), $lookup (joindre), $unwind (déplier un tableau). Placer $match le plus tôt possible réduit le volume traité et permet d'utiliser un index.",
+          "code": "db.commandes.aggregate([\n  { $match: { statut: \"payee\" } },\n  { $group: { _id: \"$client_id\",\n              total: { $sum: \"$montant\" } } },\n  { $sort: { total: -1 } },\n  { $limit: 5 }\n])"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mongo-agg-q1",
+          "prompt": "Que signifie COLLSCAN dans un plan d'exécution ?",
+          "choices": [
+            "Toute la collection est parcourue, faute d'index utilisable",
+            "La requête utilise un index",
+            "Les documents viennent du cache",
+            "La collection est compressée"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'équivalent du Seq Scan en SQL. IXSCAN indique l'utilisation d'un index.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mongo-agg-q2",
+          "prompt": "Quel est l'équivalent SQL de ce pipeline ?",
+          "code": "db.commandes.aggregate([\n  { $match: { statut: \"payee\" } },\n  { $group: { _id: \"$client_id\", n: { $sum: 1 } } }\n])",
+          "choices": [
+            "SELECT client_id, COUNT(*) FROM commandes WHERE statut = 'payee' GROUP BY client_id",
+            "SELECT SUM(client_id) FROM commandes",
+            "SELECT * FROM commandes GROUP BY statut",
+            "SELECT client_id FROM commandes WHERE COUNT(*) = 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "$match joue le rôle de WHERE ; $group, avec _id comme clé de regroupement et $sum: 1, celui de GROUP BY + COUNT(*).",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "mongo-agg-q3",
+          "prompt": "Remets le pipeline dans l'ordre : le top 5 des clients par montant payé.",
+          "lines": [
+            "db.commandes.aggregate([",
+            "  { $match: { statut: \"payee\" } },",
+            "  { $group: { _id: \"$client_id\", total: { $sum: \"$montant\" } } },",
+            "  { $sort: { total: -1 } },",
+            "  { $limit: 5 }",
+            "])"
+          ],
+          "explanation": "Filtrer, regrouper, trier, limiter : le même raisonnement qu'en SQL, écrit comme une suite d'étapes.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mongo-agg-q4",
+          "prompt": "Avec l'index { client_id: 1, date: -1 }, quelles requêtes l'utilisent efficacement ?",
+          "choices": [
+            "find({ client_id: 42 })",
+            "find({ client_id: 42 }).sort({ date: -1 })",
+            "find({ date: { $gte: ISODate(\"2024-01-01\") } })",
+            "find({ statut: \"payee\" })"
+          ],
+          "answerIndices": [0, 1],
+          "explanation": "Règle du préfixe : sans condition sur client_id, l'index n'aide pas. Avec client_id fixé, les dates sont déjà triées dans l'index.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mongo-agg-q5",
+          "prompt": "Ce pipeline regroupe toute la collection avant de filtrer. Touche l'étape qui devrait venir en premier.",
+          "code": "db.commandes.aggregate([\n  { $group: { _id: \"$client_id\",\n              total: { $sum: \"$montant\" } } },\n  { $match: { _id: 42 } }\n])",
+          "bugLines": [4],
+          "explanation": "On filtre d'abord ({ $match: { client_id: 42 } }), idéalement grâce à un index, puis on regroupe les quelques documents restants.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mongo-agg-q6",
+          "prompt": "Pourquoi ordonner les champs d'un index composé en Égalité, Tri, Plage (ESR) ?",
+          "choices": [
+            "L'index fournit une portion contiguë déjà triée : pas de tri en mémoire, et la plage filtre en dernier",
+            "C'est l'ordre alphabétique imposé par MongoDB",
+            "Les plages ne peuvent pas être indexées",
+            "Cela réduit la taille de l'index"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour find({ client_id: 42, date: { $gte: … } }).sort({ total: -1 }), on crée { client_id: 1, total: -1, date: 1 }. La même logique s'applique aux index composites en SQL.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "mongo-defi",
+    "title": "Défi entretien : MongoDB",
+    "summary": "Revue de modèle, concurrence et choix d'architecture.",
+    "questions": [
+      {
+        "type": "multi",
+        "id": "mongo-defi-q1",
+        "prompt": "Cas pratique 1/3 — Revue du modèle d'un blog : coche les remarques justifiées.",
+        "code": "// articles\n{ _id: 1, titre: \"...\",\n  auteur: { id: 7, nom: \"Ada\" },\n  commentaires: [ /* tous */ ],\n  vues: [ /* une date par vue */ ] }",
+        "choices": [
+          "vues grossit sans limite : un compteur suffit",
+          "commentaires peut grossir sans limite : collection séparée, ou seulement les derniers imbriqués",
+          "Copier le nom de l'auteur accélère l'affichage, mais impose une mise à jour s'il change",
+          "Imbriquer l'auteur est interdit dans MongoDB"
+        ],
+        "answerIndices": [0, 1, 2],
+        "explanation": "Dupliquer quelques champs rarement modifiés (le nom de l'auteur) est un compromis classique et assumé ; les tableaux non bornés, eux, sont à proscrire.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "mongo-defi-q2",
+        "prompt": "Cas pratique 2/3 — Remplace le tableau de vues par un compteur.",
+        "code": "db.articles.updateOne(\n  { _id: 1 },\n  { ___: { ___: 1 } }\n)",
+        "answers": ["$inc", "vues"],
+        "distractors": ["$push", "$set", "commentaires"],
+        "explanation": "{ $inc: { vues: 1 } } : une opération atomique qui ne fait pas grossir le document.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mongo-defi-q3",
+        "prompt": "Cas pratique 3/3 — On n'imbrique plus que les 10 derniers commentaires. Quelle mise à jour maintient ce tableau borné ?",
+        "choices": [
+          "$push avec $each et $slice: -10",
+          "$addToSet",
+          "$inc",
+          "$unset"
+        ],
+        "answerIndex": 0,
+        "explanation": "{ $push: { commentaires: { $each: [c], $slice: -10 } } } ajoute le commentaire et ne garde que les 10 derniers. Les autres sont stockés dans une collection dédiée : c'est le « subset pattern ».",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "mongo-defi-q4",
+        "prompt": "Deux inscriptions simultanées créent parfois deux comptes avec le même email. Touche une ligne en cause.",
+        "code": "const user = await db.users.findOne({ email })\nif (!user) {\n  await db.users.insertOne({ email, credits: 10 })\n}",
+        "bugLines": [1, 3],
+        "explanation": "Vérifier puis insérer n'est pas atomique : les deux requêtes peuvent lire « aucun utilisateur » avant que l'une n'insère.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "mongo-defi-q5",
+        "prompt": "Quelles protections contre les doublons d'email sont efficaces ?",
+        "choices": [
+          "Un index unique : createIndex({ email: 1 }, { unique: true })",
+          "Gérer l'erreur de clé dupliquée (E11000) à l'insertion",
+          "Appeler findOne deux fois avant d'insérer",
+          "Un updateOne avec upsert: true filtré sur l'email, adossé à l'index unique"
+        ],
+        "answerIndices": [0, 1, 3],
+        "explanation": "Seule la base peut garantir l'unicité face à la concurrence : c'est l'index unique. L'application gère ensuite l'erreur (ou utilise un upsert).",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mongo-defi-q6",
+        "prompt": "Une application gère des virements entre comptes, avec de fortes exigences de cohérence et beaucoup de relations. On te propose MongoDB. Que réponds-tu ?",
+        "choices": [
+          "Un SGBDR est plus naturel ; MongoDB peut le faire avec des transactions, mais on perd ses points forts",
+          "MongoDB ne peut pas stocker de montants",
+          "MongoDB est toujours plus rapide, c'est donc le bon choix",
+          "Il faut une base graphe"
+        ],
+        "answerIndex": 0,
+        "explanation": "En entretien, on attend un choix nuancé : MongoDB brille avec des agrégats lus d'un bloc et un schéma souple, un SGBDR avec des données très liées et des transactions omniprésentes. MongoDB propose un type Decimal128 pour les montants.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

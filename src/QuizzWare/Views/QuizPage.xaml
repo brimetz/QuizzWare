@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:QuizzWare.ViewModels"
+             xmlns:q="clr-namespace:QuizzWare.ViewModels.Questions"
+             xmlns:controls="clr-namespace:QuizzWare.Views.Controls"
+             x:Class="QuizzWare.Views.QuizPage"
+             x:DataType="vm:QuizViewModel"
+             Title="{Binding Title}">
+
+    <ContentPage.Resources>
+
+        <!-- QCM (unique ou multiple), avec code optionnel -->
+        <DataTemplate x:Key="OptionsTemplate" x:DataType="q:OptionsQuestionViewModel">
+            <VerticalStackLayout Spacing="12">
+                <controls:CodeBlockView Lines="{Binding CodeLines}" IsVisible="{Binding HasCode}" />
+                <Label Text="{Binding Hint}" IsVisible="{Binding IsMultiple}" Style="{StaticResource MutedLabel}" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Options}" Spacing="10">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="q:OptionViewModel">
+                            <Border BackgroundColor="{Binding BackgroundColor}" Stroke="{Binding StrokeColor}"
+                                    StrokeThickness="2" StrokeShape="RoundRectangle 14" Padding="14"
+                                    Opacity="{Binding Opacity}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding TapCommand}" />
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="32,*" ColumnSpacing="12">
+                                    <Border BackgroundColor="{StaticResource SurfaceRaised}" StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 8" WidthRequest="32" HeightRequest="32" VerticalOptions="Start">
+                                        <Label Text="{Binding Marker}" FontAttributes="Bold"
+                                               HorizontalOptions="Center" VerticalOptions="Center" />
+                                    </Border>
+                                    <Label Grid.Column="1" Text="{Binding Text}" FontSize="16" VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </DataTemplate>
+
+        <!-- Trouve le bug -->
+        <DataTemplate x:Key="BugTemplate" x:DataType="q:BugQuestionViewModel">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="{Binding Hint}" Style="{StaticResource MutedLabel}" />
+                <controls:CodeBlockView Lines="{Binding Lines}" />
+            </VerticalStackLayout>
+        </DataTemplate>
+
+        <!-- Code à trous -->
+        <DataTemplate x:Key="FillTemplate" x:DataType="q:FillQuestionViewModel">
+            <VerticalStackLayout Spacing="14">
+                <Label Text="{Binding Hint}" Style="{StaticResource MutedLabel}" />
+                <controls:CodeBlockView Lines="{Binding Lines}" />
+                <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start" AlignContent="Start"
+                            BindableLayout.ItemsSource="{Binding Tokens}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="q:TokenViewModel">
+                            <Border BackgroundColor="{StaticResource SurfaceRaised}" Stroke="{StaticResource Primary}"
+                                    StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="16,10" Margin="0,0,8,8"
+                                    Opacity="{Binding Opacity}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding TapCommand}" />
+                                </Border.GestureRecognizers>
+                                <Label Text="{Binding Text}" Style="{StaticResource CodeLabel}" FontSize="15"
+                                       TextColor="{StaticResource TextPrimary}" />
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </FlexLayout>
+                <Button Text="↩ Annuler le dernier mot" Style="{StaticResource SecondaryButton}" Command="{Binding UndoCommand}"
+                        IsVisible="{Binding CanUndo}" HorizontalOptions="Start" FontSize="14" MinimumHeightRequest="40" Padding="14,8" />
+                <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowSolution}">
+                    <Label Text="Solution" Style="{StaticResource SubHeaderLabel}" TextColor="{StaticResource Success}" />
+                    <controls:CodeBlockView Lines="{Binding SolutionLines}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </DataTemplate>
+
+        <!-- Remettre dans l'ordre -->
+        <DataTemplate x:Key="OrderLineTemplate" x:DataType="q:OrderLineViewModel">
+            <Border BackgroundColor="{Binding Background}" Stroke="{StaticResource Stroke}" StrokeThickness="1"
+                    StrokeShape="RoundRectangle 8" Padding="10,8">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding TapCommand}" />
+                </Border.GestureRecognizers>
+                <Label FormattedText="{Binding Formatted}" Style="{StaticResource CodeLabel}" LineBreakMode="WordWrap" />
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="OrderTemplate" x:DataType="q:OrderQuestionViewModel">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="{Binding Hint}" Style="{StaticResource MutedLabel}" />
+                <Label Text="Ta réponse" Style="{StaticResource SubHeaderLabel}" FontSize="15" />
+                <Border Style="{StaticResource CodeBlock}" Padding="8" MinimumHeightRequest="56">
+                    <Grid>
+                        <Label Text="Touche les lignes ci-dessous…" Style="{StaticResource MutedLabel}"
+                               IsVisible="{Binding IsAnswerEmpty}" VerticalOptions="Center" Margin="8,0" />
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Answer}" Spacing="6"
+                                             BindableLayout.ItemTemplate="{StaticResource OrderLineTemplate}" />
+                    </Grid>
+                </Border>
+                <Label Text="Lignes disponibles" Style="{StaticResource SubHeaderLabel}" FontSize="15"
+                       IsVisible="{Binding HasPool}" Margin="0,6,0,0" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Pool}" Spacing="6"
+                                     BindableLayout.ItemTemplate="{StaticResource OrderLineTemplate}" />
+                <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowSolution}">
+                    <Label Text="Solution" Style="{StaticResource SubHeaderLabel}" TextColor="{StaticResource Success}" />
+                    <controls:CodeBlockView Lines="{Binding SolutionLines}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </DataTemplate>
+
+        <controls:QuestionTemplateSelector x:Key="QuestionSelector"
+                                           Options="{StaticResource OptionsTemplate}"
+                                           Bug="{StaticResource BugTemplate}"
+                                           Fill="{StaticResource FillTemplate}"
+                                           Order="{StaticResource OrderTemplate}" />
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Avancement -->
+        <Grid Padding="16,8,16,8" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="8">
+            <ProgressBar Grid.ColumnSpan="2" Progress="{Binding Progress}" />
+            <Label Grid.Row="1" Text="{Binding Kind}" TextColor="{StaticResource Primary}" FontAttributes="Bold" FontSize="14" />
+            <Label Grid.Row="1" Grid.Column="1" Text="{Binding ProgressText}" Style="{StaticResource MutedLabel}" />
+        </Grid>
+
+        <!-- Énoncé et question -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="16,8,16,16" Spacing="16">
+                <Label Text="{Binding Prompt}" Style="{StaticResource HeaderLabel}" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding CurrentQuestion}"
+                                     BindableLayout.ItemTemplateSelector="{StaticResource QuestionSelector}" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Vérifier -->
+        <Border Grid.Row="2" IsVisible="{Binding IsNotAnswered}" BackgroundColor="{StaticResource Background}"
+                StrokeThickness="0" Padding="16,12,16,20">
+            <Button Text="Vérifier" Command="{Binding CheckCommand}" />
+        </Border>
+
+        <!-- Correction -->
+        <Border Grid.Row="2" IsVisible="{Binding IsAnswered}"
+                BackgroundColor="{StaticResource Surface}" Stroke="{Binding FeedbackColor}" StrokeThickness="2"
+                StrokeShape="RoundRectangle 20,20,0,0" Padding="16,16,16,20">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="{Binding FeedbackTitle}" TextColor="{Binding FeedbackColor}" Style="{StaticResource SubHeaderLabel}" />
+                <ScrollView MaximumHeightRequest="180">
+                    <Label Text="{Binding Explanation}" Style="{StaticResource BodyLabel}" />
+                </ScrollView>
+                <Button Text="{Binding ContinueText}" Command="{Binding ContinueCommand}" Margin="0,6,0,0" />
+            </VerticalStackLayout>
+        </Border>
+
+    </Grid>
+
+</ContentPage>
