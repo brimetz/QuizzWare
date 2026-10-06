@@ -28,6 +28,13 @@
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
+
+                <Label Text="⚑ Une erreur dans ce cours ? Signale-la" Style="{StaticResource MutedLabel}" FontSize="13"
+                       HorizontalOptions="Center" Padding="8">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ReportCommand}" />
+                    </Label.GestureRecognizers>
+                </Label>
             </VerticalStackLayout>
         </ScrollView>
 

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QuizzWare.Core.Content;
+using QuizzWare.Services;
 using QuizzWare.ViewModels.Code;
 using QuizzWare.Views;
 
@@ -12,7 +13,7 @@ public sealed record SectionItem(string Title, string Body, IReadOnlyList<CodeLi
     public bool HasCode => CodeLines.Count > 0;
 }
 
-public partial class LessonViewModel(ContentRepository content) : ObservableObject, IQueryAttributable
+public partial class LessonViewModel(ContentRepository content, ContentReporter reporter) : ObservableObject, IQueryAttributable
 {
     private string? _categoryId;
     private string? _lessonId;
@@ -47,6 +48,14 @@ public partial class LessonViewModel(ContentRepository content) : ObservableObje
         foreach (var section in lesson.Sections ?? [])
             Sections.Add(new SectionItem(section.Title, section.Body, CodeLineViewModel.FromCode(section.Code, section.Language ?? language)));
     }
+
+    [RelayCommand]
+    private Task ReportAsync() =>
+        reporter.ReportAsync($"leçon {_lessonId}",
+        [
+            $"- Leçon : `{_lessonId}` · {Title}",
+            $"- Catégorie : {(_categoryId is null ? "?" : content.GetCategory(_categoryId).Name)}",
+        ]);
 
     [RelayCommand]
     private Task StartQuizAsync() =>

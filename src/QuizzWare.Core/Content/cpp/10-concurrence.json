@@ -7,19 +7,437 @@
       "id": "cpp-threads",
       "title": "Threads",
       "summary": "std::thread et jthread.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "std::thread",
+          "body": "Un std::thread démarre dès sa construction. Avant sa destruction, il faut soit attendre sa fin avec join(), soit le détacher avec detach() ; sinon, son destructeur appelle std::terminate.",
+          "code": "std::thread t([] {\n    travailler();\n});\n// ... autre chose en parallèle\nt.join(); // attend la fin"
+        },
+        {
+          "title": "std::jthread (C++20)",
+          "body": "jthread fait join() automatiquement dans son destructeur (RAII), et permet de demander l'arrêt du thread via un std::stop_token. C'est le choix par défaut en C++ moderne.",
+          "code": "std::jthread t([](std::stop_token st) {\n    while (!st.stop_requested())\n        travailler();\n});\nt.request_stop();\n// le destructeur attend la fin"
+        },
+        {
+          "title": "Passer des arguments",
+          "body": "Les arguments sont copiés dans le thread. Pour passer une référence, il faut std::ref. Attention aux durées de vie : un thread détaché qui référence une variable locale peut la lire après sa destruction."
+        },
+        {
+          "title": "std::async et std::future",
+          "body": "std::async lance une tâche et renvoie un std::future ; get() attend le résultat (et relance l'exception éventuelle de la tâche).",
+          "code": "auto f = std::async(std::launch::async,\n                    [] { return calcul(); });\nint r = f.get();"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-threads-q1",
+          "prompt": "Que se passe-t-il si un std::thread est détruit sans join() ni detach() ?",
+          "choices": [
+            "std::terminate est appelé : le programme s'arrête",
+            "Le thread est arrêté proprement",
+            "Le destructeur attend la fin du thread",
+            "Le thread continue en arrière-plan"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est un choix délibéré du standard pour forcer à décider. std::jthread corrige cela en faisant join() dans son destructeur.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-threads-q2",
+          "prompt": "Le programme s'arrête brutalement à la sortie de lancer(). Touche la ligne en cause.",
+          "code": "void lancer() {\n    std::thread t([] {\n        travailler();\n    });\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "t est détruit en sortie de fonction alors qu'il est encore joignable : std::terminate. Il faut appeler t.join(), ou utiliser std::jthread.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-threads-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "void incr(int& n) { ++n; }\n\nint x = 0;\nstd::thread t(incr, std::ref(x));\nt.join();\nstd::cout << x;",
+          "choices": [
+            "1",
+            "0",
+            "Erreur de compilation",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "std::ref transmet une référence à x : le thread modifie bien x. Après join(), la lecture est sûre.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-threads-q4",
+          "prompt": "Que se passe-t-il si l'on écrit std::thread t(incr, x); sans std::ref ?",
+          "code": "void incr(int& n) { ++n; }\n\nint x = 0;\nstd::thread t(incr, x);",
+          "choices": [
+            "Erreur de compilation : la copie de x ne peut pas se lier à int&",
+            "Le thread incrémente une copie, x reste à 0",
+            "Le thread incrémente x",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "std::thread copie ses arguments puis les transmet comme des rvalues : une rvalue ne peut pas se lier à int&. Le compilateur refuse, ce qui évite un bug silencieux.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cpp-threads-q5",
+          "prompt": "Complète : un thread qui s'arrête quand on le lui demande, et que son destructeur attend.",
+          "code": "std::___ t([](std::stop_token st) {\n    while (!st.___())\n        travailler();\n});\nt.request_stop();",
+          "answers": [
+            "jthread",
+            "stop_requested"
+          ],
+          "distractors": [
+            "thread",
+            "is_stopped",
+            "joinable"
+          ],
+          "explanation": "Seul std::jthread transmet un stop_token à sa fonction et fait join() dans son destructeur. stop_requested() indique qu'un arrêt a été demandé.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-threads-q6",
+          "prompt": "Ce thread peut lire de la mémoire libérée. Touche une ligne en cause.",
+          "code": "void demarrer() {\n    std::string msg = \"bonjour\";\n    std::thread t([&msg] {\n        std::cout << msg;\n    });\n    t.detach();\n}",
+          "bugLines": [
+            3,
+            6
+          ],
+          "explanation": "Le thread détaché capture msg par référence, mais demarrer() peut se terminer (et détruire msg) avant qu'il ne l'affiche. Il faut capturer par valeur ([msg]) ou attendre le thread.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "cpp-mutex",
       "title": "Mutex et verrous",
       "summary": "lock_guard, scoped_lock et deadlocks.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La data race",
+          "body": "Deux threads accèdent à la même donnée, au moins l'un écrit, sans synchronisation : c'est une data race, un comportement indéfini. Même ++compteur n'est pas sûr : c'est une lecture, un calcul puis une écriture, que deux threads peuvent entrelacer."
+        },
+        {
+          "title": "mutex et lock_guard",
+          "body": "Un std::mutex garantit qu'un seul thread à la fois exécute la section protégée. On ne l'utilise jamais avec lock() et unlock() à la main : std::lock_guard le verrouille dans son constructeur et le déverrouille dans son destructeur, même en cas d'exception.",
+          "code": "std::mutex m;\nint compteur = 0;\n\nvoid incrementer() {\n    std::lock_guard verrou(m);\n    ++compteur;\n} // déverrouillé ici"
+        },
+        {
+          "title": "Le deadlock",
+          "body": "Le thread 1 tient A et attend B ; le thread 2 tient B et attend A : les deux attendent pour toujours. Solutions : toujours prendre les mutex dans le même ordre, ou std::scoped_lock, qui verrouille plusieurs mutex d'un coup sans risque d'interblocage.",
+          "code": "std::scoped_lock verrou(a.mutex, b.mutex);"
+        },
+        {
+          "title": "Bonnes pratiques",
+          "body": "Sections critiques courtes, pas d'appel à du code inconnu sous verrou, et protéger aussi les lectures : une lecture concurrente à une écriture est déjà une data race."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-mutex-q1",
+          "prompt": "Qu'est-ce qu'une data race ?",
+          "choices": [
+            "Des accès concurrents à une même donnée, dont au moins une écriture, sans synchronisation",
+            "Deux threads qui s'attendent mutuellement",
+            "Un thread plus rapide qu'un autre",
+            "Une exception levée dans un thread"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est un comportement indéfini, pas seulement « un résultat aléatoire » : le compilateur optimise en supposant qu'il n'y en a pas. Deux threads qui s'attendent, c'est un deadlock.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-mutex-q2",
+          "prompt": "Pourquoi utiliser std::lock_guard plutôt que m.lock() et m.unlock() ?",
+          "choices": [
+            "Il déverrouille automatiquement, même en cas d'exception ou de return anticipé",
+            "Il est plus rapide qu'un mutex",
+            "Il empêche les deadlocks",
+            "Il permet à plusieurs threads d'entrer en même temps"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le RAII appliqué aux verrous. Un unlock() oublié sur un chemin d'erreur bloque tous les autres threads pour toujours.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-mutex-q3",
+          "prompt": "Les deux threads se bloquent parfois pour toujours. Touche une ligne en cause.",
+          "code": "void virer(Compte& a, Compte& b, int m) {\n    std::lock_guard la(a.mutex);\n    std::lock_guard lb(b.mutex);\n    a.solde -= m;\n    b.solde += m;\n}\n// thread 1 : virer(x, y, 10);\n// thread 2 : virer(y, x, 5);",
+          "bugLines": [
+            2,
+            3
+          ],
+          "explanation": "Le thread 1 verrouille x puis attend y ; le thread 2 verrouille y puis attend x : deadlock. std::scoped_lock verrou(a.mutex, b.mutex); verrouille les deux sans risque.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-mutex-q4",
+          "prompt": "Complète pour verrouiller les deux comptes sans risque de deadlock.",
+          "code": "std::___ verrou(a.mutex, b.mutex);",
+          "answers": [
+            "scoped_lock"
+          ],
+          "distractors": [
+            "lock_guard",
+            "unique_lock",
+            "mutex"
+          ],
+          "explanation": "scoped_lock (C++17) accepte plusieurs mutex et utilise un algorithme d'évitement d'interblocage. lock_guard et unique_lock ne prennent qu'un mutex.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-mutex-q5",
+          "prompt": "Malgré le verrou, donnees subit des data races. Touche la ligne fautive.",
+          "code": "void ajouter(int x) {\n    std::lock_guard<std::mutex>{m};\n    donnees.push_back(x);\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le lock_guard n'a pas de nom : c'est un temporaire détruit à la fin de l'instruction. Le mutex est relâché avant le push_back. Il faut le nommer : std::lock_guard verrou(m);.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cpp-mutex-q6",
+          "prompt": "Quelles pratiques réduisent les risques en multithread ?",
+          "choices": [
+            "Garder les sections critiques courtes",
+            "Ne pas appeler de code inconnu (callbacks) sous verrou",
+            "Toujours prendre les mutex dans le même ordre",
+            "Protéger seulement les écritures, pas les lectures"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une lecture concurrente à une écriture est déjà une data race : il faut la protéger aussi. Un callback sous verrou peut tenter de reprendre le même mutex, ou un autre, et provoquer un deadlock.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "cpp-atomics",
       "title": "Atomics",
       "summary": "Opérations atomiques et data races.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "std::atomic",
+          "body": "Pour un simple compteur ou un drapeau, std::atomic<T> rend chaque opération indivisible, sans mutex : ++, +=, fetch_add, load, store, exchange... Aucune data race possible sur la variable elle-même.",
+          "code": "std::atomic<int> compteur{0};\n++compteur;            // atomique\ncompteur.fetch_add(5); // atomique\nint v = compteur.load();"
+        },
+        {
+          "title": "Atomique ne veut pas dire « tout est sûr »",
+          "body": "Chaque opération est atomique, mais deux opérations successives ne le sont pas ensemble. « Tester puis agir » (if (stock > 0) --stock;) laisse un autre thread passer entre les deux. De même, a = a + 1 est une lecture puis une écriture séparées."
+        },
+        {
+          "title": "compare_exchange",
+          "body": "compare_exchange_weak(attendu, nouveau) remplace la valeur seulement si elle vaut toujours attendu ; sinon, il met à jour attendu avec la valeur actuelle et renvoie false. On l'utilise en boucle.",
+          "code": "int attendu = stock.load();\nwhile (attendu > 0 &&\n       !stock.compare_exchange_weak(\n           attendu, attendu - 1)) {\n}"
+        },
+        {
+          "title": "volatile n'est pas fait pour ça",
+          "body": "En C++, volatile empêche le compilateur de supprimer des accès (utile pour du matériel), mais ne rend rien atomique ni ordonné entre threads. Pour la synchronisation : std::atomic ou des mutex."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-atomics-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "std::atomic<int> n{0};\n{\n    std::vector<std::jthread> ts;\n    for (int i = 0; i < 4; ++i)\n        ts.emplace_back([&n] {\n            for (int j = 0; j < 1000; ++j)\n                ++n;\n        });\n} // les jthread sont attendus ici\nstd::cout << n;",
+          "choices": [
+            "4000",
+            "Une valeur entre 1000 et 4000",
+            "1000",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "++n est atomique : aucun incrément n'est perdu. Les jthread sont joints à la fin du bloc, avant l'affichage.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-atomics-q2",
+          "prompt": "Même code, mais n est un int ordinaire. Que peut-on dire ?",
+          "choices": [
+            "C'est un comportement indéfini (data race), qui donne souvent moins de 4000",
+            "Le résultat est toujours 4000",
+            "Le résultat est toujours 1000",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des incréments concurrents non synchronisés se chevauchent et s'écrasent. Formellement, c'est même un comportement indéfini : aucune valeur n'est garantie.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-atomics-q3",
+          "prompt": "Deux threads réservent parfois le dernier article. Touche une ligne en cause.",
+          "code": "std::atomic<int> stock{1};\n\nbool reserver() {\n    if (stock > 0) {\n        --stock;\n        return true;\n    }\n    return false;\n}",
+          "bugLines": [
+            4,
+            5
+          ],
+          "explanation": "Le test et la décrémentation sont deux opérations atomiques distinctes : les deux threads peuvent voir stock == 1 avant que l'un ne décrémente. Il faut une boucle compare_exchange ou un mutex.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cpp-atomics-q4",
+          "prompt": "Que garantit volatile pour la communication entre threads ?",
+          "choices": [
+            "Rien : ni atomicité, ni ordre entre threads",
+            "Que les accès sont atomiques",
+            "Que la variable est protégée par un mutex",
+            "Que les écritures sont visibles immédiatement par tous les threads"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une confusion fréquente (venue de Java ou C#, où volatile a un sens différent). En C++, une variable volatile partagée sans synchronisation reste une data race.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-atomics-q5",
+          "prompt": "Complète pour décrémenter stock seulement s'il est positif, de façon atomique.",
+          "code": "int attendu = stock.load();\nwhile (attendu > 0 &&\n       !stock.___(\n           attendu, attendu - 1)) {\n}",
+          "answers": [
+            "compare_exchange_weak"
+          ],
+          "distractors": [
+            "exchange",
+            "fetch_sub",
+            "store"
+          ],
+          "explanation": "Si un autre thread a modifié stock entre-temps, l'échange échoue, attendu reçoit la nouvelle valeur et la boucle recommence. fetch_sub décrémenterait même un stock à 0.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cpp-atomics-q6",
+          "prompt": "Pour std::atomic<int> a, quelles instructions sont atomiques dans leur ensemble ?",
+          "choices": [
+            "++a;",
+            "a.fetch_add(2);",
+            "a = a + 1;",
+            "a += 1;"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "a = a + 1 lit a (atomiquement), calcule, puis écrit (atomiquement) : un autre thread peut écrire entre les deux. ++a et += sont des opérations lecture-modification-écriture atomiques.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cpp-defi-concurrence",
+    "title": "Défi entretien : concurrence",
+    "summary": "Initialisation, verrous et conception.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi10-q1",
+        "prompt": "Que vaut compteur à la fin ?",
+        "code": "int compteur = 0;\nstd::mutex m;\nauto travail = [&] {\n    for (int i = 0; i < 500; ++i) {\n        std::lock_guard g(m);\n        ++compteur;\n    }\n};\n{\n    std::jthread t1(travail);\n    std::jthread t2(travail);\n}\nstd::cout << compteur;",
+        "choices": [
+          "1000",
+          "500",
+          "Entre 500 et 1000",
+          "Comportement indéfini"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque incrément est protégé par le mutex, et les deux jthread sont joints à la fin du bloc : les 1000 incréments sont comptés.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi10-q2",
+        "prompt": "Cas pratique 1/3 — Appelée par plusieurs threads au démarrage, config() crée parfois deux Config. Touche la ligne où commence le problème.",
+        "code": "Config* instance = nullptr;\n\nConfig& config() {\n    if (instance == nullptr) {\n        instance = new Config();\n    }\n    return *instance;\n}",
+        "bugLines": [
+          4
+        ],
+        "explanation": "Deux threads peuvent voir instance == nullptr en même temps et créer chacun une Config (et l'un fuit). C'est en plus une data race sur instance.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi10-q3",
+        "prompt": "Cas pratique 2/3 — Quel est le correctif le plus simple et sûr ?",
+        "choices": [
+          "Config& config() { static Config c; return c; }",
+          "Déclarer instance volatile",
+          "Ajouter un second test if (instance == nullptr) sans mutex",
+          "Remplacer new par std::make_unique"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une variable static locale est initialisée une seule fois, de façon sûre en multithread. volatile ne synchronise rien, et le « double-checked locking » sans atomique reste une data race.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi10-q4",
+        "prompt": "Cas pratique 3/3 — Pourquoi cette initialisation static est-elle sûre ?",
+        "choices": [
+          "Depuis C++11, le standard garantit qu'un seul thread l'initialise ; les autres attendent",
+          "Les variables static sont initialisées avant main",
+          "Le compilateur ajoute un mutex autour de chaque fonction",
+          "Elle ne l'est que sous Windows"
+        ],
+        "answerIndex": 0,
+        "explanation": "On parle de « magic statics » : l'initialisation a lieu au premier appel, protégée par le compilateur. Elle n'a pas lieu avant main, contrairement aux variables globales.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi10-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "std::vector<int> resultats;\nstd::mutex m;\n\nvoid travail(int x) {\n    int r = calculLong(x);\n    m.lock();\n    resultats.push_back(r);\n    m.unlock();\n}",
+        "choices": [
+          "Si push_back lève une exception, m reste verrouillé pour toujours",
+          "std::lock_guard rendrait le déverrouillage automatique",
+          "calculLong(x) devrait être appelé sous le verrou",
+          "Il faudrait un std::atomic<std::vector<int>> à la place du mutex"
+        ],
+        "answerIndices": [
+          0,
+          1
+        ],
+        "explanation": "Calculer hors du verrou est justement une bonne pratique : la section critique reste courte. std::atomic ne s'applique qu'aux types trivialement copiables, pas à un vector.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi10-q6",
+        "prompt": "En entretien : quelle est la différence entre concurrence et parallélisme ?",
+        "choices": [
+          "Concurrence : plusieurs tâches en cours qui s'entrelacent ; parallélisme : exécution simultanée sur plusieurs cœurs",
+          "Ce sont deux synonymes",
+          "Le parallélisme utilise des mutex, la concurrence non",
+          "La concurrence n'existe qu'avec un seul thread"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un programme concurrent peut tourner sur un seul cœur (les tâches alternent). Le parallélisme exige plusieurs unités d'exécution. Les problèmes de synchronisation existent dans les deux cas.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

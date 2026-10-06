@@ -7,13 +7,337 @@
       "id": "cs-pattern-matching",
       "title": "Pattern matching",
       "summary": "switch expressions et patterns de propriétés.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "is et les patterns de type",
+          "body": "o is string s teste le type et déclare s dans la foulée. is null et is not null testent la nullité sans passer par un == redéfini.",
+          "code": "if (forme is Cercle c && c.Rayon > 0) { }\nif (client is not null) { }"
+        },
+        {
+          "title": "Les switch expressions",
+          "body": "Une switch expression renvoie une valeur : chaque branche associe un pattern à un résultat. Les branches sont testées dans l'ordre et la première qui correspond gagne. Une branche masquée par une précédente est une erreur de compilation.",
+          "code": "string Categorie(int age) => age switch {\n    < 0 => \"invalide\",\n    < 18 => \"mineur\",\n    >= 18 and < 65 => \"adulte\",\n    _ => \"senior\"\n};"
+        },
+        {
+          "title": "Patterns de propriétés et de listes",
+          "body": "{ Pays: \"FR\", Age: >= 18 } teste des propriétés. Les patterns de listes (C# 11) testent la forme d'une séquence : [] vide, [var x] un seul élément, [var premier, .., var dernier].",
+          "code": "decimal Remise(Client c) => c switch {\n    { EstPremium: true } => 0.2m,\n    { Anciennete: >= 5 } => 0.1m,\n    _ => 0m\n};"
+        },
+        {
+          "title": "L'exhaustivité",
+          "body": "Si aucune branche ne couvre une valeur possible, le compilateur avertit (CS8509) ; à l'exécution, cette valeur lève une SwitchExpressionException. Le pattern _ couvre tout ce qui reste."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-patterns-q1",
+          "prompt": "Avec Categorie de la leçon, qu'affiche ce code ?",
+          "code": "Console.WriteLine(Categorie(17) + Categorie(65));",
+          "choices": [
+            "mineursenior",
+            "mineuradulte",
+            "adultesenior",
+            "mineurinvalide"
+          ],
+          "answerIndex": 0,
+          "explanation": "17 correspond à < 18. 65 ne vérifie pas < 65 : seule la branche _ convient.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-patterns-q2",
+          "prompt": "Que se passe-t-il ?",
+          "code": "string Decrire(object o) => o switch {\n    int => \"entier\",\n    int n when n > 100 => \"grand\",\n    _ => \"autre\"\n};",
+          "choices": [
+            "Erreur de compilation : la deuxième branche est inatteignable",
+            "Decrire(500) renvoie « grand »",
+            "Decrire(500) renvoie « entier » sans avertissement",
+            "Avertissement seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "La branche int attrape déjà tous les entiers : celle qui suit ne peut jamais servir (erreur CS8510). Il faut placer le cas le plus précis en premier.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cs-patterns-q3",
+          "prompt": "Complète : 10 % de remise à partir de 5 ans d'ancienneté, rien sinon.",
+          "code": "decimal Remise(Client c) => c switch {\n    { EstPremium: true } => 0.2m,\n    { Anciennete: ___ 5 } => 0.1m,\n    ___ => 0m\n};",
+          "answers": [
+            ">=",
+            "_"
+          ],
+          "distractors": [
+            "==",
+            "default",
+            "else"
+          ],
+          "explanation": "Un pattern relationnel >= 5 teste la propriété ; _ (le « discard ») couvre tous les autres cas. default s'utilise dans un switch instruction, pas dans une switch expression.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-patterns-q4",
+          "prompt": "Qu'affiche ce code (C# 11) ?",
+          "code": "string Analyser(int[] t) => t switch {\n    [] => \"vide\",\n    [var x] => $\"seul {x}\",\n    [var p, .., var d] => $\"{p}..{d}\",\n};\n\nConsole.WriteLine(Analyser([4, 5, 6]));",
+          "choices": [
+            "4..6",
+            "seul 4",
+            "4..5",
+            "vide"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le tableau a trois éléments : seul le dernier pattern correspond. .. ignore les éléments du milieu ; p et d reçoivent le premier et le dernier.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-patterns-q5",
+          "prompt": "Que se passe-t-il pour Conduite(Feu.Orange) ?",
+          "code": "enum Feu { Rouge, Orange, Vert }\n\nstring Conduite(Feu f) => f switch {\n    Feu.Rouge => \"Stop\",\n    Feu.Vert => \"Passe\",\n};",
+          "choices": [
+            "Une SwitchExpressionException est levée (et le compilateur avait averti)",
+            "La méthode renvoie null",
+            "La méthode renvoie une chaîne vide",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le switch n'est pas exhaustif : avertissement CS8509 à la compilation, exception à l'exécution pour la valeur non couverte. Il faut traiter Orange ou ajouter une branche _.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cs-patterns-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "o is string s teste le type et déclare s",
+            "Dans une switch expression, la première branche qui correspond gagne",
+            "is not null est un pattern valide",
+            "Le pattern _ ne peut apparaître qu'en premier"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "_ correspond à tout : placé en premier, il rendrait toutes les autres branches inatteignables. On le met en dernier.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "cs-nouveautes",
       "title": "Nouveautés récentes",
       "summary": "Primary constructors, collection expressions…",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "C# 9 à 11",
+          "body": "Records, init, top-level statements, global using (un import pour tout le projet), namespaces de fichier (namespace App;), raw string literals \"\"\"...\"\"\", membres required, patterns de listes, generic math."
+        },
+        {
+          "title": "Constructeurs principaux (C# 12)",
+          "body": "Les paramètres déclarés après le nom de la classe sont utilisables dans toute la classe. Ce ne sont pas des propriétés, et ils ne sont pas readonly : on peut les modifier par erreur. Pour exposer une valeur, on déclare une propriété explicitement.",
+          "code": "public class Service(ILogger<Service> logger) {\n    public void Faire() => logger.LogInformation(\"ok\");\n}"
+        },
+        {
+          "title": "Expressions de collection (C# 12)",
+          "body": "[1, 2, 3] crée un tableau, une List, un Span... selon le type attendu. .. (spread) insère les éléments d'une autre collection.",
+          "code": "int[] a = [1, 2];\nList<int> b = [..a, 3];\nint[] vide = [];"
+        },
+        {
+          "title": "C# 13 (.NET 9)",
+          "body": "params accepte d'autres collections que les tableaux (Span, IEnumerable...), un nouveau type System.Threading.Lock dédié au verrouillage, et la séquence d'échappement \\e."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-nouveautes-q1",
+          "prompt": "Qu'affiche ce code (C# 12) ?",
+          "code": "int[] a = [1, 2];\nint[] b = [3];\nList<int> c = [..a, ..b, 4];\nConsole.WriteLine(string.Join(\",\", c));",
+          "choices": [
+            "1,2,3,4",
+            "1,2,4",
+            "[1,2],[3],4",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'opérateur de propagation .. insère les éléments de a puis de b, suivis de 4. Le type cible (List<int>) décide de la collection créée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-nouveautes-q2",
+          "prompt": "Dans public class Service(ILogger logger), que devient logger ?",
+          "choices": [
+            "Un paramètre utilisable dans toute la classe, mais pas une propriété publique",
+            "Une propriété publique en lecture seule",
+            "Un champ readonly public",
+            "Un paramètre utilisable uniquement dans le constructeur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Contrairement aux records positionnels, une classe à constructeur principal ne génère aucune propriété. Le paramètre est capturé dans un champ caché, modifiable.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cs-nouveautes-q3",
+          "prompt": "Après p.Nom = \"Léo\", Saluer() dit encore « Bonjour Ana ». Touche la ligne fautive.",
+          "code": "public class Personne(string nom) {\n    public string Nom { get; set; } = nom;\n    public string Saluer() => $\"Bonjour {nom}\";\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Saluer lit le paramètre nom, pas la propriété Nom : la valeur est stockée deux fois et les deux copies divergent. Il faut écrire {Nom}. Le compilateur signale d'ailleurs ce double stockage (CS9124).",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cs-nouveautes-q4",
+          "prompt": "Complète ce littéral de chaîne brut (C# 11), qui accepte les guillemets tels quels.",
+          "code": "var json = ___\n    {\"nom\": \"Ana\", \"age\": 31}\n    ___;",
+          "answers": [
+            "\"\"\"",
+            "\"\"\""
+          ],
+          "distractors": [
+            "@\"",
+            "'''",
+            "$\""
+          ],
+          "explanation": "Un raw string literal commence et se termine par au moins trois guillemets. Les guillemets internes n'ont pas besoin d'être échappés, et l'indentation commune est retirée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-nouveautes-q5",
+          "prompt": "À quoi sert global using System.Text.Json; ?",
+          "choices": [
+            "À importer ce namespace dans tous les fichiers du projet",
+            "À charger la bibliothèque au démarrage",
+            "À rendre toutes les classes du namespace publiques",
+            "À remplacer la référence NuGet"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une seule déclaration suffit pour tout le projet. Les projets récents activent aussi les ImplicitUsings (System, System.Linq...) de cette façon.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cs-nouveautes-q6",
+          "prompt": "Quelles fonctionnalités sont arrivées en C# 12 ?",
+          "choices": [
+            "Les constructeurs principaux pour les classes",
+            "Les expressions de collection [1, 2, 3]",
+            "Les records",
+            "Les paramètres par défaut dans les lambdas"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Les records datent de C# 9 (avec leur syntaxe positionnelle). C# 12 a généralisé les constructeurs principaux aux classes et aux structs.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cs-defi-moderne",
+    "title": "Défi entretien : C# moderne",
+    "summary": "Patterns, ordre des branches et constructeurs principaux.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cs-defi8-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "string Pfc(string a, string b) => (a, b) switch {\n    var (x, y) when x == y => \"égalité\",\n    (\"pierre\", \"ciseaux\")\n        or (\"ciseaux\", \"feuille\")\n        or (\"feuille\", \"pierre\") => \"gagné\",\n    _ => \"perdu\"\n};\n\nConsole.WriteLine(Pfc(\"feuille\", \"pierre\")\n                + Pfc(\"pierre\", \"feuille\"));",
+        "choices": [
+          "gagnéperdu",
+          "perdugagné",
+          "gagnégagné",
+          "égalitéperdu"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le pattern de tuple teste les deux valeurs à la fois. (feuille, pierre) fait partie des combinaisons gagnantes ; (pierre, feuille) tombe dans _.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "cs-defi8-q2",
+        "prompt": "Cas pratique 1/3 — Le compilateur refuse cette méthode. Touche la ligne fautive.",
+        "code": "decimal Frais(Colis c) => c switch {\n    { Express: true } => 15m,\n    { Express: true, Poids: > 10 } => 25m,\n    { Poids: > 30 } => 50m,\n    _ => 8m\n};",
+        "bugLines": [
+          3
+        ],
+        "explanation": "Tous les colis express sont déjà attrapés par la ligne 2 : la branche suivante est inatteignable (erreur CS8510).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi8-q3",
+        "prompt": "Cas pratique 2/3 — Quelle est la règle à retenir ?",
+        "choices": [
+          "Les branches sont testées dans l'ordre : les cas les plus précis doivent venir en premier",
+          "Les branches sont triées automatiquement par le compilateur",
+          "Un pattern de propriété ne peut tester qu'une propriété",
+          "Il faut une branche par valeur possible de Poids"
+        ],
+        "answerIndex": 0,
+        "explanation": "Comme pour les catch, l'ordre exprime la priorité. Le compilateur détecte une branche entièrement masquée, mais pas une priorité métier mal choisie.",
+        "difficulty": 1
+      },
+      {
+        "type": "order",
+        "id": "cs-defi8-q4",
+        "prompt": "Cas pratique 3/3 — Remets les branches dans l'ordre : au-delà de 30 kg, c'est toujours 50, même en express.",
+        "lines": [
+          "decimal Frais(Colis c) => c switch {",
+          "    { Poids: > 30 } => 50m,",
+          "    { Express: true, Poids: > 10 } => 25m,",
+          "    { Express: true } => 15m,",
+          "    _ => 8m",
+          "};"
+        ],
+        "explanation": "La règle la plus prioritaire (plus de 30 kg) vient en premier, puis l'express lourd avant l'express simple, et enfin le cas par défaut.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cs-defi8-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "public class Commande(int id, List<Ligne> lignes) {\n    public int Id => id;\n\n    public decimal Total() {\n        lignes = lignes.Where(l => l.Qte > 0).ToList();\n        return lignes.Sum(l => l.Prix * l.Qte);\n    }\n}",
+        "choices": [
+          "Total modifie l'état de l'objet : un calcul ne devrait pas avoir d'effet de bord",
+          "Les paramètres d'un constructeur principal ne sont pas readonly : on peut les réaffecter par erreur",
+          "La liste reçue est partagée avec l'appelant, sans copie",
+          "public int Id => id; est interdit avec un constructeur principal"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Exposer un paramètre via une propriété calculée est parfaitement valide. En revanche, réaffecter lignes dans Total change l'objet à chaque appel, et l'appelant peut modifier la liste partagée.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi8-q6",
+        "prompt": "En entretien : quand préférer une switch expression sur les types à des méthodes virtual ?",
+        "choices": [
+          "Quand l'ensemble des types est fermé et qu'on ajoute souvent de nouvelles opérations",
+          "Quand on ajoute souvent de nouveaux types",
+          "Toujours : virtual est obsolète",
+          "Jamais : c'est plus lent"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec virtual, ajouter un type est facile mais ajouter une opération touche toutes les classes ; avec un switch, c'est l'inverse. C'est le « problème de l'expression » : on choisit selon ce qui change le plus souvent.",
+        "difficulty": 3
+      }
+    ]
+  }
 }

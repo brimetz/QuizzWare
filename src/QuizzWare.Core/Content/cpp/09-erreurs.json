@@ -7,19 +7,453 @@
       "id": "cpp-exceptions",
       "title": "Exceptions",
       "summary": "throw, try et catch.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "throw, try, catch",
+          "body": "throw lance un objet, de préférence dérivé de std::exception (std::runtime_error, std::invalid_argument, std::out_of_range...). L'exécution remonte jusqu'au premier catch compatible ; en chemin, les destructeurs des objets locaux sont appelés : c'est le déroulement de la pile.",
+          "code": "double racine(double x) {\n    if (x < 0)\n        throw std::invalid_argument(\"x < 0\");\n    return std::sqrt(x);\n}\n\ntry {\n    racine(-1);\n} catch (const std::exception& e) {\n    std::cerr << e.what();\n}"
+        },
+        {
+          "title": "Attraper par référence constante",
+          "body": "Attraper par valeur copie l'exception et la tranche si on attrape une classe de base. Les catch sont testés dans l'ordre : le premier compatible gagne, il faut donc placer les plus spécifiques en premier."
+        },
+        {
+          "title": "Relancer",
+          "body": "throw; seul relance l'exception en cours, intacte. throw e; lance une copie du type déclaré de e : si e est une std::exception&, l'appelant ne reçoit plus qu'une std::exception."
+        },
+        {
+          "title": "Jamais depuis un destructeur",
+          "body": "Les destructeurs sont implicitement noexcept : une exception qui en sort appelle std::terminate et arrête le programme. Un destructeur qui peut échouer doit gérer l'erreur lui-même (journaliser, ignorer)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-exceptions-q1",
+          "prompt": "Comment faut-il attraper une exception ?",
+          "choices": [
+            "Par référence constante : catch (const std::exception& e)",
+            "Par valeur : catch (std::exception e)",
+            "Par pointeur : catch (std::exception* e)",
+            "Toujours avec catch (...)"
+          ],
+          "answerIndex": 0,
+          "explanation": "La référence évite la copie et préserve le type réel (pas de slicing) : e.what() renvoie bien le message de l'exception dérivée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-exceptions-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "try {\n    throw std::out_of_range(\"indice\");\n} catch (const std::exception& e) {\n    std::cout << 'E';\n} catch (const std::out_of_range& e) {\n    std::cout << 'O';\n}",
+          "choices": [
+            "E",
+            "O",
+            "EO",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les catch sont testés dans l'ordre : out_of_range dérive de std::exception, le premier convient. Le second est inaccessible (les compilateurs le signalent par un avertissement).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-exceptions-q3",
+          "prompt": "L'appelant reçoit une std::exception au lieu de l'std::invalid_argument d'origine. Touche la ligne fautive.",
+          "code": "try {\n    charger();\n} catch (const std::exception& e) {\n    journaliser(e.what());\n    throw e;\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "throw e; lance une copie du type statique de e, std::exception : l'objet est tranché. throw; relance l'exception d'origine sans la copier.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-exceptions-q4",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "struct G {\n    ~G() { std::cout << \"~G \"; }\n};\nvoid f() {\n    G g;\n    throw std::runtime_error(\"x\");\n}\nint main() {\n    try { f(); }\n    catch (const std::exception&) {\n        std::cout << \"catch\";\n    }\n}",
+          "choices": [
+            "~G catch",
+            "catch ~G",
+            "catch",
+            "~G"
+          ],
+          "answerIndex": 0,
+          "explanation": "En remontant vers le catch, la pile est déroulée : g est détruit en sortant de f, avant que le gestionnaire ne s'exécute.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-exceptions-q5",
+          "prompt": "Complète : signaler un âge invalide, puis traiter l'erreur.",
+          "code": "try {\n    if (age < 0)\n        ___ std::invalid_argument(\"âge\");\n} ___ (const std::exception& e) {\n    std::cerr << e.what();\n}",
+          "answers": [
+            "throw",
+            "catch"
+          ],
+          "distractors": [
+            "raise",
+            "except",
+            "return"
+          ],
+          "explanation": "C++ utilise throw et catch (raise et except sont les mots-clés de Python).",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cpp-exceptions-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Pendant la propagation, les destructeurs des objets locaux sont appelés",
+            "Une exception qui sort d'un destructeur provoque en général std::terminate",
+            "Le premier catch compatible est choisi, pas le plus précis",
+            "On ne peut lancer que des objets dérivés de std::exception"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "throw 42; est légal : on peut lancer n'importe quel type copiable ou déplaçable, même si dériver de std::exception est la bonne pratique.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "cpp-garanties",
       "title": "Garanties d'exception",
       "summary": "Basique, forte, nothrow.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Trois niveaux de garantie",
+          "body": "Basique : en cas d'exception, rien ne fuit et l'objet reste valide, mais son état a pu changer. Forte : tout ou rien, l'état est exactement celui d'avant l'appel. Nothrow : la fonction ne lève jamais. Toute fonction devrait au moins offrir la garantie basique."
+        },
+        {
+          "title": "Obtenir la garantie forte",
+          "body": "On fait le travail risqué sur une copie, puis on échange avec une opération qui ne lève pas. Si une exception survient avant l'échange, l'objet d'origine n'a pas été touché.",
+          "code": "void Annuaire::ajouter(Personne p) {\n    auto copie = contacts_;        // peut lever\n    copie.push_back(std::move(p)); // peut lever\n    std::ranges::sort(copie);      // peut lever\n    contacts_.swap(copie);         // noexcept\n}"
+        },
+        {
+          "title": "noexcept",
+          "body": "noexcept promet qu'une fonction ne lèvera pas ; si elle le fait malgré tout, std::terminate est appelé. Cette promesse permet des optimisations : vector déplace au lieu de copier si le constructeur de déplacement est noexcept. Destructeurs, swap et opérations de déplacement devraient l'être."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-garanties-q1",
+          "prompt": "Que signifie la garantie forte ?",
+          "choices": [
+            "Si une exception est levée, l'état est exactement celui d'avant l'appel",
+            "La fonction ne lève jamais d'exception",
+            "Aucune ressource ne fuit, mais l'état peut avoir changé",
+            "L'exception est toujours attrapée dans la fonction"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la sémantique « transaction » : tout réussit, ou rien ne change. La description sans fuite mais avec un état modifié est la garantie basique.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-garanties-q2",
+          "prompt": "Que se passe-t-il si une fonction noexcept lève une exception ?",
+          "choices": [
+            "std::terminate est appelé et le programme s'arrête",
+            "L'exception est ignorée",
+            "Erreur de compilation",
+            "L'exception est transformée en code d'erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "noexcept n'est pas vérifié à la compilation : c'est une promesse. Si elle est violée, la pile n'est pas forcément déroulée et std::terminate arrête tout.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-garanties-q3",
+          "prompt": "Si crediter lève une exception, l'argent disparaît. Touche la ligne qui devrait venir après l'opération risquée.",
+          "code": "void Compte::virer(Compte& dest, int m) {\n    solde_ -= m;\n    dest.crediter(m); // peut lever\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "On débite avant une opération qui peut échouer : en cas d'exception, le débit reste. Il faut d'abord faire ce qui peut échouer, puis les modifications qui ne lèvent pas (solde_ -= m).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cpp-garanties-q4",
+          "prompt": "Quelle garantie offre std::vector::push_back (si le constructeur de déplacement de T est noexcept ou si T est copiable) ?",
+          "choices": [
+            "La garantie forte",
+            "La garantie basique seulement",
+            "Nothrow : push_back ne lève jamais",
+            "Aucune garantie"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si l'allocation ou la construction échoue, le vector est inchangé. C'est pour tenir cette promesse qu'il copie au lieu de déplacer quand le déplacement pourrait lever.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cpp-garanties-q5",
+          "prompt": "Complète : ces deux fonctions ne doivent jamais lever.",
+          "code": "void swap(Tampon& a, Tampon& b) ___ {\n    std::swap(a.d, b.d);\n}\n\nTampon(Tampon&& o) ___ : d(o.d) {\n    o.d = nullptr;\n}",
+          "answers": [
+            "noexcept",
+            "noexcept"
+          ],
+          "distractors": [
+            "const",
+            "throw()",
+            "override"
+          ],
+          "explanation": "noexcept est la façon moderne de l'écrire. L'ancienne spécification throw() a été supprimée en C++20.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cpp-garanties-q6",
+          "prompt": "Quelles fonctions devraient être noexcept ?",
+          "choices": [
+            "Les destructeurs",
+            "Les fonctions swap",
+            "Les constructeurs de déplacement",
+            "Une fonction qui alloue de la mémoire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Ce sont les briques des garanties fortes : elles doivent pouvoir s'exécuter sans échec. Une allocation peut échouer (std::bad_alloc) : la marquer noexcept transformerait cet échec en arrêt du programme.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "cpp-expected",
       "title": "Alternatives aux exceptions",
       "summary": "optional et expected (C++23).",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Quand éviter les exceptions",
+          "body": "Les exceptions conviennent aux erreurs rares et graves. Pour un échec attendu (une saisie invalide, une recherche sans résultat), ou dans les projets compilés sans exceptions (jeux vidéo, embarqué), on renvoie plutôt l'échec dans la valeur de retour."
+        },
+        {
+          "title": "std::optional (C++17)",
+          "body": "Une valeur, ou rien. Pas d'allocation dynamique : la valeur est stockée dans l'objet. *opt et opt-> sur un optional vide sont des comportements indéfinis ; value() lève std::bad_optional_access.",
+          "code": "std::optional<int> versEntier(std::string_view s);\n\nif (auto n = versEntier(\"42\")) {\n    utiliser(*n);\n}\nint port = lirePort().value_or(8080);"
+        },
+        {
+          "title": "std::expected (C++23)",
+          "body": "Une valeur, ou une erreur qui explique pourquoi. On teste le résultat comme un bool, on lit la valeur avec * et l'erreur avec error().",
+          "code": "std::expected<Config, std::string>\ncharger(const std::string& chemin);\n\nauto c = charger(\"app.ini\");\nif (!c)\n    std::cerr << c.error();"
+        },
+        {
+          "title": "[[nodiscard]]",
+          "body": "Une erreur renvoyée peut être ignorée par mégarde. [[nodiscard]] sur la fonction (ou le type) fait avertir le compilateur quand la valeur de retour n'est pas utilisée."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-expected-q1",
+          "prompt": "Dans quel cas std::optional est-il le bon outil ?",
+          "choices": [
+            "L'absence de résultat est un cas normal, comme une recherche sans résultat",
+            "Une erreur grave et rare, comme un disque plein",
+            "On veut expliquer pourquoi l'opération a échoué",
+            "On veut partager un objet entre plusieurs propriétaires"
+          ],
+          "answerIndex": 0,
+          "explanation": "optional dit « il n'y a rien », sans dire pourquoi. Pour porter une raison, std::expected ; pour une erreur exceptionnelle, une exception.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-expected-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "std::optional<int> a;\nstd::optional<int> b = 5;\nstd::cout << a.value_or(-1) << ' '\n          << b.value_or(-1) << ' '\n          << a.has_value();",
+          "choices": [
+            "-1 5 0",
+            "0 5 0",
+            "-1 5 1",
+            "Une exception std::bad_optional_access"
+          ],
+          "answerIndex": 0,
+          "explanation": "a est vide : value_or renvoie la valeur de repli -1 et has_value() vaut false (affiché 0). b contient 5.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-expected-q3",
+          "prompt": "Ce code a un comportement indéfini quand l'utilisateur n'existe pas. Touche la ligne fautive.",
+          "code": "std::optional<Utilisateur> trouver(int id);\n\nvoid saluer(int id) {\n    auto u = trouver(id);\n    std::cout << \"Bonjour \" << u->nom;\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "u-> sur un optional vide est indéfini. Il faut tester d'abord : if (u) { ... }, ou utiliser u.value() qui lève une exception plutôt que de corrompre la mémoire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-expected-q4",
+          "prompt": "Qu'apporte std::expected<T, E> par rapport à std::optional<T> ?",
+          "choices": [
+            "En cas d'échec, il porte une valeur d'erreur qui explique pourquoi",
+            "Il lève une exception automatiquement",
+            "Il peut contenir plusieurs valeurs",
+            "Il évite toute copie de T"
+          ],
+          "answerIndex": 0,
+          "explanation": "expected contient soit un T, soit un E (message, code d'erreur, enum...). On le lit avec *res et res.error().",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "cpp-expected-q5",
+          "prompt": "Complète cette division qui renvoie le quotient ou un message d'erreur (C++23).",
+          "code": "std::___<int, std::string>\ndiviser(int a, int b) {\n    if (b == 0)\n        return std::___(\"division par zéro\");\n    return a / b;\n}",
+          "answers": [
+            "expected",
+            "unexpected"
+          ],
+          "distractors": [
+            "optional",
+            "nullopt",
+            "error"
+          ],
+          "explanation": "std::unexpected(...) construit la branche erreur ; return a / b; construit implicitement la branche valeur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-expected-q6",
+          "prompt": "À quoi sert l'attribut [[nodiscard]] ?",
+          "choices": [
+            "À faire avertir le compilateur si la valeur de retour est ignorée",
+            "À empêcher la fonction de lever des exceptions",
+            "À interdire la copie du résultat",
+            "À supprimer la fonction de la bibliothèque"
+          ],
+          "answerIndex": 0,
+          "explanation": "Indispensable pour les fonctions qui renvoient une erreur : oublier de tester le résultat devient un avertissement au lieu d'un bug silencieux.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cpp-expected-q7",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "value() sur un optional vide lève std::bad_optional_access",
+            "*opt sur un optional vide est un comportement indéfini",
+            "Le type d'erreur de std::expected doit dériver de std::exception",
+            "Un std::optional<T> ne fait pas d'allocation dynamique"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "E peut être n'importe quel type : un enum, une string, un std::error_code... optional réserve la place de T directement dans l'objet.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cpp-defi-erreurs",
+    "title": "Défi entretien : erreurs",
+    "summary": "Relance, destructeurs et conception robuste.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi9-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "try {\n    try {\n        throw std::runtime_error(\"A\");\n    } catch (const std::exception& e) {\n        std::cout << '1';\n        throw;\n    }\n} catch (const std::runtime_error& e) {\n    std::cout << '2' << e.what();\n}",
+        "choices": [
+          "12A",
+          "1",
+          "12",
+          "2A"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le catch intérieur affiche 1 puis relance avec throw; : l'exception d'origine, toujours une runtime_error, est attrapée par le catch extérieur.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi9-q2",
+        "prompt": "Cas pratique 1/3 — Le programme s'arrête brutalement à la destruction d'un Fichier. Touche la ligne en cause.",
+        "code": "class Fichier {\n    FILE* f;\npublic:\n    explicit Fichier(const char* chemin)\n        : f(std::fopen(chemin, \"r\")) {}\n    ~Fichier() {\n        if (std::fclose(f) != 0)\n            throw std::runtime_error(\"fclose\");\n    }\n};",
+        "bugLines": [
+          8
+        ],
+        "explanation": "Le destructeur est implicitement noexcept : l'exception appelle std::terminate. Un destructeur doit absorber ses erreurs (journaliser par exemple).",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi9-q3",
+        "prompt": "Cas pratique 2/3 — Quels autres problèmes a cette classe ?",
+        "choices": [
+          "Si fopen échoue, f vaut nullptr et fclose(nullptr) est indéfini",
+          "La copie générée mène à deux fclose sur le même FILE*",
+          "Le constructeur ne signale pas l'échec de l'ouverture",
+          "explicit empêche de créer un Fichier"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La classe possède une ressource sans gérer l'échec d'acquisition ni la copie. explicit empêche seulement la conversion implicite depuis un const char*.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi9-q4",
+        "prompt": "Cas pratique 3/3 — Quelle conception est la bonne ?",
+        "choices": [
+          "Lever dans le constructeur si l'ouverture échoue, ne jamais lever dans le destructeur, interdire la copie",
+          "Ne jamais lever, et tester f à chaque utilisation",
+          "Lever dans le destructeur, mais attraper l'exception dans main",
+          "Rendre le destructeur virtuel"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le constructeur établit l'invariant « f est valide » ou échoue ; le destructeur libère sans échouer. En pratique, std::ifstream ou un unique_ptr avec fclose comme deleter font déjà tout cela.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi9-q5",
+        "prompt": "En entretien : quel argument décisif en faveur des exceptions pour les constructeurs ?",
+        "choices": [
+          "Un constructeur n'a pas de valeur de retour : lever est la seule façon propre de signaler un échec",
+          "Les exceptions sont plus rapides que les codes d'erreur",
+          "Un constructeur ne peut pas recevoir de paramètres",
+          "Les destructeurs attrapent automatiquement les exceptions"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans exception, il faut un objet « zombie » avec une méthode estValide(), ou une fonction de fabrique qui renvoie optional/expected. Lever garantit qu'un objet construit est toujours utilisable.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi9-q6",
+        "prompt": "En entretien : que coûtent les exceptions avec les compilateurs modernes (modèle « zero-cost ») ?",
+        "choices": [
+          "Presque rien tant qu'aucune n'est levée, mais lever est coûteux",
+          "Un coût fixe à chaque appel de fonction",
+          "Rien du tout, même quand on lève",
+          "Elles doublent la taille de la pile"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les tables de déroulement sont consultées seulement quand une exception est lancée : le chemin normal est rapide, le chemin exceptionnel beaucoup plus lent. D'où la règle : exceptions pour les cas exceptionnels.",
+        "difficulty": 3
+      }
+    ]
+  }
 }

@@ -7,19 +7,441 @@
       "id": "cpp-heritage",
       "title": "Héritage",
       "summary": "Public, protégé, privé.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "« Est un »",
+          "body": "class Chien : public Animal déclare qu'un Chien est un Animal : il en reçoit les membres et peut être utilisé partout où un Animal est attendu (par référence ou pointeur). À la construction, la partie Animal est construite d'abord ; à la destruction, elle est détruite en dernier.",
+          "code": "class Animal {\npublic:\n    explicit Animal(std::string nom);\n};\n\nclass Chien : public Animal {\npublic:\n    explicit Chien(std::string nom)\n        : Animal(std::move(nom)) {}\n};"
+        },
+        {
+          "title": "public, protected, private",
+          "body": "Un membre protected est accessible à la classe et à ses dérivées, pas à l'extérieur. L'héritage public conserve l'interface (relation « est un »). Attention : avec class, l'héritage est private par défaut ; avec struct, il est public."
+        },
+        {
+          "title": "Préférer la composition",
+          "body": "Si B a seulement besoin du code de A, B doit contenir un A (« a un »), pas en hériter. L'héritage public n'est justifié que si un B peut réellement remplacer un A partout (principe de substitution de Liskov). Exemple classique : un Carre n'est pas un bon Rectangle modifiable, car changer sa largeur seule casse ses règles."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-heritage-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "struct Base {\n    Base() { std::cout << 'B'; }\n    ~Base() { std::cout << 'b'; }\n};\nstruct Fille : Base {\n    Fille() { std::cout << 'F'; }\n    ~Fille() { std::cout << 'f'; }\n};\n\nint main() { Fille x; }",
+          "choices": [
+            "BFfb",
+            "FBbf",
+            "BFbf",
+            "FBfb"
+          ],
+          "answerIndex": 0,
+          "explanation": "La base est construite avant la classe dérivée, et détruite après elle : construction B puis F, destruction f puis b.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-heritage-q2",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "class Base {\npublic:\n    void saluer() {}\n};\nclass Fille : Base {};\n\nFille f;\nf.saluer();",
+          "choices": [
+            "Erreur de compilation : avec class, l'héritage est privé par défaut",
+            "saluer() est appelée normalement",
+            "Erreur à l'exécution",
+            "Avertissement, mais l'appel fonctionne"
+          ],
+          "answerIndex": 0,
+          "explanation": "class Fille : Base équivaut à class Fille : private Base. Les membres publics de Base deviennent privés dans Fille. Il faut écrire : public Base.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-heritage-q3",
+          "prompt": "Qui peut accéder à un membre protected ?",
+          "choices": [
+            "La classe elle-même et ses classes dérivées",
+            "Uniquement la classe elle-même",
+            "Tout le monde, en lecture seule",
+            "Les classes du même fichier"
+          ],
+          "answerIndex": 0,
+          "explanation": "protected se situe entre private et public : invisible de l'extérieur, mais accessible aux classes dérivées.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-heritage-q4",
+          "prompt": "Cette classe ne compile pas. Touche la ligne fautive.",
+          "code": "class Animal {\npublic:\n    Animal(std::string nom) : nom_(nom) {}\nprivate:\n    std::string nom_;\n};\nclass Chien : public Animal {\npublic:\n    Chien() {}\n};",
+          "bugLines": [
+            9
+          ],
+          "explanation": "Animal n'a pas de constructeur par défaut : le constructeur de Chien doit construire sa base explicitement, par exemple Chien() : Animal(\"Rex\") {}.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-heritage-q5",
+          "prompt": "Complète : un Chien est un Animal, et il transmet son nom au constructeur de la base.",
+          "code": "class Chien : ___ Animal {\npublic:\n    explicit Chien(std::string nom)\n        : ___(std::move(nom)) {}\n};",
+          "answers": [
+            "public",
+            "Animal"
+          ],
+          "distractors": [
+            "private",
+            "super",
+            "base"
+          ],
+          "explanation": "L'héritage public exprime « est un ». La base se construit dans la liste d'initialisation en l'appelant par son nom : C++ n'a pas de mot-clé super.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-heritage-q6",
+          "prompt": "Dans quel cas l'héritage public est-il le bon outil ?",
+          "choices": [
+            "Un Bouton doit pouvoir être utilisé partout où un Widget est attendu",
+            "Une Voiture a un Moteur",
+            "Une Pile veut réutiliser le code de std::vector",
+            "Un Carre doit hériter d'un Rectangle dont on modifie largeur et hauteur séparément"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'héritage public exprime la substituabilité. « A un » appelle la composition, la simple réutilisation de code aussi, et le Carre casse le contrat d'un Rectangle modifiable (Liskov).",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "cpp-virtual",
       "title": "Fonctions virtuelles",
       "summary": "Polymorphisme dynamique, override, final.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "virtual",
+          "body": "Appelée via une référence ou un pointeur vers la base, une fonction virtual est choisie selon le type réel de l'objet, à l'exécution. Une fonction non virtuelle est choisie selon le type déclaré, à la compilation.",
+          "code": "struct Forme {\n    virtual double aire() const { return 0; }\n};\nstruct Carre : Forme {\n    double c = 2;\n    double aire() const override { return c * c; }\n};\n\nCarre k;\nForme& f = k;\nf.aire(); // 4 : version de Carre"
+        },
+        {
+          "title": "override et final",
+          "body": "override demande au compilateur de vérifier qu'on redéfinit bien une fonction virtuelle : une faute de signature (const oublié, type de paramètre différent) devient une erreur au lieu de créer silencieusement une nouvelle fonction. final interdit toute redéfinition (ou dérivation) ultérieure."
+        },
+        {
+          "title": "Classes abstraites",
+          "body": "Une fonction virtuelle pure (= 0) n'a pas d'implémentation dans la base : la classe devient abstraite et ne peut pas être instanciée. C'est la manière d'écrire une interface en C++.",
+          "code": "struct Forme {\n    virtual double aire() const = 0;\n    virtual ~Forme() = default;\n};"
+        },
+        {
+          "title": "Sous le capot : la vtable",
+          "body": "Chaque classe polymorphe a une table de pointeurs vers ses fonctions virtuelles, et chaque objet contient un pointeur vers la table de sa classe. Un appel virtuel coûte une indirection et empêche souvent l'inlining."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-virtual-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "struct Animal {\n    void parler() { std::cout << \"...\"; }\n    virtual void manger() { std::cout << 'A'; }\n};\nstruct Chat : Animal {\n    void parler() { std::cout << \"Miaou\"; }\n    void manger() override { std::cout << 'C'; }\n};\n\nChat c;\nAnimal& a = c;\na.parler();\na.manger();",
+          "choices": [
+            "...C",
+            "MiaouC",
+            "...A",
+            "MiaouA"
+          ],
+          "answerIndex": 0,
+          "explanation": "parler() n'est pas virtuelle : le type déclaré (Animal&) décide. manger() est virtuelle : le type réel (Chat) décide.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-virtual-q2",
+          "prompt": "Forme& f = carre; f.aire(); n'appelle jamais la version de Carre. Touche la ligne fautive.",
+          "code": "struct Forme {\n    virtual double aire() const;\n};\nstruct Carre : Forme {\n    double aire() { return c * c; }\n    double c = 1;\n};",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Sans const, Carre::aire a une autre signature : elle masque la fonction de la base au lieu de la redéfinir. Avec override, le compilateur aurait signalé l'erreur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-virtual-q3",
+          "prompt": "Que garantit le mot-clé override ?",
+          "choices": [
+            "Une erreur de compilation si la fonction ne redéfinit aucune fonction virtuelle de la base",
+            "Que la fonction sera appelée plus rapidement",
+            "Que la fonction ne pourra plus être redéfinie",
+            "Que la fonction de la base est appelée aussi"
+          ],
+          "answerIndex": 0,
+          "explanation": "override est une vérification : il transforme une erreur de signature silencieuse en erreur de compilation. C'est final qui interdit les redéfinitions suivantes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-virtual-q4",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "struct Forme {\n    virtual double aire() const = 0;\n};\n\nForme f;",
+          "choices": [
+            "Erreur de compilation : Forme est abstraite",
+            "f.aire() renverra 0",
+            "Crash à l'exécution",
+            "f est créée, mais aire() ne peut pas être appelée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une classe avec au moins une fonction virtuelle pure ne peut pas être instanciée : seules ses classes dérivées concrètes le peuvent.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "cpp-virtual-q5",
+          "prompt": "Complète cette interface et son implémentation.",
+          "code": "struct Forme {\n    ___ double aire() const = 0;\n    virtual ~Forme() = default;\n};\nstruct Cercle : Forme {\n    double r = 1;\n    double aire() const ___ {\n        return 3.14 * r * r;\n    }\n};",
+          "answers": [
+            "virtual",
+            "override"
+          ],
+          "distractors": [
+            "static",
+            "inline",
+            "explicit"
+          ],
+          "explanation": "= 0 n'est permis que sur une fonction virtual. override vérifie que Cercle redéfinit bien aire().",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cpp-virtual-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Via une référence vers la base, un appel virtuel dépend du type réel de l'objet",
+            "Un objet d'une classe polymorphe contient en général un pointeur vers une vtable",
+            "Une fonction virtuelle appelée dans le constructeur de la base exécute la version de la dérivée",
+            "Une fonction marquée final ne peut plus être redéfinie"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Pendant le constructeur de la base, l'objet n'est encore qu'une base : c'est la version de la base qui est appelée. Les autres affirmations décrivent le fonctionnement normal du polymorphisme.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "cpp-slicing",
       "title": "Pièges du polymorphisme",
       "summary": "Slicing et destructeur virtuel.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le slicing",
+          "body": "Copier un objet dérivé dans une variable de type base, par valeur, « tranche » la partie dérivée : il ne reste qu'une base, et les appels virtuels vont à la version de la base. Le polymorphisme ne fonctionne que via des références ou des pointeurs.",
+          "code": "void parler(Animal a);        // slicing\nvoid parler(const Animal& a); // OK"
+        },
+        {
+          "title": "Le destructeur virtuel",
+          "body": "Détruire un objet dérivé via un pointeur vers la base dont le destructeur n'est pas virtuel est un comportement indéfini : en pratique, le destructeur de la dérivée n'est pas appelé et ses ressources fuient. Règle : une base polymorphe a un destructeur public et virtuel.",
+          "code": "struct Base {\n    virtual ~Base() = default;\n};"
+        },
+        {
+          "title": "Des collections polymorphes",
+          "body": "std::vector<Animal> stocke des Animal : y ajouter un Chien le tranche. Pour une collection polymorphe, on stocke des pointeurs propriétaires.",
+          "code": "std::vector<std::unique_ptr<Animal>> zoo;\nzoo.push_back(std::make_unique<Chien>());"
+        },
+        {
+          "title": "Pendant la construction",
+          "body": "Dans le constructeur et le destructeur de la base, l'objet est considéré comme une base : un appel virtuel exécute la version de la base (et un appel à une virtuelle pure plante)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-slicing-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "struct Animal {\n    virtual std::string cri() const {\n        return \"?\";\n    }\n};\nstruct Chien : Animal {\n    std::string cri() const override {\n        return \"Wouf\";\n    }\n};\nvoid parler(Animal a) { std::cout << a.cri(); }\n\nChien rex;\nparler(rex);",
+          "choices": [
+            "?",
+            "Wouf",
+            "Erreur de compilation",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "parler reçoit un Animal par valeur : rex est tranché, il ne reste qu'un Animal. Avec const Animal&, on obtiendrait Wouf.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-slicing-q2",
+          "prompt": "delete b; est un comportement indéfini. Touche la ligne à corriger.",
+          "code": "struct Base {\n    ~Base() {}\n};\nstruct Fichier : Base {\n    std::vector<char> tampon;\n};\n\nBase* b = new Fichier();\ndelete b;",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le destructeur de Base n'est pas virtuel : delete via Base* ne détruit pas correctement le Fichier (son tampon fuit). Il faut virtual ~Base() = default;.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-slicing-q3",
+          "prompt": "zoo est un std::vector<Animal>. Que devient un Chien ajouté avec zoo.push_back(rex) ?",
+          "choices": [
+            "Il est tranché : seule sa partie Animal est copiée",
+            "Il est stocké entièrement, le vector s'adapte",
+            "Erreur de compilation",
+            "Il est déplacé sans copie"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque case d'un vector<Animal> a la taille d'un Animal. Pour une collection polymorphe : std::vector<std::unique_ptr<Animal>>.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-slicing-q4",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "struct Base {\n    Base() { nom(); }\n    virtual void nom() { std::cout << \"Base\"; }\n};\nstruct Fille : Base {\n    void nom() override { std::cout << \"Fille\"; }\n};\n\nint main() { Fille f; }",
+          "choices": [
+            "Base",
+            "Fille",
+            "BaseFille",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pendant le constructeur de Base, la partie Fille n'existe pas encore : l'appel virtuel est résolu vers Base::nom.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cpp-slicing-q5",
+          "prompt": "Complète cette collection polymorphe.",
+          "code": "std::vector<std::___<Animal>> zoo;\nzoo.push_back(std::___<Chien>());\nfor (const auto& a : zoo) {\n    std::cout << a->cri();\n}",
+          "answers": [
+            "unique_ptr",
+            "make_unique"
+          ],
+          "distractors": [
+            "weak_ptr",
+            "make_pair",
+            "reference_wrapper"
+          ],
+          "explanation": "Le vector possède ses animaux via des unique_ptr : pas de slicing, et chaque objet est détruit correctement (si Animal a un destructeur virtuel).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-slicing-q6",
+          "prompt": "Quelles règles appliquer à une classe de base polymorphe ?",
+          "choices": [
+            "Un destructeur public et virtuel",
+            "Supprimer ou protéger la copie pour éviter le slicing",
+            "Rendre toutes ses fonctions virtuelles",
+            "Manipuler les objets par référence ou par pointeur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Seules les fonctions destinées à être redéfinies doivent être virtuelles. Les trois autres règles évitent les fuites et le slicing.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cpp-defi-heritage",
+    "title": "Défi entretien : polymorphisme",
+    "summary": "vtable, slicing et destructeurs virtuels.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi6-q1",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "struct A {\n    virtual void f() { std::cout << 'A'; }\n    void g() { f(); }\n};\nstruct B : A {\n    void f() override { std::cout << 'B'; }\n};\n\nint main() {\n    B b;\n    A a = b;\n    b.g();\n    a.g();\n}",
+        "choices": [
+          "BA",
+          "BB",
+          "AA",
+          "AB"
+        ],
+        "answerIndex": 0,
+        "explanation": "g() n'est pas virtuelle, mais l'appel f() qu'elle contient l'est : sur b, c'est B::f. a est une copie tranchée de b : c'est un vrai A, donc A::f.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi6-q2",
+        "prompt": "Cas pratique 1/3 — Le fichier du journal n'est jamais fermé proprement. Touche la ligne en cause.",
+        "code": "class Journal {\npublic:\n    virtual void ecrire(const std::string& m);\n    ~Journal();\n};\nclass JournalFichier : public Journal {\n    std::ofstream fichier;\npublic:\n    void ecrire(const std::string& m) override;\n};\n\nstd::unique_ptr<Journal> j =\n    std::make_unique<JournalFichier>();",
+        "bugLines": [
+          4
+        ],
+        "explanation": "Le unique_ptr<Journal> détruit l'objet via un Journal* : sans destructeur virtuel, ~JournalFichier (et la fermeture du ofstream) n'est pas appelé. C'est un comportement indéfini.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi6-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi std::unique_ptr ne protège-t-il pas de ce bug ?",
+        "choices": [
+          "Il appelle delete sur un Journal* : seul un destructeur virtuel redirige vers ~JournalFichier",
+          "unique_ptr n'appelle jamais de destructeur",
+          "make_unique crée un Journal, pas un JournalFichier",
+          "Il le protège : le bug est ailleurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "unique_ptr<Journal> utilise std::default_delete<Journal>, donc delete sur le type déclaré. Le type réel n'est retrouvé que via la vtable, à condition que le destructeur soit virtuel.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi6-q4",
+        "prompt": "Cas pratique 3/3 — Et avec std::shared_ptr<Journal> j = std::make_shared<JournalFichier>(); ?",
+        "choices": [
+          "~JournalFichier est appelé : le shared_ptr mémorise la destruction du type réel à sa création",
+          "Même bug qu'avec unique_ptr",
+          "Erreur de compilation",
+          "Double destruction"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le bloc de contrôle d'un shared_ptr capture le « deleter » du type réel au moment de sa création. Cela masque le bug ici, mais la classe reste dangereuse : le destructeur virtuel reste la vraie correction.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi6-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "struct Forme {\n    virtual double aire() { return 0; }\n};\nstruct Disque : Forme {\n    double r = 1;\n    double aire() const {\n        return 3.14 * r * r;\n    }\n};",
+        "choices": [
+          "Disque::aire ne redéfinit pas Forme::aire (const ne correspond pas)",
+          "Il manque override, qui aurait signalé l'erreur",
+          "Forme n'a pas de destructeur virtuel",
+          "r devrait être protected"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La différence de const crée une nouvelle fonction : un appel via Forme& renverra 0. override l'aurait détecté. Et une base polymorphe a besoin d'un destructeur virtuel. La visibilité de r est un choix de conception, pas un bug.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi6-q6",
+        "prompt": "En entretien : qu'est-ce que la vtable ?",
+        "choices": [
+          "Une table de pointeurs de fonctions par classe, utilisée pour résoudre les appels virtuels à l'exécution",
+          "Une table de toutes les variables d'un objet",
+          "Un index des classes construit par l'éditeur de liens",
+          "Une optimisation qui supprime les appels virtuels"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque classe polymorphe a sa vtable ; chaque objet contient un pointeur (vptr) vers celle de son type réel. Un appel virtuel lit ce pointeur puis l'entrée de la fonction : une indirection de plus qu'un appel direct.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

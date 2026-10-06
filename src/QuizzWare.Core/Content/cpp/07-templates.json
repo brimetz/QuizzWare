@@ -7,19 +7,445 @@
       "id": "cpp-templates-fonctions",
       "title": "Templates de fonctions",
       "summary": "Déduction de types.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Écrire une fois, pour tous les types",
+          "body": "Un template de fonction est un modèle : le compilateur en génère une version (une instanciation) pour chaque type avec lequel on l'utilise. Tout se passe à la compilation, sans coût à l'exécution.",
+          "code": "template <typename T>\nT maximum(T a, T b) {\n    return a > b ? a : b;\n}\n\nmaximum(3, 7);       // T = int\nmaximum(2.5, 1.0);   // T = double"
+        },
+        {
+          "title": "La déduction des arguments",
+          "body": "T est déduit à partir des arguments de l'appel. Si deux arguments donnent des types différents pour le même T, la déduction échoue : maximum(3, 7.5) ne compile pas. On peut alors préciser T explicitement : maximum<double>(3, 7.5)."
+        },
+        {
+          "title": "Dans les en-têtes",
+          "body": "Pour instancier un template, le compilateur doit voir sa définition complète dans chaque fichier qui l'utilise : les templates se définissent donc dans les en-têtes. Et les erreurs n'apparaissent qu'à l'instanciation, souvent au fond du corps du template, avec des messages très longs."
+        },
+        {
+          "title": "auto en paramètre (C++20)",
+          "body": "Une fonction dont un paramètre est déclaré auto est un template abrégé : chaque paramètre auto a son propre type.",
+          "code": "auto somme(auto a, auto b) {\n    return a + b;\n}\nsomme(1, 2.5); // 3.5 : deux types"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-tpl-fonctions-q1",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "template <typename T>\nT maximum(T a, T b) {\n    return a > b ? a : b;\n}\n\nmaximum(3, 7.5);",
+          "choices": [
+            "Erreur de compilation : T ne peut pas être à la fois int et double",
+            "3 est converti en double, le résultat est 7.5",
+            "7.5 est converti en int, le résultat est 7",
+            "Avertissement seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "La déduction de template n'applique pas de conversion : 3 donne T = int, 7.5 donne T = double. Solutions : maximum<double>(3, 7.5), ou deux paramètres de types différents.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-tpl-fonctions-q2",
+          "prompt": "Quand le code d'un template de fonction est-il généré ?",
+          "choices": [
+            "À la compilation, pour chaque type avec lequel il est utilisé",
+            "À l'exécution, lors du premier appel",
+            "Une seule fois, pour un type générique",
+            "À l'édition de liens"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque instanciation est une vraie fonction compilée pour un type précis. C'est rapide à l'exécution, mais peut faire grossir le binaire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-tpl-fonctions-q3",
+          "prompt": "Pourquoi définit-on les templates dans les fichiers d'en-tête ?",
+          "choices": [
+            "Le compilateur doit voir la définition complète pour instancier le template",
+            "C'est une convention sans conséquence technique",
+            "Pour qu'ils soient inline et donc plus rapides",
+            "Parce qu'un .cpp ne peut pas contenir de template"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque fichier .cpp est compilé séparément : s'il ne voit que la déclaration, il ne peut pas générer maximum<int>, et l'édition de liens échoue.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-tpl-fonctions-q4",
+          "prompt": "Complète un échange générique, sans copie inutile.",
+          "code": "___ <typename T>\nvoid echanger(T& a, T& b) {\n    T tmp = std::___(a);\n    a = std::move(b);\n    b = std::move(tmp);\n}",
+          "answers": [
+            "template",
+            "move"
+          ],
+          "distractors": [
+            "class",
+            "copy",
+            "forward"
+          ],
+          "explanation": "template <typename T> introduit le paramètre de type. std::move permet de déplacer au lieu de copier : c'est ce que fait std::swap.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-tpl-fonctions-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "template <typename T>\nT moitie(T x) { return x / 2; }\n\nstd::cout << moitie(7) << ' '\n          << moitie(7.0) << ' '\n          << moitie<double>(7);",
+          "choices": [
+            "3 3.5 3.5",
+            "3 3.5 3",
+            "3.5 3.5 3.5",
+            "3 3 3"
+          ],
+          "answerIndex": 0,
+          "explanation": "moitie(7) instancie moitie<int> : division entière, 3. moitie(7.0) donne 3.5. moitie<double>(7) force T = double : 7 est converti, d'où 3.5.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-tpl-fonctions-q6",
+          "prompt": "Ce code ne compile pas. Touche la ligne que le compilateur ne peut pas instancier pour Point.",
+          "code": "template <typename T>\nT plusPetit(T a, T b) {\n    return a < b ? a : b;\n}\n\nstruct Point { int x, y; };\n\nPoint p = plusPetit(Point{1, 2},\n                    Point{3, 4});",
+          "bugLines": [
+            3
+          ],
+          "explanation": "L'erreur apparaît dans le corps du template : Point n'a pas d'opérateur <. C'est typique des templates sans contrainte ; un concept (C++20) signalerait le problème directement à l'appel.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "cpp-templates-classes",
       "title": "Templates de classes",
       "summary": "Spécialisation.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des classes génériques",
+          "body": "std::vector<int> et std::vector<std::string> viennent du même template de classe, mais ce sont deux types distincts, sans lien entre eux. Depuis C++17, les arguments peuvent souvent être déduits du constructeur (CTAD).",
+          "code": "template <typename T>\nclass Pile {\n    std::vector<T> elements;\npublic:\n    void empiler(T x);\n    T depiler();\n};\n\nPile<int> p;\nstd::pair q{1, 2.5}; // pair<int, double>"
+        },
+        {
+          "title": "Paramètres non-types",
+          "body": "Un paramètre de template peut être une valeur connue à la compilation, comme une taille. std::array<int, 3> et std::array<int, 4> sont deux types différents, et la taille ne coûte aucune mémoire à l'exécution.",
+          "code": "template <typename T, std::size_t N>\nclass Tampon {\n    T donnees[N];\n};"
+        },
+        {
+          "title": "La spécialisation",
+          "body": "On peut fournir une implémentation différente pour un type précis : template <> class Pile<bool> {...}. Exemple célèbre : std::vector<bool> est spécialisé pour stocker des bits ; son operator[] renvoie un objet proxy, pas un bool&, ce qui surprend souvent."
+        },
+        {
+          "title": "typename pour les noms dépendants",
+          "body": "Dans un template, C::const_iterator dépend de C : le compilateur ne sait pas a priori que c'est un type. Il faut l'indiquer avec typename C::const_iterator (ou utiliser auto)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-tpl-classes-q1",
+          "prompt": "Que peut-on dire de std::array<int, 3> et std::array<int, 4> ?",
+          "choices": [
+            "Ce sont deux types différents",
+            "C'est le même type, avec une taille stockée différente",
+            "Le second hérite du premier",
+            "Ils sont convertibles implicitement l'un en l'autre"
+          ],
+          "answerIndex": 0,
+          "explanation": "La taille fait partie du type : une fonction qui prend std::array<int, 3> n'accepte pas std::array<int, 4>. Pour accepter les deux : un template, ou std::span.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-tpl-classes-q2",
+          "prompt": "Quel est le type de p (C++17) ?",
+          "code": "std::pair p{1, 2.5};",
+          "choices": [
+            "std::pair<int, double>",
+            "std::pair<double, double>",
+            "std::pair<int, int>",
+            "Erreur : il faut écrire les arguments du template"
+          ],
+          "answerIndex": 0,
+          "explanation": "La déduction des arguments de template de classe (CTAD) utilise les arguments du constructeur : int pour 1, double pour 2.5.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-tpl-classes-q3",
+          "prompt": "Pourquoi std::vector<bool> est-il un cas particulier ?",
+          "choices": [
+            "Il est spécialisé pour stocker des bits : operator[] renvoie un proxy, pas un bool&",
+            "Il ne peut contenir que 64 éléments",
+            "Il n'a pas de méthode push_back",
+            "Il stocke chaque bool sur un int"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour économiser la mémoire, vector<bool> compacte les valeurs en bits : on ne peut pas prendre l'adresse d'un élément, et auto& x = v[0]; ne compile pas.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "cpp-tpl-classes-q4",
+          "prompt": "Ce template ne compile pas. Touche la ligne fautive.",
+          "code": "template <typename C>\nvoid afficherPremier(const C& c) {\n    C::const_iterator it = c.begin();\n    std::cout << *it;\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "C::const_iterator dépend du paramètre C : il faut écrire typename C::const_iterator it, ou plus simplement auto it = c.begin();.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cpp-tpl-classes-q5",
+          "prompt": "Complète ce tampon de taille fixe, puis déclare un tampon de 8 entiers.",
+          "code": "template <typename T, std::size_t ___>\nclass Tampon {\n    T donnees[N];\n};\n\nTampon<___, 8> t;",
+          "answers": [
+            "N",
+            "int"
+          ],
+          "distractors": [
+            "T",
+            "auto",
+            "typename"
+          ],
+          "explanation": "N est un paramètre non-type de type std::size_t, utilisé comme taille du tableau. Tampon<int, 8> instancie le template avec T = int et N = 8.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-tpl-classes-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Pile<int> et Pile<double> sont deux types sans lien entre eux",
+            "Une fonction membre d'un template de classe n'est instanciée que si elle est utilisée",
+            "On peut définir les fonctions membres d'un template dans un .cpp séparé sans précaution",
+            "std::array<int, 3> stocke ses éléments sur le tas"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "L'instanciation paresseuse des membres permet d'utiliser Pile<T> avec un T qui ne supporte pas toutes les opérations. std::array stocke ses éléments directement dans l'objet, sans allocation.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "cpp-concepts",
       "title": "Concepts (C++20)",
       "summary": "Contraindre les templates.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le problème",
+          "body": "Un template sans contrainte accepte n'importe quel type, puis échoue au fond de son corps avec un message illisible. Les exigences (« T doit être comparable ») ne sont écrites nulle part, sauf dans la documentation."
+        },
+        {
+          "title": "Contraindre avec un concept",
+          "body": "Un concept est un prédicat sur des types, vérifié à la compilation. La bibliothèque standard en fournit beaucoup dans <concepts> : std::integral, std::floating_point, std::totally_ordered, std::same_as, std::copyable...",
+          "code": "template <std::integral T>\nT pgcd(T a, T b) {\n    return b == 0 ? a : pgcd(b, a % b);\n}\n\n// Forme abrégée\nvoid f(std::integral auto x);"
+        },
+        {
+          "title": "Écrire son concept",
+          "body": "Une expression requires liste les opérations qui doivent compiler pour le type.",
+          "code": "template <typename T>\nconcept Affichable =\n    requires(std::ostream& os, T v) {\n        os << v;\n    };"
+        },
+        {
+          "title": "Surcharger par concepts",
+          "body": "Quand plusieurs surcharges conviennent, le compilateur choisit la plus contrainte. On remplace ainsi beaucoup d'astuces anciennes (enable_if, SFINAE) par du code lisible."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-concepts-q1",
+          "prompt": "Quel est le principal apport des concepts ?",
+          "choices": [
+            "Des erreurs claires au point d'appel et des exigences écrites dans la signature",
+            "Des templates plus rapides à l'exécution",
+            "Le polymorphisme dynamique sans virtual",
+            "La possibilité de définir les templates dans des .cpp"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les concepts ne changent pas le code généré : ils vérifient les types à l'appel. L'erreur dit « double ne satisfait pas std::integral » au lieu d'une page de messages.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-concepts-q2",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "template <std::integral T>\nT moitie(T x) { return x / 2; }\n\nmoitie(4.0);",
+          "choices": [
+            "Erreur de compilation : double ne satisfait pas std::integral",
+            "Renvoie 2.0",
+            "4.0 est converti en int, renvoie 2",
+            "Avertissement seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "La contrainte est vérifiée avant d'instancier : aucune version de moitie n'accepte un double, et le message le dit clairement.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "cpp-concepts-q3",
+          "prompt": "Complète la définition du concept Affichable.",
+          "code": "template <typename T>\n___ Affichable =\n    ___(std::ostream& os, T v) {\n        os << v;\n    };",
+          "answers": [
+            "concept",
+            "requires"
+          ],
+          "distractors": [
+            "typename",
+            "constexpr",
+            "template"
+          ],
+          "explanation": "concept Nom = ... définit le concept ; requires(...) { ... } liste les expressions qui doivent être valides pour T.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-concepts-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "void f(std::integral auto) { std::cout << 'I'; }\nvoid f(std::floating_point auto) { std::cout << 'F'; }\nvoid f(auto) { std::cout << 'A'; }\n\nf(42); f('a'); f(3.0f); f(\"x\");",
+          "choices": [
+            "IIFA",
+            "IAFA",
+            "AAAA",
+            "Erreur : appel ambigu"
+          ],
+          "answerIndex": 0,
+          "explanation": "char est un type entier, donc 'a' satisfait std::integral. Quand une surcharge contrainte convient, elle est préférée à la version sans contrainte : pas d'ambiguïté.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "cpp-concepts-q5",
+          "prompt": "Le compilateur refuse l'appel plusGrand(pts). Touche la ligne à modifier pour que Point soit accepté.",
+          "code": "template <std::totally_ordered T>\nT plusGrand(const std::vector<T>& v) {\n    return *std::ranges::max_element(v);\n}\n\nstruct Point { int x, y; };\n\nstd::vector<Point> pts{{1, 2}, {3, 4}};\nplusGrand(pts);",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Point n'a aucun opérateur de comparaison : il ne satisfait pas std::totally_ordered. Il suffit d'ajouter auto operator<=>(const Point&) const = default; dans Point.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-concepts-q6",
+          "prompt": "Lesquels sont des concepts de la bibliothèque standard ?",
+          "choices": [
+            "std::integral",
+            "std::same_as",
+            "std::copyable",
+            "std::printable"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "std::integral, std::same_as et std::copyable sont dans <concepts>. Il n'existe pas de std::printable : on l'écrit soi-même, comme Affichable.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cpp-defi-templates",
+    "title": "Défi entretien : templates",
+    "summary": "Spécialisation, initialisation et contraintes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi7-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "template <typename T>\nstd::string nom() { return \"?\"; }\n\ntemplate <>\nstd::string nom<int>() { return \"int\"; }\n\nstd::cout << nom<int>() << nom<double>();",
+        "choices": [
+          "int?",
+          "intdouble",
+          "??",
+          "Erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "nom<int> utilise la spécialisation complète ; nom<double> utilise le modèle général.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi7-q2",
+        "prompt": "Cas pratique 1/3 — Pour des int, somme renvoie parfois n'importe quoi. Touche la ligne fautive.",
+        "code": "template <typename T>\nT somme(const std::vector<T>& v) {\n    T total;\n    for (const T& x : v) total += x;\n    return total;\n}",
+        "bugLines": [
+          3
+        ],
+        "explanation": "T total; ne fait rien pour un int : la valeur de départ est indéterminée (comportement indéfini). Pour une std::string, ce serait correct : le bug dépend du type, typique des templates.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "cpp-defi7-q3",
+        "prompt": "Cas pratique 2/3 — Complète l'initialisation pour qu'elle soit correcte avec n'importe quel T.",
+        "code": "T total___;",
+        "answers": [
+          "{}"
+        ],
+        "distractors": [
+          " = 0",
+          "()"
+        ],
+        "explanation": "T total{}; initialise par valeur : 0 pour un int, chaîne vide pour une string. = 0 casse pour std::string (construction depuis un pointeur nul), et T total(); déclare... une fonction (« most vexing parse »).",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi7-q4",
+        "prompt": "Cas pratique 3/3 — Avec T total{};, qu'affiche ce code ?",
+        "code": "std::vector<std::string> v{\"a\", \"b\"};\nstd::cout << somme(v);",
+        "choices": [
+          "ab",
+          "ba",
+          "Rien : la chaîne est vide",
+          "Erreur : += n'existe pas pour std::string"
+        ],
+        "answerIndex": 0,
+        "explanation": "total part d'une chaîne vide, puis += concatène \"a\" et \"b\" dans l'ordre.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi7-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "template <typename T>\nT maximum(T a, T b) {\n    return a > b ? a : b;\n}\n\nauto m = maximum(std::string(\"abc\"), \"abd\");",
+        "choices": [
+          "L'appel ne compile pas : T est déduit en std::string et en const char*",
+          "Les paramètres par valeur copient les chaînes : const T& serait préférable",
+          "Un concept comme std::totally_ordered documenterait l'exigence sur T",
+          "> ne peut pas comparer deux std::string"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "\"abd\" est un const char[4] qui se dégrade en const char* : la déduction est ambiguë. std::string supporte bien > (ordre lexicographique).",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi7-q6",
+        "prompt": "En entretien : pourquoi une erreur de template est-elle souvent signalée loin de l'appel fautif ?",
+        "choices": [
+          "Elle apparaît à l'instanciation, dans le corps du template où l'opération invalide est utilisée",
+          "Le compilateur analyse les fichiers à l'envers",
+          "Les templates sont compilés à l'exécution",
+          "C'est un bug connu de tous les compilateurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans contrainte, le compilateur accepte l'appel, instancie le corps et échoue sur la ligne qui utilise l'opération manquante, en affichant toute la pile d'instanciations. Les concepts ramènent l'erreur à l'appel.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

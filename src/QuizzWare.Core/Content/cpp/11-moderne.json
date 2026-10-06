@@ -7,19 +7,459 @@
       "id": "cpp-lambdas",
       "title": "Lambdas",
       "summary": "Captures et durée de vie.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Syntaxe",
+          "body": "[captures](paramètres) { corps } crée un objet fonction : le compilateur génère une classe anonyme dont operator() contient le corps, et dont les membres sont les variables capturées.",
+          "code": "auto plus = [](int a, int b) { return a + b; };\nplus(2, 3); // 5\n\nint seuil = 10;\nauto grand = [seuil](int x) { return x > seuil; };"
+        },
+        {
+          "title": "Les captures",
+          "body": "[x] copie x au moment de la création de la lambda ; [&x] le référence. [=] et [&] capturent tout ce qui est utilisé, par copie ou par référence. Une capture initialisée permet de déplacer un objet dans la lambda.",
+          "code": "auto p = std::make_unique<Tache>();\nauto f = [t = std::move(p)] {\n    t->executer();\n};"
+        },
+        {
+          "title": "mutable",
+          "body": "Par défaut, operator() est const : on ne peut pas modifier une copie capturée. mutable le permet ; la modification touche la copie interne de la lambda, jamais la variable d'origine."
+        },
+        {
+          "title": "Durée de vie",
+          "body": "Une lambda qui capture par référence ne doit pas survivre aux variables capturées : renvoyée par une fonction, stockée dans un callback ou passée à un thread, elle référence de la mémoire libérée. Dans ces cas, on capture par valeur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-lambdas-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int x = 1;\nauto f = [x] { return x; };\nauto g = [&x] { return x; };\nx = 2;\nstd::cout << f() << g();",
+          "choices": [
+            "12",
+            "22",
+            "11",
+            "21"
+          ],
+          "answerIndex": 0,
+          "explanation": "f a copié x quand il valait 1. g référence x et voit donc sa valeur actuelle, 2.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-lambdas-q2",
+          "prompt": "Appeler le compteur renvoyé est un comportement indéfini. Touche la ligne fautive.",
+          "code": "std::function<int()> compteur() {\n    int n = 0;\n    return [&n] { return ++n; };\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "n est détruit à la sortie de compteur() : la lambda renvoyée référence une variable morte. Il faut capturer par valeur et rendre la lambda mutable : [n]() mutable { return ++n; }.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-lambdas-q3",
+          "prompt": "Que se passe-t-il ?",
+          "code": "int n = 0;\nauto f = [n] { return ++n; };",
+          "choices": [
+            "Erreur de compilation : la copie capturée n'est pas modifiable sans mutable",
+            "f() renvoie 1 et n vaut 1",
+            "f() renvoie 1 et n reste à 0",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "operator() d'une lambda est const par défaut : la copie de n ne peut pas être modifiée. Avec mutable, f() renverrait 1 et n resterait à 0.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-lambdas-q4",
+          "prompt": "Complète pour transférer la possession de la tâche à la lambda.",
+          "code": "auto p = std::make_unique<Tache>();\nauto f = [t = std::___(p)] {\n    t->executer();\n};",
+          "answers": [
+            "move"
+          ],
+          "distractors": [
+            "ref",
+            "copy",
+            "forward"
+          ],
+          "explanation": "Un unique_ptr n'est pas copiable : la capture initialisée [t = std::move(p)] le déplace dans la lambda, qui devient elle-même non copiable.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-lambdas-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int n = 0;\nauto f = [n]() mutable { return ++n; };\nf();\nf();\nstd::cout << f() << n;",
+          "choices": [
+            "30",
+            "33",
+            "10",
+            "31"
+          ],
+          "answerIndex": 0,
+          "explanation": "La lambda modifie sa propre copie de n, qui persiste entre les appels : 1, 2, puis 3. La variable n d'origine reste à 0.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-lambdas-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "[&] capture par référence toutes les variables locales utilisées",
+            "Dans une fonction membre, [=] accède aux membres via this, pas via une copie de l'objet",
+            "Une lambda sans capture peut se convertir en pointeur de fonction",
+            "Une capture par valeur copie la variable à chaque appel"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La copie a lieu une seule fois, à la création de la lambda. Le piège de [=] : il capture this (un pointeur), donc la lambda dépend de la durée de vie de l'objet. C++20 déconseille cette capture implicite.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "cpp-constexpr",
       "title": "constexpr et consteval",
       "summary": "Calculer à la compilation.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "constexpr",
+          "body": "Une fonction constexpr peut être évaluée à la compilation si ses arguments sont des constantes et que le résultat est exigé dans un contexte constant (taille de tableau, static_assert, variable constexpr). Sinon, elle s'exécute normalement.",
+          "code": "constexpr int fact(int n) {\n    return n <= 1 ? 1 : n * fact(n - 1);\n}\n\nstatic_assert(fact(5) == 120);\nint t[fact(3)]; // taille 6"
+        },
+        {
+          "title": "consteval et constinit (C++20)",
+          "body": "consteval impose l'évaluation à la compilation : appeler la fonction avec une valeur connue seulement à l'exécution est une erreur. constinit garantit qu'une variable statique est initialisée à la compilation, sans la rendre constante."
+        },
+        {
+          "title": "if constexpr",
+          "body": "Dans un template, if constexpr choisit une branche à la compilation et élimine l'autre : elle n'a même pas besoin de compiler pour ce type.",
+          "code": "template <typename T>\nstd::string decrire(T) {\n    if constexpr (std::is_integral_v<T>)\n        return \"entier\";\n    else\n        return \"autre\";\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-constexpr-q1",
+          "prompt": "Une fonction constexpr est-elle toujours évaluée à la compilation ?",
+          "choices": [
+            "Non : seulement si c'est exigé dans un contexte constant (ou si le compilateur le choisit)",
+            "Oui, toujours",
+            "Non, jamais : constexpr est un simple indice",
+            "Seulement en mode Release"
+          ],
+          "answerIndex": 0,
+          "explanation": "constexpr signifie « peut être évaluée à la compilation ». Appelée avec une valeur lue au clavier, elle s'exécute normalement. Pour l'imposer : consteval.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-constexpr-q2",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "consteval int carre(int x) { return x * x; }\n\nint n;\nstd::cin >> n;\nint r = carre(n);",
+          "choices": [
+            "Erreur de compilation : carre doit être évaluée à la compilation",
+            "carre est évaluée à l'exécution",
+            "r vaut toujours 0",
+            "Avertissement seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une fonction consteval est une « fonction immédiate » : chaque appel doit produire une constante de compilation. n n'est connu qu'à l'exécution.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-constexpr-q3",
+          "prompt": "Complète pour vérifier le résultat dès la compilation.",
+          "code": "constexpr int fact(int n) {\n    return n <= 1 ? 1 : n * fact(n - 1);\n}\n___(fact(5) == 120);",
+          "answers": [
+            "static_assert"
+          ],
+          "distractors": [
+            "assert",
+            "constexpr",
+            "consteval"
+          ],
+          "explanation": "static_assert est vérifié par le compilateur ; assert l'est à l'exécution, et seulement si NDEBUG n'est pas défini.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-constexpr-q4",
+          "prompt": "Ce code ne compile pas. Touche la ligne fautive.",
+          "code": "int lireTaille();\n\nconstexpr int taille = lireTaille();\nint tableau[taille];",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Une variable constexpr exige une valeur calculable à la compilation, or lireTaille() n'est pas constexpr. Pour une taille connue à l'exécution : const int taille = lireTaille(); et std::vector<int> tableau(taille);.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-constexpr-q5",
+          "prompt": "Avec le decrire de la leçon, qu'affiche ce code ?",
+          "code": "std::cout << decrire(1)\n          << decrire(1.0)\n          << decrire('c');",
+          "choices": [
+            "entierautreentier",
+            "entierautreautre",
+            "entierentierentier",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "is_integral_v est vrai pour int et pour char, faux pour double. if constexpr choisit la branche à la compilation, pour chaque instanciation.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-constexpr-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "consteval impose une évaluation à la compilation",
+            "constinit garantit une initialisation à la compilation, mais la variable reste modifiable",
+            "if constexpr élimine la branche non retenue à la compilation",
+            "Une fonction constexpr ne peut être appelée qu'avec des constantes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une fonction constexpr accepte aussi des valeurs d'exécution : elle s'exécute alors normalement. constinit sert à éviter le « fiasco de l'ordre d'initialisation des statiques ».",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "cpp-cpp20",
       "title": "De C++17 à C++23",
       "summary": "Structured bindings, variant, ranges, modules.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "C++17",
+          "body": "Les structured bindings déstructurent paires, tuples et structures. std::optional, std::variant et std::string_view enrichissent la bibliothèque. if et switch acceptent un initialiseur.",
+          "code": "for (const auto& [cle, valeur] : m) { }\n\nif (auto it = m.find(k); it != m.end()) { }"
+        },
+        {
+          "title": "string_view et span ne possèdent rien",
+          "body": "std::string_view (C++17) et std::span (C++20) sont des vues : un pointeur et une taille vers des données qui appartiennent à quelqu'un d'autre. Parfaits en paramètre, dangereux en valeur de retour ou en membre, s'ils survivent aux données."
+        },
+        {
+          "title": "std::variant",
+          "body": "Une union sûre : la valeur est l'un des types listés, et le variant sait lequel. std::get<T> lève std::bad_variant_access si le type ne correspond pas ; std::visit applique une fonction selon le type contenu.",
+          "code": "std::variant<int, std::string> v = 42;\nv = std::string(\"hi\");\nv.index(); // 1"
+        },
+        {
+          "title": "C++20 et C++23",
+          "body": "C++20 : concepts, ranges, coroutines, modules, <=>, std::format, std::span. C++23 : std::expected, std::print, std::ranges::to, « deducing this »."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-cpp20-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "std::map<std::string, int> m{\n    {\"a\", 1}, {\"b\", 2}};\nfor (const auto& [k, v] : m)\n    std::cout << k << v;",
+          "choices": [
+            "a1b2",
+            "1a2b",
+            "ab12",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque élément est une paire clé-valeur : [k, v] la déstructure. La map est parcourue dans l'ordre des clés.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-cpp20-q2",
+          "prompt": "Quel est le problème de cette fonction ?",
+          "code": "std::string_view nom() {\n    std::string s = \"Ana\";\n    return s;\n}",
+          "choices": [
+            "La vue renvoyée pointe vers une chaîne détruite",
+            "Aucun : string_view copie les caractères",
+            "Erreur de compilation : conversion impossible",
+            "La chaîne est copiée deux fois"
+          ],
+          "answerIndex": 0,
+          "explanation": "string_view ne possède pas ses caractères. s est détruite à la sortie de la fonction : l'appelant reçoit une vue pendante. Il faut renvoyer std::string.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-cpp20-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "std::variant<int, std::string> v = 42;\nv = std::string(\"hi\");\nstd::cout << v.index()\n          << std::get<std::string>(v);",
+          "choices": [
+            "1hi",
+            "0hi",
+            "142",
+            "Une exception std::bad_variant_access"
+          ],
+          "answerIndex": 0,
+          "explanation": "index() donne la position du type actif dans la liste : std::string est le deuxième, d'indice 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-cpp20-q4",
+          "prompt": "Complète : somme doit accepter un vector comme un tableau C, sans copie.",
+          "code": "int somme(std::___<const int> valeurs);\n\nstd::vector<int> v{1, 2, 3};\nint t[] = {4, 5};\nsomme(v);\nsomme(t);",
+          "answers": [
+            "span"
+          ],
+          "distractors": [
+            "vector",
+            "array",
+            "initializer_list"
+          ],
+          "explanation": "std::span (C++20) est une vue sur une séquence contiguë, quelle qu'en soit l'origine : vector, array, tableau C... sans copie.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-cpp20-q5",
+          "prompt": "Ce code lève une exception. Touche la ligne en cause.",
+          "code": "std::variant<int, double> v = 3.5;\nint x = std::get<int>(v);",
+          "bugLines": [
+            2
+          ],
+          "explanation": "v contient un double : std::get<int> lève std::bad_variant_access. Pour tester sans exception : std::get_if<int>(&v) ou std::holds_alternative<int>(v).",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cpp-cpp20-q6",
+          "prompt": "Quelles fonctionnalités sont arrivées en C++20 ?",
+          "choices": [
+            "Les concepts",
+            "Les ranges",
+            "Les modules",
+            "std::optional"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "std::optional date de C++17, comme std::variant et std::string_view. C++20 est la plus grosse mise à jour depuis C++11.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-cpp20-q7",
+          "prompt": "Qu'affiche ce code (C++20) ?",
+          "code": "std::cout << std::format(\"{} a {} ans\",\n                         \"Ana\", 31);",
+          "choices": [
+            "Ana a 31 ans",
+            "{} a {} ans",
+            "Ana a {} ans",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "std::format remplace les {} par les arguments dans l'ordre, avec vérification des types à la compilation. C'est l'alternative sûre à printf.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cpp-defi-moderne",
+    "title": "Défi entretien : C++ moderne",
+    "summary": "Lambdas, vues et durées de vie.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi11-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "auto creerCompteur() {\n    return [n = 0]() mutable {\n        return ++n;\n    };\n}\n\nauto a = creerCompteur();\nauto b = a;\na();\na();\nstd::cout << a() << b();",
+        "choices": [
+          "31",
+          "34",
+          "33",
+          "11"
+        ],
+        "answerIndex": 0,
+        "explanation": "b est une copie de a faite avant les appels, avec son propre n à 0. a atteint 3, b renvoie 1.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi11-q2",
+        "prompt": "Cas pratique 1/3 — Un clic après la fin de creer() affiche n'importe quoi. Touche la ligne en cause.",
+        "code": "void Fenetre::creer() {\n    auto b = std::make_shared<Bouton>();\n    std::string titre = \"OK\";\n    b->onClic([&titre] {\n        afficher(titre);\n    });\n    boutons_.push_back(b);\n}",
+        "bugLines": [
+          4
+        ],
+        "explanation": "Le callback est stocké dans le bouton, qui survit à creer(). Il référence titre, une variable locale déjà détruite au moment du clic.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi11-q3",
+        "prompt": "Cas pratique 2/3 — Quel est le correctif ?",
+        "choices": [
+          "Capturer titre par valeur : [titre]",
+          "Capturer tout par référence : [&]",
+          "Déclarer titre static dans la fonction",
+          "Rendre la lambda mutable"
+        ],
+        "answerIndex": 0,
+        "explanation": "La copie vit dans la lambda, aussi longtemps que le callback. [&] reproduit le bug ; static partagerait une seule chaîne entre tous les appels.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi11-q4",
+        "prompt": "Cas pratique 3/3 — La lambda doit maintenant appeler une méthode de Fenetre, qui peut être détruite avant le bouton. Que capturer ?",
+        "choices": [
+          "Un weak_ptr vers la fenêtre, verrouillé avec lock() dans la lambda",
+          "this",
+          "*this par référence",
+          "Un shared_ptr vers la fenêtre"
+        ],
+        "answerIndex": 0,
+        "explanation": "this deviendrait pendant. Un shared_ptr maintiendrait la fenêtre en vie (et créerait un cycle si la fenêtre possède le bouton). Le weak_ptr permet de vérifier si la fenêtre existe encore.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi11-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "std::string_view trouver(\n        const std::vector<int>& v, int c) {\n    std::string_view res = \"absent\";\n    for (int x : v)\n        if (x == c)\n            res = std::to_string(x);\n    return res;\n}",
+        "choices": [
+          "res = std::to_string(x) pointe vers une chaîne temporaire détruite aussitôt",
+          "Le résultat renvoyé peut donc être une vue pendante",
+          "Une vue sur le littéral \"absent\" est pendante",
+          "Renvoyer std::string ou std::optional<int> serait correct"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          3
+        ],
+        "explanation": "Le temporaire de to_string meurt à la fin de l'instruction. Un littéral, en revanche, a une durée de vie statique : la vue sur \"absent\" reste valide.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi11-q6",
+        "prompt": "En entretien : quand préférer std::variant à une hiérarchie de classes avec virtual ?",
+        "choices": [
+          "Quand l'ensemble des types est fermé et connu : pas d'allocation, et std::visit vérifie que chaque cas est traité",
+          "Quand on veut que des bibliothèques externes ajoutent leurs propres types",
+          "Quand les types ont des tailles très différentes et que la mémoire compte",
+          "Jamais : variant est déprécié"
+        ],
+        "answerIndex": 0,
+        "explanation": "variant stocke la valeur dans l'objet (taille du plus gros type) et std::visit refuse de compiler si un type n'est pas géré. L'héritage reste préférable pour un ensemble ouvert, extensible par d'autres.",
+        "difficulty": 3
+      }
+    ]
+  }
 }

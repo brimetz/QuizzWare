@@ -7,19 +7,432 @@
       "id": "cs-gc",
       "title": "Le ramasse-miettes",
       "summary": "Générations et Large Object Heap.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le principe",
+          "body": "Le ramasse-miettes (GC) libère les objets qui ne sont plus atteignables depuis les « racines » : variables locales en cours d'utilisation, champs static, registres. On ne libère jamais la mémoire soi-même, et on ne sait pas quand une collection aura lieu."
+        },
+        {
+          "title": "Les générations",
+          "body": "La plupart des objets meurent jeunes. Le GC range donc les objets par âge : la génération 0, petite, est collectée souvent et vite ; les survivants passent en génération 1 puis 2, collectée rarement et plus coûteuse. Les objets de 85 000 octets ou plus vont dans le Large Object Heap, collecté avec la génération 2."
+        },
+        {
+          "title": "Les fuites existent quand même",
+          "body": "Un objet encore référencé n'est jamais collecté. Les causes classiques : une collection static qu'on remplit sans jamais la vider, un abonnement à l'événement d'un objet qui vit longtemps, un cache sans limite.",
+          "code": "class Fenetre {\n    public Fenetre(Horloge h) {\n        h.Tic += MettreAJour; // h garde la fenêtre\n    }\n}"
+        },
+        {
+          "title": "Ne pas forcer le GC",
+          "body": "GC.Collect() perturbe les heuristiques du GC et promeut des objets vers des générations plus anciennes : c'est presque toujours une mauvaise idée. Les finaliseurs (~Classe()) s'exécutent à un moment imprévisible : pour libérer une ressource, on utilise IDisposable."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-gc-q1",
+          "prompt": "Quand un objet est-il libéré par le ramasse-miettes ?",
+          "choices": [
+            "Quand il n'est plus atteignable, à un moment choisi par le GC",
+            "Dès la sortie du bloc où il a été créé",
+            "Quand on lui affecte null",
+            "À la fin du programme seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ne plus être atteignable rend l'objet éligible ; la collection a lieu plus tard, quand le GC le décide (souvent quand la génération 0 est pleine).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-gc-q2",
+          "prompt": "Sur quelle observation repose le GC générationnel ?",
+          "choices": [
+            "La plupart des objets meurent jeunes",
+            "Les gros objets sont les plus nombreux",
+            "Les objets anciens sont souvent inutiles",
+            "Chaque thread a sa propre mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "En collectant souvent la petite génération 0, le GC récupère beaucoup de mémoire pour peu d'effort, sans parcourir les objets anciens.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cs-gc-q3",
+          "prompt": "Les fenêtres fermées ne sont jamais libérées. Touche la ligne en cause.",
+          "code": "class Fenetre {\n    public Fenetre(Horloge h) {\n        h.Tic += MettreAJour;\n    }\n    void MettreAJour(object? s, EventArgs e) { }\n}\n// l'horloge vit toute l'application",
+          "bugLines": [
+            3
+          ],
+          "explanation": "L'événement de l'horloge garde une référence vers chaque fenêtre abonnée : elles restent atteignables. Il faut se désabonner (h.Tic -= MettreAJour) à la fermeture.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-gc-q4",
+          "prompt": "À partir de quelle taille un objet va-t-il dans le Large Object Heap ?",
+          "choices": [
+            "85 000 octets",
+            "1 Mo",
+            "4 Ko",
+            "Toute taille supérieure à celle d'un int"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les gros objets (souvent de grands tableaux) sont coûteux à déplacer : le LOH n'est pas compacté par défaut et n'est collecté qu'avec la génération 2. Les allouer en boucle fragmente la mémoire.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cs-gc-q5",
+          "prompt": "Quelles situations empêchent des objets d'être libérés ?",
+          "choices": [
+            "Une List static qu'on remplit sans jamais la vider",
+            "Un abonnement non désabonné à l'événement d'un objet qui vit longtemps",
+            "Une variable locale, après la fin de la méthode",
+            "Un cache sans limite ni expiration"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Une variable locale cesse d'être une racine à la fin de la méthode (et même avant, après sa dernière utilisation). Les trois autres cas gardent les objets atteignables indéfiniment.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-gc-q6",
+          "prompt": "Faut-il appeler GC.Collect() pour libérer de la mémoire ?",
+          "choices": [
+            "Presque jamais : cela perturbe les heuristiques du GC et coûte cher",
+            "Oui, après chaque grosse allocation",
+            "Oui, dans chaque destructeur",
+            "Oui, sinon la mémoire n'est jamais libérée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le GC s'adapte à la charge réelle. Une collection forcée est une collection complète (génération 2) au mauvais moment, qui promeut en plus des objets jeunes.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "cs-idisposable",
       "title": "IDisposable et using",
       "summary": "Libérer les ressources.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les ressources non gérées",
+          "body": "Un fichier, une connexion à une base, un socket : le GC ne sait pas qu'il faut les libérer rapidement. Les types qui en possèdent implémentent IDisposable : Dispose() libère la ressource immédiatement, sans attendre le GC."
+        },
+        {
+          "title": "using",
+          "body": "using garantit l'appel de Dispose à la fin du bloc, même en cas d'exception. Depuis C# 8, la déclaration using var libère à la fin de la portée englobante. Pour les ressources asynchrones (IAsyncDisposable) : await using.",
+          "code": "using var lecteur = new StreamReader(chemin);\nvar ligne = lecteur.ReadLine();\n// Dispose à la fin de la méthode\n\nawait using var cnx = new SqlConnection(cs);"
+        },
+        {
+          "title": "Posséder, c'est libérer",
+          "body": "Une classe qui garde un champ IDisposable doit elle-même implémenter IDisposable et le libérer. Exception notable : HttpClient est fait pour être réutilisé ; en créer un par requête peut épuiser les sockets. On utilise une instance partagée ou IHttpClientFactory."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-idisposable-q1",
+          "prompt": "Que garantit using ?",
+          "choices": [
+            "L'appel de Dispose en fin de bloc, même en cas d'exception",
+            "La libération de la mémoire de l'objet",
+            "Que l'objet ne sera pas copié",
+            "Que l'objet est thread-safe"
+          ],
+          "answerIndex": 0,
+          "explanation": "using équivaut à un try/finally qui appelle Dispose. La mémoire de l'objet, elle, reste gérée par le GC.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cs-idisposable-q2",
+          "prompt": "Après quelques appels, le fichier reste verrouillé. Touche la ligne en cause.",
+          "code": "string LirePremiere(string chemin) {\n    var lecteur = new StreamReader(chemin);\n    return lecteur.ReadLine() ?? \"\";\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le StreamReader n'est jamais libéré : le fichier reste ouvert jusqu'à un passage du GC et du finaliseur. Il faut using var lecteur = ...",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "cs-idisposable-q3",
+          "prompt": "Complète : la connexion est libérée de façon asynchrone en fin de méthode.",
+          "code": "await ___ var connexion = new SqlConnection(cs);\nawait connexion.___();",
+          "answers": [
+            "using",
+            "OpenAsync"
+          ],
+          "distractors": [
+            "lock",
+            "fixed",
+            "Open"
+          ],
+          "explanation": "await using appelle DisposeAsync en fin de portée. OpenAsync est la version asynchrone d'Open : on ne peut pas faire await sur Open(), qui renvoie void.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-idisposable-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "using (var a = new Trace(\"A\"))\nusing (var b = new Trace(\"B\"))\n{\n    Console.Write(\"corps \");\n}\n\nclass Trace(string nom) : IDisposable {\n    public void Dispose()\n        => Console.Write($\"~{nom} \");\n}",
+          "choices": [
+            "corps ~B ~A",
+            "corps ~A ~B",
+            "~A ~B corps",
+            "corps"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les using imbriqués se libèrent dans l'ordre inverse de leur création, comme les destructeurs en C++ : b puis a.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-idisposable-q5",
+          "prompt": "Pourquoi ne pas créer un nouvel HttpClient à chaque requête ?",
+          "choices": [
+            "Chaque instance garde ses connexions : on peut épuiser les sockets disponibles",
+            "HttpClient n'implémente pas IDisposable",
+            "Le constructeur d'HttpClient est synchrone",
+            "Un HttpClient ne peut envoyer qu'une requête"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les sockets fermés restent un moment en TIME_WAIT. On réutilise une instance (thread-safe) ou on passe par IHttpClientFactory, qui gère aussi le renouvellement DNS.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cs-idisposable-q6",
+          "prompt": "Lesquels doivent être libérés avec Dispose (ou using) ?",
+          "choices": [
+            "Un FileStream",
+            "Une connexion à une base de données",
+            "Une string",
+            "Une List<int>"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "Les objets qui ne tiennent que de la mémoire gérée (string, List) sont libérés par le GC. Ceux qui tiennent une ressource du système (fichier, connexion) implémentent IDisposable.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "cs-span",
       "title": "Span et allocations",
       "summary": "Réduire la pression mémoire.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Pourquoi éviter les allocations",
+          "body": "Chaque allocation alimente le GC. Dans une boucle critique (analyse de texte, serveur très sollicité), moins d'allocations signifie moins de collections et des temps de réponse plus réguliers."
+        },
+        {
+          "title": "Span<T> et ReadOnlySpan<T>",
+          "body": "Un Span est une vue sur une zone mémoire contiguë (tableau, chaîne, pile) : découper (Slice, [..4]) ne copie rien. C'est un ref struct : il ne vit que sur la pile. Il ne peut donc pas être un champ de classe, être capturé par une lambda, ni survivre à un await.",
+          "code": "ReadOnlySpan<char> date = \"2024-05-17\";\nint annee = int.Parse(date[..4]);   // sans Substring\nint mois = int.Parse(date[5..7]);"
+        },
+        {
+          "title": "stackalloc, Memory et ArrayPool",
+          "body": "stackalloc réserve un petit tampon sur la pile. Memory<T> est l'équivalent de Span qu'on peut stocker et utiliser en asynchrone. ArrayPool<T>.Shared prête des tableaux réutilisables au lieu d'en allouer de nouveaux.",
+          "code": "Span<byte> tampon = stackalloc byte[256];\n\nvar tab = ArrayPool<byte>.Shared.Rent(4096);\ntry { /* ... */ }\nfinally { ArrayPool<byte>.Shared.Return(tab); }"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-span-q1",
+          "prompt": "Qu'est-ce qu'un Span<T> ?",
+          "choices": [
+            "Une vue sur une zone mémoire contiguë, sans copie",
+            "Une liste chaînée optimisée",
+            "Un tableau alloué sur le tas plus rapide",
+            "Un type de collection thread-safe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un Span contient un pointeur et une longueur : il désigne une partie d'un tableau, d'une chaîne ou d'un tampon de pile sans dupliquer les données.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-span-q2",
+          "prompt": "Quelle différence entre s.Substring(0, 4) et s.AsSpan(0, 4) ?",
+          "choices": [
+            "Substring alloue une nouvelle chaîne ; AsSpan crée une vue sans allocation",
+            "Aucune",
+            "AsSpan copie la chaîne sur la pile",
+            "Substring est plus rapide car la chaîne est immuable"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans une boucle qui découpe des millions de lignes, éviter ces petites chaînes temporaires réduit fortement le travail du GC. int.Parse accepte directement un ReadOnlySpan<char>.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cs-span-q3",
+          "prompt": "Cette classe ne compile pas. Touche la ligne fautive.",
+          "code": "class Analyseur {\n    private Span<char> tampon;\n    public Analyseur(char[] donnees) {\n        tampon = donnees;\n    }\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Span est un ref struct : il ne peut exister que sur la pile, donc pas comme champ d'une classe (qui vit sur le tas). On stocke un Memory<char> ou le tableau lui-même.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cs-span-q4",
+          "prompt": "Pourquoi ce code ne compile-t-il pas ?",
+          "code": "async Task<int> CompterAsync(string texte) {\n    ReadOnlySpan<char> s = texte.AsSpan();\n    await Task.Delay(10);\n    return s.Length;\n}",
+          "choices": [
+            "Un Span ne peut pas être utilisé après un await",
+            "AsSpan n'existe pas sur string",
+            "Une méthode async ne peut pas renvoyer int",
+            "Task.Delay exige un CancellationToken"
+          ],
+          "answerIndex": 0,
+          "explanation": "Après un await, les variables locales sont conservées dans un objet sur le tas : un ref struct ne peut pas y être stocké. On calcule ce qu'il faut avant le await, ou on utilise Memory<char>.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cs-span-q5",
+          "prompt": "Complète : un tampon de 256 octets sur la pile, sans allocation sur le tas.",
+          "code": "___<byte> tampon = ___ byte[256];",
+          "answers": [
+            "Span",
+            "stackalloc"
+          ],
+          "distractors": [
+            "List",
+            "new",
+            "fixed"
+          ],
+          "explanation": "stackalloc réserve la mémoire sur la pile, libérée automatiquement à la sortie de la méthode. À réserver aux petits tampons : la pile est limitée.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cs-span-q6",
+          "prompt": "Quelles techniques réduisent les allocations ?",
+          "choices": [
+            "Emprunter des tableaux avec ArrayPool<T>.Shared.Rent",
+            "Utiliser Span et stackalloc pour de petits tampons temporaires",
+            "Concaténer des chaînes avec + dans une boucle",
+            "Réutiliser un StringBuilder"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Chaque + crée une nouvelle chaîne. Les trois autres techniques réutilisent ou évitent la mémoire du tas.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cs-defi-memoire",
+    "title": "Défi entretien : mémoire",
+    "summary": "Fuites, ressources et structs.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cs-defi5-q1",
+        "prompt": "Avec la classe Trace de la leçon, qu'affiche ce code ?",
+        "code": "void Traiter() {\n    using var a = new Trace(\"A\");\n    Console.Write(\"1 \");\n    using var b = new Trace(\"B\");\n    Console.Write(\"2 \");\n}\n\nTraiter();",
+        "choices": [
+          "1 2 ~B ~A",
+          "1 ~A 2 ~B",
+          "1 2 ~A ~B",
+          "~A ~B 1 2"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une déclaration using var libère l'objet à la fin de la portée englobante (ici la méthode), dans l'ordre inverse des déclarations.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "cs-defi5-q2",
+        "prompt": "Cas pratique 1/3 — La mémoire du serveur grimpe sans jamais redescendre. Touche la ligne en cause.",
+        "code": "public static class Cache {\n    static readonly Dictionary<string, Image>\n        images = new();\n\n    public static Image Obtenir(string chemin) {\n        if (!images.TryGetValue(chemin, out var img)) {\n            img = Image.Charger(chemin);\n            images[chemin] = img;\n        }\n        return img;\n    }\n}",
+        "bugLines": [
+          2,
+          3
+        ],
+        "explanation": "Un dictionnaire static vit toute l'application et n'a ni limite ni expiration : chaque nouvelle image s'y accumule.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi5-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi le GC ne libère-t-il pas ces images ?",
+        "choices": [
+          "Elles restent atteignables via le champ static",
+          "Les images sont dans le Large Object Heap, jamais collecté",
+          "Le GC ne libère pas les objets d'une classe static",
+          "Le dictionnaire empêche le GC de s'exécuter"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un champ static est une racine : tout ce qu'il référence est vivant pour le GC. Le LOH est bien collecté, avec la génération 2.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi5-q4",
+        "prompt": "Cas pratique 3/3 — Quel est le bon correctif ?",
+        "choices": [
+          "Un cache avec une taille maximale et une expiration, comme MemoryCache",
+          "Appeler GC.Collect() toutes les minutes",
+          "Rendre le dictionnaire non static",
+          "Remplacer Dictionary par ConcurrentDictionary"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un cache doit avoir une politique d'éviction. ConcurrentDictionary corrigerait la sécurité entre threads (autre bug ici), pas la croissance.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cs-defi5-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "public class Rapport {\n    private readonly FileStream flux;\n\n    public Rapport(string chemin) {\n        flux = File.Create(chemin);\n    }\n\n    public void Ecrire(string s) { /* ... */ }\n}",
+        "choices": [
+          "Rapport possède un FileStream mais n'implémente pas IDisposable",
+          "Le fichier reste ouvert jusqu'à la finalisation, à un moment imprévisible",
+          "Les appelants ne peuvent pas utiliser using sur un Rapport",
+          "readonly empêche d'écrire dans le flux"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Qui possède un IDisposable doit être IDisposable. readonly empêche seulement de réaffecter le champ flux, pas d'utiliser l'objet.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi5-q6",
+        "prompt": "En entretien : une struct est-elle toujours allouée sur la pile ?",
+        "choices": [
+          "Non : elle est stockée là où elle est déclarée, par exemple dans un objet sur le tas si c'est un champ de classe",
+          "Oui, toujours",
+          "Non, toujours sur le tas",
+          "Oui, sauf en mode Debug"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une struct locale vit sur la pile, mais une struct champ d'une classe ou élément d'un tableau vit dans cet objet, sur le tas. « Type valeur » décrit la sémantique de copie, pas l'emplacement mémoire.",
+        "difficulty": 3
+      }
+    ]
+  }
 }

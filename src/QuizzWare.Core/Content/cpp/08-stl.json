@@ -7,19 +7,450 @@
       "id": "cpp-conteneurs",
       "title": "Conteneurs",
       "summary": "vector, map, unordered_map…",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "std::vector par défaut",
+          "body": "Éléments contigus en mémoire, accès par indice en O(1), ajout en fin en O(1) amorti, parcours très rapide grâce au cache du processeur. L'insertion au milieu coûte O(n). C'est le conteneur à choisir, sauf raison précise."
+        },
+        {
+          "title": "map et unordered_map",
+          "body": "std::map garde ses clés triées (arbre équilibré) : recherche en O(log n), parcours dans l'ordre, recherche par intervalle. std::unordered_map utilise une table de hachage : O(1) en moyenne, sans ordre. Même logique pour std::set et std::unordered_set.",
+          "code": "std::map<std::string, int> ages;\nages[\"Ana\"] = 31;\nages.insert({\"Léo\", 25});\nif (ages.contains(\"Ana\")) { } // C++20"
+        },
+        {
+          "title": "Le piège de operator[]",
+          "body": "map[cle] insère une valeur par défaut si la clé n'existe pas : une simple lecture peut donc agrandir la map. Pour chercher sans insérer : find, contains (C++20), ou at, qui lève std::out_of_range. Pour la même raison, operator[] n'existe pas sur une map const."
+        },
+        {
+          "title": "Les autres",
+          "body": "std::array : taille fixe, sans allocation. std::deque : ajout rapide aux deux extrémités. std::list : insertion en O(1) à une position connue, mais éléments dispersés en mémoire, donc lents à parcourir : rarement le bon choix."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-conteneurs-q1",
+          "prompt": "Quel conteneur choisir par défaut pour une séquence d'éléments ?",
+          "choices": [
+            "std::vector",
+            "std::list",
+            "std::deque",
+            "std::map"
+          ],
+          "answerIndex": 0,
+          "explanation": "La mémoire contiguë de vector le rend imbattable pour le parcours et l'accès par indice, et souvent même pour des insertions, malgré la théorie.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-conteneurs-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "std::map<std::string, int> ages;\nif (ages[\"Ana\"] == 0) {\n    std::cout << \"inconnue \";\n}\nstd::cout << ages.size();",
+          "choices": [
+            "inconnue 1",
+            "inconnue 0",
+            "0",
+            "Une exception std::out_of_range"
+          ],
+          "answerIndex": 0,
+          "explanation": "ages[\"Ana\"] insère la clé avec la valeur 0 avant de la lire : la map contient désormais un élément. Pour tester l'existence : ages.contains(\"Ana\").",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-conteneurs-q3",
+          "prompt": "Quelle est la complexité d'une recherche dans un std::unordered_map ?",
+          "choices": [
+            "O(1) en moyenne, O(n) dans le pire cas",
+            "O(log n) dans tous les cas",
+            "O(1) dans tous les cas",
+            "O(n) en moyenne"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une bonne fonction de hachage répartit les clés : accès constant en moyenne. Si beaucoup de clés tombent dans le même seau (collisions), on dégénère vers O(n).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-conteneurs-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "std::map<int, char> m{\n    {3, 'c'}, {1, 'a'}, {2, 'b'}};\nfor (const auto& [k, v] : m)\n    std::cout << v;",
+          "choices": [
+            "abc",
+            "cab",
+            "Un ordre imprévisible",
+            "cba"
+          ],
+          "answerIndex": 0,
+          "explanation": "std::map parcourt ses éléments dans l'ordre croissant des clés : 1, 2, 3. Avec unordered_map, l'ordre ne serait pas garanti.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-conteneurs-q5",
+          "prompt": "Cette fonction ne compile pas. Touche la ligne fautive.",
+          "code": "int age(const std::map<std::string, int>& m,\n        const std::string& nom) {\n    return m[nom];\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "operator[] peut insérer, il n'existe donc pas sur une map const. On utilise m.at(nom) (exception si absent) ou m.find(nom).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-conteneurs-q6",
+          "prompt": "Dans quels cas std::unordered_map est-il préférable à std::map ?",
+          "choices": [
+            "On n'a pas besoin d'ordre et on veut des recherches rapides",
+            "On doit parcourir les clés triées",
+            "On cherche toutes les clés entre deux bornes",
+            "La clé a une bonne fonction de hachage"
+          ],
+          "answerIndices": [
+            0,
+            3
+          ],
+          "explanation": "Le parcours trié et les recherches par intervalle (lower_bound, upper_bound) sont des atouts de std::map. unordered_map gagne pour des recherches ponctuelles, si le hachage est bon.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-conteneurs-q7",
+          "prompt": "Complète : n'ajouter x que s'il n'a pas déjà été vu (C++20).",
+          "code": "std::set<int> vus;\nif (!vus.___(x)) {\n    vus.___(x);\n}",
+          "answers": [
+            "contains",
+            "insert"
+          ],
+          "distractors": [
+            "push_back",
+            "has",
+            "add"
+          ],
+          "explanation": "contains (C++20) teste la présence, insert ajoute. En pratique, vus.insert(x).second indique à lui seul si l'insertion a eu lieu.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "cpp-iterateurs",
       "title": "Itérateurs et invalidation",
       "summary": "Ce qui casse quand on modifie un conteneur.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les itérateurs",
+          "body": "Un itérateur généralise un pointeur : on le déréférence (*it) et on l'avance (++it). begin() désigne le premier élément, end() la position juste après le dernier : on ne déréférence jamais end(). Les algorithmes travaillent sur l'intervalle [begin, end)."
+        },
+        {
+          "title": "L'invalidation",
+          "body": "Quand un vector manque de place, push_back alloue un nouveau bloc et y déplace les éléments : tous les itérateurs, pointeurs et références vers les anciens éléments deviennent invalides. insert et erase invalident tout ce qui suit la position modifiée. Les utiliser ensuite est un comportement indéfini."
+        },
+        {
+          "title": "Effacer en parcourant",
+          "body": "erase renvoie un itérateur valide vers l'élément suivant : il faut l'utiliser au lieu d'incrémenter l'ancien. Depuis C++20, std::erase_if fait tout en une ligne.",
+          "code": "for (auto it = v.begin(); it != v.end();) {\n    if (*it < 0) it = v.erase(it);\n    else ++it;\n}\n\nstd::erase_if(v, [](int x) {\n    return x < 0;\n}); // C++20"
+        },
+        {
+          "title": "remove n'efface rien",
+          "body": "std::remove et std::remove_if déplacent les éléments à garder au début et renvoient la nouvelle fin logique, sans changer la taille. Il faut ensuite appeler erase : c'est l'idiome erase-remove, remplacé par std::erase_if en C++20."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-iterateurs-q1",
+          "prompt": "Que désigne v.end() ?",
+          "choices": [
+            "La position juste après le dernier élément : on ne la déréférence pas",
+            "Le dernier élément",
+            "Un pointeur nul",
+            "L'élément qui sera ajouté au prochain push_back"
+          ],
+          "answerIndex": 0,
+          "explanation": "end() est une sentinelle : les boucles s'arrêtent quand it == end(). *v.end() est un comportement indéfini ; le dernier élément est v.back() ou *(v.end() - 1).",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-iterateurs-q2",
+          "prompt": "Ce code a un comportement indéfini. Touche la ligne qui invalide la référence.",
+          "code": "std::vector<int> v{1, 2, 3};\nint& premier = v[0];\nv.push_back(4);\nstd::cout << premier;",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Si la capacité est atteinte, push_back réalloue : premier désigne alors de la mémoire libérée. Il faut reprendre la référence après l'ajout, ou réserver la place avant.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-iterateurs-q3",
+          "prompt": "Cette boucle doit retirer les nombres pairs, mais son comportement est indéfini. Touche la ligne fautive.",
+          "code": "for (auto it = v.begin(); it != v.end(); ++it) {\n    if (*it % 2 == 0) {\n        v.erase(it);\n    }\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Après v.erase(it), it est invalide : le ++it suivant est indéfini. Il faut écrire it = v.erase(it); sans incrémenter dans ce cas, ou utiliser std::erase_if.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-iterateurs-q4",
+          "prompt": "Complète pour retirer réellement les valeurs négatives de v (C++20).",
+          "code": "std::___(v, [](int x) {\n    return x < 0;\n});",
+          "answers": [
+            "erase_if"
+          ],
+          "distractors": [
+            "remove_if",
+            "erase",
+            "filter"
+          ],
+          "explanation": "std::erase_if efface et réduit la taille. Le piège : std::remove_if (qui prend d'ailleurs deux itérateurs) ne fait que réorganiser les éléments sans rien effacer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-iterateurs-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "std::vector<int> v{1, 2, 1, 3};\nstd::remove(v.begin(), v.end(), 1);\nstd::cout << v.size();",
+          "choices": [
+            "4",
+            "2",
+            "3",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "std::remove ne peut pas changer la taille d'un conteneur : il ne voit que des itérateurs. Il renvoie la nouvelle fin, à passer à v.erase(...).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cpp-iterateurs-q6",
+          "prompt": "Après v.push_back(x) sur un std::vector, qu'est-ce qui peut devenir invalide ?",
+          "choices": [
+            "Tous les itérateurs, en cas de réallocation",
+            "Les références et pointeurs vers les éléments, en cas de réallocation",
+            "L'itérateur end(), même sans réallocation",
+            "Les valeurs des éléments existants"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Sans réallocation, seul end() est invalidé (la fin a bougé). Avec réallocation, tout l'est. Les valeurs, elles, sont préservées : elles sont déplacées dans le nouveau bloc.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "cpp-algorithmes",
       "title": "Algorithmes",
       "summary": "sort, find_if, transform et ranges.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Nommer l'intention",
+          "body": "<algorithm> et <numeric> offrent des dizaines d'algorithmes éprouvés : sort, find, find_if, count_if, any_of, all_of, transform, accumulate... Une boucle brute oblige le lecteur à deviner l'intention ; un algorithme la nomme.",
+          "code": "auto it = std::find_if(v.begin(), v.end(),\n    [](const Produit& p) {\n        return p.prix > 100;\n    });\nif (it != v.end()) { /* trouvé */ }"
+        },
+        {
+          "title": "Les ranges (C++20)",
+          "body": "std::ranges::sort(v) prend directement le conteneur. Les vues (std::views::filter, transform, take...) se composent avec | et sont paresseuses : rien n'est calculé ni copié avant le parcours.",
+          "code": "auto pairs = v\n    | std::views::filter(estPair)\n    | std::views::transform(carre);"
+        },
+        {
+          "title": "Deux pièges",
+          "body": "Le comparateur de sort doit définir un ordre strict : < et jamais <=, sinon le comportement est indéfini. Et le type du résultat de std::accumulate est celui de la valeur initiale : accumulate(..., 0) additionne des int, même sur des double."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-algorithmes-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "std::vector<double> v{0.5, 0.5, 0.5};\nauto s = std::accumulate(\n    v.begin(), v.end(), 0);\nstd::cout << s;",
+          "choices": [
+            "0",
+            "1.5",
+            "1",
+            "2"
+          ],
+          "answerIndex": 0,
+          "explanation": "La valeur initiale 0 est un int : chaque étape calcule int + double puis reconvertit en int. 0 + 0.5 donne 0, trois fois. Il faut écrire 0.0.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cpp-algorithmes-q2",
+          "prompt": "Que renvoie std::find_if quand aucun élément ne correspond ?",
+          "choices": [
+            "L'itérateur de fin (le deuxième argument)",
+            "nullptr",
+            "Une exception",
+            "L'itérateur de début"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les algorithmes signalent « pas trouvé » en renvoyant la fin de l'intervalle : il faut toujours comparer à end() avant de déréférencer.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-algorithmes-q3",
+          "prompt": "Ce tri peut planter ou lire hors du vector. Touche la ligne fautive.",
+          "code": "std::sort(v.begin(), v.end(),\n    [](int a, int b) { return a <= b; });",
+          "bugLines": [
+            2
+          ],
+          "explanation": "sort exige un ordre strict faible : comp(a, a) doit être faux. Avec <=, deux éléments égaux sont chacun « avant » l'autre, et certaines implémentations sortent du tableau. Il faut <.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cpp-algorithmes-q4",
+          "prompt": "Complète : neg doit valoir true si au moins un élément est négatif.",
+          "code": "bool neg = std::___(\n    v.begin(), v.end(),\n    [](int x) { return x < 0; });",
+          "answers": [
+            "any_of"
+          ],
+          "distractors": [
+            "all_of",
+            "find_if",
+            "count"
+          ],
+          "explanation": "any_of renvoie un bool et s'arrête au premier élément qui satisfait le prédicat. find_if renvoie un itérateur, pas un bool.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-algorithmes-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "auto estPair = [](int x) { return x % 2 == 0; };\nauto carre = [](int x) { return x * x; };\n\nstd::vector<int> v{1, 2, 3, 4, 5, 6};\nfor (int x : v | std::views::filter(estPair)\n               | std::views::transform(carre))\n    std::cout << x << ' ';",
+          "choices": [
+            "4 16 36",
+            "1 9 25",
+            "2 4 6",
+            "1 4 9 16 25 36"
+          ],
+          "answerIndex": 0,
+          "explanation": "filter garde 2, 4 et 6, puis transform les met au carré. Les vues sont paresseuses : chaque élément traverse la chaîne au moment du parcours.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-algorithmes-q6",
+          "prompt": "Quels sont les avantages des algorithmes standard sur les boucles écrites à la main ?",
+          "choices": [
+            "L'intention est explicite (find_if, count_if...)",
+            "Moins d'erreurs d'indices et de bornes",
+            "Certains peuvent être parallélisés avec une politique d'exécution",
+            "Ils sont toujours plus rapides qu'une boucle"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "std::sort(std::execution::par, ...) peut utiliser plusieurs cœurs. Mais un algorithme n'est pas magiquement plus rapide qu'une boucle équivalente : son intérêt est d'abord la clarté et la justesse.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cpp-defi-stl",
+    "title": "Défi entretien : la bibliothèque standard",
+    "summary": "Invalidation, map et choix de conteneurs.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi8-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "std::set<int> s{5, 1, 3, 1};\ns.insert(2);\nfor (int x : s) std::cout << x;\nstd::cout << ' ' << s.size();",
+        "choices": [
+          "1235 4",
+          "51312 5",
+          "12345 5",
+          "1235 5"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un set ne garde qu'un exemplaire de chaque valeur (le second 1 est ignoré) et les parcourt triées : 1, 2, 3, 5, soit 4 éléments.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi8-q2",
+        "prompt": "Cas pratique 1/3 — doubler doit ajouter une copie de chaque élément à la fin, mais plante parfois. Touche la ligne fautive.",
+        "code": "void doubler(std::vector<int>& v) {\n    for (int x : v) {\n        v.push_back(x);\n    }\n}",
+        "bugLines": [
+          3
+        ],
+        "explanation": "La boucle sur intervalle garde des itérateurs begin et end calculés au départ. push_back peut réallouer : ces itérateurs pointent alors dans de la mémoire libérée.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi8-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi le plantage n'arrive-t-il que « parfois » ?",
+        "choices": [
+          "Il ne se produit que si push_back doit réallouer, ce qui dépend de la capacité",
+          "Il dépend de l'ordre d'exécution des threads",
+          "Le compilateur optimise parfois la boucle",
+          "Il n'arrive qu'avec des nombres négatifs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Tant que capacity() suffit, les éléments ne bougent pas et le bug reste invisible. C'est pour cela que ces erreurs passent souvent les tests ; AddressSanitizer les détecte.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi8-q4",
+        "prompt": "Cas pratique 3/3 — Quel correctif est correct ?",
+        "choices": [
+          "Mémoriser n = v.size(), réserver 2 * n, puis ajouter v[i] pour i de 0 à n - 1",
+          "v.insert(v.end(), v.begin(), v.end());",
+          "Remplacer for (int x : v) par for (int& x : v)",
+          "Appeler v.shrink_to_fit() avant la boucle"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec la place réservée, aucune réallocation n'a lieu et les indices restent valides. Le piège : insérer dans un vector un intervalle de ce même vector est explicitement interdit (comportement indéfini).",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi8-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "std::map<std::string, int> stock;\n\nbool enStock(const std::string& p) {\n    return stock[p] > 0;\n}\nvoid afficher() {\n    for (auto p : stock)\n        std::cout << p.first << '\\n';\n}",
+        "choices": [
+          "stock[p] insère les produits inconnus dans la map",
+          "afficher listera des produits qui n'ont jamais été en stock",
+          "for (auto p : stock) copie chaque paire : préférer const auto&",
+          "Une std::map ne peut pas avoir de clé std::string"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Chaque appel à enStock avec un produit inconnu l'ajoute avec la quantité 0. Il faut utiliser find ou contains. Chaque itération copie aussi une std::string inutilement.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi8-q6",
+        "prompt": "En entretien : pourquoi std::vector bat-il souvent std::list, même pour des insertions au milieu ?",
+        "choices": [
+          "Sa mémoire contiguë exploite le cache, alors que trouver la position dans une list coûte O(n) en sauts mémoire",
+          "std::list n'a pas de méthode insert",
+          "vector insère en O(1) au milieu",
+          "list alloue toute sa mémoire à l'avance"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'insertion en O(1) de list suppose qu'on a déjà la position, qu'il faut atteindre en parcourant des nœuds dispersés (défauts de cache). Décaler des éléments contigus d'un vector est très rapide en pratique.",
+        "difficulty": 3
+      }
+    ]
+  }
 }

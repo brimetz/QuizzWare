@@ -28,6 +28,7 @@ public static class MauiProgram
         // Sons et vibrations des réponses
         builder.AddAudio();
         builder.Services.AddSingleton<FeedbackService>();
+        builder.Services.AddSingleton<ContentReporter>();
 
         // Core
         builder.Services.AddSingleton(_ => ContentRepository.LoadEmbedded());

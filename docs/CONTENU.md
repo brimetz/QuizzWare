@@ -2,7 +2,7 @@
 
 Ce guide décrit comment écrire les cours et les quizz. **La liste de tous les sujets (catégories, chapitres, spécialisations) et leur état se trouvent dans la [carte des sujets](CARTE.md).**
 
-Modèles à suivre : les chapitres 1 et 2 du C++ ([cpp/](../src/QuizzWare.Core/Content/cpp/)), tout le tronc commun de Bases de données et les parcours de spécialisation déjà écrits (MongoDB, EF Core, PostgreSQL, ASP.NET Core, Kubernetes, FastAPI, System design).
+Modèles à suivre : les troncs communs complets du C++ ([cpp/](../src/QuizzWare.Core/Content/cpp/)) et du C# ([csharp/](../src/QuizzWare.Core/Content/csharp/)), tout le tronc commun de Bases de données et les parcours de spécialisation déjà écrits (MongoDB, EF Core, PostgreSQL, ASP.NET Core, Kubernetes, FastAPI, System design).
 
 ## Principes
 
@@ -126,4 +126,6 @@ Le chargeur accepte aussi un fichier unique `<categorie>.json` contenant tous le
 
 ## Relecture
 
-Chaque question est relue techniquement avant d'être publiée : une réponse fausse dans une app pour ingénieurs fait perdre toute crédibilité. Pour les questions « qu'affiche ce code ? », on **compile et on exécute** l'extrait.
+Chaque question est relue techniquement avant d'être publiée : une réponse fausse dans une app pour ingénieurs fait perdre toute crédibilité. Pour les questions « qu'affiche ce code ? », on **compile et on exécute** l'extrait ; pour « que se passe-t-il ? », on vérifie que l'erreur de compilation annoncée est bien la bonne (en C++, sans le mode de compatibilité MSVC : `clang++ -std=c++23 -fno-ms-compatibility`).
+
+Après publication, les utilisateurs signalent les erreurs depuis l'app (**⚑ Signaler**, sous chaque correction et chaque cours) : une issue GitHub est ouverte avec l'identifiant de la question ou de la leçon.

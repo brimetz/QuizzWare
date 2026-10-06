@@ -7,19 +7,453 @@
       "id": "cpp-classes-bases",
       "title": "Classes et encapsulation",
       "summary": "Membres, accès et méthodes const.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "class ou struct ?",
+          "body": "Les deux définissent un type avec des données et des fonctions membres. La seule différence est l'accès par défaut : private pour class, public pour struct (idem pour l'héritage). Par convention, struct sert aux agrégats de données simples, class aux types qui protègent un invariant.",
+          "code": "struct Point {      // public par défaut\n    int x, y;\n};\n\nclass Compte {      // private par défaut\n    double solde = 0;\npublic:\n    void deposer(double m);\n};"
+        },
+        {
+          "title": "L'encapsulation protège les invariants",
+          "body": "Un invariant est une règle toujours vraie pour l'objet (« le solde n'est jamais négatif »). En gardant les données private et en n'exposant que des fonctions publiques qui respectent la règle, on rend impossible un état invalide depuis l'extérieur."
+        },
+        {
+          "title": "Méthodes const",
+          "body": "Une fonction membre marquée const promet de ne pas modifier l'objet. C'est la seule qu'on puisse appeler sur un objet const ou via une référence const& : oublier const sur un accesseur empêche donc de l'utiliser dans beaucoup de contextes.",
+          "code": "class Cercle {\n    double r = 1;\npublic:\n    double aire() const { return 3.14 * r * r; }\n    void agrandir() { r *= 2; }\n};\n\nvoid f(const Cercle& c) {\n    c.aire();     // OK\n    c.agrandir(); // erreur : c est const\n}"
+        },
+        {
+          "title": "Membres static",
+          "body": "Un membre static appartient à la classe, pas à chaque objet : il est partagé par toutes les instances. Une fonction membre static n'a pas de this et ne peut accéder qu'aux membres static."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-classes-q1",
+          "prompt": "Quelle est la seule différence entre struct et class en C++ ?",
+          "choices": [
+            "L'accès par défaut : public pour struct, private pour class",
+            "Une struct ne peut pas avoir de fonctions membres",
+            "Une struct est toujours allouée sur la pile",
+            "Une struct ne peut pas hériter d'une autre"
+          ],
+          "answerIndex": 0,
+          "explanation": "En C++, struct et class sont équivalentes à l'accès par défaut près (membres et héritage). Contrairement au C#, une struct n'est pas un « type valeur » à part.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-classes-q2",
+          "prompt": "Que se passe-t-il ?",
+          "code": "class Compte {\n    double solde = 0;\n};\n\nCompte c;\nc.solde = 100;",
+          "choices": [
+            "Erreur de compilation : solde est privé",
+            "c.solde vaut 100",
+            "Erreur à l'exécution",
+            "L'affectation est ignorée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans une class, les membres sont private par défaut : on ne peut pas y accéder depuis l'extérieur. Avec struct, le code compilerait.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-classes-q3",
+          "prompt": "Cette classe ne compile pas. Touche la ligne fautive.",
+          "code": "class Compteur {\npublic:\n    int valeur() const { return n; }\n    void incrementer() const { ++n; }\nprivate:\n    int n = 0;\n};",
+          "bugLines": [
+            4
+          ],
+          "explanation": "incrementer modifie n : elle ne peut pas être const. valeur(), elle, est à juste titre const puisqu'elle ne fait que lire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-classes-q4",
+          "prompt": "Pourquoi ce code ne compile-t-il pas ?",
+          "code": "struct Point {\n    int x, y;\n    void afficher() {\n        std::cout << x << ',' << y;\n    }\n};\n\nvoid f(const Point& p) {\n    p.afficher();\n}",
+          "choices": [
+            "afficher() n'est pas marquée const",
+            "x et y sont privés",
+            "p devrait être passé par valeur",
+            "Une struct ne peut pas contenir de fonction"
+          ],
+          "answerIndex": 0,
+          "explanation": "Via une const&, on ne peut appeler que des fonctions membres const. afficher() ne modifie rien : il faut la déclarer void afficher() const.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-classes-q5",
+          "prompt": "Complète : aire() doit être accessible de l'extérieur et utilisable sur un Cercle const.",
+          "code": "class Cercle {\n___:\n    double aire() ___ {\n        return 3.14 * r * r;\n    }\nprivate:\n    double r = 1;\n};",
+          "answers": [
+            "public",
+            "const"
+          ],
+          "distractors": [
+            "private",
+            "static",
+            "virtual"
+          ],
+          "explanation": "public rend aire() accessible ; const après la liste de paramètres permet de l'appeler sur un objet constant.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-classes-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "struct Objet {\n    static int compteur;\n    Objet() { ++compteur; }\n};\nint Objet::compteur = 0;\n\nint main() {\n    Objet a, b;\n    Objet c;\n    std::cout << Objet::compteur;\n}",
+          "choices": [
+            "3",
+            "1",
+            "0",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "compteur est static : un seul entier partagé par tous les objets. Chacun des trois constructeurs l'incrémente.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "cpp-constructeurs",
       "title": "Constructeurs et destructeur",
       "summary": "Listes d'initialisation et explicit.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La liste d'initialisation",
+          "body": "Elle initialise les membres avant l'exécution du corps du constructeur. Elle est obligatoire pour les membres const, les références et les membres sans constructeur par défaut. Piège classique : les membres sont initialisés dans l'ordre de leur déclaration dans la classe, pas dans l'ordre de la liste.",
+          "code": "class Personne {\n    std::string nom;\n    const int age;\npublic:\n    Personne(std::string n, int a)\n        : nom(std::move(n)), age(a) {}\n};"
+        },
+        {
+          "title": "explicit",
+          "body": "Un constructeur à un seul argument sert aussi de conversion implicite : une fonction qui attend un Metres accepterait alors un double. explicit interdit cette conversion silencieuse. Règle simple : marquer explicit tout constructeur à un argument, sauf raison précise."
+        },
+        {
+          "title": "Le destructeur",
+          "body": "~NomDeClasse() est appelé automatiquement quand l'objet est détruit : fin de portée pour une variable locale, delete pour un objet alloué dynamiquement. Les objets locaux sont détruits dans l'ordre inverse de leur construction, même en cas d'exception.",
+          "code": "{\n    Fichier a(\"a.txt\");\n    Fichier b(\"b.txt\");\n} // ~b() puis ~a()"
+        },
+        {
+          "title": "= default et = delete",
+          "body": "= default demande au compilateur la version générée d'un membre spécial. = delete l'interdit : par exemple, supprimer la copie d'une classe qui possède une ressource unique.",
+          "code": "class Connexion {\npublic:\n    Connexion() = default;\n    Connexion(const Connexion&) = delete;\n};"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-constructeurs-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "struct T {\n    char c;\n    T(char c) : c(c) { std::cout << c; }\n    ~T() { std::cout << c; }\n};\n\nint main() {\n    T a('a');\n    T b('b');\n}",
+          "choices": [
+            "abba",
+            "abab",
+            "aabb",
+            "baab"
+          ],
+          "answerIndex": 0,
+          "explanation": "a puis b sont construits (« ab »), puis détruits en fin de portée dans l'ordre inverse : b puis a (« ba »).",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-constructeurs-q2",
+          "prompt": "Ce constructeur alloue parfois une taille absurde. Touche une ligne en cause.",
+          "code": "class Tampon {\n    char* donnees;\n    std::size_t taille;\npublic:\n    Tampon(std::size_t n)\n        : taille(n),\n          donnees(new char[taille]) {}\n};",
+          "bugLines": [
+            2,
+            3,
+            7
+          ],
+          "explanation": "donnees est déclarée avant taille : elle est donc initialisée en premier, alors que taille n'a pas encore de valeur. L'ordre de la liste n'y change rien. Correctif : utiliser n (new char[n]) ou inverser les déclarations — et, mieux, un std::vector<char>.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cpp-constructeurs-q3",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "struct Metres {\n    explicit Metres(double v) : v(v) {}\n    double v;\n};\n\nvoid avancer(Metres m);\n\navancer(5.0);",
+          "choices": [
+            "Erreur de compilation : conversion implicite interdite",
+            "5.0 est converti en Metres automatiquement",
+            "avancer reçoit un Metres de valeur 0",
+            "Avertissement seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "explicit empêche d'utiliser ce constructeur pour une conversion implicite. Il faut écrire avancer(Metres{5.0}) : l'unité devient visible à l'appel.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-constructeurs-q4",
+          "prompt": "Complète : Fichier ne doit pas être copiable, et son destructeur ferme le fichier.",
+          "code": "class Fichier {\npublic:\n    Fichier(const Fichier&) = ___;\n    ___Fichier() { fermer(); }\n};",
+          "answers": [
+            "delete",
+            "~"
+          ],
+          "distractors": [
+            "default",
+            "0",
+            "!"
+          ],
+          "explanation": "= delete supprime le constructeur de copie ; le destructeur s'écrit ~Fichier().",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cpp-constructeurs-q5",
+          "prompt": "Quels membres doivent obligatoirement être initialisés dans la liste d'initialisation ?",
+          "choices": [
+            "Un membre const",
+            "Un membre référence",
+            "Un membre dont le type n'a pas de constructeur par défaut",
+            "Un membre int ordinaire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "const et références ne peuvent pas être affectés après coup, et un membre sans constructeur par défaut doit être construit explicitement. Un int peut être affecté dans le corps (même si la liste reste préférable).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-constructeurs-q6",
+          "prompt": "Quand le destructeur d'une variable locale est-il appelé ?",
+          "choices": [
+            "À la sortie de sa portée, y compris si une exception est levée",
+            "Quand le ramasse-miettes passe",
+            "À la fin du programme",
+            "Seulement si on appelle delete"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est déterministe : en sortie de bloc, normale ou par exception. C'est la base du RAII. delete ne concerne que les objets alloués avec new.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "cpp-surcharge-operateurs",
       "title": "Surcharge d'opérateurs",
       "summary": "Opérateurs arithmétiques, de comparaison et <=>.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Principe",
+          "body": "On peut donner un sens à +, ==, << ... pour ses propres types. La règle d'or : respecter la sémantique attendue. Les opérateurs composés (+=) sont des membres qui renvoient *this par référence ; les opérateurs binaires (+) sont plutôt des fonctions libres, définies à partir de +=.",
+          "code": "struct Vec {\n    double x, y;\n    Vec& operator+=(const Vec& o) {\n        x += o.x; y += o.y;\n        return *this;\n    }\n};\n\nVec operator+(Vec a, const Vec& b) {\n    return a += b;\n}"
+        },
+        {
+          "title": "Afficher avec <<",
+          "body": "operator<< pour les flux est une fonction libre : l'opérande de gauche est le flux, pas notre objet. Elle renvoie le flux par référence pour permettre l'enchaînement std::cout << a << b.",
+          "code": "std::ostream& operator<<(std::ostream& os,\n                         const Vec& v) {\n    return os << v.x << ',' << v.y;\n}"
+        },
+        {
+          "title": "Comparaisons et <=> (C++20)",
+          "body": "L'opérateur « vaisseau spatial » <=> déclaré = default génère <, <=, > et >= en comparant les membres dans l'ordre de déclaration. Un operator<=> par défaut déclare aussi implicitement un operator== par défaut.",
+          "code": "struct Version {\n    int majeur, mineur;\n    auto operator<=>(const Version&) const\n        = default;\n};"
+        },
+        {
+          "title": "Les limites",
+          "body": "On ne peut ni inventer d'opérateur (pas de **), ni changer la priorité des opérateurs existants. Surcharger && ou || fait perdre l'évaluation en court-circuit : à éviter. =, [], () et -> doivent être des fonctions membres."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-operateurs-q1",
+          "prompt": "Que doit renvoyer operator+= par convention ?",
+          "choices": [
+            "Une référence vers *this",
+            "Une copie de *this",
+            "void",
+            "Un bool indiquant le succès"
+          ],
+          "answerIndex": 0,
+          "explanation": "Comme pour les types natifs, (a += b) désigne a lui-même : on renvoie T&. Une copie rendrait (a += b) += c trompeur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-operateurs-q2",
+          "prompt": "Pourquoi définir operator+ comme fonction libre plutôt que membre ?",
+          "choices": [
+            "Pour que les deux opérandes bénéficient des conversions : 2 + v comme v + 2",
+            "Parce qu'un membre ne peut pas renvoyer de valeur",
+            "Pour qu'il soit plus rapide",
+            "C'est obligatoire pour tous les opérateurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "En membre, l'opérande de gauche doit déjà être du type de la classe : 2 + v ne compilerait pas même si un constructeur de conversion existe. En fonction libre, les deux côtés sont traités symétriquement.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-operateurs-q3",
+          "prompt": "(a += b) += c ne modifie a qu'une seule fois. Touche la ligne en cause.",
+          "code": "struct Vec {\n    double x, y;\n    Vec operator+=(const Vec& o) {\n        x += o.x;\n        y += o.y;\n        return *this;\n    }\n};",
+          "bugLines": [
+            3
+          ],
+          "explanation": "operator+= renvoie Vec par valeur : le second += s'applique à une copie temporaire. La signature attendue est Vec& operator+=(const Vec& o).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-operateurs-q4",
+          "prompt": "Complète l'opérateur d'affichage pour pouvoir écrire std::cout << p << '\\n';",
+          "code": "std::___& operator<<(std::ostream& os,\n                     const Point& p) {\n    return os << p.x << ',' << p.y;\n}",
+          "answers": [
+            "ostream"
+          ],
+          "distractors": [
+            "istream",
+            "string",
+            "cout"
+          ],
+          "explanation": "On renvoie le flux reçu (std::ostream&) pour permettre l'enchaînement. std::cout est un objet, pas un type.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-operateurs-q5",
+          "prompt": "Qu'affiche ce code (C++20) ?",
+          "code": "struct Version {\n    int majeur, mineur;\n    auto operator<=>(const Version&) const\n        = default;\n};\n\nVersion a{1, 9}, b{2, 0};\nstd::cout << (a < b) << (a == b);",
+          "choices": [
+            "10",
+            "01",
+            "00",
+            "Erreur de compilation : operator== manquant"
+          ],
+          "answerIndex": 0,
+          "explanation": "La comparaison se fait membre par membre dans l'ordre : 1 < 2 suffit, donc a < b (1). Un operator<=> par défaut déclare aussi un operator== par défaut : a == b vaut false (0).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cpp-operateurs-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "On ne peut pas créer un nouvel opérateur comme **",
+            "La surcharge ne change pas la priorité des opérateurs",
+            "Un && surchargé garde l'évaluation en court-circuit",
+            "operator= doit être une fonction membre"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Les opérateurs, leur arité et leur priorité sont fixés par le langage. Un && surchargé est un appel de fonction ordinaire : les deux opérandes sont toujours évalués.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cpp-defi-classes",
+    "title": "Défi entretien : classes et objets",
+    "summary": "Durée de vie, encapsulation et revue de classe.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi3-q1",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "struct M {\n    char n;\n    M(char n) : n(n) { std::cout << n; }\n    ~M() { std::cout << n; }\n};\nstruct C {\n    M b{'b'};\n    M a{'a'};\n    C() { std::cout << 'C'; }\n    ~C() { std::cout << 'c'; }\n};\n\nint main() { C objet; }",
+        "choices": [
+          "baCcab",
+          "abCcba",
+          "Cbacab",
+          "baCcba"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les membres sont construits dans l'ordre de déclaration (b, a) avant le corps du constructeur (C). À la destruction, le corps du destructeur s'exécute d'abord (c), puis les membres dans l'ordre inverse (a, b).",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi3-q2",
+        "prompt": "Cas pratique 1/3 — Un collègue écrit panier.prix.clear(); et le total devient faux. Touche la ligne qui rend cela possible.",
+        "code": "class Panier {\npublic:\n    std::vector<double> prix;\n    double total = 0;\n\n    void ajouter(double p) {\n        prix.push_back(p);\n        total += p;\n    }\n};",
+        "bugLines": [
+          2,
+          3,
+          4
+        ],
+        "explanation": "Les données sont publiques : n'importe qui peut modifier prix sans mettre total à jour, et l'invariant « total = somme des prix » est cassé.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi3-q3",
+        "prompt": "Cas pratique 2/3 — Quel est le bon correctif ?",
+        "choices": [
+          "Rendre les données privées et exposer double total() const",
+          "Ajouter un commentaire « ne pas modifier prix »",
+          "Déclarer prix const",
+          "Rendre total static"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'encapsulation garantit l'invariant : seules les fonctions membres (ajouter, retirer...) modifient les données, et elles les gardent cohérentes. Un prix const empêcherait d'ajouter des articles.",
+        "difficulty": 1
+      },
+      {
+        "type": "fill",
+        "id": "cpp-defi3-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version corrigée.",
+        "code": "class Panier {\npublic:\n    void ajouter(double p);\n    double total() ___ { return total_; }\n___:\n    std::vector<double> prix_;\n    double total_ = 0;\n};",
+        "answers": [
+          "const",
+          "private"
+        ],
+        "distractors": [
+          "static",
+          "public",
+          "virtual"
+        ],
+        "explanation": "total() ne modifie rien : const. Les données passent en private, accessibles seulement par les fonctions membres.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi3-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "class Point {\npublic:\n    Point(int x, int y) {\n        x = x;\n        y = y;\n    }\n    int getX() { return x; }\nprivate:\n    int x, y;\n};",
+        "choices": [
+          "x = x; affecte le paramètre à lui-même : les membres restent non initialisés",
+          "getX() devrait être const",
+          "Une liste d'initialisation : x(x), y(y) corrigerait le constructeur",
+          "Il manque un destructeur pour libérer x et y"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le paramètre x masque le membre : x = x ne touche pas this->x. Dans une liste d'initialisation, x(x) désigne bien le membre puis le paramètre. Des int n'ont rien à libérer : le destructeur généré suffit.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi3-q6",
+        "prompt": "En entretien : pourquoi marquer explicit un constructeur à un argument ?",
+        "choices": [
+          "Pour empêcher des conversions implicites surprenantes",
+          "Pour qu'il soit appelé en premier",
+          "Pour autoriser la copie de l'objet",
+          "Pour le rendre accessible depuis les classes dérivées"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans explicit, un appel comme envoyer(42) peut construire silencieusement un objet à partir d'un int. explicit oblige à écrire la conversion, ce qui rend le code plus lisible et évite des bugs.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

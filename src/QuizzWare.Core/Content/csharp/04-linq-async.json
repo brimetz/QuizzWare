@@ -4,29 +4,33 @@
   "summary": "Requêtes sur les collections et async/await.",
   "lessons": [
     {
-      "id": "csharp-linq-async",
-      "title": "LINQ et async/await",
-      "summary": "Requêtes sur les collections et programmation asynchrone.",
+      "id": "csharp-linq",
+      "title": "LINQ",
+      "summary": "Filtrer, transformer, regrouper, et l'exécution différée.",
       "difficulty": 2,
       "sections": [
         {
-          "title": "LINQ et exécution différée",
-          "body": "La plupart des opérateurs LINQ (Where, Select...) ne s'exécutent pas immédiatement : ils décrivent une requête évaluée au moment de l'énumération (foreach, ToList, Count...). Énumérer deux fois exécute donc la requête deux fois.",
-          "code": "var nums = new[] { 1, 2, 3, 4 };\nvar result = nums.Where(x => x > 2).Select(x => x * 2);\n// rien n'est encore calculé\nvar list = result.ToList(); // [6, 8]"
+          "title": "Les opérateurs essentiels",
+          "body": "Where filtre, Select transforme, OrderBy trie, GroupBy regroupe, Any, All et Count testent, Sum et Average agrègent, ToList et ToDictionary matérialisent. On les enchaîne pour décrire le résultat voulu plutôt que la boucle qui le calcule.",
+          "code": "var top = commandes\n    .Where(c => c.Total > 100)\n    .OrderByDescending(c => c.Total)\n    .Select(c => c.Client)\n    .Take(3)\n    .ToList();"
         },
         {
-          "title": "async / await",
-          "body": "await ne bloque pas le thread : il libère le thread pendant l'attente et reprend la suite de la méthode quand la tâche est terminée. On évite async void (exceptions non observables), sauf pour les gestionnaires d'événements."
+          "title": "L'exécution différée",
+          "body": "Where, Select, OrderBy... ne calculent rien immédiatement : ils décrivent une requête, exécutée au moment du parcours (foreach, ToList, Count, First...). Conséquences : la requête voit l'état des données et des variables capturées au moment du parcours, et chaque parcours la réexécute."
         },
         {
-          "title": "ConfigureAwait(false)",
-          "body": "Par défaut, la suite d'un await reprend sur le contexte de synchronisation capturé (ex. le thread UI). ConfigureAwait(false) indique que ce n'est pas nécessaire : utile dans le code de bibliothèque pour éviter des deadlocks et gagner en performance."
+          "title": "First, Single et leurs variantes",
+          "body": "First lève une exception si la séquence est vide ; FirstOrDefault renvoie la valeur par défaut. Single exige exactement un élément : il lève s'il y en a zéro ou plusieurs. On choisit celui qui exprime la règle métier."
+        },
+        {
+          "title": "IEnumerable ou IQueryable",
+          "body": "Sur une base de données (Entity Framework), une requête IQueryable est traduite en SQL. Appeler ToList() ou AsEnumerable() trop tôt rapatrie toute la table en mémoire avant de filtrer."
         }
       ],
       "questions": [
         {
           "type": "choice",
-          "id": "csharp-async-q1",
+          "id": "csharp-linq-q1",
           "prompt": "Que contient list ?",
           "code": "var list = new[] { 1, 2, 3, 4 }\n    .Where(x => x > 2)\n    .Select(x => x * 2)\n    .ToList();",
           "choices": [
@@ -41,7 +45,111 @@
         },
         {
           "type": "choice",
-          "id": "csharp-async-q2",
+          "id": "csharp-linq-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "var nombres = new List<int> { 1, 2, 3 };\nvar grands = nombres.Where(n => n > 1);\nnombres.Add(4);\nConsole.WriteLine(grands.Count());",
+          "choices": [
+            "3",
+            "2",
+            "4",
+            "Une exception"
+          ],
+          "answerIndex": 0,
+          "explanation": "La requête n'est exécutée qu'au Count(), après l'ajout de 4 : elle trouve 2, 3 et 4.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "csharp-linq-q3",
+          "prompt": "Que se passe-t-il ?",
+          "code": "var vide = new List<int>();\nvar a = vide.FirstOrDefault();\nvar b = vide.First();",
+          "choices": [
+            "a vaut 0, puis First() lève InvalidOperationException",
+            "a et b valent 0",
+            "a vaut null, b vaut 0",
+            "Les deux lèvent une exception"
+          ],
+          "answerIndex": 0,
+          "explanation": "FirstOrDefault renvoie default(int), soit 0. First exige au moins un élément et lève InvalidOperationException sur une séquence vide.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "csharp-linq-q4",
+          "prompt": "Complète : compter les clients par ville.",
+          "code": "var parVille = clients\n    .___(c => c.Ville)\n    .Select(g => new {\n        Ville = g.Key,\n        Nb = g.Count()\n    });",
+          "answers": [
+            "GroupBy"
+          ],
+          "distractors": [
+            "OrderBy",
+            "Select",
+            "Distinct"
+          ],
+          "explanation": "GroupBy produit des groupes ; chaque groupe a une Key (la ville) et contient les clients correspondants.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "csharp-linq-q5",
+          "prompt": "On voulait les commandes de plus de 10 €, mais on n'obtient que celles de plus de 1000 €. Touche une ligne en cause.",
+          "code": "int seuil = 10;\nvar grosses = commandes.Where(c => c.Total > seuil);\nseuil = 1000;\nforeach (var c in grosses)\n    Console.WriteLine(c.Id);",
+          "bugLines": [
+            2,
+            3
+          ],
+          "explanation": "La lambda capture la variable seuil, pas sa valeur : la requête, exécutée au foreach, lit 1000. Il faut matérialiser avec ToList() avant de modifier seuil, ou ne pas réutiliser la variable.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "csharp-linq-q6",
+          "prompt": "Quels appels déclenchent l'exécution immédiate de la requête ?",
+          "choices": [
+            "ToList()",
+            "Count()",
+            "Where(...)",
+            "First()"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Where (comme Select ou OrderBy) renvoie une nouvelle requête sans rien calculer. Les opérateurs qui produisent une valeur ou une collection concrète parcourent la séquence.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "csharp-async",
+      "title": "async et await",
+      "summary": "Attendre sans bloquer.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Pourquoi l'asynchrone",
+          "body": "Une requête HTTP ou une lecture de fichier passe l'essentiel de son temps à attendre. Bloquer un thread pendant ce temps fige une interface ou épuise les threads d'un serveur. L'asynchrone libère le thread pendant l'attente."
+        },
+        {
+          "title": "async et await",
+          "body": "Une méthode async renvoie Task ou Task<T>. await suspend la méthode sans bloquer le thread et la reprend quand la tâche se termine. Si la tâche échoue, l'exception est stockée dans la Task et relevée au moment du await.",
+          "code": "async Task<int> CompterAsync(string chemin) {\n    var lignes = await File.ReadAllLinesAsync(chemin);\n    return lignes.Length;\n}"
+        },
+        {
+          "title": "Lancer en parallèle",
+          "body": "Des await successifs attendent chaque opération l'une après l'autre. Pour des opérations indépendantes, on les démarre toutes, puis on attend l'ensemble avec Task.WhenAll.",
+          "code": "var tProfil = ChargerProfilAsync(id);\nvar tCommandes = ChargerCommandesAsync(id);\nawait Task.WhenAll(tProfil, tCommandes);"
+        },
+        {
+          "title": "L'annulation",
+          "body": "Un CancellationToken permet de demander l'arrêt d'une opération. L'annulation est coopérative : la méthode doit transmettre le jeton aux API qu'elle appelle, ou le vérifier elle-même."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "csharp-async-q1",
           "prompt": "Que fait await pendant qu'une tâche est en cours ?",
           "choices": [
             "Il bloque le thread courant",
@@ -50,26 +158,113 @@
             "Il annule la tâche"
           ],
           "answerIndex": 1,
-          "explanation": "await suspend la méthode sans bloquer le thread, qui peut traiter d'autres travaux.",
+          "explanation": "await suspend la méthode sans bloquer le thread, qui peut traiter d'autres travaux. Aucun thread n'est créé pour attendre une opération d'entrée-sortie.",
           "difficulty": 1
         },
         {
           "type": "choice",
-          "id": "csharp-async-q3",
-          "prompt": "Quand une requête LINQ comme Where(...).Select(...) est-elle exécutée ?",
+          "id": "csharp-async-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "async Task Etape() {\n    Console.Write(\"1\");\n    await Task.Delay(100);\n    Console.Write(\"3\");\n}\n\nvar t = Etape();\nConsole.Write(\"2\");\nawait t;",
           "choices": [
-            "À sa déclaration",
-            "Lors de son énumération",
-            "À la compilation",
-            "Au démarrage de l'application"
+            "123",
+            "132",
+            "213",
+            "231"
           ],
-          "answerIndex": 1,
-          "explanation": "C'est l'exécution différée : la requête est évaluée quand on l'énumère (foreach, ToList...).",
+          "answerIndex": 0,
+          "explanation": "Une méthode async s'exécute de façon synchrone jusqu'à son premier await sur une tâche non terminée (« 1 »), puis rend la main à l'appelant (« 2 »). La suite (« 3 ») s'exécute après le délai.",
           "difficulty": 2
         },
         {
           "type": "choice",
+          "id": "csharp-async-q3",
+          "prompt": "Ces trois chargements sont indépendants. Comment réduire le temps total ?",
+          "code": "var profil = await ChargerProfilAsync(id);\nvar commandes = await ChargerCommandesAsync(id);\nvar avis = await ChargerAvisAsync(id);",
+          "choices": [
+            "Démarrer les trois tâches, puis await Task.WhenAll(...)",
+            "Remplacer chaque await par .Result",
+            "Envelopper chaque appel dans Task.Run",
+            "Ajouter ConfigureAwait(false) à chaque appel"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les await successifs additionnent les durées. En démarrant les tâches avant d'attendre, elles progressent en même temps : la durée totale devient celle de la plus lente.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
           "id": "csharp-async-q4",
+          "prompt": "Complète cette méthode asynchrone.",
+          "code": "public ___ Task<int> CompterAsync() {\n    var lignes =\n        ___ File.ReadAllLinesAsync(\"a.txt\");\n    return lignes.Length;\n}",
+          "answers": [
+            "async",
+            "await"
+          ],
+          "distractors": [
+            "void",
+            "yield",
+            "sync"
+          ],
+          "explanation": "async autorise await dans la méthode ; await récupère le string[] produit par la tâche. Le return renvoie un int, que le compilateur emballe dans la Task<int>.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "csharp-async-q5",
+          "prompt": "Une exception est levée dans une méthode async Task. Où apparaît-elle ?",
+          "choices": [
+            "Elle est stockée dans la Task et relevée au moment du await",
+            "Elle arrête immédiatement le programme",
+            "Elle est perdue",
+            "Elle est levée au moment de l'appel, avant le await"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui permet d'écrire try { await X(); } catch { } comme en synchrone. Une tâche jamais attendue garde donc son exception sans que personne ne la voie.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "csharp-async-q6",
+          "prompt": "À quoi sert un CancellationToken ?",
+          "choices": [
+            "À demander l'arrêt d'une opération, qui doit coopérer en le vérifiant ou en le transmettant",
+            "À tuer immédiatement le thread qui exécute la tâche",
+            "À limiter le nombre de tâches simultanées",
+            "À mesurer la durée d'une tâche"
+          ],
+          "answerIndex": 0,
+          "explanation": ".NET n'interrompt jamais une tâche de force : le jeton signale la demande, et les API qui le reçoivent (HttpClient, EF Core...) lèvent OperationCanceledException.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "csharp-async-pieges",
+      "title": "Pièges de l'asynchrone",
+      "summary": "async void, .Result et deadlocks.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "async void",
+          "body": "Une méthode async void ne peut pas être attendue, et ses exceptions ne remontent pas à l'appelant : elles font planter le processus. On ne l'utilise que pour les gestionnaires d'événements, dont la signature impose void."
+        },
+        {
+          "title": ".Result et .Wait()",
+          "body": "Bloquer sur une tâche gaspille un thread et peut provoquer un deadlock : dans une interface graphique, le thread UI attend la tâche, alors que la suite de la tâche attend de pouvoir reprendre sur le thread UI. Règle : « async jusqu'au bout »."
+        },
+        {
+          "title": "ConfigureAwait(false)",
+          "body": "Par défaut, la suite d'un await reprend sur le contexte capturé (le thread UI par exemple). Dans du code de bibliothèque qui n'en a pas besoin, ConfigureAwait(false) évite ce retour : moins de risques de deadlock et un peu de performance. ASP.NET Core n'a pas de tel contexte."
+        },
+        {
+          "title": "Task.Run n'est pas « rendre asynchrone »",
+          "body": "Task.Run exécute du code sur un thread du pool : utile pour décharger un calcul lourd du thread UI. Envelopper un appel d'entrée-sortie dans Task.Run ne fait qu'occuper un thread de plus pendant l'attente."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "csharp-async-pieges-q1",
           "prompt": "Dans quel cas async void est-il acceptable ?",
           "choices": [
             "Jamais",
@@ -78,12 +273,12 @@
             "Pour les constructeurs"
           ],
           "answerIndex": 1,
-          "explanation": "Les handlers d'événements imposent une signature void ; ailleurs on retourne Task pour pouvoir attendre et observer les exceptions.",
-          "difficulty": 2
+          "explanation": "Les gestionnaires d'événements imposent une signature void ; ailleurs on renvoie Task pour pouvoir attendre et observer les exceptions.",
+          "difficulty": 1
         },
         {
           "type": "choice",
-          "id": "csharp-async-q5",
+          "id": "csharp-async-pieges-q2",
           "prompt": "Que signifie ConfigureAwait(false) ?",
           "choices": [
             "Annuler la tâche si elle échoue",
@@ -93,9 +288,166 @@
           ],
           "answerIndex": 1,
           "explanation": "La suite de la méthode peut reprendre sur n'importe quel thread du pool, sans repasser par le contexte d'origine.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "csharp-async-pieges-q3",
+          "prompt": "Cliquer sur le bouton fige l'application pour toujours. Touche la ligne en cause.",
+          "code": "void Bouton_Click(object s, EventArgs e) {\n    var texte = ChargerAsync().Result;\n    Etiquette.Text = texte;\n}\n\nasync Task<string> ChargerAsync() {\n    var t = await http.GetStringAsync(url);\n    return t.Trim();\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": ".Result bloque le thread UI. La suite de ChargerAsync (après son await) doit reprendre sur ce même thread : chacun attend l'autre. Correctif : async void Bouton_Click et await ChargerAsync().",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "csharp-async-pieges-q4",
+          "prompt": "Pourquoi ce deadlock disparaît-il si ChargerAsync utilise ConfigureAwait(false) ?",
+          "choices": [
+            "La suite de ChargerAsync reprend sur un thread du pool, sans attendre le thread UI bloqué",
+            "ConfigureAwait(false) rend .Result non bloquant",
+            "ConfigureAwait(false) annule la tâche",
+            "Il ne disparaît pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "La tâche peut alors se terminer sans le thread UI, et .Result finit par rendre la main. C'est un pansement : l'interface reste figée pendant le chargement. La vraie correction est d'attendre avec await.",
           "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "csharp-async-pieges-q5",
+          "prompt": "Complète les types de retour : un gestionnaire d'événement, puis une méthode qu'on peut attendre.",
+          "code": "async ___ Bouton_Click(object s, EventArgs e) {\n    await SauverAsync();\n}\n\nasync ___ SauverAsync() {\n    await File.WriteAllTextAsync(\"a.txt\", \"ok\");\n}",
+          "answers": [
+            "void",
+            "Task"
+          ],
+          "distractors": [
+            "Task<void>",
+            "Action",
+            "dynamic"
+          ],
+          "explanation": "Le gestionnaire d'événement doit renvoyer void ; toute autre méthode async renvoie Task (ou Task<T>). Task<void> n'existe pas.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "csharp-async-pieges-q6",
+          "prompt": "Quelles pratiques sont recommandées ?",
+          "choices": [
+            "« async jusqu'au bout » : ne pas bloquer sur une tâche avec .Result ou .Wait()",
+            "Accepter et transmettre un CancellationToken",
+            "Envelopper chaque appel réseau dans Task.Run",
+            "Utiliser ConfigureAwait(false) dans le code de bibliothèque"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Un appel réseau asynchrone n'occupe aucun thread pendant l'attente : Task.Run en mobiliserait un pour rien. Task.Run sert aux calculs lourds qu'on veut sortir du thread UI.",
+          "difficulty": 2
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "csharp-defi-linq-async",
+    "title": "Défi entretien : LINQ et asynchrone",
+    "summary": "Requêtes, base de données et montée en charge.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "csharp-defi4-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "var mots = new[] { \"pomme\", \"kiwi\",\n                   \"ananas\", \"figue\" };\nvar r = mots\n    .Where(m => m.Length > 4)\n    .OrderBy(m => m.Length)\n    .ThenBy(m => m)\n    .Select(m => m[0]);\nConsole.WriteLine(string.Concat(r));",
+        "choices": [
+          "fpa",
+          "pfa",
+          "pkaf",
+          "apf"
+        ],
+        "answerIndex": 0,
+        "explanation": "kiwi est écarté (4 lettres). Tri par longueur : figue et pomme (5), puis ananas (6) ; ThenBy départage figue et pomme par ordre alphabétique. On garde la première lettre.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "csharp-defi4-q2",
+        "prompt": "Cas pratique 1/3 — Sous forte charge, cette API ASP.NET Core répond de plus en plus lentement, puis plus du tout. Touche la ligne en cause.",
+        "code": "public IActionResult Get(int id) {\n    var client = _repo.TrouverAsync(id).Result;\n    return Ok(client);\n}",
+        "bugLines": [
+          2
+        ],
+        "explanation": ".Result bloque un thread du pool pendant toute la requête à la base de données. Sous charge, tous les threads sont bloqués à attendre.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "csharp-defi4-q3",
+        "prompt": "Cas pratique 2/3 — Comment s'appelle ce phénomène ?",
+        "choices": [
+          "L'épuisement du pool de threads (thread pool starvation)",
+          "Un deadlock sur le thread UI",
+          "Une fuite mémoire",
+          "Une data race"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le pool crée de nouveaux threads lentement : les requêtes s'accumulent en attendant un thread libre. ASP.NET Core n'a pas de contexte de synchronisation, donc pas de deadlock classique, mais l'effet est similaire.",
+        "difficulty": 3
+      },
+      {
+        "type": "fill",
+        "id": "csharp-defi4-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version asynchrone.",
+        "code": "public async ___<IActionResult> Get(int id) {\n    var client = ___ _repo.TrouverAsync(id);\n    return Ok(client);\n}",
+        "answers": [
+          "Task",
+          "await"
+        ],
+        "distractors": [
+          "void",
+          "Result",
+          "Wait"
+        ],
+        "explanation": "L'action renvoie Task<IActionResult> et attend la requête avec await : le thread retourne au pool pendant l'attente.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "csharp-defi4-q5",
+        "prompt": "Revue de code (Entity Framework) : coche tous les problèmes.",
+        "code": "async Task<decimal> TotalAsync(int clientId) {\n    var commandes =\n        await _db.Commandes.ToListAsync();\n    return commandes\n        .Where(c => c.ClientId == clientId)\n        .Sum(c => c.Montant);\n}",
+        "choices": [
+          "Toute la table Commandes est chargée en mémoire",
+          "Le Where devrait précéder ToListAsync pour être traduit en SQL",
+          "SumAsync permettrait de calculer la somme directement en base",
+          "async est inutile puisqu'il y a un await"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "ToListAsync exécute la requête : tout ce qui suit se fait en mémoire. Version efficace : await _db.Commandes.Where(...).SumAsync(c => c.Montant); qui génère un seul SELECT SUM(...).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "csharp-defi4-q6",
+        "prompt": "En entretien : quelle est la différence entre une Task et un Thread ?",
+        "choices": [
+          "Une Task représente une opération qui se terminera ; elle n'occupe pas forcément de thread (attente d'entrée-sortie)",
+          "C'est la même chose",
+          "Une Task crée toujours un nouveau Thread",
+          "Un Thread est plus léger qu'une Task"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un Thread est un fil d'exécution du système, coûteux. Une Task est une promesse de résultat : pour une requête réseau, aucun thread n'est occupé pendant l'attente.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

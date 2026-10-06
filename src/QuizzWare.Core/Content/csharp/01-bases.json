@@ -1,26 +1,31 @@
 {
   "id": "csharp-ch-bases",
   "title": "Bases du langage",
-  "summary": "Types valeur, types référence et nullabilité.",
+  "summary": "Types, chaînes et méthodes.",
   "lessons": [
     {
       "id": "csharp-types",
-      "title": "Types et bases du langage",
-      "summary": "Types valeur, types référence et nullabilité.",
+      "title": "Types valeur et types référence",
+      "summary": "Copie, partage et nullabilité.",
       "difficulty": 1,
       "sections": [
         {
-          "title": "Types valeur vs types référence",
-          "body": "Une struct est un type valeur : l'affectation copie les données. Une class est un type référence : l'affectation copie la référence, et les deux variables désignent le même objet."
+          "title": "Valeur ou référence",
+          "body": "Une struct (comme int, bool, DateTime) est un type valeur : l'affectation copie les données. Une class (comme string, List<T>, les tableaux) est un type référence : l'affectation copie la référence, et les deux variables désignent le même objet.",
+          "code": "struct PointS { public int X; }\nclass PointC { public int X; }\n\nvar a = new PointS { X = 1 };\nvar b = a;  b.X = 2;  // a.X vaut 1\nvar c = new PointC { X = 1 };\nvar d = c;  d.X = 2;  // c.X vaut 2"
         },
         {
-          "title": "string est immuable",
-          "body": "Une string ne peut pas être modifiée : chaque opération crée une nouvelle instance. Pour des concaténations en boucle, on utilise StringBuilder."
+          "title": "var n'est pas dynamique",
+          "body": "var laisse le compilateur déduire le type ; il reste statique et vérifié à la compilation. C'est dynamic qui repousse la résolution à l'exécution, sans vérification."
         },
         {
-          "title": "var et nullabilité",
-          "body": "var ne rend pas le code dynamique : le type est inféré à la compilation et reste statique. Les types nullables (int?, string? avec les nullable reference types) et les opérateurs ?? et ?. aident à gérer l'absence de valeur.",
-          "code": "int? x = null;\nConsole.WriteLine(x ?? 42);      // 42\nstring? name = null;\nConsole.WriteLine(name?.Length); // (vide)"
+          "title": "Valeurs absentes",
+          "body": "int? (raccourci de Nullable<int>) ajoute null à un type valeur. Les opérateurs ?. (accès si non null), ?? (valeur de repli) et ??= (affectation si null) évitent les NullReferenceException.",
+          "code": "string? nom = null;\nint longueur = nom?.Length ?? 0; // 0\nnom ??= \"inconnu\";"
+        },
+        {
+          "title": "L'égalité",
+          "body": "Pour une class, == compare par défaut les références : deux objets au contenu identique sont différents. string fait exception (== compare le texte), comme les records, qui comparent leurs valeurs."
         }
       ],
       "questions": [
@@ -35,7 +40,7 @@
             "Une interface"
           ],
           "answerIndex": 1,
-          "explanation": "Les struct sont des types valeur : elles sont copiées lors de l'affectation.",
+          "explanation": "Les struct sont des types valeur : elles sont copiées lors de l'affectation et du passage en paramètre.",
           "difficulty": 1
         },
         {
@@ -70,6 +75,106 @@
         {
           "type": "choice",
           "id": "csharp-types-q4",
+          "prompt": "Avec PointS (struct) et PointC (class) de la leçon, qu'affiche ce code ?",
+          "code": "var a = new PointS { X = 1 };\nvar b = a;\nb.X = 2;\nvar c = new PointC { X = 1 };\nvar d = c;\nd.X = 2;\nConsole.WriteLine($\"{a.X} {c.X}\");",
+          "choices": [
+            "1 2",
+            "2 2",
+            "1 1",
+            "2 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "b est une copie indépendante de la struct a : a.X reste à 1. c et d désignent le même objet PointC : modifier via d se voit via c.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "csharp-types-q5",
+          "prompt": "On voulait incrémenter le compteur stocké dans la liste, mais elle affiche toujours 0. Touche la ligne en cause.",
+          "code": "struct Compteur { public int Valeur; }\n\nvar liste = new List<Compteur> { new() };\nvar c = liste[0];\nc.Valeur++;\nConsole.WriteLine(liste[0].Valeur);",
+          "bugLines": [
+            4
+          ],
+          "explanation": "liste[0] renvoie une copie de la struct : on incrémente la copie. Il faudrait réécrire liste[0] = c;, ou faire de Compteur une class. Le compilateur interdit d'ailleurs liste[0].Valeur++ pour cette raison (CS1612).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "csharp-types-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "int, bool et DateTime sont des types valeur",
+            "string est un type référence",
+            "Par défaut, == entre deux objets d'une class compare leur contenu",
+            "int? est un raccourci pour Nullable<int>"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Pour une class sans redéfinition, == compare les références. string (et les records) redéfinissent l'égalité pour comparer les valeurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "csharp-types-q7",
+          "prompt": "Complète : longueur vaut la longueur du nom, ou 0 si nom est null.",
+          "code": "string? nom = null;\nint longueur = nom___Length ___ 0;",
+          "answers": [
+            "?.",
+            "??"
+          ],
+          "distractors": [
+            ".",
+            "?:",
+            "!"
+          ],
+          "explanation": "nom?.Length donne null au lieu de lever une exception ; ?? 0 remplace ce null par 0. Avec nom.Length, on aurait une NullReferenceException.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "csharp-chaines",
+      "title": "Chaînes et formatage",
+      "summary": "Immuabilité, interpolation et comparaisons.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "string est immuable",
+          "body": "Une string ne change jamais : ToUpper, Replace ou Trim renvoient une nouvelle chaîne et laissent l'originale intacte. Oublier de récupérer le résultat est un bug classique.",
+          "code": "string nom = \"ana\";\nnom.ToUpper();       // résultat perdu\nnom = nom.ToUpper(); // \"ANA\""
+        },
+        {
+          "title": "Interpolation et littéraux",
+          "body": "$\"...\" insère des expressions, avec un format optionnel ({prix:F2}, {date:yyyy-MM-dd}). @\"...\" (verbatim) n'interprète pas les \\, pratique pour les chemins. Les raw strings \"\"\"...\"\"\" (C# 11) acceptent guillemets et retours à la ligne tels quels.",
+          "code": "decimal prix = 3.5m;\nvar texte = $\"Total : {prix:F2} €\";\nvar chemin = @\"C:\\dossier\\fichier.txt\";"
+        },
+        {
+          "title": "Comparer des chaînes",
+          "body": "== compare le contenu. Pour ignorer la casse, on précise la règle : string.Equals(a, b, StringComparison.OrdinalIgnoreCase). Comparer des ToLower() alloue deux chaînes et dépend de la culture (en turc, \"I\".ToLower() ne donne pas \"i\")."
+        },
+        {
+          "title": "StringBuilder",
+          "body": "Concaténer dans une boucle copie tout le texte à chaque tour : le coût devient quadratique. StringBuilder travaille dans un tampon modifiable et ne construit la chaîne qu'à la fin."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "csharp-chaines-q1",
+          "prompt": "Ce code affiche « ana » au lieu de « ANA ». Touche la ligne fautive.",
+          "code": "string nom = \"ana\";\nnom.ToUpper();\nConsole.WriteLine(nom);",
+          "bugLines": [
+            2
+          ],
+          "explanation": "ToUpper renvoie une nouvelle chaîne, ignorée ici : string est immuable. Il faut écrire nom = nom.ToUpper();.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "csharp-chaines-q2",
           "prompt": "Pourquoi préférer StringBuilder pour concaténer dans une boucle ?",
           "choices": [
             "string est immuable : chaque concaténation alloue une nouvelle chaîne",
@@ -78,10 +183,288 @@
             "StringBuilder compresse les données"
           ],
           "answerIndex": 0,
-          "explanation": "Concaténer n fois des string crée n objets intermédiaires ; StringBuilder travaille sur un buffer modifiable.",
+          "explanation": "Concaténer n fois recopie le texte accumulé à chaque tour (coût en O(n²)) ; StringBuilder ajoute dans un tampon qui grandit au besoin. Il n'est d'ailleurs pas thread-safe.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "csharp-chaines-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "string a = \"bonjour\";\nstring b = string.Concat(\"bon\", \"jour\");\nConsole.Write(a == b);\nConsole.Write(\" \");\nConsole.Write((object)a == (object)b);",
+          "choices": [
+            "True False",
+            "True True",
+            "False False",
+            "False True"
+          ],
+          "answerIndex": 0,
+          "explanation": "== entre deux string compare le texte : True. Converties en object, c'est l'égalité de référence qui s'applique : b est une autre instance, créée à l'exécution.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "csharp-chaines-q4",
+          "prompt": "Complète pour afficher le prix avec deux décimales.",
+          "code": "decimal prix = 3.5m;\nConsole.WriteLine(___\"Prix : {prix___} €\");",
+          "answers": [
+            "$",
+            ":F2"
+          ],
+          "distractors": [
+            "@",
+            ".2f",
+            "%"
+          ],
+          "explanation": "$ active l'interpolation, :F2 formate avec deux décimales (le séparateur dépend de la culture : 3,50 en français). .2f est la syntaxe de Python.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "csharp-chaines-q5",
+          "prompt": "Quelle est la meilleure façon de comparer deux identifiants sans tenir compte de la casse ?",
+          "choices": [
+            "string.Equals(a, b, StringComparison.OrdinalIgnoreCase)",
+            "a.ToLower() == b.ToLower()",
+            "a == b",
+            "a.CompareTo(b) == 0"
+          ],
+          "answerIndex": 0,
+          "explanation": "La comparaison ordinale insensible à la casse n'alloue rien et ne dépend pas de la culture de la machine. ToLower() fonctionne souvent, mais échoue dans certaines cultures (le « i turc »).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "csharp-chaines-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Chaque concaténation crée une nouvelle chaîne",
+            "== entre deux string compare leur contenu",
+            "Dans @\"C:\\dossier\", les \\ ne sont pas interprétés",
+            "string.Empty et null sont équivalents"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "string.Empty est une chaîne vide valide (Length vaut 0) ; null est l'absence de chaîne. string.IsNullOrEmpty teste les deux.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "csharp-methodes",
+      "title": "Méthodes et paramètres",
+      "summary": "ref, out, params et arguments nommés.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Passage par valeur",
+          "body": "Par défaut, la méthode reçoit une copie : de la valeur pour une struct, de la référence pour une class. Elle peut donc modifier l'objet référencé (visible par l'appelant), mais réaffecter le paramètre n'a aucun effet à l'extérieur.",
+          "code": "void Modifier(List<int> l) {\n    l.Add(1);              // visible dehors\n    l = new List<int>();   // invisible dehors\n}"
+        },
+        {
+          "title": "ref, out et in",
+          "body": "ref passe la variable elle-même : la méthode peut la réaffecter, et elle doit être initialisée avant l'appel. out oblige la méthode à l'affecter : c'est le motif TryParse. in passe par référence en lecture seule, pour éviter de copier une grosse struct.",
+          "code": "if (int.TryParse(saisie, out int age))\n    Console.WriteLine(age);"
+        },
+        {
+          "title": "Paramètres optionnels, nommés et params",
+          "body": "Un paramètre avec valeur par défaut est optionnel ; un argument nommé permet d'en sauter certains. params accepte un nombre variable d'arguments, reçus dans un tableau.",
+          "code": "void Log(string msg, int niveau = 1,\n         bool horodatage = true) { }\n\nLog(\"ok\", horodatage: false);\n\nint Somme(params int[] v) => v.Sum();"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "csharp-methodes-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "void Modifier(List<int> l) {\n    l.Add(1);\n    l = new List<int> { 99 };\n}\n\nvar liste = new List<int>();\nModifier(liste);\nConsole.WriteLine(string.Join(\",\", liste));",
+          "choices": [
+            "1",
+            "99",
+            "1,99",
+            "Rien : la liste est vide"
+          ],
+          "answerIndex": 0,
+          "explanation": "l est une copie de la référence : Add modifie la liste partagée, mais la réaffectation ne change que la copie locale. L'appelant voit [1].",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "csharp-methodes-q2",
+          "prompt": "Complète pour convertir la saisie sans risquer d'exception.",
+          "code": "if (int.TryParse(saisie, ___ int age))\n    Console.WriteLine(age);",
+          "answers": [
+            "out"
+          ],
+          "distractors": [
+            "ref",
+            "in",
+            "var"
+          ],
+          "explanation": "TryParse renvoie un bool et écrit le résultat dans un paramètre out, déclarable directement dans l'appel.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "csharp-methodes-q3",
+          "prompt": "Ce code ne compile pas. Touche une ligne en cause.",
+          "code": "void Doubler(ref int x) => x *= 2;\n\nint n;\nDoubler(ref n);",
+          "bugLines": [
+            3,
+            4
+          ],
+          "explanation": "Une variable passée par ref doit être initialisée avant l'appel, puisque la méthode peut la lire. Avec out, ce serait l'inverse : la méthode est obligée de l'affecter.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "csharp-methodes-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "string Saluer(string nom,\n              string salut = \"Bonjour\",\n              string fin = \"!\")\n    => $\"{salut} {nom}{fin}\";\n\nConsole.WriteLine(Saluer(\"Ana\", fin: \".\"));",
+          "choices": [
+            "Bonjour Ana.",
+            ". Ana!",
+            "Bonjour Ana!",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'argument nommé fin: saute salut, qui garde sa valeur par défaut.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "csharp-methodes-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int Somme(params int[] valeurs)\n    => valeurs.Sum();\n\nConsole.WriteLine(Somme() + Somme(1, 2, 3));",
+          "choices": [
+            "6",
+            "Erreur de compilation : Somme() sans argument",
+            "Une exception : valeurs est null",
+            "0"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans argument, params reçoit un tableau vide (pas null) : Somme() vaut 0, Somme(1, 2, 3) vaut 6.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "csharp-methodes-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "out oblige la méthode à affecter le paramètre",
+            "ref exige que la variable soit initialisée avant l'appel",
+            "in passe par référence en lecture seule",
+            "Sans ref, une méthode ne peut pas modifier un objet d'une class reçu en paramètre"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Sans ref, la méthode reçoit une copie de la référence : elle ne peut pas changer la variable de l'appelant, mais peut tout à fait modifier l'objet désigné.",
           "difficulty": 2
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "csharp-defi-bases",
+    "title": "Défi entretien : bases du langage",
+    "summary": "Chaînes, nullabilité et types.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "csharp-defi1-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "int a = 1, b = 2;\n(a, b) = (b, a);\nConsole.WriteLine($\"{a}{b}\");",
+        "choices": [
+          "21",
+          "12",
+          "22",
+          "Erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "La déconstruction de tuple évalue (b, a) avant d'affecter : c'est un échange sans variable temporaire.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "csharp-defi1-q2",
+        "prompt": "Cas pratique 1/3 — Avec 100 000 lignes, Rapport prend plusieurs secondes. Touche la ligne en cause.",
+        "code": "string Rapport(List<Ligne> lignes) {\n    string texte = \"\";\n    foreach (var l in lignes)\n        texte += $\"{l.Nom};{l.Total}\\n\";\n    return texte;\n}",
+        "bugLines": [
+          4
+        ],
+        "explanation": "Chaque += crée une nouvelle chaîne en recopiant tout le texte déjà accumulé.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "csharp-defi1-q3",
+        "prompt": "Cas pratique 2/3 — Quelle est la complexité de cette boucle ?",
+        "choices": [
+          "O(n²) : chaque tour recopie un texte de plus en plus long",
+          "O(n) : une concaténation par ligne",
+          "O(log n)",
+          "O(1) : le compilateur optimise tout"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le tour i recopie environ i lignes : la somme est quadratique. Avec 100 000 lignes, cela représente des milliards de caractères copiés.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "csharp-defi1-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version efficace.",
+        "code": "var sb = new ___();\nforeach (var l in lignes)\n    sb.___($\"{l.Nom};{l.Total}\");\nreturn sb.ToString();",
+        "answers": [
+          "StringBuilder",
+          "AppendLine"
+        ],
+        "distractors": [
+          "String",
+          "Add",
+          "Concat"
+        ],
+        "explanation": "StringBuilder accumule dans un tampon ; AppendLine ajoute le texte suivi d'un retour à la ligne. ToString() construit la chaîne une seule fois.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "csharp-defi1-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "bool EstAdmin(string? role) {\n    if (role.ToLower() == \"admin\")\n        return true;\n    return false;\n}",
+        "choices": [
+          "role peut être null : NullReferenceException",
+          "ToLower dépend de la culture et alloue une chaîne",
+          "Le if suivi de return true / return false peut tenir en un seul return",
+          "string? n'est pas une syntaxe C# valide"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Version propre : return string.Equals(role, \"admin\", StringComparison.OrdinalIgnoreCase); qui gère aussi null. string? est la syntaxe des nullable reference types.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "csharp-defi1-q6",
+        "prompt": "En entretien : qu'est-ce que le boxing ?",
+        "code": "int n = 42;\nobject o = n;",
+        "choices": [
+          "La conversion d'un type valeur en object : la valeur est copiée dans un objet sur le tas",
+          "La conversion d'un object en int",
+          "L'encapsulation des champs d'une classe",
+          "La compression d'un objet en mémoire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le boxing alloue un objet et y copie la valeur ; l'unboxing ((int)o) la recopie. Dans une boucle, ces allocations coûtent cher : c'est une raison d'utiliser les génériques (List<int> plutôt que ArrayList).",
+        "difficulty": 2
+      }
+    ]
+  }
 }

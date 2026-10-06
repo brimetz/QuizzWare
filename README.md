@@ -14,6 +14,8 @@ Chaque catégorie a un **tronc commun** en chapitres (des leçons, cours + quizz
 | Complète le code | Placer des mots dans les trous |
 | Remets dans l'ordre | Toucher les lignes dans le bon ordre |
 
+Les troncs communs **C++** (12 chapitres) et **C#** (9 chapitres) sont entièrement écrits, chaque chapitre avec son défi entretien. Les extraits « qu'affiche ce code ? » ont été compilés et exécutés (clang++ en C++23, Roslyn en C# 13). Chaque question et chaque cours a un lien **⚑ Signaler** qui ouvre une issue GitHub pré-remplie.
+
 ## Stack
 
 - **.NET 9 / .NET MAUI** (Android, iOS, Windows pour le dev)
@@ -35,7 +37,8 @@ src/
     ViewModels/Questions/  Un ViewModel par type de question
     ViewModels/Code/       Coloration syntaxique, lignes de code
     Views/Controls/        Bloc de code réutilisable, sélection du template de question
-    Services/              Notifications locales (Plugin.LocalNotification, Android / iOS uniquement)
+    Services/              Notifications locales (Android / iOS), sons et vibrations, signalement d'erreurs
+    Resources/Raw/sons/    Sons générés par tools/GenerateurSons.ps1
 tests/
   QuizzWare.Core.Tests/    Tests xUnit du Core (y compris validation du contenu JSON)
 docs/
@@ -59,6 +62,7 @@ tools/
 | Défi entretien | Débloqué quand toutes les leçons du chapitre sont validées ; facultatif pour avancer |
 | Entraînement rapide | 5 questions tirées des leçons débloquées ; difficulté max 1 (niv. 1-3), 2 (niv. 4-6), 3 (niv. 7+) |
 | Série (streak) | +1 par jour consécutif avec au moins un quizz |
+| Erreurs rejouées | Une question ratée revient en fin de quizz (remélangée, 2 reprises max) ; seule la première réponse compte pour le score, l'XP et la révision espacée |
 | Objectif du jour | 10, 30 (par défaut), 50 ou 100 XP, réglable dans ⚙️ Réglages |
 | Révision espacée | Chaque question répondue entre dans un système de Leitner à 6 boîtes (intervalles 1, 3, 7, 14, 30, 60 jours). Bonne réponse à l'échéance → boîte suivante ; erreur → boîte 1, à revoir demain. « 🧠 Réviser » propose jusqu'à 10 questions dues, toutes catégories confondues ; leur XP va à la catégorie de chaque question (sans bonus sans faute) |
 | Rappels | Notification locale quotidienne à l'heure choisie (Android / iOS), sur 3 jours glissants ; pas de rappel le jour même si l'objectif est atteint |

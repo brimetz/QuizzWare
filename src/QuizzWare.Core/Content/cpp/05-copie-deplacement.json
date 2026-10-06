@@ -7,19 +7,456 @@
       "id": "cpp-copie",
       "title": "Copie profonde et superficielle",
       "summary": "Constructeur et affectation par copie.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La copie générée",
+          "body": "Sans indication, le compilateur génère une copie membre à membre. C'est parfait pour des int, des std::string ou des std::vector, qui savent se copier. C'est dangereux pour un pointeur brut qui possède sa mémoire : seul le pointeur est copié (copie superficielle) et les deux objets croient posséder la même zone.",
+          "code": "struct Tampon {\n    char* d;\n    ~Tampon() { delete[] d; }\n};\nTampon a{new char[10]};\nTampon b = a; // b.d == a.d\n// fin de portée : double delete[] !"
+        },
+        {
+          "title": "La copie profonde",
+          "body": "Le constructeur de copie alloue une nouvelle zone et y recopie le contenu : chaque objet possède sa propre mémoire.",
+          "code": "Tampon(const Tampon& o)\n    : d(new char[o.n]), n(o.n) {\n    std::copy(o.d, o.d + n, d);\n}"
+        },
+        {
+          "title": "L'affectation par copie et copy-and-swap",
+          "body": "L'affectation doit libérer l'ancien contenu, copier le nouveau et rester correcte pour t = t. L'idiome copy-and-swap fait tout cela : on reçoit une copie par valeur, on échange son contenu avec le nôtre, et l'ancien contenu est libéré avec la copie.",
+          "code": "Tampon& operator=(Tampon o) { // copie\n    std::swap(d, o.d);\n    std::swap(n, o.n);\n    return *this;\n} // o (l'ancien contenu) est détruit"
+        },
+        {
+          "title": "La règle des trois",
+          "body": "Si une classe a besoin d'un destructeur personnalisé, elle a presque toujours besoin aussi d'un constructeur de copie et d'une affectation par copie (ou de les supprimer avec = delete)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-copie-q1",
+          "prompt": "Que fait le constructeur de copie généré par le compilateur ?",
+          "choices": [
+            "Il copie chaque membre, un par un",
+            "Il copie l'objet octet par octet avec memcpy",
+            "Il copie aussi les zones pointées par les pointeurs",
+            "Rien : il faut toujours l'écrire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque membre est copié avec sa propre copie : un std::string se copie en profondeur, mais un pointeur brut est copié comme une simple adresse.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-copie-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "struct S { int* p; };\n\nS a{new int(1)};\nS b = a;\n*b.p = 2;\nstd::cout << *a.p;",
+          "choices": [
+            "2",
+            "1",
+            "0",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "La copie générée copie le pointeur : a.p et b.p désignent le même entier. Modifier via b se voit via a. C'est une copie superficielle.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-copie-q3",
+          "prompt": "t = t; corrompt l'objet. Touche la première ligne qui pose problème.",
+          "code": "Tampon& operator=(const Tampon& o) {\n    delete[] d;\n    n = o.n;\n    d = new char[n];\n    std::copy(o.d, o.d + n, d);\n    return *this;\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Si o est *this, delete[] d libère aussi o.d : on recopie ensuite depuis une zone libérée. Il faut tester this == &o, ou mieux utiliser copy-and-swap, qui gère ce cas et les exceptions.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-copie-q4",
+          "prompt": "Pour quelles classes la copie générée est-elle correcte ?",
+          "choices": [
+            "Membres : un int et un std::string",
+            "Membre : un std::vector<int>",
+            "Membre : un char* qui possède un tableau alloué avec new[]",
+            "Membre : un pointeur qui observe un objet sans le posséder"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Le problème n'est pas le pointeur en soi, mais la possession : copier un pointeur d'observation est voulu, copier un pointeur propriétaire mène à un double delete.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cpp-copie-q5",
+          "prompt": "Complète l'affectation en copy-and-swap.",
+          "code": "Tampon& operator=(Tampon o) {\n    std::___(d, o.d);\n    std::swap(n, o.n);\n    return ___this;\n}",
+          "answers": [
+            "swap",
+            "*"
+          ],
+          "distractors": [
+            "move",
+            "copy",
+            "&"
+          ],
+          "explanation": "On échange le contenu avec la copie o, puis on renvoie *this (une référence vers l'objet). L'ancien contenu est libéré par le destructeur de o.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-copie-q6",
+          "prompt": "Pourquoi copy-and-swap est-il sûr face aux exceptions ?",
+          "choices": [
+            "La copie, qui peut échouer, est faite avant de modifier l'objet ; swap ne lève pas",
+            "swap attrape toutes les exceptions",
+            "Le passage par valeur désactive les exceptions",
+            "Il ne l'est pas, c'est seulement plus court"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si l'allocation échoue pendant la copie du paramètre, *this n'a pas encore été touché : c'est la garantie forte. Ensuite, échanger des pointeurs ne peut pas échouer.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "cpp-deplacement",
       "title": "Sémantique de déplacement",
       "summary": "rvalues et std::move.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "lvalues et rvalues",
+          "body": "Une lvalue a un nom et une adresse (une variable). Une rvalue est une valeur temporaire (le résultat de f(), a + b). Une référence T&& se lie aux rvalues : elle signale un objet dont on peut « voler » le contenu, puisque personne ne s'en servira après."
+        },
+        {
+          "title": "Déplacer, c'est voler les ressources",
+          "body": "Le constructeur de déplacement récupère le pointeur de la source au lieu de copier les données, puis laisse la source vide. Il doit être noexcept : std::vector ne déplace ses éléments lors d'un agrandissement que si c'est garanti sans exception, sinon il les copie.",
+          "code": "Tampon(Tampon&& o) noexcept\n    : d(o.d), n(o.n) {\n    o.d = nullptr;\n    o.n = 0;\n}"
+        },
+        {
+          "title": "std::move ne déplace rien",
+          "body": "std::move est un simple cast vers T&& : il autorise le déplacement, que réalisera le constructeur ou l'affectation choisis. Un objet déplacé est dans un état valide mais non spécifié : on peut le détruire ou lui réaffecter une valeur, pas compter sur son contenu.",
+          "code": "std::string a = \"bonjour\";\nstd::string b = std::move(a);\n// a : valide, contenu non spécifié\na = \"réutilisable\"; // OK"
+        },
+        {
+          "title": "Les pièges",
+          "body": "std::move sur un objet const donne un const T&& : c'est la copie qui est choisie. Et return std::move(local); empêche l'élision de copie : un return de variable locale déplace déjà automatiquement."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-deplacement-q1",
+          "prompt": "Que fait réellement std::move ?",
+          "choices": [
+            "Un cast vers une référence rvalue, sans rien déplacer lui-même",
+            "Il copie l'objet puis vide la source",
+            "Il déplace l'objet en mémoire vers une autre adresse",
+            "Il libère la mémoire de la source"
+          ],
+          "answerIndex": 0,
+          "explanation": "std::move(x) équivaut à static_cast<T&&>(x). C'est le constructeur (ou l'affectation) par déplacement sélectionné ensuite qui transfère les ressources.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-deplacement-q2",
+          "prompt": "Après ce code, que peut-on dire de a ?",
+          "code": "std::string a = \"bonjour\";\nstd::string b = std::move(a);",
+          "choices": [
+            "Il est valide mais dans un état non spécifié : on peut le réaffecter ou le détruire",
+            "Il est détruit : l'utiliser est un comportement indéfini",
+            "Il contient toujours « bonjour »",
+            "Il vaut nullptr"
+          ],
+          "answerIndex": 0,
+          "explanation": "La bibliothèque standard garantit un état valide mais non spécifié (en pratique souvent vide). a.size() est permis, a = \"x\" aussi ; compter sur son contenu ne l'est pas.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-deplacement-q3",
+          "prompt": "Un std::vector<Tampon> copie ses éléments à chaque agrandissement au lieu de les déplacer. Touche la ligne à corriger.",
+          "code": "class Tampon {\npublic:\n    Tampon(const Tampon& o);\n    Tampon(Tampon&& o)\n        : d(o.d), n(o.n) {\n        o.d = nullptr;\n        o.n = 0;\n    }\n};",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Sans noexcept, vector préfère copier lors d'une réallocation (std::move_if_noexcept) pour pouvoir annuler en cas d'exception. Il faut écrire Tampon(Tampon&& o) noexcept.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cpp-deplacement-q4",
+          "prompt": "Dans quels cas une copie a-t-elle lieu malgré std::move ?",
+          "choices": [
+            "L'objet passé à std::move est const",
+            "Le type n'a qu'un constructeur de copie, pas de déplacement",
+            "Le type a un constructeur de déplacement noexcept",
+            "On déplace une variable locale std::string non const"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "const T&& ne peut pas se lier à T&& : la surcharge const T& (la copie) est choisie. Sans constructeur de déplacement, une rvalue se lie aussi à const T&. Dans les deux cas, le code compile et copie silencieusement.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cpp-deplacement-q5",
+          "prompt": "Complète la signature du constructeur de déplacement.",
+          "code": "Tampon(Tampon___ o) ___\n    : d(o.d), n(o.n) {\n    o.d = nullptr;\n    o.n = 0;\n}",
+          "answers": [
+            "&&",
+            "noexcept"
+          ],
+          "distractors": [
+            "&",
+            "const",
+            "override"
+          ],
+          "explanation": "Tampon&& accepte les rvalues ; noexcept permet aux conteneurs d'utiliser le déplacement en toute sécurité.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-deplacement-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "void f(const std::string&) { std::cout << 'L'; }\nvoid f(std::string&&) { std::cout << 'R'; }\n\nstd::string s = \"x\";\nf(s);\nf(std::move(s));\nf(\"tmp\");",
+          "choices": [
+            "LRR",
+            "LRL",
+            "LLR",
+            "RRR"
+          ],
+          "answerIndex": 0,
+          "explanation": "s est une lvalue (L). std::move(s) est une rvalue (R). \"tmp\" est converti en std::string temporaire, donc une rvalue (R).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-deplacement-q7",
+          "prompt": "Pourquoi éviter return std::move(resultat); quand resultat est une variable locale ?",
+          "choices": [
+            "Cela empêche l'élision de copie, alors que le retour déplace déjà automatiquement",
+            "Cela provoque une référence pendante",
+            "Cela ne compile pas",
+            "Cela copie l'objet deux fois"
+          ],
+          "answerIndex": 0,
+          "explanation": "return resultat; permet au compilateur de construire l'objet directement chez l'appelant (NRVO), et sinon il est traité comme une rvalue. std::move force un déplacement, ce qui interdit l'élision.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "cpp-regle-zero",
       "title": "La règle du zéro",
       "summary": "Déléguer aux types RAII.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "N'écrire aucun membre spécial",
+          "body": "Si chaque membre gère lui-même sa ressource (std::string, std::vector, std::unique_ptr...), les cinq membres spéciaux générés font exactement ce qu'il faut. On n'écrit alors ni destructeur, ni copie, ni déplacement : moins de code, moins de bugs.",
+          "code": "// Règle du zéro : rien à écrire\nclass Image {\n    std::vector<unsigned char> pixels;\n    int largeur = 0;\n    int hauteur = 0;\n};"
+        },
+        {
+          "title": "Les membres spéciaux s'influencent",
+          "body": "Déclarer un destructeur, même vide, ou une opération de copie supprime la génération implicite du déplacement : les « déplacements » deviennent alors des copies, sans erreur ni avertissement. Déclarer une opération de déplacement supprime la copie implicite."
+        },
+        {
+          "title": "Les types non copiables",
+          "body": "Une classe qui contient un std::unique_ptr devient automatiquement non copiable mais déplaçable : c'est exactement la sémantique voulue pour une ressource possédée de façon exclusive.",
+          "code": "class Connexion {\n    std::unique_ptr<Socket> socket_;\n};\n\nConnexion a = ouvrir();\nConnexion b = std::move(a); // OK\nConnexion c = b;            // erreur"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-regle-zero-q1",
+          "prompt": "Que dit la règle du zéro ?",
+          "choices": [
+            "Confier les ressources à des membres RAII et n'écrire aucun des cinq membres spéciaux",
+            "Ne jamais utiliser de pointeurs",
+            "Initialiser tous les membres à zéro",
+            "Ne pas déclarer de constructeur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les classes qui gèrent directement une ressource sont rares et isolées (unique_ptr, vector...). Les classes métier se contentent de les composer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-regle-zero-q2",
+          "prompt": "Une classe déclare seulement ~T() {} (vide). Quel est l'effet sur le déplacement ?",
+          "choices": [
+            "Le déplacement n'est plus généré : les déplacements deviennent des copies",
+            "Aucun effet",
+            "Erreur de compilation à chaque std::move",
+            "La copie est supprimée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un destructeur déclaré par l'utilisateur supprime la génération implicite des opérations de déplacement. std::move(t) se rabat sur la copie, sans aucun message.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cpp-regle-zero-q3",
+          "prompt": "Quelles classes sont correctes sans écrire aucun membre spécial ?",
+          "choices": [
+            "{ std::string nom; std::vector<int> notes; }",
+            "{ std::unique_ptr<Moteur> moteur; }",
+            "{ FILE* f; } // ouvert avec fopen",
+            "{ int* t; } // alloué avec new[]"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "string, vector et unique_ptr libèrent eux-mêmes leurs ressources. Un FILE* ou un int* propriétaire nécessiteraient un destructeur, donc la règle des cinq... ou un emballage RAII.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-regle-zero-q4",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "struct Joueur {\n    std::string nom;\n    std::unique_ptr<Arme> arme;\n};\n\nJoueur a{\"Ana\", std::make_unique<Arme>()};\nJoueur b = a;",
+          "choices": [
+            "Erreur de compilation : Joueur n'est pas copiable",
+            "b partage l'arme de a",
+            "b reçoit une copie de l'arme",
+            "a.arme devient vide"
+          ],
+          "answerIndex": 0,
+          "explanation": "unique_ptr n'est pas copiable, donc la copie générée de Joueur est supprimée. Joueur b = std::move(a); compilerait.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-regle-zero-q5",
+          "prompt": "Chaque push_back copie tous les pixels au lieu de les déplacer. Touche la ligne en cause.",
+          "code": "class Image {\n    std::vector<unsigned char> pixels;\npublic:\n    ~Image() {}\n};\n\nstd::vector<Image> images;\nimages.push_back(chargerImage());",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le destructeur vide, déclaré « par habitude », supprime le déplacement implicite : chargerImage() est copié. Il suffit de le retirer (ou d'écrire ~Image() = default; et de redéclarer les déplacements).",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cpp-regle-zero-q6",
+          "prompt": "Complète pour que Connexion n'ait besoin d'aucun membre spécial (le socket est possédé de façon exclusive).",
+          "code": "class Connexion {\n    std::___<Socket> socket_;\n    std::___ adresse_;\n};",
+          "answers": [
+            "unique_ptr",
+            "string"
+          ],
+          "distractors": [
+            "shared_ptr",
+            "auto_ptr",
+            "string_view"
+          ],
+          "explanation": "unique_ptr exprime la possession exclusive et libère le socket ; std::string possède son texte. shared_ptr partagerait la connexion entre copies, et string_view ne possède pas son texte.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cpp-defi-copie",
+    "title": "Défi entretien : copie et déplacement",
+    "summary": "Double libération, noexcept et règle du zéro.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi5-q1",
+        "prompt": "Qu'affiche ce code (C++17) ?",
+        "code": "struct T {\n    T() {}\n    T(const T&) { std::cout << 'C'; }\n    T(T&&) noexcept { std::cout << 'M'; }\n};\n\nT a;\nT b = a;\nT c = std::move(a);\nT d = T();",
+        "choices": [
+          "CM",
+          "CMM",
+          "CCM",
+          "CMC"
+        ],
+        "answerIndex": 0,
+        "explanation": "b copie a (C), c déplace a (M). Depuis C++17, T d = T(); construit directement d : l'élision de copie est garantie, rien n'est affiché.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi5-q2",
+        "prompt": "Cas pratique 1/3 — Le programme plante à la fin. Touche la ligne qui déclenche le problème.",
+        "code": "class Chaine {\n    char* d;\npublic:\n    Chaine(const char* s)\n        : d(new char[std::strlen(s) + 1]) {\n        std::strcpy(d, s);\n    }\n    ~Chaine() { delete[] d; }\n};\n\nvoid afficher(Chaine c);\nChaine nom(\"Ana\");\nafficher(nom);",
+        "bugLines": [
+          11,
+          13
+        ],
+        "explanation": "afficher prend Chaine par valeur : l'appel copie nom. Le paramètre c est détruit à la fin d'afficher et libère d ; nom libère ensuite la même zone.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi5-q3",
+        "prompt": "Cas pratique 2/3 — Quelle est la cause de fond ?",
+        "choices": [
+          "La copie générée est superficielle : deux objets possèdent le même tableau",
+          "strcpy écrit hors du tableau",
+          "Le destructeur devrait utiliser delete au lieu de delete[]",
+          "Le constructeur devrait être explicit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaine définit un destructeur mais ni copie ni affectation : la règle des trois est violée. strlen(s) + 1 réserve bien la place du '\\0'.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi5-q4",
+        "prompt": "Cas pratique 3/3 — Quel est le meilleur correctif ?",
+        "choices": [
+          "Remplacer char* d par std::string et supprimer le destructeur",
+          "Faire prendre const Chaine& à afficher",
+          "Supprimer le destructeur",
+          "Écrire d = nullptr à la fin du destructeur"
+        ],
+        "answerIndex": 0,
+        "explanation": "La règle du zéro règle le problème pour toutes les copies. Changer afficher ne corrige que cet appel ; supprimer le destructeur crée une fuite ; d = nullptr dans le destructeur n'a aucun effet sur l'autre objet.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi5-q5",
+        "prompt": "Revue de code : coche tous les problèmes de ce constructeur de déplacement.",
+        "code": "Tampon(Tampon&& o)\n    : d(o.d), n(o.n) {\n}\n\n~Tampon() { delete[] d; }",
+        "choices": [
+          "o.d n'est pas remis à nullptr : double delete[] à la destruction",
+          "Il n'est pas noexcept : vector copiera au lieu de déplacer",
+          "Il faudrait écrire d(std::move(o.d)) pour déplacer le pointeur",
+          "Un constructeur de déplacement ne peut pas avoir de liste d'initialisation"
+        ],
+        "answerIndices": [
+          0,
+          1
+        ],
+        "explanation": "Déplacer un pointeur brut revient à le copier : std::move n'y change rien, c'est la remise à nullptr de la source qui compte. Une liste d'initialisation est la façon normale d'écrire ce constructeur.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi5-q6",
+        "prompt": "En entretien : lors d'une réallocation, que fait std::vector si le constructeur de déplacement de ses éléments n'est pas noexcept (et qu'ils sont copiables) ?",
+        "choices": [
+          "Il les copie, pour pouvoir tout annuler en cas d'exception",
+          "Il les déplace quand même",
+          "Il lève une exception",
+          "Il refuse de compiler"
+        ],
+        "answerIndex": 0,
+        "explanation": "vector offre la garantie forte sur push_back : si une exception survient, le vecteur d'origine est intact. Un déplacement qui échoue à mi-chemin aurait déjà vidé des éléments ; vector copie donc, sauf si le déplacement est noexcept.",
+        "difficulty": 3
+      }
+    ]
+  }
 }

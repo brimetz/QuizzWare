@@ -7,13 +7,346 @@
       "id": "cs-exceptions",
       "title": "Exceptions",
       "summary": "throw, filtres et bonnes pratiques.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "try, catch, finally",
+          "body": "catch traite une exception d'un type donné ; les catch sont testés dans l'ordre, et un catch plus général placé avant un plus précis est une erreur de compilation. finally s'exécute toujours, même après un return ; using repose dessus.",
+          "code": "try {\n    var texte = File.ReadAllText(chemin);\n} catch (FileNotFoundException) {\n    Console.WriteLine(\"Fichier absent\");\n} finally {\n    Console.WriteLine(\"Fin\");\n}"
+        },
+        {
+          "title": "Les filtres",
+          "body": "catch (...) when (condition) n'attrape l'exception que si la condition est vraie ; sinon, elle continue sa route avec sa pile intacte.",
+          "code": "catch (HttpRequestException e)\n    when (e.StatusCode == HttpStatusCode.NotFound) {\n    return null;\n}"
+        },
+        {
+          "title": "throw; et pas throw e;",
+          "body": "Pour relancer une exception attrapée, throw; conserve la pile d'appels d'origine. throw e; la remplace par l'emplacement du catch : on perd l'information la plus utile pour déboguer."
+        },
+        {
+          "title": "Bonnes pratiques",
+          "body": "Attraper seulement ce qu'on sait traiter, et laisser remonter le reste. Ne jamais avaler une exception avec un catch vide. Ne pas utiliser les exceptions pour un cas normal (TryParse, TryGetValue existent pour cela). Valider les arguments tôt : ArgumentNullException.ThrowIfNull(x)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-exceptions-q1",
+          "prompt": "Quelle différence entre throw; et throw e; dans un catch ?",
+          "choices": [
+            "throw e; remplace la pile d'appels par l'emplacement du catch ; throw; la conserve",
+            "Aucune",
+            "throw; ne relance pas l'exception",
+            "throw e; crée une nouvelle exception d'un autre type"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec throw e;, la trace indique le catch comme origine de l'erreur. throw; relance l'exception telle quelle, avec la trace complète jusqu'à la vraie cause.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-exceptions-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int F() {\n    try { return 1; }\n    finally { Console.Write(\"F\"); }\n}\n\nConsole.Write(F());",
+          "choices": [
+            "F1",
+            "1F",
+            "1",
+            "F"
+          ],
+          "answerIndex": 0,
+          "explanation": "La valeur de retour est calculée, puis finally s'exécute avant que la méthode ne rende la main : F s'affiche avant que l'appelant n'affiche 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cs-exceptions-q3",
+          "prompt": "L'utilisateur voit « Commande enregistrée ! » même quand la sauvegarde échoue. Touche une ligne en cause.",
+          "code": "try {\n    Sauvegarder(commande);\n} catch (Exception) {\n}\nConsole.WriteLine(\"Commande enregistrée !\");",
+          "bugLines": [
+            3,
+            4
+          ],
+          "explanation": "Le catch vide avale toutes les erreurs : le programme continue comme si tout allait bien. Il faut traiter l'échec (prévenir l'utilisateur, journaliser) ou laisser l'exception remonter.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "cs-exceptions-q4",
+          "prompt": "Complète : n'attraper l'erreur HTTP que si la ressource est introuvable.",
+          "code": "try {\n    return await Charger(id);\n} catch (HttpRequestException e)\n    ___ (e.StatusCode == HttpStatusCode.NotFound) {\n    return null;\n}",
+          "answers": [
+            "when"
+          ],
+          "distractors": [
+            "if",
+            "where",
+            "case"
+          ],
+          "explanation": "when introduit un filtre d'exception : les autres erreurs HTTP (500, délai dépassé...) continuent de remonter, avec leur pile intacte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-exceptions-q5",
+          "prompt": "Que se passe-t-il ?",
+          "code": "try { Lire(); }\ncatch (Exception e) { Journaliser(e); }\ncatch (IOException e) { Reessayer(); }",
+          "choices": [
+            "Erreur de compilation : le second catch est inaccessible",
+            "Une IOException est traitée par le second catch",
+            "Les deux catch s'exécutent pour une IOException",
+            "Avertissement seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "IOException dérive d'Exception : le premier catch attrape déjà tout. C# en fait une erreur (CS0160) ; il faut placer le catch le plus précis en premier.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cs-exceptions-q6",
+          "prompt": "Quelles pratiques sont recommandées ?",
+          "choices": [
+            "Attraper les exceptions précises qu'on sait traiter",
+            "Utiliser les exceptions pour les cas normaux du programme",
+            "Valider les arguments avec ArgumentNullException.ThrowIfNull",
+            "Laisser remonter ce qu'on ne sait pas traiter"
+          ],
+          "answerIndices": [
+            0,
+            2,
+            3
+          ],
+          "explanation": "Une exception est coûteuse et rend le flux difficile à suivre : pour un cas attendu (clé absente, saisie invalide), on utilise les méthodes Try...",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "cs-nullable",
       "title": "Nullable reference types",
       "summary": "Annotations et avertissements.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "string ou string?",
+          "body": "Avec les nullable reference types (activés par défaut dans les nouveaux projets), string signifie « jamais null » et string? « peut être null ». Le compilateur suit les valeurs et avertit quand on déréférence une variable peut-être nulle, ou qu'on affecte null à une variable non nullable.",
+          "code": "string nom = null;      // avertissement\nstring? surnom = null;  // OK\nint n = surnom.Length;  // avertissement"
+        },
+        {
+          "title": "Seulement des avertissements",
+          "body": "Les annotations ne changent pas le code généré : string et string? sont le même type à l'exécution, sans aucune vérification ajoutée. Une valeur nulle venue d'une désérialisation ou d'une bibliothèque non annotée passe inaperçue."
+        },
+        {
+          "title": "L'analyse de flux",
+          "body": "Après un test (if (x is null) return;), le compilateur sait que x n'est plus null. Les méthodes du framework sont annotées : après !string.IsNullOrEmpty(s), s est considérée non nulle."
+        },
+        {
+          "title": "L'opérateur !",
+          "body": "x! (« null-forgiving ») fait taire l'avertissement : on affirme au compilateur que x n'est pas null. Aucune vérification n'est faite ; si on se trompe, la NullReferenceException survient plus loin. À utiliser avec parcimonie."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-nullable-q1",
+          "prompt": "Avec les nullable reference types activés, que signifie string? ?",
+          "choices": [
+            "La valeur peut être null : le compilateur avertit si on la déréférence sans vérifier",
+            "Un type valeur nullable, comme int?",
+            "Une chaîne qui peut être vide",
+            "Une chaîne vérifiée non nulle à l'exécution"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour les types référence, ? est une annotation pour le compilateur. Pour les types valeur, int? est un vrai type différent (Nullable<int>).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-nullable-q2",
+          "prompt": "Les nullable reference types empêchent-ils une NullReferenceException à l'exécution ?",
+          "choices": [
+            "Non : ce sont des avertissements de compilation, sans vérification à l'exécution",
+            "Oui, le runtime bloque toute affectation de null",
+            "Oui, mais seulement en mode Debug",
+            "Oui, ils transforment null en chaîne vide"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ils réduisent fortement les risques en signalant les cas douteux, mais ne garantissent rien : données externes, opérateur !, avertissements ignorés...",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cs-nullable-q3",
+          "prompt": "Le compilateur avertit d'un possible déréférencement de null. Touche la ligne concernée.",
+          "code": "string Initiale(string? nom)\n{\n    return nom[..1].ToUpper();\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "nom est string? : il peut être null, et nom[..1] lèverait alors une exception (avertissement CS8602). Il faut tester : if (string.IsNullOrEmpty(nom)) return \"?\";.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-nullable-q4",
+          "prompt": "Que fait le ! dans string s = TrouverNom()!; ?",
+          "choices": [
+            "Il fait taire l'avertissement, sans aucune vérification à l'exécution",
+            "Il lève une exception si la valeur est null",
+            "Il remplace null par une chaîne vide",
+            "Il inverse la valeur"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une simple promesse au compilateur. Si TrouverNom() renvoie null, s vaut null malgré son type, et l'erreur apparaîtra plus tard, loin de la cause.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cs-nullable-q5",
+          "prompt": "Complète : lire la ville si l'adresse existe, puis remplacer une ville absente par « Inconnue ».",
+          "code": "string? ville = client.Adresse___Ville;\nville ___ \"Inconnue\";",
+          "answers": [
+            "?.",
+            "??="
+          ],
+          "distractors": [
+            ".",
+            "??",
+            "!"
+          ],
+          "explanation": "?. renvoie null si Adresse est null. ??= n'affecte que si ville est null. ?? seul produirait une valeur, mais ne peut pas former une instruction à lui seul.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-nullable-q6",
+          "prompt": "Pourquoi le compilateur n'avertit-il pas à la ligne 4 ?",
+          "code": "string Decrire(string? s)\n{\n    if (string.IsNullOrEmpty(s)) return \"vide\";\n    return s.ToUpper();\n}",
+          "choices": [
+            "IsNullOrEmpty est annotée : après un résultat false, s est connue non nulle",
+            "Les avertissements de nullabilité sont désactivés dans les return",
+            "ToUpper accepte null",
+            "s est automatiquement convertie en string"
+          ],
+          "answerIndex": 0,
+          "explanation": "IsNullOrEmpty porte l'attribut [NotNullWhen(false)] : l'analyse de flux en déduit que s n'est pas null après le if. On peut annoter ses propres méthodes de la même façon.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cs-nullable-q7",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Les nullable reference types ne changent pas le code généré",
+            "string? et string sont le même type à l'exécution",
+            "L'opérateur ! lève une exception si la valeur est null",
+            "On peut les activer fichier par fichier avec #nullable enable"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Tout se passe à la compilation. #nullable enable permet une migration progressive d'un ancien projet ; ! ne fait que supprimer l'avertissement.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cs-defi-erreurs",
+    "title": "Défi entretien : erreurs",
+    "summary": "Filtres, coût des exceptions et nullabilité.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cs-defi6-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "try {\n    throw new InvalidOperationException();\n}\ncatch (Exception e) when (Log(e)) {\n    Console.Write(\"A\");\n}\ncatch (InvalidOperationException) {\n    Console.Write(\"B\");\n}\n\nbool Log(Exception e) {\n    Console.Write(\"L\");\n    return false;\n}",
+        "choices": [
+          "LB",
+          "LA",
+          "A",
+          "B"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le filtre s'exécute (L) et renvoie false : le premier catch est ignoré, et le suivant attrape l'exception (B). Astuce connue : un filtre qui journalise et renvoie false trace l'erreur sans l'attraper.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "cs-defi6-q2",
+        "prompt": "Cas pratique 1/3 — Prix est très lent quand beaucoup de codes sont inconnus. Touche une ligne en cause.",
+        "code": "public decimal Prix(string code) {\n    try {\n        return _tarifs[code];\n    } catch (KeyNotFoundException) {\n        return 0;\n    }\n}",
+        "bugLines": [
+          3,
+          4
+        ],
+        "explanation": "Un code inconnu est un cas normal, traité ici par une exception : chaque appel paie la création de l'exception et la capture de la pile.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "cs-defi6-q3",
+        "prompt": "Cas pratique 2/3 — Complète la version sans exception.",
+        "code": "return _tarifs.___(code, out var prix)\n    ? prix : 0;",
+        "answers": [
+          "TryGetValue"
+        ],
+        "distractors": [
+          "ContainsKey",
+          "Find",
+          "GetValue"
+        ],
+        "explanation": "TryGetValue fait une seule recherche et renvoie false si la clé est absente. _tarifs.GetValueOrDefault(code) serait aussi une solution.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi6-q4",
+        "prompt": "Cas pratique 3/3 — Pourquoi une exception coûte-t-elle cher ?",
+        "choices": [
+          "Il faut capturer la pile d'appels et chercher un gestionnaire, bien plus lent qu'un simple test",
+          "Elle déclenche toujours une collection du GC",
+          "Elle crée un nouveau thread",
+          "Elle n'est pas coûteuse en .NET"
+        ],
+        "answerIndex": 0,
+        "explanation": "Lever une exception prend de l'ordre de la microseconde, contre quelques nanosecondes pour un test. Sur un chemin fréquent, la différence se voit nettement.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cs-defi6-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "public User Charger(int id) {\n    try {\n        return _repo.Trouver(id);\n    } catch (Exception ex) {\n        throw ex;\n    }\n}",
+        "choices": [
+          "throw ex; perd la pile d'appels d'origine",
+          "Le try/catch n'apporte rien : autant le supprimer",
+          "Attraper Exception est trop large",
+          "Un return dans un try est interdit"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Ce catch relance sans rien ajouter, en abîmant la trace. S'il fallait journaliser, throw; aurait préservé la pile. Un return dans un try est parfaitement valide.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi6-q6",
+        "prompt": "En entretien : pourquoi activer les nullable reference types sur un projet ?",
+        "choices": [
+          "Pour détecter à la compilation les déréférencements possibles de null et documenter l'intention des signatures",
+          "Pour rendre le code plus rapide",
+          "Pour que le runtime refuse les valeurs null",
+          "Pour pouvoir utiliser int?"
+        ],
+        "answerIndex": 0,
+        "explanation": "La NullReferenceException est l'erreur la plus fréquente en production. Les annotations la font apparaître dès la compilation, et chaque signature dit si null est accepté. int? existait déjà avant.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

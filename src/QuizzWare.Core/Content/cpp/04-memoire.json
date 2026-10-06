@@ -4,6 +4,120 @@
   "summary": "Gérer la mémoire sans new ni delete manuels.",
   "lessons": [
     {
+      "id": "cpp-pile-tas",
+      "title": "Pile, tas et new/delete",
+      "summary": "Où vivent les objets, et ce qui arrive quand on oublie de les libérer.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La pile et le tas",
+          "body": "Les variables locales vivent sur la pile : leur mémoire est réservée à l'entrée du bloc et libérée automatiquement à la sortie. C'est très rapide, mais la pile est petite (quelques Mo). Le tas accueille les objets créés avec new : ils vivent jusqu'à un delete explicite, quelle que soit la portée.",
+          "code": "void f() {\n    int a = 5;            // pile\n    int* p = new int(5);  // tas\n    delete p;             // libération manuelle\n} // a est libéré automatiquement"
+        },
+        {
+          "title": "new et delete vont par paires",
+          "body": "Chaque new doit correspondre à exactement un delete, et chaque new[] à un delete[]. Mélanger les deux (new[] puis delete) est un comportement indéfini. delete sur un nullptr, en revanche, ne fait rien."
+        },
+        {
+          "title": "Les trois bugs classiques",
+          "body": "Fuite : on oublie le delete (souvent à cause d'un return anticipé ou d'une exception). Double libération : deux delete sur le même pointeur. Pointeur pendant : utiliser la mémoire après son delete. Les deux derniers sont des comportements indéfinis, parfois silencieux pendant des mois.",
+          "code": "int* p = new int(42);\ndelete p;\nstd::cout << *p; // use-after-free\ndelete p;        // double free"
+        },
+        {
+          "title": "En C++ moderne : presque plus de new",
+          "body": "On confie la mémoire à des objets qui la libèrent eux-mêmes : std::vector ou std::string pour les tableaux, std::make_unique pour un objet unique. Un new ou un delete écrit à la main dans du code applicatif est un signal d'alerte en revue de code."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-pile-tas-q1",
+          "prompt": "Quand la mémoire de p (objet créé avec new) est-elle libérée ?",
+          "code": "void f() {\n    Widget* p = new Widget();\n    p->dessiner();\n}",
+          "choices": [
+            "Jamais : il manque un delete, c'est une fuite",
+            "À la sortie de f()",
+            "Quand le ramasse-miettes passe",
+            "À la fin du programme, proprement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le pointeur p (sur la pile) disparaît à la sortie de f, mais pas l'objet sur le tas : plus rien ne permet de le libérer. Le système récupère la mémoire à la fin du processus, mais sans appeler le destructeur.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-pile-tas-q2",
+          "prompt": "Cette fonction a un comportement indéfini. Touche la ligne fautive.",
+          "code": "void traiter(std::size_t n) {\n    int* t = new int[n];\n    remplir(t, n);\n    afficher(t, n);\n    delete t;\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Un tableau alloué avec new[] doit être libéré avec delete[]. Mieux : std::vector<int> t(n); et plus aucune libération à écrire.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cpp-pile-tas-q3",
+          "prompt": "Cette fonction fuit de la mémoire dans un cas précis. Touche la ligne responsable.",
+          "code": "bool charger(const std::string& chemin) {\n    Image* img = new Image(chemin);\n    if (!img->valide()) {\n        return false;\n    }\n    afficher(*img);\n    delete img;\n    return true;\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le return anticipé saute le delete : chaque image invalide fuit. Avec auto img = std::make_unique<Image>(chemin); l'image serait libérée sur tous les chemins de sortie, exceptions comprises.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-pile-tas-q4",
+          "prompt": "Que se passe-t-il ?",
+          "code": "int* p = new int(42);\ndelete p;\nstd::cout << *p;",
+          "choices": [
+            "Comportement indéfini : lecture après libération",
+            "Affiche 42",
+            "Affiche 0",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Après delete, p est un pointeur pendant. Le programme peut afficher 42, autre chose ou planter : c'est justement ce qui rend ce bug dangereux. Les outils comme AddressSanitizer le détectent.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-pile-tas-q5",
+          "prompt": "Lesquels sont des comportements indéfinis ?",
+          "choices": [
+            "Appeler delete deux fois sur le même pointeur",
+            "Appeler delete sur un nullptr",
+            "Libérer avec delete un tableau alloué avec new[]",
+            "Lire un objet via un pointeur après son delete"
+          ],
+          "answerIndices": [
+            0,
+            2,
+            3
+          ],
+          "explanation": "delete nullptr est explicitement autorisé et ne fait rien. Les trois autres cas sont indéfinis : le compilateur ne garantit plus rien sur le comportement du programme.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "cpp-pile-tas-q6",
+          "prompt": "Remets dans l'ordre cette version sans fuite possible.",
+          "lines": [
+            "std::unique_ptr<Image> charger(Chemin c) {",
+            "    auto img = std::make_unique<Image>(c);",
+            "    if (!img->valide()) {",
+            "        return nullptr;",
+            "    }",
+            "    return img;",
+            "}"
+          ],
+          "explanation": "make_unique crée l'objet et le confie à un unique_ptr. Sur le return nullptr, img est détruit et libère l'image ; sur le return img, la possession est transférée à l'appelant.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
       "id": "cpp-raii",
       "title": "RAII et pointeurs intelligents",
       "summary": "Lier la durée de vie des ressources à celle des objets.",
@@ -11,7 +125,8 @@
       "sections": [
         {
           "title": "RAII",
-          "body": "Resource Acquisition Is Initialization : une ressource (mémoire, fichier, mutex) est acquise dans le constructeur d'un objet et libérée dans son destructeur. Les destructeurs s'exécutant automatiquement en sortie de portée — même en cas d'exception — il n'y a plus de fuite."
+          "body": "Resource Acquisition Is Initialization : une ressource (mémoire, fichier, mutex) est acquise dans le constructeur d'un objet et libérée dans son destructeur. Les destructeurs s'exécutant automatiquement en sortie de portée — même en cas d'exception — il n'y a plus de fuite.",
+          "code": "void ecrire(const std::string& msg) {\n    std::lock_guard verrou(mutex_);\n    journal << msg; // peut lever\n} // mutex libéré dans tous les cas"
         },
         {
           "title": "unique_ptr et shared_ptr",
@@ -93,8 +208,137 @@
           "answerIndex": 2,
           "explanation": "La règle des cinq concerne le destructeur, la copie (constructeur + affectation) et le déplacement (constructeur + affectation).",
           "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "cpp-raii-q6",
+          "prompt": "Ces deux nœuds ne sont jamais libérés. Touche la ligne à changer.",
+          "code": "struct Noeud {\n    std::shared_ptr<Noeud> suivant;\n    std::shared_ptr<Noeud> precedent;\n};\n\nauto a = std::make_shared<Noeud>();\nauto b = std::make_shared<Noeud>();\na->suivant = b;\nb->precedent = a;",
+          "bugLines": [
+            3
+          ],
+          "explanation": "a et b se possèdent mutuellement : aucun compteur ne retombe à 0. Le lien « retour » ne doit pas posséder : std::weak_ptr<Noeud> precedent;.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cpp-raii-q7",
+          "prompt": "Complète : créer un Widget possédé de façon exclusive, puis transférer cette possession à q.",
+          "code": "auto p = std::___<Widget>();\nauto q = std::___(p);",
+          "answers": [
+            "make_unique",
+            "move"
+          ],
+          "distractors": [
+            "make_shared",
+            "copy",
+            "forward"
+          ],
+          "explanation": "make_unique crée un unique_ptr (possession exclusive). Il n'est pas copiable : std::move transfère la possession, et p devient vide.",
+          "difficulty": 1
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cpp-defi-memoire",
+    "title": "Défi entretien : mémoire",
+    "summary": "Fuites, compteurs de références et possession.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi4-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "auto a = std::make_shared<int>(7);\nauto b = a;\n{\n    auto c = a;\n    std::cout << a.use_count();\n}\nstd::cout << a.use_count();\nb.reset();\nstd::cout << a.use_count();",
+        "choices": [
+          "321",
+          "333",
+          "123",
+          "322"
+        ],
+        "answerIndex": 0,
+        "explanation": "a, b et c partagent l'entier (3). c est détruit en sortant du bloc (2), puis b.reset() libère sa part (1).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi4-q2",
+        "prompt": "Cas pratique 1/3 — Que se passe-t-il si preparer() lève une exception ?",
+        "code": "void traiter() {\n    Ressource* r = new Ressource();\n    r->preparer();   // peut lever\n    r->executer();\n    delete r;\n}",
+        "choices": [
+          "La Ressource fuit : delete n'est jamais exécuté",
+          "delete est appelé automatiquement",
+          "Le programme s'arrête toujours",
+          "Rien : l'exception annule le new"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'exception quitte la fonction avant le delete. Un pointeur brut n'a pas de destructeur qui libère ce qu'il pointe.",
+        "difficulty": 1
+      },
+      {
+        "type": "fill",
+        "id": "cpp-defi4-q3",
+        "prompt": "Cas pratique 2/3 — Complète la version sûre.",
+        "code": "void traiter() {\n    auto r = std::___<Ressource>();\n    r->preparer();\n    r->executer();\n}",
+        "answers": [
+          "make_unique"
+        ],
+        "distractors": [
+          "unique_ptr",
+          "allocate",
+          "addressof"
+        ],
+        "explanation": "make_unique renvoie un unique_ptr qui détruit la Ressource en sortie de fonction, normale ou par exception. std::unique_ptr<Ressource>() construirait un pointeur vide.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi4-q4",
+        "prompt": "Cas pratique 3/3 — Pourquoi unique_ptr plutôt que shared_ptr ici ?",
+        "choices": [
+          "La possession est exclusive : pas de compteur atomique ni de bloc de contrôle à payer",
+          "shared_ptr ne libère pas la mémoire en cas d'exception",
+          "unique_ptr est copiable, donc plus pratique",
+          "shared_ptr n'existe qu'à partir de C++20"
+        ],
+        "answerIndex": 0,
+        "explanation": "unique_ptr a le coût d'un pointeur brut. shared_ptr maintient un compteur (incrémenté de façon atomique) dans un bloc de contrôle : à réserver aux possessions vraiment partagées.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi4-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "class Cache {\n    Donnee* d = new Donnee();\npublic:\n    ~Cache() { delete d; }\n};\n\nCache a;\nCache b = a;",
+        "choices": [
+          "a et b pointent sur la même Donnee : double delete à la destruction",
+          "La règle des trois n'est pas respectée : la copie n'est ni définie ni supprimée",
+          "Avec std::unique_ptr<Donnee>, la copie ne compilerait plus : le bug serait évité",
+          "delete dans un destructeur est interdit"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La copie générée copie le pointeur (copie superficielle) : les deux destructeurs libèrent la même mémoire. Un membre unique_ptr rend la classe non copiable par défaut, ce qui transforme le bug en erreur de compilation.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi4-q6",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "std::weak_ptr<int> w;\n{\n    auto s = std::make_shared<int>(5);\n    w = s;\n}\nif (auto p = w.lock())\n    std::cout << *p;\nelse\n    std::cout << \"expiré\";",
+        "choices": [
+          "expiré",
+          "5",
+          "0",
+          "Comportement indéfini"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un weak_ptr ne possède pas l'objet : quand s est détruit, l'entier est libéré. lock() renvoie alors un shared_ptr vide, sans comportement indéfini.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

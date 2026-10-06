@@ -7,13 +7,338 @@
       "id": "cpp-ub",
       "title": "Comportements indéfinis",
       "summary": "Les reconnaître et les éviter.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Qu'est-ce qu'un comportement indéfini ?",
+          "body": "Le standard n'impose alors aucune exigence : le programme peut planter, donner un résultat faux, ou sembler marcher... jusqu'au prochain changement de compilateur. Surtout, le compilateur optimise en supposant qu'il n'y en a jamais : il peut supprimer des tests qui « ne peuvent pas » être vrais."
+        },
+        {
+          "title": "Les grands classiques",
+          "body": "Débordement d'un entier signé, accès hors limites, déréférencement d'un pointeur nul ou pendant, lecture d'une variable non initialisée, data race, modification d'un littéral de chaîne, double delete. En revanche, le débordement d'un entier non signé est défini : le calcul se fait modulo 2^n."
+        },
+        {
+          "title": "Quand le compilateur en profite",
+          "body": "Un débordement signé étant impossible « par hypothèse », x + 1 < x est toujours faux pour le compilateur : la fonction ci-dessous peut être compilée en return false;.",
+          "code": "bool depasse(int x) {\n    return x + 1 < x;\n}"
+        },
+        {
+          "title": "Les outils",
+          "body": "Compiler avec les avertissements (-Wall -Wextra), puis tester avec les sanitizers : -fsanitize=address détecte les accès mémoire invalides, -fsanitize=undefined les débordements et autres UB, -fsanitize=thread les data races. Les analyseurs statiques (clang-tidy) complètent."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-ub-q1",
+          "prompt": "Que signifie « comportement indéfini » ?",
+          "choices": [
+            "Le standard n'impose rien : le programme peut tout faire, y compris sembler fonctionner",
+            "Le programme plante toujours immédiatement",
+            "Le résultat dépend du système, mais reste documenté",
+            "Le compilateur refuse de compiler"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un comportement « défini par l'implémentation » (comme sizeof(int)) est documenté. Un comportement indéfini ne l'est pas : aucune garantie, et le bug peut rester invisible longtemps.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-ub-q2",
+          "prompt": "Que peut faire un compilateur optimisant de cette fonction ?",
+          "code": "bool depasse(int x) {\n    return x + 1 < x;\n}",
+          "choices": [
+            "La remplacer par return false;",
+            "Rien : elle détecte correctement le débordement",
+            "Refuser de la compiler",
+            "Ajouter une vérification à l'exécution"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le débordement signé étant indéfini, le compilateur suppose x + 1 > x et simplifie. Pour tester correctement : x == std::numeric_limits<int>::max().",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cpp-ub-q3",
+          "prompt": "Lesquels sont des comportements indéfinis ?",
+          "choices": [
+            "Le débordement d'un int",
+            "Le débordement d'un unsigned int",
+            "Lire une variable locale non initialisée",
+            "Modifier un littéral de chaîne"
+          ],
+          "answerIndices": [
+            0,
+            2,
+            3
+          ],
+          "explanation": "Les entiers non signés suivent une arithmétique modulo 2^n : leur « débordement » est parfaitement défini. Les trois autres cas sont indéfinis.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-ub-q4",
+          "prompt": "Cette boucle écrit hors du tableau. Touche la ligne fautive.",
+          "code": "int t[5];\nfor (int i = 0; i <= 5; ++i)\n    t[i] = i;",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Les indices valides vont de 0 à 4 : avec <=, la boucle écrit t[5]. Le classique « off-by-one ». Avec std::array et at(), ou une boucle sur intervalle, l'erreur disparaît.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cpp-ub-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "unsigned int u = 0;\nu = u - 1;\nstd::cout << (u > 0);",
+          "choices": [
+            "1",
+            "0",
+            "Comportement indéfini",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "0 - 1 en non signé donne la plus grande valeur représentable (calcul modulo 2^32) : c'est défini, et u > 0. Ce comportement explique les pièges avec size_t.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-ub-q6",
+          "prompt": "Quel outil détecte à l'exécution une lecture après libération (use-after-free) ?",
+          "choices": [
+            "AddressSanitizer (-fsanitize=address)",
+            "L'optimisation -O3",
+            "Le préprocesseur",
+            "static_assert"
+          ],
+          "answerIndex": 0,
+          "explanation": "ASan instrumente les accès mémoire et signale précisément l'accès fautif, avec l'endroit de l'allocation et de la libération. À activer dans les tests et l'intégration continue.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "cpp-pieges-entretien",
       "title": "Pièges classiques d'entretien",
       "summary": "Questions piège et bonnes réponses.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les quatre casts",
+          "body": "static_cast : conversions vérifiées à la compilation (int vers double, base vers dérivée sans vérification). dynamic_cast : conversion dans une hiérarchie polymorphe, vérifiée à l'exécution (nullptr si échec sur un pointeur). const_cast : retire const, mais modifier un objet réellement const reste indéfini. reinterpret_cast : réinterprète les bits, sans aucune vérification. On évite le cast « à la C », qui peut faire n'importe lequel des quatre."
+        },
+        {
+          "title": "Taille et alignement",
+          "body": "Une classe vide a une taille de 1 (deux objets distincts doivent avoir des adresses distinctes). Les membres sont alignés : le compilateur insère du remplissage (padding) entre eux. Ranger les membres du plus grand au plus petit réduit souvent la taille."
+        },
+        {
+          "title": "Signé et non signé",
+          "body": "Dans une comparaison entre int et unsigned, l'int est converti en unsigned : -1 devient une valeur énorme. Les compilateurs le signalent (-Wsign-compare) ; C++20 offre std::cmp_less pour comparer correctement."
+        },
+        {
+          "title": "Le « most vexing parse »",
+          "body": "Widget w(); ne crée pas d'objet : c'est la déclaration d'une fonction w qui renvoie un Widget. On écrit Widget w; ou Widget w{};."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cpp-pieges-q1",
+          "prompt": "Que vaut sizeof(Vide) ?",
+          "code": "struct Vide {};",
+          "choices": [
+            "1",
+            "0",
+            "4",
+            "8"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque objet doit avoir une adresse distincte : un objet vide occupe au moins un octet. (Comme membre ou base, il peut toutefois ne rien coûter grâce à certaines optimisations.)",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-pieges-q2",
+          "prompt": "Sur une plateforme courante (int de 4 octets), qu'affiche ce code ?",
+          "code": "struct A {\n    char c;\n    int i;\n    char d;\n};\nstruct B {\n    int i;\n    char c;\n    char d;\n};\nstd::cout << sizeof(A) << ' ' << sizeof(B);",
+          "choices": [
+            "12 8",
+            "6 6",
+            "8 8",
+            "12 12"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans A, 3 octets de remplissage suivent c pour aligner i, et 3 autres terminent la structure : 12. Dans B, les deux char se suivent après i, plus 2 octets de remplissage : 8.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cpp-pieges-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "struct Animal { virtual ~Animal() = default; };\nstruct Chien : Animal {};\nstruct Chat : Animal {};\n\nAnimal* a = new Chat();\nChien* c = dynamic_cast<Chien*>(a);\nstd::cout << (c == nullptr);",
+          "choices": [
+            "1",
+            "0",
+            "Une exception std::bad_cast",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "a pointe vers un Chat : la conversion vers Chien* échoue et dynamic_cast renvoie nullptr. Sur une référence, il lèverait std::bad_cast. Un static_cast, lui, ne vérifierait rien.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cpp-pieges-q4",
+          "prompt": "Ce code ne compile pas. Touche la ligne fautive.",
+          "code": "struct Minuteur {\n    void demarrer();\n};\n\nMinuteur m();\nm.demarrer();",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Minuteur m(); déclare une fonction m sans paramètre qui renvoie un Minuteur (« most vexing parse »). m.demarrer() n'a alors aucun sens. Il faut écrire Minuteur m; ou Minuteur m{};.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cpp-pieges-q5",
+          "prompt": "Quelles affirmations sur les casts sont vraies ?",
+          "choices": [
+            "static_cast convertit un int en double",
+            "dynamic_cast exige une classe polymorphe (avec au moins une fonction virtuelle)",
+            "const_cast permet de modifier sans risque un objet déclaré const",
+            "reinterpret_cast réinterprète les bits sans aucune vérification"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "const_cast ne sert qu'à retirer un const ajouté en chemin (par exemple pour une API mal typée). Modifier un objet défini const est un comportement indéfini.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cpp-pieges-q6",
+          "prompt": "Pourquoi écrire ++it plutôt que it++ dans une boucle sur un itérateur ?",
+          "choices": [
+            "it++ doit copier l'ancienne valeur pour la renvoyer ; ++it évite cette copie",
+            "it++ ne compile pas sur les itérateurs",
+            "++it est évalué avant la condition de la boucle",
+            "Il n'y a jamais aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour un int, l'optimiseur rend les deux identiques. Pour un itérateur complexe, la copie peut coûter : ++it exprime aussi simplement l'intention.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cpp-pieges-q7",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "unsigned int a = 1;\nint b = -1;\nstd::cout << (b < a);",
+          "choices": [
+            "0",
+            "1",
+            "Comportement indéfini",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "b est converti en unsigned pour la comparaison : -1 devient 4294967295, qui n'est pas inférieur à 1. std::cmp_less(b, a) (C++20) donnerait le résultat mathématique.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cpp-defi-pieges",
+    "title": "Défi entretien : l'épreuve finale",
+    "summary": "Tous les pièges du C++ en un défi.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cpp-defi12-q1",
+        "prompt": "Sur une plateforme 64 bits, qu'affiche ce code ?",
+        "code": "std::vector<int> v{1, 2, 3};\nstd::cout << v.size() - 4;",
+        "choices": [
+          "18446744073709551615",
+          "-1",
+          "0",
+          "Une exception"
+        ],
+        "answerIndex": 0,
+        "explanation": "size() renvoie un size_t non signé de 64 bits : 3 - 4 vaut 2^64 - 1. C'est défini, mais presque toujours un bug. C++20 offre std::ssize(v) pour obtenir une taille signée.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "cpp-defi12-q2",
+        "prompt": "Cas pratique 1/3 — Cette fonction corrompt parfois le tas. Touche la ligne fautive.",
+        "code": "char* dupliquer(const char* s) {\n    char* r = new char[std::strlen(s)];\n    std::strcpy(r, s);\n    return r;\n}",
+        "bugLines": [
+          2
+        ],
+        "explanation": "strlen ne compte pas le '\\0' final, que strcpy copie pourtant : il manque un octet. Il faut new char[std::strlen(s) + 1].",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi12-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi ce bug peut-il passer inaperçu longtemps ?",
+        "choices": [
+          "Déborder d'un octet est un comportement indéfini souvent silencieux : l'allocateur arrondit parfois la taille",
+          "Le compilateur ajoute automatiquement le '\\0'",
+          "strcpy vérifie la taille de la destination",
+          "new réserve toujours un octet de plus"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les allocateurs réservent souvent un peu plus que demandé : l'octet de trop tombe dans une zone inutilisée... jusqu'au jour où il écrase les métadonnées d'un autre bloc. AddressSanitizer le détecte immédiatement.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi12-q4",
+        "prompt": "Cas pratique 3/3 — Quelle est la version moderne ?",
+        "choices": [
+          "std::string dupliquer(std::string_view s) { return std::string(s); }",
+          "char* dupliquer(const char* s) { return strdup(s); }",
+          "std::string_view dupliquer(const char* s) { return s; }",
+          "std::unique_ptr<char> dupliquer(const char* s);"
+        ],
+        "answerIndex": 0,
+        "explanation": "std::string gère la taille, le '\\0' et la libération. strdup renvoie encore un pointeur brut à libérer avec free ; un string_view ne copie rien ; unique_ptr<char> appellerait delete au lieu de delete[].",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cpp-defi12-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "class Pile {\n    int* d = new int[100];\n    int n = 0;\npublic:\n    void empiler(int x) { d[n++] = x; }\n    int depiler() { return d[--n]; }\n};",
+        "choices": [
+          "Aucune vérification de capacité : débordement après 100 éléments",
+          "depiler() sur une pile vide lit d[-1]",
+          "Pas de destructeur ni de copie : fuite, et double delete[] si on en ajoute un sans gérer la copie",
+          "d[n++] devrait être d[++n]"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "d[n++] écrit à l'indice n puis l'incrémente : c'est correct. La bonne version : un std::vector<int> membre (règle du zéro), et une gestion explicite de la pile vide.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cpp-defi12-q6",
+        "prompt": "En entretien : quelle est la différence entre une référence et un pointeur ?",
+        "choices": [
+          "Une référence doit être initialisée et ne peut être ni nulle ni réassignée ; un pointeur peut être nul et changer de cible",
+          "Une référence est plus lente qu'un pointeur",
+          "Un pointeur ne peut pas désigner un objet sur la pile",
+          "Il n'y a aucune différence en C++ moderne"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une référence est un alias permanent d'un objet existant. On utilise une référence quand l'objet est obligatoire, un pointeur (ou std::optional) quand il peut manquer.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

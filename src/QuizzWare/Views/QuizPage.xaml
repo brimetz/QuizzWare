@@ -153,7 +153,16 @@
                 BackgroundColor="{StaticResource Surface}" Stroke="{Binding FeedbackColor}" StrokeThickness="2"
                 StrokeShape="RoundRectangle 20,20,0,0" Padding="16,16,16,20">
             <VerticalStackLayout Spacing="10">
-                <Label Text="{Binding FeedbackTitle}" TextColor="{Binding FeedbackColor}" Style="{StaticResource SubHeaderLabel}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <Label Text="{Binding FeedbackTitle}" TextColor="{Binding FeedbackColor}" Style="{StaticResource SubHeaderLabel}"
+                           VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="⚑ Signaler" Style="{StaticResource MutedLabel}" FontSize="13"
+                           VerticalOptions="Center" Padding="8,4">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ReportCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </Grid>
                 <ScrollView MaximumHeightRequest="180">
                     <Label Text="{Binding Explanation}" Style="{StaticResource BodyLabel}" />
                 </ScrollView>

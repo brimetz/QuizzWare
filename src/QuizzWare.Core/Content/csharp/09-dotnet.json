@@ -7,13 +7,332 @@
       "id": "cs-runtime",
       "title": "Runtime et compilation",
       "summary": "IL, JIT et AOT.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "De C# au code machine",
+          "body": "Le compilateur C# (Roslyn) produit du langage intermédiaire (IL) dans un assembly (.dll). À l'exécution, le runtime (CLR) compile chaque méthode en code machine lors de son premier appel : c'est le JIT. Le CLR fournit aussi le ramasse-miettes, la vérification des types et les exceptions."
+        },
+        {
+          "title": "La compilation par paliers",
+          "body": "Pour démarrer vite, le JIT compile d'abord sans beaucoup optimiser (palier 0). Les méthodes très appelées sont recompilées avec toutes les optimisations (palier 1), guidées par le profil réel d'exécution (PGO dynamique, activé par défaut depuis .NET 8)."
+        },
+        {
+          "title": "Native AOT",
+          "body": "La publication Native AOT compile tout en code machine à l'avance : démarrage quasi instantané, moins de mémoire, pas de JIT embarqué. En échange, pas de génération de code dynamique, une réflexion limitée par le « trimming » (suppression du code inutilisé), et un binaire par système et architecture.",
+          "code": "<PropertyGroup>\n  <TargetFramework>net9.0</TargetFramework>\n  <PublishAot>true</PublishAot>\n</PropertyGroup>",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-runtime-q1",
+          "prompt": "Que produit le compilateur C# ?",
+          "choices": [
+            "Du langage intermédiaire (IL) dans un assembly",
+            "Du code machine directement exécutable par le processeur",
+            "Du code JavaScript",
+            "Du code C++"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'IL est indépendant du processeur : le même .dll tourne sur x64 ou ARM, le JIT se chargeant de la traduction finale.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-runtime-q2",
+          "prompt": "Quand le JIT compile-t-il une méthode ?",
+          "choices": [
+            "À l'exécution, lors de son premier appel",
+            "À la compilation du projet",
+            "À l'installation de l'application",
+            "Jamais : l'IL est interprété"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque méthode est compilée juste à temps (« just in time »), puis le code machine est réutilisé pour les appels suivants. C'est une des raisons du temps de démarrage d'une application .NET.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-runtime-q3",
+          "prompt": "Quel est le principal avantage de Native AOT ?",
+          "choices": [
+            "Un démarrage très rapide et une empreinte mémoire réduite",
+            "Une réflexion plus puissante",
+            "Un seul binaire pour tous les systèmes",
+            "La désactivation du ramasse-miettes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans JIT, le programme démarre directement en code machine : idéal pour des fonctions serverless, des outils en ligne de commande ou des conteneurs nombreux.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cs-runtime-q4",
+          "prompt": "Quelles sont les limites de Native AOT ?",
+          "choices": [
+            "Pas de génération de code à l'exécution (Reflection.Emit)",
+            "La réflexion sur du code supprimé par le trimming échoue",
+            "Le ramasse-miettes est désactivé",
+            "Le binaire est propre à un système et une architecture"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Le GC est bien présent en Native AOT. Les bibliothèques fortement basées sur la réflexion doivent utiliser des générateurs de source (comme System.Text.Json) pour être compatibles.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cs-runtime-q5",
+          "prompt": "Complète le fichier projet pour publier en Native AOT.",
+          "code": "<PropertyGroup>\n  <TargetFramework>net9.0</TargetFramework>\n  <___>true</___>\n</PropertyGroup>",
+          "language": "text",
+          "answers": [
+            "PublishAot",
+            "PublishAot"
+          ],
+          "distractors": [
+            "Optimize",
+            "SelfContained",
+            "Nullable"
+          ],
+          "explanation": "PublishAot active la compilation native lors de dotnet publish. SelfContained embarque le runtime mais garde le JIT.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-runtime-q6",
+          "prompt": "Qu'est-ce que la compilation par paliers (tiered compilation) ?",
+          "choices": [
+            "Compiler d'abord vite et peu optimisé, puis recompiler les méthodes très utilisées avec plus d'optimisations",
+            "Compiler le projet en plusieurs fichiers",
+            "Compiler en Debug puis en Release",
+            "Compiler une méthode par thread"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le palier 0 accélère le démarrage ; le palier 1, guidé par le profil d'exécution, optimise ce qui compte vraiment.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "cs-injection",
       "title": "Injection de dépendances",
       "summary": "Le conteneur de .NET.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le principe",
+          "body": "Une classe reçoit ses dépendances (en général par son constructeur) au lieu de les créer elle-même. Elle dépend d'abstractions, ce qui permet de fournir une fausse implémentation dans les tests et de changer d'implémentation sans la modifier.",
+          "code": "public class CommandeService(\n    IEmailSender email, IClock horloge) {\n    // ...\n}"
+        },
+        {
+          "title": "Le conteneur de .NET",
+          "body": "On enregistre les services au démarrage ; le conteneur construit ensuite les objets en résolvant leurs constructeurs, récursivement, et appelle Dispose sur ceux qu'il a créés.",
+          "code": "builder.Services.AddSingleton<IClock, HorlogeSysteme>();\nbuilder.Services.AddScoped<IPanier, PanierService>();\nbuilder.Services.AddTransient<IEmailSender, Smtp>();"
+        },
+        {
+          "title": "Les durées de vie",
+          "body": "Singleton : une seule instance pour toute l'application. Scoped : une instance par portée, c'est-à-dire par requête HTTP en ASP.NET Core (le DbContext d'EF Core est scoped). Transient : une nouvelle instance à chaque résolution."
+        },
+        {
+          "title": "La dépendance captive",
+          "body": "Un singleton qui reçoit un service scoped le garde pour toujours : un DbContext, non thread-safe, se retrouve partagé entre toutes les requêtes. En développement, ASP.NET Core détecte ce cas au démarrage (validation des portées)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-injection-q1",
+          "prompt": "Quel est le principal intérêt de l'injection de dépendances ?",
+          "choices": [
+            "Découpler les classes et pouvoir les tester avec de fausses implémentations",
+            "Rendre le code plus rapide",
+            "Supprimer le besoin d'interfaces",
+            "Créer automatiquement la base de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une classe qui reçoit un IEmailSender peut être testée avec un faux expéditeur, sans envoyer de vrais e-mails.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-injection-q2",
+          "prompt": "En ASP.NET Core, que signifie la durée de vie Scoped ?",
+          "choices": [
+            "Une instance par requête HTTP",
+            "Une instance pour toute l'application",
+            "Une nouvelle instance à chaque injection",
+            "Une instance par thread"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le framework crée une portée par requête : tous les services scoped résolus pendant cette requête partagent la même instance, libérée à la fin.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cs-injection-q3",
+          "prompt": "Sous charge, EF Core signale « A second operation was started on this context ». Touche une ligne en cause.",
+          "code": "builder.Services.AddDbContext<AppDb>(); // scoped\nbuilder.Services.AddSingleton<CacheProduits>();\n\npublic class CacheProduits(AppDb db) {\n    public List<Produit> Tous()\n        => db.Produits.ToList();\n}",
+          "bugLines": [
+            2,
+            4
+          ],
+          "explanation": "Le singleton capture un DbContext scoped : la même instance sert à toutes les requêtes en parallèle, alors qu'un DbContext n'est pas thread-safe. Il faut rendre CacheProduits scoped, ou lui injecter un IDbContextFactory<AppDb>.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cs-injection-q4",
+          "prompt": "Complète les enregistrements selon les commentaires.",
+          "code": "// une seule instance pour toute l'application\nbuilder.Services.___<IClock, HorlogeSysteme>();\n// une nouvelle instance à chaque résolution\nbuilder.Services.___<IEmailSender, Smtp>();",
+          "answers": [
+            "AddSingleton",
+            "AddTransient"
+          ],
+          "distractors": [
+            "AddScoped",
+            "AddInstance",
+            "Register"
+          ],
+          "explanation": "AddSingleton : une instance partagée. AddTransient : une instance neuve à chaque fois. AddScoped : une par requête.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-injection-q5",
+          "prompt": "Quel est le problème de ce code ?",
+          "code": "public class Commande {\n    public void Valider() {\n        var mail = Program.Services\n            .GetRequiredService<IEmailSender>();\n        mail.Envoyer(\"Commande validée\");\n    }\n}",
+          "choices": [
+            "C'est un « service locator » : la dépendance est cachée, il faut l'injecter par le constructeur",
+            "GetRequiredService n'existe pas",
+            "Le service n'est jamais libéré",
+            "Aucun : c'est la bonne pratique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Rien dans la signature de Commande n'indique qu'elle envoie des e-mails, et un test doit configurer un conteneur global. Avec l'injection par constructeur, la dépendance est visible et remplaçable.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cs-injection-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Un singleton ne doit pas dépendre d'un service scoped",
+            "Le conteneur appelle Dispose sur les services IDisposable qu'il a créés",
+            "Un service transient est partagé entre toutes les requêtes",
+            "L'injection par constructeur rend les dépendances visibles"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Un transient est recréé à chaque résolution : il n'est jamais partagé. C'est le singleton qui l'est.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cs-defi-dotnet",
+    "title": "Défi entretien : l'écosystème .NET",
+    "summary": "Durées de vie, testabilité et runtime.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cs-defi9-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "var services = new ServiceCollection();\nservices.AddSingleton<A>();\nservices.AddTransient<B>();\nvar sp = services.BuildServiceProvider();\n\nConsole.Write(ReferenceEquals(\n    sp.GetService<A>(), sp.GetService<A>()));\nConsole.Write(ReferenceEquals(\n    sp.GetService<B>(), sp.GetService<B>()));",
+        "choices": [
+          "TrueFalse",
+          "TrueTrue",
+          "FalseFalse",
+          "FalseTrue"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le singleton renvoie toujours la même instance ; le transient en crée une nouvelle à chaque résolution.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "cs-defi9-q2",
+        "prompt": "Cas pratique 1/3 — Impossible de tester EstExpire de façon fiable. Touche la ligne en cause.",
+        "code": "public class Abonnement {\n    public DateTime Fin { get; init; }\n    public bool EstExpire() => DateTime.Now > Fin;\n}",
+        "bugLines": [
+          3
+        ],
+        "explanation": "DateTime.Now est une dépendance cachée à l'horloge système : le résultat dépend du moment où le test s'exécute. En plus, l'heure locale change avec les fuseaux et l'heure d'été.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi9-q3",
+        "prompt": "Cas pratique 2/3 — Quel est le bon correctif ?",
+        "choices": [
+          "Injecter une abstraction du temps (TimeProvider, depuis .NET 8) et l'interroger",
+          "Utiliser DateTime.UtcNow à la place",
+          "Ajouter un paramètre optionnel bool estTest",
+          "Mettre Thread.Sleep dans les tests"
+        ],
+        "answerIndex": 0,
+        "explanation": "UtcNow règle le problème des fuseaux, pas celui des tests. Avec un TimeProvider injecté, un test fournit un FakeTimeProvider réglé sur la date voulue.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "cs-defi9-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version testable.",
+        "code": "public class Abonnement(___ temps) {\n    public DateTimeOffset Fin { get; init; }\n    public bool EstExpire()\n        => temps.___() > Fin;\n}",
+        "answers": [
+          "TimeProvider",
+          "GetUtcNow"
+        ],
+        "distractors": [
+          "DateTime",
+          "Now",
+          "Today"
+        ],
+        "explanation": "TimeProvider.System en production, un faux en test. GetUtcNow() renvoie un DateTimeOffset en UTC.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cs-defi9-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "public class RapportService {\n    private readonly HttpClient http = new();\n    private readonly SqlRepository repo =\n        new(\"Server=prod;Database=ventes\");\n\n    public async Task GenererAsync() { /* ... */ }\n}",
+        "choices": [
+          "Les dépendances sont créées en dur : impossible de les remplacer dans un test",
+          "La chaîne de connexion de production est codée en dur",
+          "HttpClient devrait venir de l'injection (IHttpClientFactory)",
+          "readonly empêche d'utiliser http"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La configuration doit venir d'appsettings ou de l'environnement, et les dépendances du constructeur. readonly empêche seulement de réaffecter le champ.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi9-q6",
+        "prompt": "En entretien : pourquoi le JIT peut-il produire du code plus rapide qu'une compilation à l'avance ?",
+        "choices": [
+          "Il connaît le processeur réel et le profil d'exécution, et optimise les chemins vraiment utilisés",
+          "Il a plus de temps pour compiler",
+          "Il désactive le ramasse-miettes",
+          "C'est faux : l'AOT est toujours plus rapide"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec le PGO dynamique, le JIT recompile les méthodes chaudes en tenant compte des types et branches réellement observés. L'AOT gagne au démarrage ; le JIT peut gagner sur la durée.",
+        "difficulty": 3
+      }
+    ]
+  }
 }

@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (23 écrits) | 323 (38 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (39 écrits) | 328 (87 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -212,43 +212,44 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
    - ✅ Les références
    - ✅ Les pointeurs
    - ✅ const, pointeurs et tableaux
-3. 🕓 Classes et objets
-   - Classes et encapsulation
-   - Constructeurs et destructeur
-   - Surcharge d'opérateurs
+3. ✅ Classes et objets
+   - ✅ Classes et encapsulation
+   - ✅ Constructeurs et destructeur
+   - ✅ Surcharge d'opérateurs
 4. ✅ Mémoire et RAII
+   - ✅ Pile, tas et new/delete
    - ✅ RAII et pointeurs intelligents
-5. 🕓 Copie et déplacement
-   - Copie profonde et superficielle
-   - Sémantique de déplacement
-   - La règle du zéro
-6. 🕓 Héritage et polymorphisme
-   - Héritage
-   - Fonctions virtuelles
-   - Pièges du polymorphisme
-7. 🕓 Templates
-   - Templates de fonctions
-   - Templates de classes
-   - Concepts (C++20)
-8. 🕓 La bibliothèque standard
-   - Conteneurs
-   - Itérateurs et invalidation
-   - Algorithmes
-9. 🕓 Erreurs et exceptions
-   - Exceptions
-   - Garanties d'exception
-   - Alternatives aux exceptions
-10. 🕓 Concurrence
-   - Threads
-   - Mutex et verrous
-   - Atomics
-11. 🕓 C++ moderne
-   - Lambdas
-   - constexpr et consteval
-   - De C++17 à C++23
-12. 🕓 Pièges et comportements indéfinis
-   - Comportements indéfinis
-   - Pièges classiques d'entretien
+5. ✅ Copie et déplacement
+   - ✅ Copie profonde et superficielle
+   - ✅ Sémantique de déplacement
+   - ✅ La règle du zéro
+6. ✅ Héritage et polymorphisme
+   - ✅ Héritage
+   - ✅ Fonctions virtuelles
+   - ✅ Pièges du polymorphisme
+7. ✅ Templates
+   - ✅ Templates de fonctions
+   - ✅ Templates de classes
+   - ✅ Concepts (C++20)
+8. ✅ La bibliothèque standard
+   - ✅ Conteneurs
+   - ✅ Itérateurs et invalidation
+   - ✅ Algorithmes
+9. ✅ Erreurs et exceptions
+   - ✅ Exceptions
+   - ✅ Garanties d'exception
+   - ✅ Alternatives aux exceptions
+10. ✅ Concurrence
+   - ✅ Threads
+   - ✅ Mutex et verrous
+   - ✅ Atomics
+11. ✅ C++ moderne
+   - ✅ Lambdas
+   - ✅ constexpr et consteval
+   - ✅ De C++17 à C++23
+12. ✅ Pièges et comportements indéfinis
+   - ✅ Comportements indéfinis
+   - ✅ Pièges classiques d'entretien
 
 **Spécialisations**
 
@@ -281,34 +282,38 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 **Tronc commun**
 
 1. ✅ Bases du langage
-   - ✅ Types et bases du langage
-2. 🕓 Programmation orientée objet
-   - Classes et propriétés
-   - Héritage et interfaces
-   - Records et structs
-3. 🕓 Collections et génériques
-   - Les collections
-   - Génériques
-   - IEnumerable et yield
+   - ✅ Types valeur et types référence
+   - ✅ Chaînes et formatage
+   - ✅ Méthodes et paramètres
+2. ✅ Programmation orientée objet
+   - ✅ Classes et propriétés
+   - ✅ Héritage et interfaces
+   - ✅ Records et structs
+3. ✅ Collections et génériques
+   - ✅ Les collections
+   - ✅ Génériques
+   - ✅ IEnumerable et yield
 4. ✅ LINQ et asynchrone
-   - ✅ LINQ et async/await
-5. 🕓 Mémoire et performance
-   - Le ramasse-miettes
-   - IDisposable et using
-   - Span et allocations
-6. 🕓 Exceptions et nullabilité
-   - Exceptions
-   - Nullable reference types
-7. 🕓 Délégués, événements et lambdas
-   - Délégués, Func et Action
-   - Événements
-   - Lambdas et closures
-8. 🕓 C# moderne
-   - Pattern matching
-   - Nouveautés récentes
-9. 🕓 L'écosystème .NET
-   - Runtime et compilation
-   - Injection de dépendances
+   - ✅ LINQ
+   - ✅ async et await
+   - ✅ Pièges de l'asynchrone
+5. ✅ Mémoire et performance
+   - ✅ Le ramasse-miettes
+   - ✅ IDisposable et using
+   - ✅ Span et allocations
+6. ✅ Exceptions et nullabilité
+   - ✅ Exceptions
+   - ✅ Nullable reference types
+7. ✅ Délégués, événements et lambdas
+   - ✅ Délégués, Func et Action
+   - ✅ Événements
+   - ✅ Lambdas et closures
+8. ✅ C# moderne
+   - ✅ Pattern matching
+   - ✅ Nouveautés récentes
+9. ✅ L'écosystème .NET
+   - ✅ Runtime et compilation
+   - ✅ Injection de dépendances
 
 **Spécialisations**
 

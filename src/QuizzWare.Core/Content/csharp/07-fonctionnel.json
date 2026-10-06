@@ -7,19 +7,440 @@
       "id": "cs-delegues",
       "title": "Délégués, Func et Action",
       "summary": "Passer du comportement en paramètre.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Un délégué référence une méthode",
+          "body": "Un délégué est un objet qui pointe vers une méthode d'une signature donnée. Les types génériques Func et Action couvrent presque tous les cas : Func<T1, ..., TResult> renvoie une valeur (le dernier type est le retour), Action<T1, ...> ne renvoie rien.",
+          "code": "Func<int, int, int> addition = (a, b) => a + b;\nAction<string> afficher = Console.WriteLine;\nPredicate<int> estPair = n => n % 2 == 0;\n\nafficher(addition(2, 3).ToString()); // 5"
+        },
+        {
+          "title": "Passer du comportement",
+          "body": "C'est le cœur de LINQ : Where reçoit un Func<T, bool>. On peut ainsi paramétrer un algorithme par une stratégie (comparaison, filtre, calcul) sans créer d'interface."
+        },
+        {
+          "title": "Délégués multicast",
+          "body": "+= ajoute une méthode à la liste d'invocation, -= la retire : l'appel exécute toutes les méthodes, dans l'ordre. Un délégué sans méthode vaut null : on l'appelle avec ?.Invoke(...)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-delegues-q1",
+          "prompt": "Que représente Func<int, string> ?",
+          "choices": [
+            "Une fonction qui prend un int et renvoie une string",
+            "Une fonction qui prend une string et renvoie un int",
+            "Une fonction qui prend un int et une string, sans retour",
+            "Une liste de paires int et string"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans Func, le dernier paramètre générique est toujours le type de retour ; les précédents sont les paramètres.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-delegues-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Func<int, int> doubler = x => x * 2;\nFunc<int, int> plusUn = x => x + 1;\nFunc<int, int> f = x => plusUn(doubler(x));\nConsole.WriteLine(f(5));",
+          "choices": [
+            "11",
+            "12",
+            "10",
+            "6"
+          ],
+          "answerIndex": 0,
+          "explanation": "f compose les deux fonctions : d'abord doubler (10), puis plusUn (11).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-delegues-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Action a = () => Console.Write(\"A\");\na += () => Console.Write(\"B\");\na += () => Console.Write(\"C\");\na -= () => Console.Write(\"B\");\na();",
+          "choices": [
+            "ABC",
+            "AC",
+            "AB",
+            "Une exception"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque lambda écrite crée un délégué distinct : celle du -= n'est pas celle ajoutée par le +=, donc rien n'est retiré. Pour pouvoir se désabonner, il faut garder une référence au délégué.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cs-delegues-q4",
+          "prompt": "Complète les types de ces deux variables.",
+          "code": "___<string, bool> estLong = s => s.Length > 5;\n___<string> afficher = s => Console.WriteLine(s);",
+          "answers": [
+            "Func",
+            "Action"
+          ],
+          "distractors": [
+            "Predicate",
+            "Delegate",
+            "Lambda"
+          ],
+          "explanation": "estLong renvoie un bool : Func<string, bool> (Predicate<string> conviendrait aussi, mais n'a qu'un seul paramètre générique). afficher ne renvoie rien : Action<string>.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cs-delegues-q5",
+          "prompt": "Telecharger lève NullReferenceException quand personne ne suit la progression. Touche la ligne fautive.",
+          "code": "class Telechargeur {\n    public Action<int>? Progression;\n    public void Telecharger() {\n        for (int p = 0; p <= 100; p += 10)\n            Progression(p);\n    }\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Un délégué sans abonné vaut null. Il faut écrire Progression?.Invoke(p);, qui n'appelle rien quand il est null.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cs-delegues-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Action ne renvoie pas de valeur",
+            "Le dernier paramètre générique de Func est le type de retour",
+            "Une lambda peut être affectée à un Func ou un Action de signature compatible",
+            "Un délégué ne peut référencer qu'une méthode static"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un délégué peut référencer une méthode d'instance : il garde alors une référence vers l'objet cible (ce qui peut d'ailleurs le maintenir en vie).",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "cs-evenements",
       "title": "Événements",
       "summary": "Publication et abonnement.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le mot-clé event",
+          "body": "Un événement est un délégué protégé : de l'extérieur, on peut seulement s'abonner (+=) ou se désabonner (-=). Seule la classe qui le déclare peut le déclencher ou le remplacer. Un champ délégué public, lui, peut être écrasé ou déclenché par n'importe qui."
+        },
+        {
+          "title": "Le modèle standard",
+          "body": "Par convention, un événement est de type EventHandler ou EventHandler<T> : le gestionnaire reçoit l'émetteur (sender) et les données. On le déclenche dans une méthode protected virtual OnXxx, avec ?.Invoke.",
+          "code": "public class Minuteur {\n    public event EventHandler<int>? Tic;\n\n    protected virtual void OnTic(int n)\n        => Tic?.Invoke(this, n);\n}"
+        },
+        {
+          "title": "L'exécution",
+          "body": "Les abonnés sont appelés de façon synchrone, dans l'ordre d'abonnement, sur le thread qui déclenche. Si l'un d'eux lève une exception, les suivants ne sont pas appelés."
+        },
+        {
+          "title": "Se désabonner",
+          "body": "L'émetteur garde une référence vers chaque abonné. Si l'émetteur vit longtemps (un service singleton), un abonné jamais désabonné reste en mémoire et continue de recevoir les événements."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-evenements-q1",
+          "prompt": "Qu'apporte event par rapport à un champ délégué public ?",
+          "choices": [
+            "De l'extérieur, on peut seulement s'abonner ou se désabonner ; seule la classe peut déclencher l'événement",
+            "Les abonnés sont appelés sur un autre thread",
+            "Les exceptions des abonnés sont ignorées",
+            "Les abonnés sont automatiquement désabonnés"
+          ],
+          "answerIndex": 0,
+          "explanation": "event encapsule le délégué : impossible d'écraser les autres abonnés avec = ou de déclencher l'événement à la place de son propriétaire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-evenements-q2",
+          "prompt": "Avec le Minuteur de la leçon, que se passe-t-il à la dernière ligne ?",
+          "code": "var m = new Minuteur();\nm.Tic += (s, n) => Console.WriteLine(n);\nm.Tic(m, 5);",
+          "choices": [
+            "Erreur de compilation : seul Minuteur peut déclencher Tic",
+            "Affiche 5",
+            "NullReferenceException",
+            "Rien ne se passe"
+          ],
+          "answerIndex": 0,
+          "explanation": "En dehors de sa classe, un événement ne peut apparaître qu'à gauche de += ou -= (erreur CS0070).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cs-evenements-q3",
+          "prompt": "Complète cet événement et son déclenchement sûr.",
+          "code": "public class Bouton {\n    public ___ EventHandler? Clic;\n\n    protected virtual void OnClic()\n        => Clic___Invoke(this, EventArgs.Empty);\n}",
+          "answers": [
+            "event",
+            "?."
+          ],
+          "distractors": [
+            "delegate",
+            "static",
+            "."
+          ],
+          "explanation": "event protège le délégué ; ?.Invoke évite la NullReferenceException quand personne n'est abonné.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cs-evenements-q4",
+          "prompt": "Après Fermer(), Rafraichir est toujours appelée. Touche la ligne fautive.",
+          "code": "void Ouvrir() {\n    _horloge.Tic += (s, e) => Rafraichir();\n}\n\nvoid Fermer() {\n    _horloge.Tic -= (s, e) => Rafraichir();\n}",
+          "bugLines": [
+            6
+          ],
+          "explanation": "La lambda du -= est un nouveau délégué, différent de celui abonné : rien n'est retiré. Il faut s'abonner avec une méthode nommée, ou garder le délégué dans un champ pour le retirer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-evenements-q5",
+          "prompt": "Declencher(n) appelle Tic?.Invoke(this, n). Qu'affiche ce code ?",
+          "code": "var m = new Minuteur();\nm.Tic += (s, n) => Console.Write($\"a{n}\");\nm.Tic += (s, n) => Console.Write($\"b{n}\");\nm.Declencher(1);",
+          "choices": [
+            "a1b1",
+            "b1a1",
+            "Un ordre imprévisible",
+            "a1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les gestionnaires sont appelés l'un après l'autre, de façon synchrone, dans l'ordre d'abonnement.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cs-evenements-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Les abonnés sont appelés dans l'ordre d'abonnement, sur le thread qui déclenche",
+            "Si un abonné lève une exception, les suivants ne sont pas appelés",
+            "Un événement s'exécute toujours sur un nouveau thread",
+            "Oublier de se désabonner peut provoquer une fuite mémoire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Déclencher un événement est un simple appel de délégué multicast : synchrone et séquentiel. L'émetteur référence ses abonnés, d'où le risque de fuite.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "cs-closures",
       "title": "Lambdas et closures",
       "summary": "Captures et pièges.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Capturer une variable",
+          "body": "Une lambda qui utilise une variable locale la capture : le compilateur déplace la variable dans un objet partagé entre la méthode et la lambda. C'est la variable qui est capturée, pas sa valeur : les modifications sont visibles des deux côtés, et la variable vit aussi longtemps que la lambda.",
+          "code": "int compteur = 0;\nAction incr = () => compteur++;\nincr();\nConsole.WriteLine(compteur); // 1"
+        },
+        {
+          "title": "Le piège de la boucle for",
+          "body": "Toutes les lambdas créées dans une boucle for partagent la même variable i : à l'exécution, elles voient sa valeur finale. foreach, au contraire, crée une nouvelle variable à chaque itération (depuis C# 5). Dans un for, on copie i dans une variable locale.",
+          "code": "for (int i = 0; i < 3; i++) {\n    int copie = i;\n    actions.Add(() => Console.Write(copie));\n}"
+        },
+        {
+          "title": "Le coût et static",
+          "body": "Une closure alloue un objet (et un délégué). Dans une boucle critique, ce coût compte. Une lambda static (C# 9) ne peut rien capturer : le compilateur le vérifie, et le délégué peut être mis en cache.",
+          "code": "Func<int, int> carre = static x => x * x;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-closures-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "var actions = new List<Action>();\nfor (int i = 0; i < 3; i++)\n    actions.Add(() => Console.Write(i));\nactions.ForEach(a => a());",
+          "choices": [
+            "333",
+            "012",
+            "222",
+            "Une exception"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les trois lambdas capturent la même variable i, qui vaut 3 à la sortie de la boucle, quand elles sont exécutées.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-closures-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "var actions = new List<Action>();\nforeach (var i in new[] { 0, 1, 2 })\n    actions.Add(() => Console.Write(i));\nactions.ForEach(a => a());",
+          "choices": [
+            "012",
+            "222",
+            "333",
+            "000"
+          ],
+          "answerIndex": 0,
+          "explanation": "Depuis C# 5, la variable d'un foreach est nouvelle à chaque itération : chaque lambda capture sa propre variable.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-closures-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int compteur = 0;\nAction incr = () => compteur++;\nincr();\nincr();\nConsole.WriteLine(compteur);",
+          "choices": [
+            "2",
+            "0",
+            "1",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "La lambda capture la variable compteur elle-même, pas une copie : ses incréments modifient la variable de la méthode.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cs-closures-q4",
+          "prompt": "Chaque bouton ouvre la page 3, qui n'existe pas. Touche la ligne en cause.",
+          "code": "for (int i = 0; i < 3; i++)\n{\n    boutons[i].Click += (s, e) => Ouvrir(i);\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Au moment du clic, la boucle est terminée et i vaut 3 pour toutes les lambdas. Il faut copier : int page = i; puis Ouvrir(page).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cs-closures-q5",
+          "prompt": "Complète : garantir que cette lambda ne capture rien.",
+          "code": "Func<int, int> carre = ___ x => x * x;",
+          "answers": [
+            "static"
+          ],
+          "distractors": [
+            "const",
+            "readonly",
+            "async"
+          ],
+          "explanation": "Une lambda static qui tenterait d'utiliser une variable locale ou this ne compilerait pas : aucune closure n'est allouée.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cs-closures-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Une lambda capture la variable, pas sa valeur au moment de la création",
+            "Une variable capturée vit aussi longtemps que la lambda",
+            "foreach crée une nouvelle variable à chaque itération (depuis C# 5)",
+            "Une lambda static peut lire les variables locales"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "C'est justement ce que static interdit : une lambda static ne voit que ses paramètres et les membres static.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cs-defi-delegues",
+    "title": "Défi entretien : délégués et événements",
+    "summary": "Closures, abonnements et encapsulation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cs-defi7-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "Func<int> CreerCompteur() {\n    int n = 0;\n    return () => ++n;\n}\n\nvar a = CreerCompteur();\nvar b = CreerCompteur();\na();\na();\nConsole.WriteLine($\"{a()} {b()}\");",
+        "choices": [
+          "3 1",
+          "3 3",
+          "1 1",
+          "3 4"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque appel de CreerCompteur crée une nouvelle variable n, capturée par sa propre lambda : a et b comptent indépendamment.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "cs-defi7-q2",
+        "prompt": "Cas pratique 1/3 — À chaque ouverture de la page, la mémoire augmente et Actualiser est appelée de plus en plus souvent. Touche la ligne en cause.",
+        "code": "public class PageVM {\n    public PageVM(ServiceMeteo meteo) {\n        meteo.Change += (s, e) => Actualiser();\n    }\n    void Actualiser() { /* ... */ }\n}\n// ServiceMeteo est un singleton",
+        "bugLines": [
+          3
+        ],
+        "explanation": "Le singleton garde une référence vers chaque PageVM abonnée, et rien ne les désabonne.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi7-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi Actualiser est-elle appelée de plus en plus souvent ?",
+        "choices": [
+          "Les anciennes PageVM restent abonnées : chacune reçoit encore l'événement",
+          "Le service déclenche l'événement plus souvent avec le temps",
+          "La lambda est recompilée à chaque ouverture",
+          "Le GC duplique les abonnés"
+        ],
+        "answerIndex": 0,
+        "explanation": "Après dix ouvertures de la page, dix PageVM (dont neuf invisibles) réagissent à chaque changement.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi7-q4",
+        "prompt": "Cas pratique 3/3 — Quel est le correctif ?",
+        "choices": [
+          "Garder le gestionnaire et se désabonner quand la page se ferme (par exemple dans Dispose)",
+          "Appeler GC.Collect() à la fermeture de la page",
+          "Remplacer la lambda par une lambda static",
+          "Mettre meteo à null dans le constructeur"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'abonnement doit avoir une fin explicite. Autre option : une messagerie à références faibles (comme WeakReferenceMessenger du CommunityToolkit). Une lambda static ne pourrait pas appeler Actualiser.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cs-defi7-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "public class Bourse {\n    public Action<decimal>? CoursChange;\n\n    public void Publier(decimal c) {\n        if (CoursChange != null)\n            CoursChange(c);\n    }\n}\n\n// ailleurs :\nbourse.CoursChange = MettreAJourGraphique;",
+        "choices": [
+          "Avec =, un abonné écrase tous les autres",
+          "N'importe qui peut déclencher CoursChange depuis l'extérieur",
+          "Le mot-clé event empêcherait ces deux abus",
+          "Action<decimal> ne peut pas avoir de paramètre"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "public event Action<decimal>? CoursChange; n'autoriserait que += et -= de l'extérieur. Le test null puis l'appel pourrait aussi s'écrire CoursChange?.Invoke(c).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi7-q6",
+        "prompt": "En entretien : qu'est-ce qu'une closure ?",
+        "choices": [
+          "Une fonction qui capture des variables de son environnement ; le compilateur les place dans un objet partagé",
+          "Une méthode qui ferme les ressources",
+          "Une classe scellée",
+          "Un bloc finally"
+        ],
+        "answerIndex": 0,
+        "explanation": "La lambda et la méthode qui l'a créée partagent les variables capturées, dont la durée de vie est prolongée tant que la lambda existe. C'est ce qui permet de créer des compteurs, des fabriques ou des callbacks avec un état.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

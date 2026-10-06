@@ -12,7 +12,8 @@ using QuizzWare.Views;
 
 namespace QuizzWare.ViewModels;
 
-public partial class QuizViewModel(ContentRepository content, ProgressService progressService, QuizBuilder builder, FeedbackService feedback)
+public partial class QuizViewModel(
+    ContentRepository content, ProgressService progressService, QuizBuilder builder, FeedbackService feedback, ContentReporter reporter)
     : ObservableObject, IQueryAttributable
 {
     private string? _categoryId;
@@ -202,6 +203,22 @@ public partial class QuizViewModel(ContentRepository content, ProgressService pr
 
         AnswerChecked?.Invoke(this, result.IsCorrect);
         _ = feedback.PlayAsync(result.IsCorrect ? FeedbackKind.Correct : FeedbackKind.Wrong, _settings);
+    }
+
+    [RelayCommand]
+    private Task ReportAsync()
+    {
+        if (_session is null)
+            return Task.CompletedTask;
+
+        var question = _session.Current.Source;
+        var location = content.FindQuestion(question.Id);
+        return reporter.ReportAsync($"question {question.Id}",
+        [
+            $"- Question : `{question.Id}`",
+            $"- Catégorie : {location?.Category.Name ?? "?"} · {location?.Unit.Title ?? "?"}",
+            $"- Énoncé : {question.Prompt}",
+        ]);
     }
 
     [RelayCommand]

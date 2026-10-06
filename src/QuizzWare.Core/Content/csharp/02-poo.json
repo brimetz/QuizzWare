@@ -7,19 +7,440 @@
       "id": "cs-classes",
       "title": "Classes et propriétés",
       "summary": "Constructeurs, propriétés, init.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Champs et propriétés",
+          "body": "Les champs restent privés ; on expose des propriétés, qui peuvent valider ou restreindre l'accès. Une propriété automatique génère son champ caché. { get; private set; } : lecture publique, écriture interne. init (C# 9) : affectable seulement à la construction.",
+          "code": "public class Commande {\n    public required string Id { get; init; }\n    public decimal Total { get; private set; }\n    public void Ajouter(decimal m) => Total += m;\n}"
+        },
+        {
+          "title": "Constructeurs et initialiseurs",
+          "body": "Un constructeur peut en appeler un autre avec : this(...). L'initialiseur d'objet (new T { A = 1 }) s'exécute après le constructeur, et après les initialiseurs de propriétés. required (C# 11) oblige l'appelant à initialiser une propriété.",
+          "code": "var c = new Commande { Id = \"A1\" };\n// sans Id : erreur de compilation (required)"
+        },
+        {
+          "title": "static",
+          "body": "Un membre static appartient au type, pas aux instances. Une static class ne contient que des membres static et ne peut pas être instanciée : c'est le cas de Math ou des classes d'extensions."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-classes-q1",
+          "prompt": "Que permet l'accesseur init ?",
+          "choices": [
+            "D'affecter la propriété seulement à la construction (constructeur ou initialiseur d'objet)",
+            "D'initialiser la propriété automatiquement à sa valeur par défaut",
+            "D'appeler une méthode à chaque lecture",
+            "De rendre la propriété static"
+          ],
+          "answerIndex": 0,
+          "explanation": "init rend la propriété immuable après la création de l'objet, tout en permettant la syntaxe new T { P = ... }.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cs-classes-q2",
+          "prompt": "Lire Nom fait planter le programme (StackOverflowException). Touche la ligne fautive.",
+          "code": "class Personne {\n    private string nom = \"\";\n    public string Nom {\n        get => Nom;\n        set => nom = value;\n    }\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le get renvoie la propriété Nom elle-même : il s'appelle en boucle jusqu'au dépassement de pile. Il faut renvoyer le champ : get => nom;.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-classes-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "class Boite {\n    public int Taille { get; set; } = 1;\n    public Boite() { Taille = 2; }\n}\n\nvar b = new Boite { Taille = 3 };\nConsole.WriteLine(b.Taille);",
+          "choices": [
+            "3",
+            "2",
+            "1",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ordre : initialiseur de propriété (1), corps du constructeur (2), puis initialiseur d'objet (3). La dernière affectation gagne.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cs-classes-q4",
+          "prompt": "Complète : Id est obligatoire et figé à la création ; Total n'est modifiable que par la classe.",
+          "code": "public class Commande {\n    public required string Id { get; ___; }\n    public decimal Total { get; ___ set; }\n}",
+          "answers": [
+            "init",
+            "private"
+          ],
+          "distractors": [
+            "set",
+            "readonly",
+            "const"
+          ],
+          "explanation": "init : affectable uniquement à la construction. private set : lecture publique, écriture réservée à la classe.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-classes-q5",
+          "prompt": "Avec la classe Commande précédente, que se passe-t-il à la dernière ligne ?",
+          "code": "var c = new Commande { Id = \"A1\" };\nc.Id = \"B2\";",
+          "choices": [
+            "Erreur de compilation : Id n'est affectable qu'à l'initialisation",
+            "c.Id vaut B2",
+            "Une exception à l'exécution",
+            "L'affectation est ignorée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une propriété init ne peut plus être modifiée une fois l'objet construit : c'est vérifié par le compilateur.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cs-classes-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Une propriété automatique { get; set; } génère un champ caché",
+            "required oblige l'appelant à initialiser la propriété",
+            "Une static class peut être instanciée avec new",
+            "L'initialiseur d'objet s'exécute après le constructeur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Une static class ne peut pas être instanciée ni servir de base : elle regroupe des membres static.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "cs-heritage-interfaces",
       "title": "Héritage et interfaces",
       "summary": "abstract, virtual, méthodes d'interface par défaut.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Héritage simple",
+          "body": "Une classe hérite d'une seule classe, mais peut implémenter plusieurs interfaces. Le constructeur de la base s'appelle avec : base(...). sealed interdit de dériver.",
+          "code": "class Chien : Animal, IComparable<Chien> {\n    public Chien(string nom) : base(nom) { }\n    public int CompareTo(Chien? o) => ...;\n}"
+        },
+        {
+          "title": "virtual, override et new",
+          "body": "Une méthode virtual redéfinie avec override est polymorphe : le type réel de l'objet décide. new masque la méthode de la base sans la redéfinir : c'est alors le type déclaré de la variable qui décide. Oublier override déclenche un avertissement (CS0114) et revient à new."
+        },
+        {
+          "title": "Classe abstraite ou interface",
+          "body": "Une classe abstraite peut contenir de l'état (champs), des constructeurs et du code partagé ; elle ne s'instancie pas. Une interface est un contrat ; depuis C# 8, elle peut fournir des implémentations par défaut, utiles pour faire évoluer une interface sans casser ses implémentations.",
+          "code": "public interface IJournal {\n    void Ecrire(string m);\n    void Erreur(string m) => Ecrire(\"ERREUR \" + m);\n}"
+        },
+        {
+          "title": "Préférer la composition",
+          "body": "L'héritage couple fortement la classe dérivée aux détails de la base. Pour réutiliser du code, on compose (un champ) ; pour substituer des implémentations (tests, injection de dépendances), on passe par des interfaces."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-heritage-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Animal a = new Chat();\na.Parler();\na.Manger();\n\nclass Animal {\n    public virtual void Parler() => Console.Write(\"A\");\n    public void Manger() => Console.Write(\"a\");\n}\nclass Chat : Animal {\n    public override void Parler() => Console.Write(\"C\");\n    public new void Manger() => Console.Write(\"c\");\n}",
+          "choices": [
+            "Ca",
+            "Cc",
+            "Aa",
+            "Ac"
+          ],
+          "answerIndex": 0,
+          "explanation": "Parler est redéfinie (override) : le type réel, Chat, décide. Manger est masquée (new) : la variable est déclarée Animal, c'est donc Animal.Manger qui s'exécute.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cs-heritage-q2",
+          "prompt": "De combien de classes une classe C# peut-elle hériter ?",
+          "choices": [
+            "Une seule, mais elle peut implémenter plusieurs interfaces",
+            "Autant qu'elle veut",
+            "Aucune : C# n'a que des interfaces",
+            "Deux au maximum"
+          ],
+          "answerIndex": 0,
+          "explanation": "C# interdit l'héritage multiple de classes (et ses ambiguïtés), mais une classe peut implémenter autant d'interfaces que nécessaire.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cs-heritage-q3",
+          "prompt": "Forme f = new Carre { Cote = 2 }; puis f.Aire() renvoie 0. Touche la ligne fautive.",
+          "code": "abstract class Forme {\n    public virtual double Aire() => 0;\n}\nclass Carre : Forme {\n    public double Cote { get; init; }\n    public double Aire() => Cote * Cote;\n}",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Sans override, Carre.Aire masque la méthode de la base au lieu de la redéfinir (avertissement CS0114). Via une variable Forme, c'est Forme.Aire qui s'exécute.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cs-heritage-q4",
+          "prompt": "Complète : Forme ne peut pas être instanciée et oblige chaque dérivée à implémenter Aire.",
+          "code": "public ___ class Forme {\n    public ___ double Aire();\n}",
+          "answers": [
+            "abstract",
+            "abstract"
+          ],
+          "distractors": [
+            "virtual",
+            "sealed",
+            "static"
+          ],
+          "explanation": "Une méthode abstract n'a pas de corps et doit être redéfinie ; elle n'est permise que dans une classe abstract. virtual exigerait un corps.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-heritage-q5",
+          "prompt": "À quoi servent les méthodes d'interface par défaut (C# 8) ?",
+          "choices": [
+            "À ajouter une méthode à une interface sans casser les classes qui l'implémentent déjà",
+            "À rendre une interface instanciable",
+            "À permettre l'héritage multiple de classes",
+            "À rendre toutes les méthodes optionnelles"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les implémentations existantes héritent du comportement par défaut, et peuvent le redéfinir. C'est pensé pour l'évolution des bibliothèques.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cs-heritage-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Une classe peut implémenter plusieurs interfaces",
+            "Une classe abstraite peut avoir des champs et des constructeurs",
+            "Une interface peut contenir des champs d'instance",
+            "On ne peut pas instancier une classe abstraite"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Une interface ne porte pas d'état d'instance : pas de champs (seulement des membres static). C'est la différence principale avec une classe abstraite.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "cs-records-struct",
       "title": "Records et structs",
       "summary": "Égalité par valeur et expressions with.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "record",
+          "body": "Un record (C# 9) est une classe pensée pour les données : égalité par valeur, ToString lisible, déconstruction. La forme positionnelle génère des propriétés init et un constructeur.",
+          "code": "public record Produit(string Nom, decimal Prix);\n\nvar a = new Produit(\"Café\", 2.5m);\nvar b = new Produit(\"Café\", 2.5m);\nConsole.WriteLine(a == b); // True"
+        },
+        {
+          "title": "with",
+          "body": "with crée une copie modifiée sans toucher l'original. Attention : c'est une copie superficielle. Une liste référencée par le record est partagée entre l'original et la copie.",
+          "code": "var promo = a with { Prix = 2m };"
+        },
+        {
+          "title": "struct, record struct, readonly struct",
+          "body": "Une struct convient aux petites valeurs (quelques champs), idéalement immuables : coordonnées, montants, intervalles. record struct (C# 10) ajoute l'égalité et ToString générés ; readonly struct garantit l'immuabilité. Les structs modifiables sont source de bugs, car on modifie souvent une copie."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cs-records-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Console.Write(new P(1, 2) == new P(1, 2));\nConsole.Write(\" \");\nConsole.Write(new C { X = 1 } == new C { X = 1 });\n\nrecord P(int X, int Y);\nclass C { public int X; }",
+          "choices": [
+            "True False",
+            "True True",
+            "False False",
+            "False True"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un record compare ses valeurs ; une classe ordinaire compare ses références, et ce sont deux objets distincts.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-records-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "var p1 = new Personne(\"Ana\", 30);\nvar p2 = p1 with { Age = 31 };\nConsole.WriteLine($\"{p1.Age} {p2.Age} {p1 == p2}\");\n\nrecord Personne(string Nom, int Age);",
+          "choices": [
+            "30 31 False",
+            "31 31 True",
+            "30 31 True",
+            "31 31 False"
+          ],
+          "answerIndex": 0,
+          "explanation": "with crée une nouvelle instance ; p1 n'est pas modifié. Les âges diffèrent, donc l'égalité par valeur donne False.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cs-records-q3",
+          "prompt": "L'équipe a gagné un membre alors qu'on n'a modifié que b. Touche la ligne qui crée le partage.",
+          "code": "record Equipe(string Nom, List<string> Membres);\n\nvar a = new Equipe(\"A\", new() { \"Ana\" });\nvar b = a with { Nom = \"B\" };\nb.Membres.Add(\"Léo\");\nConsole.WriteLine(a.Membres.Count); // 2",
+          "bugLines": [
+            4
+          ],
+          "explanation": "with copie les propriétés une à une : b.Membres référence la même liste que a.Membres. Il faut copier la liste (Membres = new(a.Membres)) ou utiliser une collection immuable.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cs-records-q4",
+          "prompt": "Complète : un type de données à égalité par valeur, puis une copie avec un autre prix.",
+          "code": "public ___ Produit(string Nom, decimal Prix);\n\nvar p = new Produit(\"Café\", 2.5m);\nvar promo = p ___ { Prix = 2m };",
+          "answers": [
+            "record",
+            "with"
+          ],
+          "distractors": [
+            "class",
+            "new",
+            "set"
+          ],
+          "explanation": "La syntaxe positionnelle record Produit(...) génère propriétés, constructeur et égalité. with produit une copie modifiée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cs-records-q5",
+          "prompt": "Dans quel cas une struct est-elle un bon choix ?",
+          "choices": [
+            "Une petite valeur immuable, comme une coordonnée ou un montant",
+            "Un objet volumineux souvent modifié",
+            "Une entité avec une identité, comme un client",
+            "Un type dont on veut hériter"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les structs sont copiées à chaque affectation : idéales pour de petites valeurs sans identité. Elles ne supportent pas l'héritage.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cs-records-q6",
+          "prompt": "Quelles affirmations sur les records sont vraies ?",
+          "choices": [
+            "Un record génère Equals, GetHashCode et ToString basés sur les valeurs",
+            "Les propriétés d'un record positionnel sont init",
+            "Un record est toujours un type valeur",
+            "with crée une copie modifiée sans changer l'original"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "record seul (ou record class) est un type référence ; record struct est un type valeur. Dans les deux cas, l'égalité est par valeur.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "cs-defi-poo",
+    "title": "Défi entretien : orienté objet",
+    "summary": "Égalité, clés de dictionnaire et encapsulation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cs-defi2-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "Console.WriteLine(new Point(1, 2));\n\nrecord Point(int X, int Y);",
+        "choices": [
+          "Point { X = 1, Y = 2 }",
+          "Point",
+          "(1, 2)",
+          "Point(1, 2)"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un record génère un ToString qui affiche le nom du type et ses propriétés publiques. Une classe ordinaire afficherait seulement son nom complet.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "cs-defi2-q2",
+        "prompt": "Cas pratique 1/3 — dico.ContainsKey(k) renvoie False. Touche la ligne en cause.",
+        "code": "class Cle {\n    public int Id { get; set; }\n    public override int GetHashCode() => Id;\n    public override bool Equals(object? o)\n        => o is Cle c && c.Id == Id;\n}\n\nvar dico = new Dictionary<Cle, string>();\nvar k = new Cle { Id = 1 };\ndico[k] = \"un\";\nk.Id = 2;\nConsole.WriteLine(dico.ContainsKey(k));",
+        "bugLines": [
+          11
+        ],
+        "explanation": "La clé est modifiée après son insertion : son hash change, alors que le dictionnaire l'a rangée selon l'ancien.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi2-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi la clé devient-elle introuvable ?",
+        "choices": [
+          "Le dictionnaire cherche dans le compartiment du nouveau hash, alors que l'entrée est rangée sous l'ancien",
+          "Le dictionnaire copie les clés à l'insertion",
+          "Equals compare les références",
+          "Le dictionnaire supprime les clés modifiées"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un Dictionary range chaque entrée selon le hash calculé à l'insertion. Une clé dont le hash change n'est plus retrouvable, et l'entrée reste orpheline.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi2-q4",
+        "prompt": "Cas pratique 3/3 — Quel est le correctif ?",
+        "choices": [
+          "Rendre la clé immuable, par exemple record Cle(int Id)",
+          "Supprimer la redéfinition de GetHashCode",
+          "Remplacer Dictionary par List",
+          "Appeler dico.TrimExcess() après la modification"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une clé de dictionnaire ne doit jamais changer d'égalité ni de hash. Un record positionnel est immuable et implémente les deux correctement.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cs-defi2-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "public class Compte {\n    public decimal Solde;\n    public List<Operation> Operations = new();\n\n    public void Debiter(decimal m) {\n        Solde -= m;\n    }\n}",
+        "choices": [
+          "Solde est un champ public : n'importe qui peut le modifier",
+          "La liste est exposée et modifiable de l'extérieur",
+          "Debiter n'enregistre aucune opération et accepte n'importe quel montant",
+          "decimal est inadapté pour de l'argent"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La classe n'encapsule rien : Solde { get; private set; }, une IReadOnlyList<Operation> exposée, et des méthodes qui valident et tracent. decimal est justement le bon type pour l'argent (pas d'erreur d'arrondi binaire).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cs-defi2-q6",
+        "prompt": "En entretien : pourquoi préférer la composition à l'héritage ?",
+        "choices": [
+          "L'héritage couple la classe dérivée aux détails de la base ; la composition reste souple et testable",
+          "L'héritage est plus lent à l'exécution",
+          "C# ne supporte pas bien l'héritage",
+          "La composition évite d'écrire des interfaces"
+        ],
+        "answerIndex": 0,
+        "explanation": "Modifier une classe de base peut casser ses dérivées (« fragile base class »). Avec la composition et des interfaces, on remplace une pièce sans toucher au reste.",
+        "difficulty": 2
+      }
+    ]
+  }
 }
