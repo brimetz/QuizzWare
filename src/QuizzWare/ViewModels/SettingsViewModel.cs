@@ -99,6 +99,9 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
     }
 
     [RelayCommand]
+    private Task RedoOnboardingAsync() => Shell.Current.GoToAsync(nameof(Views.OnboardingPage));
+
+    [RelayCommand]
     private async Task ResetAsync()
     {
         var confirmed = await Shell.Current.DisplayAlert("Réinitialiser la progression ?",

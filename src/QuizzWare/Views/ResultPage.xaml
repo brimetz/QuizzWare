@@ -17,6 +17,23 @@
                            HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
 
+                <!-- Bilan d'examen : entretien ou test de niveau -->
+                <Border Style="{StaticResource Card}" IsVisible="{Binding HasReport}" Stroke="{StaticResource Primary}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="{Binding ReportTitle}" Style="{StaticResource SubHeaderLabel}" TextColor="{StaticResource Primary}" />
+                        <Label Text="{Binding ReportDetails}" Style="{StaticResource BodyLabel}" />
+                        <Label Text="À retravailler" Style="{StaticResource SubHeaderLabel}" FontSize="15"
+                               IsVisible="{Binding HasWeakTopics}" Margin="0,6,0,0" />
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding WeakTopics}" Spacing="4" IsVisible="{Binding HasWeakTopics}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Label Text="{Binding .}" Style="{StaticResource BodyLabel}" />
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
                 <Border Style="{StaticResource Card}" IsVisible="{Binding IsLevelUp}"
                         BackgroundColor="{StaticResource PrimaryDark}" Stroke="{StaticResource Primary}">
                     <Label Text="{Binding LevelUpText}" FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="Center" />

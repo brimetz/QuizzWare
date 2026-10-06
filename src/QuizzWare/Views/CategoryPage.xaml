@@ -29,7 +29,24 @@
                 </VerticalStackLayout>
             </Border>
 
+            <!-- Test de niveau : proposé tant qu'aucune leçon n'est validée -->
+            <Border Style="{StaticResource Card}" Stroke="{StaticResource Warning}" IsVisible="{Binding CanTakePlacement}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding StartPlacementCommand}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="12">
+                    <Label Text="🎯" FontSize="28" VerticalOptions="Center" />
+                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                        <Label Text="Test de niveau" Style="{StaticResource SubHeaderLabel}" />
+                        <Label Text="{Binding PlacementText}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                    </VerticalStackLayout>
+                    <Label Grid.Column="2" Text="›" FontSize="28" TextColor="{StaticResource Warning}" VerticalOptions="Center" />
+                </Grid>
+            </Border>
+
             <Button Text="{Binding PracticeText}" Command="{Binding PracticeCommand}" IsVisible="{Binding CanPractice}" />
+            <Button Text="🎤 Mode entretien" Command="{Binding StartInterviewCommand}" IsVisible="{Binding CanInterview}"
+                    Style="{StaticResource SecondaryButton}" />
 
             <!-- Entrée vers l'arbre des spécialisations -->
             <Border Style="{StaticResource Card}" Stroke="{StaticResource Primary}" IsVisible="{Binding HasSpecializations}">

@@ -482,3 +482,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Clés de signature Android : jamais dans le dépôt (voir docs/PUBLICATION.md)
+*.keystore
+*.jks
+

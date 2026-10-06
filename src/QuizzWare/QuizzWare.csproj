@@ -32,6 +32,19 @@
     <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
   </PropertyGroup>
 
+  <!-- Publication Play Store : bundle .aab signé. Voir docs/PUBLICATION.md.
+       Le chemin de la keystore et son mot de passe viennent de variables d'environnement : aucun secret dans le dépôt. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <AndroidPackageFormat>aab</AndroidPackageFormat>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' And '$(QUIZZWARE_KEYSTORE)' != '' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <AndroidKeyStore>true</AndroidKeyStore>
+    <AndroidSigningKeyStore>$(QUIZZWARE_KEYSTORE)</AndroidSigningKeyStore>
+    <AndroidSigningKeyAlias>quizzware</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass>env:QUIZZWARE_KEYSTORE_PASS</AndroidSigningKeyPass>
+    <AndroidSigningStorePass>env:QUIZZWARE_KEYSTORE_PASS</AndroidSigningStorePass>
+  </PropertyGroup>
+
   <ItemGroup>
     <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0F1221" />
     <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0F1221" BaseSize="128,128" />

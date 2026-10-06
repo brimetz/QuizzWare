@@ -3,7 +3,7 @@ using QuizzWare.Core.Models;
 
 namespace QuizzWare.Core.Content;
 
-public sealed record QuestionLocation(Category Category, IQuizUnit Unit, Question Question);
+public sealed record QuestionLocation(Category Category, Chapter Chapter, IQuizUnit Unit, Question Question);
 
 /// <summary>Accès en lecture seule aux catégories, chapitres, leçons et défis.</summary>
 public sealed class ContentRepository
@@ -25,8 +25,8 @@ public sealed class ContentRepository
         ContentValidator.Validate(Categories);
         _byId = Categories.ToDictionary(c => c.Id);
         _questions = Categories
-            .SelectMany(c => c.AllChapters.SelectMany(Units).Select(u => (Category: c, Unit: u)))
-            .SelectMany(x => x.Unit.Questions.Select(q => new QuestionLocation(x.Category, x.Unit, q)))
+            .SelectMany(c => c.AllChapters.SelectMany(ch => Units(ch).Select(u => (Category: c, Chapter: ch, Unit: u))))
+            .SelectMany(x => x.Unit.Questions.Select(q => new QuestionLocation(x.Category, x.Chapter, x.Unit, q)))
             .ToDictionary(l => l.Question.Id);
     }
 

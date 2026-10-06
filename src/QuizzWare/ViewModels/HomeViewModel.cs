@@ -34,6 +34,8 @@ public partial class HomeViewModel(ContentRepository content, ProgressService pr
 
     public ObservableCollection<CategoryCardViewModel> Categories { get; } = [];
 
+    public bool NeedsOnboarding { get; private set; }
+
     [RelayCommand]
     private Task StartReviewAsync() => Shell.Current.GoToAsync($"{nameof(QuizPage)}?mode=review");
 
@@ -44,9 +46,13 @@ public partial class HomeViewModel(ContentRepository content, ProgressService pr
     {
         var progress = await progressService.GetProgressAsync();
 
+        NeedsOnboarding = !progress.Settings.OnboardingCompleted;
+
+        // Les centres d'intérêt choisis au premier lancement passent en tête.
+        var interests = progress.Settings.Interests.ToHashSet();
         Categories.Clear();
-        foreach (var category in content.Categories)
-            Categories.Add(new CategoryCardViewModel(category, progressService.GetLevel(progress, category.Id)));
+        foreach (var category in content.Categories.OrderByDescending(c => interests.Contains(c.Id)))
+            Categories.Add(new CategoryCardViewModel(category, progressService.GetLevel(progress, category.Id), interests.Contains(category.Id)));
 
         var totalXp = progress.Categories.Values.Sum(c => c.TotalXp);
         var playableLessons = content.Categories.SelectMany(c => c.AllLessons).Where(l => !l.IsPlanned).Select(l => l.Id).ToHashSet();
@@ -68,9 +74,10 @@ public partial class HomeViewModel(ContentRepository content, ProgressService pr
     }
 }
 
-public sealed partial class CategoryCardViewModel(Category category, LevelInfo level)
+public sealed partial class CategoryCardViewModel(Category category, LevelInfo level, bool isFavorite = false)
 {
     public string Name => category.Name;
+    public bool IsFavorite => isFavorite;
     public string Description => category.Description;
     public string Icon => category.Icon;
     public Color Color { get; } = Color.FromArgb(category.Color);

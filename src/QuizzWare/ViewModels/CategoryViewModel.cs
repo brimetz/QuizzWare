@@ -52,10 +52,54 @@ public partial class CategoryViewModel(ContentRepository content, ProgressServic
     [ObservableProperty]
     private string specializationsText = string.Empty;
 
+    [ObservableProperty]
+    private bool canTakePlacement;
+
+    [ObservableProperty]
+    private string placementText = string.Empty;
+
+    [ObservableProperty]
+    private bool canInterview;
+
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("categoryId", out var id))
             _categoryId = id as string;
+    }
+
+    [RelayCommand]
+    private async Task StartPlacementAsync()
+    {
+        if (_categoryId is null)
+            return;
+        var category = content.GetCategory(_categoryId);
+        var chapters = category.Chapters.Count(c => c.Lessons.Any(l => !l.IsPlanned));
+        var ok = await Shell.Current.DisplayAlert("🎯 Test de niveau",
+            $"Jusqu'à {chapters * PlacementTest.QuestionsPerChapter} questions, {PlacementTest.QuestionsPerChapter} par chapitre, sans correction en cours de route. "
+            + "Chaque chapitre réussi sans faute est validé, et le test s'arrête au premier chapitre raté.",
+            "C'est parti", "Plus tard");
+        if (ok)
+            await Shell.Current.GoToAsync($"{nameof(QuizPage)}?categoryId={_categoryId}&mode=placement");
+    }
+
+    [RelayCommand]
+    private async Task StartInterviewAsync()
+    {
+        if (_categoryId is null)
+            return;
+        var category = content.GetCategory(_categoryId);
+        var levels = InterviewLevel.All.Where(l => QuizBuilder.CanInterview(category, l)).ToList();
+        var choice = await Shell.Current.DisplayActionSheet("🎤 Niveau de l'entretien", "Annuler", null,
+            levels.Select(l => l.Description).ToArray());
+        var level = levels.FirstOrDefault(l => l.Description == choice);
+        if (level is null)
+            return;
+
+        var ok = await Shell.Current.DisplayAlert($"Entretien {level.Label}",
+            $"{level.QuestionCount} questions en {level.Duration.TotalMinutes:0} minutes, sans correction avant la fin, comme en vrai. "
+            + "Tu obtiendras un verdict et les sujets à retravailler.", "Commencer", "Annuler");
+        if (ok)
+            await Shell.Current.GoToAsync($"{nameof(QuizPage)}?categoryId={_categoryId}&mode=interview&level={level.Id}");
     }
 
     public async Task LoadAsync()
@@ -82,6 +126,9 @@ public partial class CategoryViewModel(ContentRepository content, ProgressServic
 
         Chapters = PathBuilder.Build(category, category.Chapters, userProgress, progressService);
         CanPractice = progressService.GetUnlockedLessons(userProgress, category).Count > 0;
+        CanTakePlacement = progressService.CanTakePlacement(userProgress, category);
+        PlacementText = $"Tu connais déjà le {category.Name} ? Passe le test de niveau pour sauter les chapitres que tu maîtrises.";
+        CanInterview = QuizBuilder.CanInterview(category, InterviewLevel.Junior);
 
         HasSpecializations = category.Specializations is not null;
         if (category.Specializations is { } tree)
@@ -165,6 +212,7 @@ public sealed partial class UnitItemViewModel
     {
         UnitState.Planned => "🕓 À venir",
         UnitState.Locked => lockedText,
+        UnitState.Completed when best is null => "✅ Validée par le test de niveau",
         UnitState.Completed => $"✅ Réussi · meilleur score {best} %",
         _ when best is { } s => $"Meilleur score {s} % · {ProgressService.PassPercent} % requis",
         _ => "À découvrir",

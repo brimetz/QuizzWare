@@ -130,7 +130,11 @@
                     </DataTrigger>
                 </Label.Triggers>
             </Label>
-            <Label Grid.Row="1" Grid.Column="1" Text="{Binding ProgressText}" Style="{StaticResource MutedLabel}" />
+            <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Spacing="10">
+                <Label Text="{Binding TimerText}" TextColor="{Binding TimerColor}" FontAttributes="Bold"
+                       IsVisible="{Binding HasTimer}" />
+                <Label Text="{Binding ProgressText}" Style="{StaticResource MutedLabel}" />
+            </HorizontalStackLayout>
         </Grid>
 
         <!-- Énoncé et question -->
@@ -145,7 +149,7 @@
         <!-- Vérifier -->
         <Border Grid.Row="2" IsVisible="{Binding IsNotAnswered}" BackgroundColor="{StaticResource Background}"
                 StrokeThickness="0" Padding="16,12,16,20">
-            <Button Text="Vérifier" Command="{Binding CheckCommand}" />
+            <Button Text="{Binding CheckText}" Command="{Binding CheckCommand}" />
         </Border>
 
         <!-- Correction -->

@@ -16,6 +16,14 @@ Chaque catégorie a un **tronc commun** en chapitres (des leçons, cours + quizz
 
 Les troncs communs **C++** (12 chapitres) et **C#** (9 chapitres) sont entièrement écrits, chaque chapitre avec son défi entretien. Les extraits « qu'affiche ce code ? » ont été compilés et exécutés (clang++ en C++23, Roslyn en C# 13). Chaque question et chaque cours a un lien **⚑ Signaler** qui ouvre une issue GitHub pré-remplie.
 
+Au-delà des leçons :
+
+- **Premier lancement** : profil (étudiant → senior), centres d'intérêt (affichés en premier sur l'accueil) et objectif quotidien, puis un parcours conseillé.
+- **Test de niveau** : 2 questions par chapitre du tronc commun, sans correction en cours de route ; chaque chapitre réussi sans faute est validé, et le test s'arrête au premier chapitre raté. Proposé tant qu'aucune leçon de la catégorie n'est validée.
+- **Mode entretien** : simulation chronométrée (Junior 10 questions / 8 min, Confirmé 15 / 12 min, Senior 15 / 10 min), questions réparties entre les chapitres, verdict et sujets à retravailler. Les erreurs rejoignent la révision espacée.
+
+Publication sur le Play Store : **[docs/PUBLICATION.md](docs/PUBLICATION.md)**.
+
 ## Stack
 
 - **.NET 9 / .NET MAUI** (Android, iOS, Windows pour le dev)

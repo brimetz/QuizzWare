@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QuizzWare.Core.Progress;
+using QuizzWare.Core.Quiz;
 using QuizzWare.Services;
 
 namespace QuizzWare.ViewModels;
@@ -62,10 +63,29 @@ public partial class ResultViewModel(ProgressService progressService, FeedbackSe
     [ObservableProperty]
     private Color dailyGoalColor = Palette.Warning;
 
+    [ObservableProperty]
+    private bool hasReport;
+
+    [ObservableProperty]
+    private string reportTitle = string.Empty;
+
+    [ObservableProperty]
+    private string reportDetails = string.Empty;
+
+    [ObservableProperty]
+    private IReadOnlyList<string> weakTopics = [];
+
+    [ObservableProperty]
+    private bool hasWeakTopics;
+
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("update", out var value) && value is ProgressUpdate update)
             Populate(update);
+        if (query.TryGetValue("interview", out var r) && r is InterviewReport report)
+            PopulateInterview(report);
+        if (query.TryGetValue("placement", out var p) && p is PlacementUpdate placement)
+            PopulatePlacement(placement);
 
         // Évite de ré-appliquer l'objet si Shell rappelle cette méthode lors d'une navigation retour.
         query.Clear();
@@ -130,6 +150,58 @@ public partial class ResultViewModel(ProgressService progressService, FeedbackSe
             LessonText = $"Il faut {ProgressService.PassPercent} % de bonnes réponses pour valider {unit}.";
             LessonColor = Palette.Warning;
         }
+    }
+
+    /// <summary>Simulation d'entretien : verdict, temps et sujets à retravailler, en plus du résultat habituel.</summary>
+    private void PopulateInterview(InterviewReport report)
+    {
+        Headline = report.Percent >= InterviewReport.PassPercent ? "Entretien réussi ! 🎉"
+            : report.Percent >= InterviewReport.AlmostPercent ? "Presque ! 💪"
+            : "Pas encore… 📚";
+        ShouldCelebrate = report.Percent >= InterviewReport.PassPercent;
+        HasReport = true;
+        ReportTitle = $"🎤 Entretien {report.Level.Label} · {report.Percent} %";
+        ReportDetails = report.Verdict + "\n" + (report.TimeExpired
+            ? $"⏱ Temps écoulé ({report.Level.Duration.TotalMinutes:0} min) : les questions sans réponse comptent comme fausses."
+            : $"⏱ Terminé en {report.Elapsed:m\\:ss} sur {report.Level.Duration.TotalMinutes:0} min.");
+        WeakTopics = report.WeakTopics.Select(t => $"• {t.Title} : {t.Correct}/{t.Total}").ToList();
+        HasWeakTopics = WeakTopics.Count > 0;
+
+        var failed = report.Total - report.Correct;
+        LessonText = failed == 0 ? null : $"🧠 {failed} question{(failed > 1 ? "s" : "")} ajoutée{(failed > 1 ? "s" : "")} à tes révisions.";
+        LessonColor = Palette.Warning;
+    }
+
+    /// <summary>Test de niveau : chapitres acquis, leçons validées et prochaine étape.</summary>
+    private void PopulatePlacement(PlacementUpdate update)
+    {
+        Headline = update.PassedChapters == update.TotalChapters ? "Tout le tronc commun est acquis ! 🏆"
+            : update.PassedChapters > 0 ? "Bien placé ! 🎯"
+            : "On commence par les bases 📚";
+        ScoreText = $"{update.PassedChapters} / {update.TotalChapters}";
+        XpText = $"chapitre{(update.TotalChapters > 1 ? "s" : "")} acquis · +{update.XpEarned} XP";
+        ShouldCelebrate = update.PassedChapters > 0;
+
+        HasLevel = true;
+        IsLevelUp = false;
+        LevelText = LevelFormat.Level(update.After);
+        LevelXpText = LevelFormat.Xp(update.After);
+        LevelProgress = update.After.Progress;
+
+        HasReport = true;
+        ReportTitle = "🎯 Test de niveau";
+        ReportDetails = update.LessonsValidated > 0
+            ? $"{update.LessonsValidated} leçon{(update.LessonsValidated > 1 ? "s" : "")} validée{(update.LessonsValidated > 1 ? "s" : "")} d'un coup. Les défis entretien de ces chapitres restent à relever."
+            : "Aucun chapitre validé : le parcours commence au début, c'est le bon endroit pour toi.";
+        LessonText = update.NextLesson is { } next ? $"➡️ Prochaine leçon : {next.Title}" : "Il te reste les défis entretien et les spécialisations.";
+        LessonColor = Palette.Success;
+
+        StreakText = update.Streak > 1 ? $"🔥 Série de {update.Streak} jours" : "🔥 Série démarrée : reviens demain !";
+        var goal = update.DailyGoal;
+        DailyGoalProgress = goal.Progress;
+        DailyGoalColor = goal.IsReached ? Palette.Success : Palette.Warning;
+        DailyGoalText = update.DailyGoalJustReached ? $"🎉 Objectif du jour atteint : {goal.XpToday} / {goal.GoalXp} XP !"
+            : $"🎯 Objectif du jour : {goal.XpToday} / {goal.GoalXp} XP";
     }
 
     [RelayCommand]

@@ -63,6 +63,26 @@ public sealed class UserSettings
     public TimeOnly ReminderTime { get; set; } = new(19, 0);
     public bool SoundEnabled { get; set; } = true;
     public bool HapticsEnabled { get; set; } = true;
+
+    /// <summary>Le parcours de premier lancement a été fait (ou passé).</summary>
+    public bool OnboardingCompleted { get; set; }
+
+    /// <summary>Profil déclaré au premier lancement (voir <see cref="Profiles"/>), null s'il n'a pas été renseigné.</summary>
+    public string? Profile { get; set; }
+
+    /// <summary>Catégories choisies comme centres d'intérêt : affichées en premier sur l'accueil.</summary>
+    public List<string> Interests { get; set; } = [];
+}
+
+/// <summary>Profils proposés au premier lancement. Au-delà d'« étudiant », on suggère le test de niveau.</summary>
+public static class Profiles
+{
+    public const string Etudiant = "etudiant";
+    public const string Junior = "junior";
+    public const string Confirme = "confirme";
+    public const string Senior = "senior";
+
+    public static bool SuggestsPlacement(string? profile) => profile is Junior or Confirme or Senior;
 }
 
 /// <summary>Fiche de révision (système de Leitner) : plus la boîte est haute, plus la révision suivante est lointaine.</summary>

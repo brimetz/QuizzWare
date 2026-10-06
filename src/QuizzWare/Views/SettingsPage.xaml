@@ -78,6 +78,13 @@
                 </Border>
             </VerticalStackLayout>
 
+            <!-- Profil -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="🧭 Profil et centres d'intérêt" Style="{StaticResource HeaderLabel}" />
+                <Button Text="Refaire le parcours de bienvenue" Command="{Binding RedoOnboardingCommand}"
+                        Style="{StaticResource SecondaryButton}" />
+            </VerticalStackLayout>
+
             <!-- Compte -->
             <VerticalStackLayout Spacing="10">
                 <Label Text="👤 Compte" Style="{StaticResource HeaderLabel}" />

@@ -19,6 +19,12 @@ public partial class QuizPage : ContentPage
         await _viewModel.LoadAsync();
     }
 
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _viewModel.Pause();
+    }
+
     /// <summary>La correction monte depuis le bas ; en cas d'erreur, elle tremble.</summary>
     private async void OnAnswerChecked(object? sender, bool isCorrect)
     {

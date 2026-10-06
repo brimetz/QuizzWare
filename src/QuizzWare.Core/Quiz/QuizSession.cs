@@ -110,6 +110,24 @@ public sealed class QuizSession
         return result;
     }
 
+    /// <summary>Première réponse à la question d'indice <paramref name="index"/> : null si elle n'a pas encore été posée.</summary>
+    public bool? IsCorrectAt(int index) => _firstAnswers[index]?.IsCorrect;
+
+    /// <summary>XP gagnée jusqu'ici (premières réponses uniquement).</summary>
+    public int XpSoFar => _firstAnswers.Sum(a => a?.XpEarned ?? 0);
+
+    /// <summary>
+    /// Temps écoulé (mode entretien) : les questions sans réponse comptent comme fausses et la session se termine.
+    /// </summary>
+    public void Expire()
+    {
+        for (var i = 0; i < _firstAnswers.Length; i++)
+            _firstAnswers[i] ??= new AnswerResult(false, Questions[i].Source.Explanation, 0);
+
+        _steps.RemoveRange(CurrentIndex + 1, _steps.Count - CurrentIndex - 1);
+        _isCurrentAnswered = true;
+    }
+
     public bool MoveNext()
     {
         if (!_isCurrentAnswered || !HasNext)

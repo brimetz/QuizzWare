@@ -53,7 +53,11 @@
                                    HorizontalOptions="Center" VerticalOptions="Center" />
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="6">
-                            <Label Text="{Binding Name}" Style="{StaticResource SubHeaderLabel}" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{Binding Name}" Style="{StaticResource SubHeaderLabel}" />
+                                <Label Grid.Column="1" Text="★" TextColor="{StaticResource Warning}" FontSize="16"
+                                       IsVisible="{Binding IsFavorite}" />
+                            </Grid>
                             <Label Text="{Binding LevelText}" Style="{StaticResource MutedLabel}" />
                             <ProgressBar Progress="{Binding Progress}" ProgressColor="{Binding Color}" />
                             <Label Text="{Binding XpText}" Style="{StaticResource MutedLabel}" FontSize="12" />

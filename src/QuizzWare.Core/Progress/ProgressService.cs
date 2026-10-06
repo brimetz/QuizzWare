@@ -20,6 +20,20 @@ public sealed record ProgressUpdate(
     public bool LeveledUp => After is not null && Before is not null && After.Level > Before.Level;
 }
 
+/// <summary>Résultat d'un test de niveau.</summary>
+/// <param name="NextLesson">Première leçon à faire après le test (null si tout le tronc commun est validé).</param>
+public sealed record PlacementUpdate(
+    string CategoryId,
+    int PassedChapters,
+    int TotalChapters,
+    int LessonsValidated,
+    int XpEarned,
+    Lesson? NextLesson,
+    LevelInfo After,
+    int Streak,
+    DailyGoalStatus DailyGoal,
+    bool DailyGoalJustReached);
+
 public sealed record DailyGoalStatus(int XpToday, int GoalXp)
 {
     public bool IsReached => XpToday >= GoalXp;
@@ -135,6 +149,58 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         Changed?.Invoke(this, progress);
         return update;
     }
+
+    /// <summary>
+    /// Applique un test de niveau terminé : les leçons des chapitres acquis sont validées (pas les défis, qui restent
+    /// à relever), et les bonnes réponses rapportent leur XP habituelle.
+    /// </summary>
+    public async Task<PlacementUpdate> ApplyPlacementAsync(PlacementTest test)
+    {
+        PlacementUpdate update;
+        UserProgress progress;
+
+        await _lock.WaitAsync();
+        try
+        {
+            progress = _progress ??= await store.LoadAsync();
+            var today = Today();
+            var goalBefore = GetDailyGoal(progress);
+            var category = progress.GetOrCreate(test.Category.Id);
+
+            var passed = test.PassedChapters;
+            var validated = test.Chapters.Take(passed)
+                .SelectMany(c => c.Lessons).Where(l => !l.IsPlanned)
+                .Count(l => category.CompletedLessons.Add(l.Id));
+
+            var answered = Enumerable.Range(0, test.Session.Questions.Count).Where(i => test.Session.IsCorrectAt(i) is not null).ToList();
+            var xp = test.Session.XpSoFar;
+            category.TotalXp += xp;
+            category.QuizzesCompleted++;
+            category.QuestionsAnswered += answered.Count;
+            category.CorrectAnswers += answered.Count(i => test.Session.IsCorrectAt(i) == true);
+
+            AddDailyXp(progress, today, xp);
+            UpdateStreak(progress, today);
+            await SaveAsync(progress);
+
+            var next = test.Category.MainLessons.FirstOrDefault(l => !l.IsPlanned && !category.CompletedLessons.Contains(l.Id));
+            var goalAfter = GetDailyGoal(progress);
+            update = new PlacementUpdate(test.Category.Id, passed, test.Chapters.Count, validated, xp, next,
+                LevelSystem.GetLevelInfo(category.TotalXp), progress.CurrentStreak, goalAfter, goalAfter.IsReached && !goalBefore.IsReached);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+
+        Changed?.Invoke(this, progress);
+        return update;
+    }
+
+    /// <summary>Le test de niveau est proposé tant qu'aucune leçon du tronc commun n'a été validée.</summary>
+    public bool CanTakePlacement(UserProgress progress, Category category) =>
+        category.Chapters.Count(c => c.Lessons.Any(l => !l.IsPlanned)) >= 2
+        && !category.MainLessons.Any(l => Completed(progress, category).Contains(l.Id));
 
     /// <summary>Modifie les réglages (objectif quotidien, rappels) et les sauvegarde.</summary>
     public async Task UpdateSettingsAsync(Action<UserSettings> change)

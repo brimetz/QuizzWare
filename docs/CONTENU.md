@@ -23,6 +23,7 @@ Catégorie
 
 - Les leçons se débloquent dans l'ordre du parcours : il faut **70 %** à la précédente.
 - L'entraînement rapide ne pioche que dans les leçons déjà débloquées, avec une difficulté qui suit le niveau.
+- Le test de niveau et le mode entretien tirent des questions au hasard : une question qui commence par « Cas pratique » ou par « Avec … de la leçon / précédente » en est exclue, car elle n'a de sens que dans son contexte. Les autres doivent se comprendre seules.
 - Le défi garde l'ordre des questions : on peut enchaîner un **cas pratique** en plusieurs étapes (« Cas pratique 1/3 — trouve le bug », « 2/3 — quel correctif ? », « 3/3 — que se passe-t-il si… ? »).
 
 ### Contenu « à venir »

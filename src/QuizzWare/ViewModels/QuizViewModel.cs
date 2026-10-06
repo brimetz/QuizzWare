@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QuizzWare.Core.Content;
@@ -12,15 +13,26 @@ using QuizzWare.Views;
 
 namespace QuizzWare.ViewModels;
 
+/// <summary>
+/// Normal : leçon, défi ou entraînement. Review : révision espacée.
+/// Placement et Interview sont des examens : pas de correction question par question.
+/// </summary>
+public enum QuizMode { Normal, Review, Placement, Interview }
+
 public partial class QuizViewModel(
     ContentRepository content, ProgressService progressService, QuizBuilder builder, FeedbackService feedback, ContentReporter reporter)
     : ObservableObject, IQueryAttributable
 {
     private string? _categoryId;
     private string? _unitId;
-    private bool _isReview;
+    private QuizMode _mode;
     private bool _startedFromLesson;
     private QuizSession? _session;
+    private PlacementTest? _placement;
+    private InterviewLevel? _interviewLevel;
+    private IDispatcherTimer? _timer;
+    private readonly Stopwatch _chrono = new();
+    private bool _finishing;
     private UserSettings _settings = new();
 
     /// <summary>Levé après chaque vérification (true = bonne réponse) : la page anime la correction.</summary>
@@ -62,10 +74,24 @@ public partial class QuizViewModel(
     private string continueText = string.Empty;
 
     [ObservableProperty]
+    private string checkText = "Vérifier";
+
+    [ObservableProperty]
+    private bool hasTimer;
+
+    [ObservableProperty]
+    private string timerText = string.Empty;
+
+    [ObservableProperty]
+    private Color timerColor = Palette.TextMuted;
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CheckCommand))]
     private QuestionViewModel? current;
 
     public bool IsNotAnswered => !IsAnswered;
+
+    private bool IsExam => _mode is QuizMode.Placement or QuizMode.Interview;
 
     /// <summary>Contient uniquement la question courante : permet de choisir son template via BindableLayout.</summary>
     public ObservableCollection<QuestionViewModel> CurrentQuestion { get; } = [];
@@ -74,17 +100,28 @@ public partial class QuizViewModel(
     {
         _categoryId = query.TryGetValue("categoryId", out var c) ? c as string : null;
         _unitId = query.TryGetValue("unitId", out var u) ? u as string : null;
-        _isReview = query.TryGetValue("mode", out var m) && m as string == "review";
+        _mode = (query.TryGetValue("mode", out var m) ? m as string : null) switch
+        {
+            "review" => QuizMode.Review,
+            "placement" => QuizMode.Placement,
+            "interview" => QuizMode.Interview,
+            _ => QuizMode.Normal,
+        };
+        if (query.TryGetValue("level", out var l) && l is string levelId)
+            _interviewLevel = InterviewLevel.Get(levelId);
     }
 
     public async Task LoadAsync()
     {
         if (_session is not null)
+        {
+            ResumeTimer();
             return;
+        }
 
         _settings = (await progressService.GetProgressAsync()).Settings;
 
-        if (_isReview)
+        if (_mode == QuizMode.Review)
         {
             await LoadReviewAsync();
             return;
@@ -94,6 +131,29 @@ public partial class QuizViewModel(
             return;
 
         var category = content.GetCategory(_categoryId);
+
+        if (_mode == QuizMode.Placement)
+        {
+            _placement = builder.ForPlacement(category);
+            _session = _placement.Session;
+            Title = $"🎯 Test de niveau";
+            CheckText = "Valider";
+            ShowCurrentQuestion();
+            return;
+        }
+
+        if (_mode == QuizMode.Interview)
+        {
+            _interviewLevel ??= InterviewLevel.Junior;
+            _session = builder.ForInterview(category, _interviewLevel);
+            Title = $"🎤 Entretien {_interviewLevel.Label}";
+            CheckText = "Valider";
+            HasTimer = true;
+            _chrono.Start();
+            StartTimer();
+            ShowCurrentQuestion();
+            return;
+        }
 
         switch (_unitId is null ? null : content.GetUnit(_categoryId, _unitId))
         {
@@ -152,14 +212,31 @@ public partial class QuizViewModel(
         CurrentQuestion.Add(Current);
 
         IsRetry = _session.IsRetry;
-        Kind = IsRetry ? "🔁 Erreur à revoir"
-            : _isReview && location is not null ? $"{location.Category.Name} · {Current.Kind}"
-            : Current.Kind;
         Prompt = question.Source.Prompt;
-        ProgressText = IsRetry
-            ? $"{_session.PendingRetries} à revoir"
-            : $"{_session.CurrentIndex + 1} / {_session.Questions.Count}";
-        UpdateProgress();
+
+        switch (_mode)
+        {
+            case QuizMode.Placement:
+                Kind = $"{_placement!.CurrentChapterNumber}. {_placement.CurrentChapter.Title}";
+                ProgressText = $"Chapitre {_placement.CurrentChapterNumber} / {_placement.Chapters.Count}";
+                Progress = (double)(_placement.CurrentChapterNumber - 1) / _placement.Chapters.Count;
+                break;
+            case QuizMode.Interview:
+                Kind = Current.Kind;
+                ProgressText = $"{_session.CurrentIndex + 1} / {_session.Questions.Count}";
+                Progress = (double)_session.CurrentIndex / _session.Questions.Count;
+                break;
+            default:
+                Kind = IsRetry ? "🔁 Erreur à revoir"
+                    : _mode == QuizMode.Review && location is not null ? $"{location.Category.Name} · {Current.Kind}"
+                    : Current.Kind;
+                ProgressText = IsRetry
+                    ? $"{_session.PendingRetries} à revoir"
+                    : $"{_session.CurrentIndex + 1} / {_session.Questions.Count}";
+                UpdateProgress();
+                break;
+        }
+
         IsAnswered = false;
     }
 
@@ -172,13 +249,19 @@ public partial class QuizViewModel(
             CheckCommand.NotifyCanExecuteChanged();
     }
 
-    private bool CanCheck() => Current?.CanSubmit == true && !IsAnswered;
+    private bool CanCheck() => Current?.CanSubmit == true && !IsAnswered && !_finishing;
 
     [RelayCommand(CanExecute = nameof(CanCheck))]
-    private void Check()
+    private async Task CheckAsync()
     {
-        if (_session is null || Current is null || IsAnswered)
+        if (_session is null || Current is null || IsAnswered || _finishing)
             return;
+
+        if (IsExam)
+        {
+            await SubmitExamAnswerAsync();
+            return;
+        }
 
         var wasRetry = _session.IsRetry;
         var retriesBefore = _session.PendingRetries;
@@ -203,6 +286,22 @@ public partial class QuizViewModel(
 
         AnswerChecked?.Invoke(this, result.IsCorrect);
         _ = feedback.PlayAsync(result.IsCorrect ? FeedbackKind.Correct : FeedbackKind.Wrong, _settings);
+    }
+
+    /// <summary>Examen : on enregistre la réponse sans la corriger, puis on enchaîne.</summary>
+    private async Task SubmitExamAnswerAsync()
+    {
+        _session!.Submit(Current!.BuildAnswer());
+
+        var finished = _mode == QuizMode.Placement ? _placement!.IsFinished : !_session.HasNext;
+        if (finished)
+        {
+            await FinishExamAsync(timeExpired: false);
+            return;
+        }
+
+        _session.MoveNext();
+        ShowCurrentQuestion();
     }
 
     [RelayCommand]
@@ -238,5 +337,86 @@ public partial class QuizViewModel(
         // On remplace le quizz (et la leçon) par l'écran de résultat : « retour » ramène à la catégorie.
         var back = _startedFromLesson ? "../.." : "..";
         await Shell.Current.GoToAsync($"{back}/{nameof(ResultPage)}", new Dictionary<string, object> { ["update"] = update });
+    }
+
+    private async Task FinishExamAsync(bool timeExpired)
+    {
+        if (_finishing)
+            return;
+        _finishing = true;
+        CheckCommand.NotifyCanExecuteChanged();
+        StopTimer();
+        _chrono.Stop();
+
+        Dictionary<string, object> parameters;
+        if (_mode == QuizMode.Placement)
+        {
+            parameters = new() { ["placement"] = await progressService.ApplyPlacementAsync(_placement!) };
+        }
+        else
+        {
+            var session = _session!;
+            var unanswered = Enumerable.Range(0, session.Questions.Count)
+                .Where(i => session.IsCorrectAt(i) is null)
+                .Select(i => session.Questions[i].Source.Id)
+                .ToHashSet();
+            if (timeExpired)
+                session.Expire();
+            var result = session.BuildResult();
+            var update = await progressService.ApplyResultAsync(result);
+            var report = InterviewReport.Evaluate(result, _interviewLevel!, _chrono.Elapsed, timeExpired, content, unanswered);
+            parameters = new() { ["update"] = update, ["interview"] = report };
+        }
+
+        await Shell.Current.GoToAsync($"../{nameof(ResultPage)}", parameters);
+    }
+
+    // ---- Chrono du mode entretien ----------------------------------------------------------
+
+    private void StartTimer()
+    {
+        _timer = Application.Current!.Dispatcher.CreateTimer();
+        _timer.Interval = TimeSpan.FromSeconds(1);
+        _timer.Tick += (_, _) => OnTick();
+        _timer.Start();
+        OnTick();
+    }
+
+    private void OnTick()
+    {
+        var remaining = _interviewLevel!.Duration - _chrono.Elapsed;
+        if (remaining <= TimeSpan.Zero)
+        {
+            TimerText = "⏱ 00:00";
+            _ = TimeUpAsync();
+            return;
+        }
+
+        TimerText = $"⏱ {remaining:mm\\:ss}";
+        TimerColor = remaining < TimeSpan.FromMinutes(1) ? Palette.Error : Palette.TextMuted;
+    }
+
+    private async Task TimeUpAsync()
+    {
+        if (_finishing)
+            return;
+        StopTimer();
+        await Shell.Current.DisplayAlert("⏱ Temps écoulé", "Les questions sans réponse comptent comme fausses.", "Voir le bilan");
+        await FinishExamAsync(timeExpired: true);
+    }
+
+    private void ResumeTimer()
+    {
+        if (_mode == QuizMode.Interview && !_finishing && _timer is { IsRunning: false })
+            _timer.Start();
+    }
+
+    /// <summary>La page quitte l'écran (retour, autre page) : le chrono visuel s'arrête, le temps continue de compter.</summary>
+    public void Pause() => _timer?.Stop();
+
+    private void StopTimer()
+    {
+        _timer?.Stop();
+        _timer = null;
     }
 }

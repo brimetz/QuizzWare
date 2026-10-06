@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:QuizzWare.ViewModels"
+             x:Class="QuizzWare.Views.OnboardingPage"
+             x:DataType="vm:OnboardingViewModel"
+             Shell.NavBarIsVisible="False">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Avancement -->
+        <Grid Padding="16,24,16,8" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <Label Text="‹" FontSize="28" TextColor="{StaticResource TextMuted}" VerticalOptions="Center"
+                   IsVisible="{Binding CanGoBack}" Padding="4,0,12,4">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding BackCommand}" />
+                </Label.GestureRecognizers>
+            </Label>
+            <ProgressBar Grid.Column="1" Progress="{Binding StepProgress}" VerticalOptions="Center" />
+            <Label Grid.Column="2" Text="{Binding StepText}" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <Grid Padding="16,8,16,16">
+
+                <!-- 1. Bienvenue -->
+                <VerticalStackLayout IsVisible="{Binding IsWelcome}" Spacing="18" Padding="0,40,0,0">
+                    <Label Text="&lt;/&gt;" FontSize="64" FontAttributes="Bold" TextColor="{StaticResource Primary}"
+                           HorizontalOptions="Center" />
+                    <Label Text="Bienvenue sur QuizzWare" Style="{StaticResource TitleLabel}" HorizontalTextAlignment="Center" />
+                    <Label Text="Des leçons de 5 minutes, des quizz sans clavier, du code à lire et à déboguer, et des simulations d'entretien. Le tout pour progresser chaque jour dans ton métier de développeur."
+                           Style="{StaticResource BodyLabel}" HorizontalTextAlignment="Center" />
+                    <Label Text="Trois questions pour personnaliser ton parcours."
+                           Style="{StaticResource MutedLabel}" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+
+                <!-- 2. Profil -->
+                <VerticalStackLayout IsVisible="{Binding IsProfile}" Spacing="12">
+                    <Label Text="Où en es-tu ?" Style="{StaticResource TitleLabel}" />
+                    <Label Text="On adapte les conseils à ton expérience." Style="{StaticResource MutedLabel}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding ProfileOptions}" Spacing="10" Margin="0,8,0,0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:OptionViewModel">
+                                <Border Style="{StaticResource Card}" Padding="16,14"
+                                        Stroke="{Binding StrokeColor}" BackgroundColor="{Binding BackgroundColor}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding TapCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{Binding Label}" Style="{StaticResource SubHeaderLabel}" />
+                                        <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- 3. Centres d'intérêt -->
+                <VerticalStackLayout IsVisible="{Binding IsInterests}" Spacing="12">
+                    <Label Text="Qu'est-ce qui t'intéresse ?" Style="{StaticResource TitleLabel}" />
+                    <Label Text="Choisis une ou plusieurs catégories : elles s'afficheront en premier." Style="{StaticResource MutedLabel}" />
+                    <FlexLayout Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start" AlignContent="Start"
+                                BindableLayout.ItemsSource="{Binding CategoryOptions}" Margin="0,8,0,0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:OptionViewModel">
+                                <Border Stroke="{Binding StrokeColor}" BackgroundColor="{Binding BackgroundColor}"
+                                        StrokeThickness="2" StrokeShape="RoundRectangle 18" Padding="14,8" Margin="0,0,8,8">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding TapCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout>
+                                        <Label Text="{Binding Label}" FontAttributes="Bold" FontSize="14" />
+                                        <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+                </VerticalStackLayout>
+
+                <!-- 4. Objectif -->
+                <VerticalStackLayout IsVisible="{Binding IsGoal}" Spacing="12">
+                    <Label Text="Ton objectif quotidien" Style="{StaticResource TitleLabel}" />
+                    <Label Text="La régularité compte plus que la quantité. Tu pourras le changer dans les réglages."
+                           Style="{StaticResource MutedLabel}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Goals}" Spacing="10" Margin="0,8,0,0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:GoalOptionViewModel">
+                                <Border Style="{StaticResource Card}" Padding="16,14"
+                                        Stroke="{Binding StrokeColor}" BackgroundColor="{Binding BackgroundColor}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding TapCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label Text="{Binding Label}" Style="{StaticResource SubHeaderLabel}" />
+                                            <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                        </VerticalStackLayout>
+                                        <Label Grid.Column="1" Text="{Binding XpText}" TextColor="{StaticResource Warning}"
+                                               FontAttributes="Bold" VerticalOptions="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- 5. Parcours conseillé -->
+                <VerticalStackLayout IsVisible="{Binding IsSummary}" Spacing="12">
+                    <Label Text="Ton parcours 🚀" Style="{StaticResource TitleLabel}" />
+                    <Label Text="{Binding SummaryText}" Style="{StaticResource BodyLabel}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Recommendations}" Spacing="10" Margin="0,8,0,0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RecommendationViewModel">
+                                <Border Style="{StaticResource Card}">
+                                    <VerticalStackLayout Spacing="12">
+                                        <Grid ColumnDefinitions="48,*" ColumnSpacing="12">
+                                            <Border Style="{StaticResource Badge}" BackgroundColor="{Binding Color}"
+                                                    WidthRequest="48" HeightRequest="48">
+                                                <Label Text="{Binding Icon}" FontAttributes="Bold" FontSize="14" TextColor="White"
+                                                       HorizontalOptions="Center" VerticalOptions="Center" />
+                                            </Border>
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                                <Label Text="{Binding Name}" Style="{StaticResource SubHeaderLabel}" />
+                                                <Label Text="{Binding Hint}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                            <Button Text="🎯 Test de niveau" Command="{Binding PlacementCommand}"
+                                                    IsVisible="{Binding SuggestPlacement}" FontSize="14" Padding="8" />
+                                            <Button Grid.Column="1" Text="Voir le parcours" Command="{Binding OpenCommand}"
+                                                    Style="{StaticResource SecondaryButton}" FontSize="14" Padding="8" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Grid>
+        </ScrollView>
+
+        <!-- Actions -->
+        <Border Grid.Row="2" BackgroundColor="{StaticResource Background}" StrokeThickness="0" Padding="16,12,16,20">
+            <Grid>
+                <VerticalStackLayout Spacing="8" IsVisible="{Binding IsNotSummary}">
+                    <Button Text="{Binding NextText}" Command="{Binding NextCommand}" />
+                    <Label Text="Passer" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Padding="12,4"
+                           IsVisible="{Binding IsWelcome}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SkipCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </VerticalStackLayout>
+                <Button Text="Aller à l'accueil" Command="{Binding FinishCommand}" IsVisible="{Binding IsSummary}"
+                        Style="{StaticResource SecondaryButton}" />
+            </Grid>
+        </Border>
+    </Grid>
+
+</ContentPage>
