@@ -1,25 +1,29 @@
 {
   "id": "python-ch-bases",
   "title": "Bases du langage",
-  "summary": "Structures de données, mutabilité et idiomes.",
+  "summary": "Types, contrôle du flux et chaînes.",
   "lessons": [
     {
       "id": "python-bases",
-      "title": "Bases et structures de données",
-      "summary": "Listes, dictionnaires, mutabilité et compréhensions.",
+      "title": "Types, variables et mutabilité",
+      "summary": "Noms, objets, is et ==.",
       "difficulty": 1,
       "sections": [
         {
-          "title": "Mutable vs immuable",
-          "body": "list, dict et set sont mutables. int, str, tuple et frozenset sont immuables : toute « modification » crée un nouvel objet."
+          "title": "Les variables sont des étiquettes",
+          "body": "En Python, tout est objet, et une variable n'est qu'un nom attaché à un objet. b = a n'en fait pas une copie : les deux noms désignent le même objet. Si cet objet est modifiable, une modification via b se voit via a.",
+          "code": "a = [1, 2]\nb = a          # même liste\nb.append(3)    # a vaut [1, 2, 3]\nc = a[:]       # une copie"
         },
         {
-          "title": "Compréhensions",
-          "body": "Les compréhensions construisent une collection de façon concise et lisible.",
-          "code": "carres = [x * x for x in range(5)]      # [0, 1, 4, 9, 16]\npairs = {x: x % 2 == 0 for x in range(3)} # {0: True, 1: False, 2: True}"
+          "title": "Mutable ou immuable",
+          "body": "list, dict et set sont mutables. int, float, str, tuple et frozenset sont immuables : toute « modification » crée un nouvel objet. Seuls les objets immuables (plus exactement hachables) peuvent servir de clé de dict."
         },
         {
-          "title": "is vs ==",
+          "title": "Typage dynamique, mais fort",
+          "body": "Le type est porté par l'objet, pas par la variable, et une variable peut changer de type. Mais Python ne convertit pas en silence : \"1\" + 1 lève une TypeError. On convertit explicitement avec int(), str(), float()."
+        },
+        {
+          "title": "is ou ==",
           "body": "== compare les valeurs, is compare l'identité (le même objet en mémoire). On utilise is surtout pour None : if x is None."
         },
         {
@@ -61,15 +65,16 @@
         {
           "type": "choice",
           "id": "python-bases-q3",
-          "prompt": "Quelle est la complexité moyenne d'un accès par clé dans un dict ?",
+          "prompt": "Que se passe-t-il ?",
+          "code": "age = \"31\"\nprint(age + 1)",
           "choices": [
-            "O(1)",
-            "O(log n)",
-            "O(n)",
-            "O(n log n)"
+            "TypeError : impossible d'additionner str et int",
+            "Affiche 32",
+            "Affiche 311",
+            "Affiche 31 1"
           ],
           "answerIndex": 0,
-          "explanation": "dict est une table de hachage : accès en temps constant en moyenne.",
+          "explanation": "Python est dynamique mais fortement typé : pas de conversion implicite entre str et int. Il faut écrire int(age) + 1.",
           "difficulty": 1
         },
         {
@@ -100,8 +105,413 @@
           "answerIndex": 1,
           "explanation": "La liste par défaut est créée une seule fois et partagée entre les appels.",
           "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "python-bases-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "a = [1, 2]\nb = a\nb.append(3)\nprint(a)",
+          "choices": [
+            "[1, 2, 3]",
+            "[1, 2]",
+            "[3]",
+            "Une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "b = a attache un deuxième nom à la même liste. Pour copier : b = a[:], list(a) ou a.copy().",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "python-bases-q7",
+          "prompt": "Modifier une case modifie toute une colonne. Touche la ligne fautive.",
+          "code": "grille = [[0] * 3] * 3\ngrille[0][0] = 1\nprint(grille)\n# [[1, 0, 0], [1, 0, 0], [1, 0, 0]]",
+          "bugLines": [
+            1
+          ],
+          "explanation": "* 3 répète la référence vers la même liste intérieure : les trois lignes sont un seul objet. Il faut créer une liste par ligne : [[0] * 3 for _ in range(3)].",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "python-bases-q8",
+          "prompt": "Complète le test idiomatique d'absence de valeur.",
+          "code": "if resultat ___ None:\n    print(\"rien trouvé\")",
+          "answers": [
+            "is"
+          ],
+          "distractors": [
+            "==",
+            "=",
+            "in"
+          ],
+          "explanation": "None est un objet unique : on teste l'identité avec is. == fonctionne souvent, mais un objet peut redéfinir __eq__ et fausser le test.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "py-controle",
+      "title": "Contrôle du flux",
+      "summary": "Conditions, boucles, enumerate et zip.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Vrai ou faux",
+          "body": "Dans un if, tout objet a une valeur de vérité. Sont faux : False, None, 0, 0.0, la chaîne vide et les collections vides ([], {}, set()). Tout le reste est vrai, y compris \"0\" ou [0]. D'où l'idiome if liste: pour tester qu'une liste n'est pas vide."
+        },
+        {
+          "title": "Les boucles for",
+          "body": "for parcourt directement les éléments d'un itérable, sans indice. enumerate fournit l'indice en plus, zip parcourt plusieurs séquences en parallèle (et s'arrête à la plus courte).",
+          "code": "for i, nom in enumerate(noms, start=1):\n    print(i, nom)\n\nfor nom, age in zip(noms, ages):\n    print(f\"{nom} : {age}\")"
+        },
+        {
+          "title": "break, continue et for…else",
+          "body": "break sort de la boucle, continue passe au tour suivant. Le else d'une boucle s'exécute seulement si la boucle n'a pas été interrompue par break : pratique pour une recherche."
+        },
+        {
+          "title": "Ne pas modifier ce qu'on parcourt",
+          "body": "Retirer des éléments d'une liste pendant qu'on la parcourt décale les indices et fait sauter des éléments. On construit plutôt une nouvelle liste.",
+          "code": "nombres = [n for n in nombres if n != 2]"
+        }
+      ],
+      "questions": [
+        {
+          "type": "multi",
+          "id": "py-controle-q1",
+          "prompt": "Lesquelles de ces valeurs sont considérées comme fausses dans un if ?",
+          "choices": [
+            "0",
+            "\"\" (chaîne vide)",
+            "[] (liste vide)",
+            "\"0\" (la chaîne zéro)"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une chaîne non vide est toujours vraie, même \"0\" ou \"False\". Seules les valeurs nulles et les collections vides sont fausses.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-controle-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "for i, c in enumerate(\"abc\", start=1):\n    print(i, c, end=\" \")",
+          "choices": [
+            "1 a 2 b 3 c",
+            "0 a 1 b 2 c",
+            "a 1 b 2 c 3",
+            "1 2 3"
+          ],
+          "answerIndex": 0,
+          "explanation": "enumerate produit des paires (indice, élément) ; start=1 fait commencer l'indice à 1.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-controle-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "for n in [3, 5, 7]:\n    if n % 2 == 0:\n        print(\"pair trouvé\")\n        break\nelse:\n    print(\"aucun pair\")",
+          "choices": [
+            "aucun pair",
+            "pair trouvé",
+            "Rien",
+            "Une erreur de syntaxe"
+          ],
+          "answerIndex": 0,
+          "explanation": "La boucle se termine sans break : le else de la boucle s'exécute.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "py-controle-q4",
+          "prompt": "On voulait retirer tous les 2, mais il en reste un. Touche la ligne fautive.",
+          "code": "nombres = [1, 2, 2, 3]\nfor n in nombres:\n    if n == 2:\n        nombres.remove(n)\nprint(nombres)  # [1, 2, 3]",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Retirer un élément décale les suivants pendant le parcours : le second 2 est sauté. Il faut construire une nouvelle liste : [n for n in nombres if n != 2].",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-controle-q5",
+          "prompt": "Complète pour parcourir les deux listes en parallèle.",
+          "code": "noms = [\"Ana\", \"Léo\"]\nages = [31, 25]\nfor nom, age in ___(noms, ages):\n    print(f\"{nom} a {age} ans\")",
+          "answers": [
+            "zip"
+          ],
+          "distractors": [
+            "enumerate",
+            "map",
+            "range"
+          ],
+          "explanation": "zip associe les éléments de même position : (\"Ana\", 31), puis (\"Léo\", 25).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-controle-q6",
+          "prompt": "Que vaut cette expression ?",
+          "code": "list(zip([1, 2, 3], \"ab\"))",
+          "choices": [
+            "[(1, 'a'), (2, 'b')]",
+            "[(1, 'a'), (2, 'b'), (3, None)]",
+            "Une ValueError : longueurs différentes",
+            "[(1, 2, 3), ('a', 'b')]"
+          ],
+          "answerIndex": 0,
+          "explanation": "zip s'arrête à la plus courte séquence, sans erreur. Depuis Python 3.10, zip(..., strict=True) lève une ValueError si les longueurs diffèrent.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-controle-q7",
+          "prompt": "Que vaut list(range(2, 10, 3)) ?",
+          "choices": [
+            "[2, 5, 8]",
+            "[2, 5, 8, 11]",
+            "[3, 6, 9]",
+            "[2, 3, 4]"
+          ],
+          "answerIndex": 0,
+          "explanation": "range(début, fin, pas) : on part de 2, on avance de 3, et la fin (10) est exclue.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "py-chaines",
+      "title": "Chaînes et f-strings",
+      "summary": "Découpage, méthodes et formatage.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Indices et découpage",
+          "body": "Une str est une séquence immuable de caractères Unicode. s[i] lit un caractère (les indices négatifs partent de la fin), s[début:fin:pas] découpe une tranche, la fin étant exclue.",
+          "code": "s = \"Python\"\ns[0]      # 'P'\ns[-1]     # 'n'\ns[1:4]    # 'yth'\ns[::-1]   # 'nohtyP'"
+        },
+        {
+          "title": "Les méthodes renvoient une nouvelle chaîne",
+          "body": "strip, lower, replace, split... ne modifient jamais la chaîne : elles en renvoient une nouvelle, qu'il faut récupérer. split découpe, join assemble.",
+          "code": "propre = brut.strip().lower()\nmots = \"a b c\".split()      # ['a', 'b', 'c']\n\", \".join(mots)             # 'a, b, c'"
+        },
+        {
+          "title": "Les f-strings",
+          "body": "f\"...\" insère des expressions entre accolades, avec un format optionnel : {prix:.2f} pour deux décimales, {n:,} pour les milliers. {x=} (Python 3.8) affiche le nom et la valeur, pratique pour déboguer.",
+          "code": "prix = 3.14159\nf\"{prix:.2f} €\"   # '3.14 €'\nx = 42\nf\"{x=}\"           # 'x=42'"
+        },
+        {
+          "title": "Assembler beaucoup de morceaux",
+          "body": "Concaténer avec += dans une boucle recrée une chaîne à chaque tour. Pour assembler beaucoup de morceaux, on les met dans une liste puis on fait \"\".join(morceaux)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-chaines-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "s = \"Python\"\nprint(s[1:4], s[-1], s[::-1])",
+          "choices": [
+            "yth n nohtyP",
+            "Pyt n nohtyP",
+            "ytho P nohtyP",
+            "yth P Python"
+          ],
+          "answerIndex": 0,
+          "explanation": "s[1:4] prend les indices 1 à 3 (« yth »), s[-1] le dernier caractère, et un pas de -1 parcourt la chaîne à l'envers.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-chaines-q2",
+          "prompt": "Que se passe-t-il ?",
+          "code": "nom = \"ana\"\nnom[0] = \"A\"",
+          "choices": [
+            "TypeError : une str ne peut pas être modifiée",
+            "nom vaut \"Ana\"",
+            "nom vaut \"Aana\"",
+            "IndexError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les chaînes sont immuables. On crée une nouvelle chaîne : nom = \"A\" + nom[1:], ou nom.capitalize().",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "py-chaines-q3",
+          "prompt": "Complète pour obtenir « un, deux, trois ».",
+          "code": "mots = [\"un\", \"deux\", \"trois\"]\ntexte = \", \".___(mots)",
+          "answers": [
+            "join"
+          ],
+          "distractors": [
+            "split",
+            "concat",
+            "append"
+          ],
+          "explanation": "join est une méthode du séparateur, qui reçoit la liste à assembler. split fait l'inverse.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-chaines-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "print(\"a,b,,c\".split(\",\"))",
+          "choices": [
+            "['a', 'b', '', 'c']",
+            "['a', 'b', 'c']",
+            "['a', 'b', None, 'c']",
+            "['a,b,,c']"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un séparateur explicite, deux virgules consécutives produisent une chaîne vide. Sans argument, split() découpe sur les espaces et ignore les vides.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "py-chaines-q5",
+          "prompt": "L'e-mail n'est jamais trouvé. Touche la ligne fautive.",
+          "code": "email = \"  Ana@Exemple.fr \"\nemail.strip().lower()\nif email == \"ana@exemple.fr\":\n    print(\"trouvé\")",
+          "bugLines": [
+            2
+          ],
+          "explanation": "strip et lower renvoient une nouvelle chaîne, ignorée ici. Il faut écrire email = email.strip().lower().",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-chaines-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "total = 1234.5\nprint(f\"{total:,.2f}\")",
+          "choices": [
+            "1,234.50",
+            "1234.50",
+            "1 234,50",
+            "1,234.5"
+          ],
+          "answerIndex": 0,
+          "explanation": ", ajoute un séparateur de milliers et .2f deux décimales. Le format est le même quelle que soit la langue du système (virgule, puis point décimal).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "py-chaines-q7",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "s[::-1] renvoie la chaîne inversée",
+            "\"\".join(morceaux) est préférable à += dans une boucle",
+            "s.upper() modifie s",
+            "f\"{x=}\" affiche le nom de la variable et sa valeur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "upper renvoie une nouvelle chaîne : les chaînes ne sont jamais modifiées.",
+          "difficulty": 1
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "python-defi-bases",
+    "title": "Défi entretien : bases du langage",
+    "summary": "Références, valeurs par défaut et code idiomatique.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "python-defi1-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "a = [1, 2, 3]\nb = a[:]\nb.append(4)\nc = a\nc.append(5)\nprint(len(a), len(b))",
+        "choices": [
+          "4 4",
+          "3 4",
+          "5 4",
+          "4 5"
+        ],
+        "answerIndex": 0,
+        "explanation": "b est une copie : a n'est pas touchée par b.append(4). c est un alias de a : c.append(5) modifie a, qui passe à 4 éléments. b en a aussi 4.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "python-defi1-q2",
+        "prompt": "Cas pratique 1/3 — Le second appel affiche {'a': 2, 'b': 2}. Touche la ligne fautive.",
+        "code": "def compter_mots(texte, compte={}):\n    for mot in texte.split():\n        compte[mot] = compte.get(mot, 0) + 1\n    return compte\n\nprint(compter_mots(\"a b a\"))\nprint(compter_mots(\"b\"))",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Le dict par défaut est partagé entre les appels : le second appel continue de compter dans celui du premier.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "python-defi1-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi le dictionnaire est-il partagé ?",
+        "choices": [
+          "Les valeurs par défaut sont évaluées une seule fois, quand la fonction est définie",
+          "Les dict sont des variables globales en Python",
+          "get modifie le dictionnaire",
+          "Python met en cache le résultat des fonctions"
+        ],
+        "answerIndex": 0,
+        "explanation": "def crée la valeur par défaut une fois et la stocke dans la fonction (compter_mots.__defaults__). Chaque appel sans argument réutilise ce même objet.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "python-defi1-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version corrigée.",
+        "code": "def compter_mots(texte, compte=___):\n    if compte ___ None:\n        compte = {}\n    ...",
+        "answers": [
+          "None",
+          "is"
+        ],
+        "distractors": [
+          "{}",
+          "==",
+          "dict()"
+        ],
+        "explanation": "None est immuable, donc sans danger comme valeur par défaut ; un nouveau dict est créé à chaque appel qui n'en fournit pas.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "python-defi1-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "def moyenne(notes):\n    total = 0\n    for i in range(len(notes)):\n        total = total + notes[i]\n    return total / len(notes)",
+        "choices": [
+          "Avec une liste vide, la fonction lève ZeroDivisionError",
+          "range(len(...)) n'est pas idiomatique : for note in notes suffit",
+          "sum(notes) / len(notes) serait plus simple",
+          "La division / renvoie toujours un entier en Python 3"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "En Python 3, / renvoie toujours un float (// est la division entière). Le cas de la liste vide doit être traité explicitement.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "python-defi1-q6",
+        "prompt": "En entretien : pourquoi un tuple peut-il servir de clé de dict, mais pas une liste ?",
+        "choices": [
+          "Le tuple est immuable, donc hachable : son hash ne peut pas changer",
+          "Les listes sont trop lentes",
+          "Les dict n'acceptent que des types primitifs",
+          "C'est faux : les deux fonctionnent"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un dict range ses clés selon leur hash. Une clé modifiable pourrait changer de hash après insertion et devenir introuvable ; list ne définit donc pas __hash__. (Un tuple qui contient une liste n'est d'ailleurs pas hachable.)",
+        "difficulty": 2
+      }
+    ]
+  }
 }

@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (39 écrits) | 328 (87 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (46 écrits) | 332 (108 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -404,33 +404,37 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 **Tronc commun**
 
 1. ✅ Bases du langage
-   - ✅ Bases et structures de données
-2. 🕓 Structures de données
-   - Listes et tuples
-   - Dictionnaires et ensembles
-   - Le module collections
-3. 🕓 Fonctions
-   - Arguments
-   - Portée (LEGB)
-   - Closures
-4. 🕓 Programmation orientée objet
-   - Classes
-   - Méthodes spéciales
-   - Dataclasses et héritage
-5. 🕓 Itérateurs et générateurs
-   - Le protocole d'itération
-   - Générateurs
+   - ✅ Types, variables et mutabilité
+   - ✅ Contrôle du flux
+   - ✅ Chaînes et f-strings
+2. ✅ Structures de données
+   - ✅ Listes et tuples
+   - ✅ Dictionnaires et ensembles
+   - ✅ Le module collections
+3. ✅ Fonctions
+   - ✅ Arguments
+   - ✅ Portée (LEGB)
+   - ✅ Closures
+4. ✅ Programmation orientée objet
+   - ✅ Classes
+   - ✅ Méthodes spéciales
+   - ✅ Dataclasses et héritage
+5. ✅ Itérateurs et générateurs
+   - ✅ Le protocole d'itération
+   - ✅ Générateurs
 6. ✅ Fonctions avancées et concurrence
-   - ✅ Fonctions avancées et concurrence
-7. 🕓 Erreurs et tests
-   - Exceptions
-   - Tests avec pytest
-8. 🕓 Typage et outillage
-   - Type hints
-   - Environnements et paquets
-9. 🕓 Fonctionnement interne
-   - CPython
-   - Gestion de la mémoire
+   - ✅ Décorateurs et gestionnaires de contexte
+   - ✅ Threads, processus et GIL
+   - ✅ asyncio
+7. ✅ Erreurs et tests
+   - ✅ Exceptions
+   - ✅ Tests avec pytest
+8. ✅ Typage et outillage
+   - ✅ Type hints
+   - ✅ Environnements et paquets
+9. ✅ Fonctionnement interne
+   - ✅ CPython
+   - ✅ Gestion de la mémoire
 
 **Spécialisations**
 

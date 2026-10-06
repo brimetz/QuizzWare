@@ -7,13 +7,339 @@
       "id": "py-type-hints",
       "title": "Type hints",
       "summary": "Annotations et mypy.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des annotations, pas des contrôles",
+          "body": "def f(x: int) -> str: documente les types attendus. L'interpréteur ne les vérifie pas : ce sont des outils comme mypy, pyright ou votre éditeur qui signalent les incohérences avant l'exécution.",
+          "code": "def trouver(id: int) -> Utilisateur | None:\n    ...\n\nnotes: dict[str, list[float]] = {}"
+        },
+        {
+          "title": "La syntaxe moderne",
+          "body": "Depuis Python 3.9, on écrit list[int] ou dict[str, int] directement ; depuis 3.10, X | None remplace Optional[X]. Python 3.12 simplifie les génériques : def premier[T](l: list[T]) -> T."
+        },
+        {
+          "title": "Protocol et TypedDict",
+          "body": "Un Protocol décrit des méthodes attendues : toute classe qui les possède convient, sans hériter de rien (le duck typing, vérifié statiquement). TypedDict décrit la forme d'un dict (par exemple une réponse JSON).",
+          "code": "class Affichable(Protocol):\n    def afficher(self) -> str: ..."
+        },
+        {
+          "title": "Valider à l'exécution",
+          "body": "Pour des données venues de l'extérieur (API, formulaires), les annotations ne suffisent pas : des bibliothèques comme pydantic s'en servent pour valider et convertir réellement les valeurs à l'exécution."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-type-hints-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def double(x: int) -> int:\n    return x * 2\n\nprint(double(\"ab\"))",
+          "choices": [
+            "abab",
+            "TypeError : x doit être un int",
+            "0",
+            "None"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les annotations ne sont pas vérifiées à l'exécution : \"ab\" * 2 vaut \"abab\". mypy, lui, signalerait l'appel.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-type-hints-q2",
+          "prompt": "Qui vérifie les annotations de type ?",
+          "choices": [
+            "Des outils d'analyse statique (mypy, pyright) et l'éditeur, avant l'exécution",
+            "L'interpréteur, à chaque appel de fonction",
+            "Le compilateur de bytecode, qui refuse le programme",
+            "Personne : elles sont ignorées partout"
+          ],
+          "answerIndex": 0,
+          "explanation": "Python stocke les annotations (dans __annotations__) sans les appliquer. On les exploite en lançant mypy ou pyright, souvent dans l'intégration continue.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "py-type-hints-q3",
+          "prompt": "Complète : la fonction renvoie un Utilisateur, ou None s'il n'existe pas (Python 3.10+).",
+          "code": "def trouver(id: int) -> Utilisateur ___ None:\n    ...",
+          "answers": [
+            "|"
+          ],
+          "distractors": [
+            "or",
+            "?",
+            "&"
+          ],
+          "explanation": "X | None est l'écriture moderne d'Optional[X]. La syntaxe Utilisateur? vient d'autres langages (C#, Kotlin).",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "py-type-hints-q4",
+          "prompt": "mypy signale une erreur dans cette fonction. Touche une ligne en cause.",
+          "code": "def moyenne(notes: list[float]) -> float:\n    if not notes:\n        return None\n    return sum(notes) / len(notes)",
+          "bugLines": [
+            1,
+            3
+          ],
+          "explanation": "La fonction peut renvoyer None alors que sa signature promet un float. Soit on annote -> float | None (et l'appelant devra gérer None), soit on lève une exception pour une liste vide.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-type-hints-q5",
+          "prompt": "Qu'apporte typing.Protocol ?",
+          "choices": [
+            "Un typage structurel : une classe convient si elle a les bonnes méthodes, sans hériter du Protocol",
+            "Une vérification des types à l'exécution",
+            "Une classe abstraite qu'il faut obligatoirement dériver",
+            "Un moyen de rendre une classe immuable"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le duck typing rendu vérifiable : une fonction qui attend un Affichable accepte tout objet ayant une méthode afficher() -> str.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "py-type-hints-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Les annotations d'une fonction sont accessibles dans f.__annotations__",
+            "list[int] s'écrit directement depuis Python 3.9",
+            "Optional[str] équivaut à str | None",
+            "Les annotations rendent le programme plus rapide"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "CPython ignore les annotations pour l'exécution : aucun gain de vitesse. Leur intérêt est la détection d'erreurs, la documentation et l'autocomplétion.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "py-packaging",
       "title": "Environnements et paquets",
       "summary": "venv, pip et pyproject.toml.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un environnement par projet",
+          "body": "Deux projets peuvent avoir besoin de versions différentes d'une même bibliothèque. Un environnement virtuel (python -m venv .venv) isole les paquets installés pour chaque projet. Le dossier .venv ne se commite pas.",
+          "code": "python -m venv .venv\n.venv\\Scripts\\activate      # Windows\nsource .venv/bin/activate     # Linux, macOS\npip install -r requirements.txt",
+          "language": "shell"
+        },
+        {
+          "title": "pyproject.toml et fichiers de verrouillage",
+          "body": "pyproject.toml décrit le projet et ses dépendances directes, avec des plages de versions. Un fichier de verrouillage (uv.lock, poetry.lock, ou un requirements.txt généré par pip-tools) fige les versions exactes de toutes les dépendances, y compris indirectes : l'installation devient reproductible.",
+          "code": "[project]\nname = \"monapp\"\nrequires-python = \">=3.11\"\ndependencies = [\n    \"flask>=3.0,<4\",\n]",
+          "language": "text"
+        },
+        {
+          "title": "Modules et __main__",
+          "body": "Un fichier .py est un module ; son nom est __name__. Quand le fichier est lancé directement, __name__ vaut \"__main__\" : le bloc if __name__ == \"__main__\": ne s'exécute donc pas lors d'un import."
+        },
+        {
+          "title": "L'outillage moderne",
+          "body": "uv installe et verrouille les dépendances très rapidement, ruff vérifie et formate le code, mypy contrôle les types. Les trois s'exécutent dans l'intégration continue."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-packaging-q1",
+          "prompt": "À quoi sert un environnement virtuel ?",
+          "choices": [
+            "À isoler les paquets de chaque projet, pour éviter les conflits de versions",
+            "À exécuter Python dans une machine virtuelle",
+            "À accélérer l'exécution du code",
+            "À chiffrer les dépendances"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans environnement virtuel, tous les projets partagent les mêmes paquets : mettre à jour une bibliothèque pour l'un peut casser l'autre.",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "py-packaging-q2",
+          "prompt": "Remets dans l'ordre la mise en route d'un projet sous Windows.",
+          "language": "shell",
+          "lines": [
+            "python -m venv .venv",
+            ".venv\\Scripts\\activate",
+            "pip install -r requirements.txt",
+            "python -m monapp"
+          ],
+          "explanation": "On crée l'environnement, on l'active (pip et python pointent alors vers lui), on installe les dépendances, puis on lance l'application.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-packaging-q3",
+          "prompt": "outils.py contient print(__name__). Qu'affiche-t-il quand un autre fichier fait import outils ?",
+          "choices": [
+            "outils",
+            "__main__",
+            "outils.py",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un module importé a pour __name__ son nom de module. Lancé directement (python outils.py), il aurait affiché __main__.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-packaging-q4",
+          "prompt": "Complète : main() ne doit s'exécuter que si le fichier est lancé directement.",
+          "code": "if __name__ == \"___\":\n    main()",
+          "answers": [
+            "__main__"
+          ],
+          "distractors": [
+            "main",
+            "__init__",
+            "self"
+          ],
+          "explanation": "Ce garde permet d'importer le module (pour ses fonctions, ou dans les tests) sans lancer le programme.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-packaging-q5",
+          "prompt": "Comment spécifier les versions des dépendances ?",
+          "choices": [
+            "Application : versions exactes verrouillées ; bibliothèque : plages compatibles",
+            "Toujours la dernière version, sans contrainte",
+            "Toujours des versions exactes, même dans une bibliothèque",
+            "Ne jamais rien préciser"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une application veut des installations identiques partout. Une bibliothèque qui figerait ses versions entrerait en conflit avec les autres paquets de ses utilisateurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "py-packaging-q6",
+          "prompt": "Lesquels ne doivent PAS être commités dans le dépôt ?",
+          "choices": [
+            "Le dossier .venv/",
+            "Les dossiers __pycache__/",
+            "pyproject.toml",
+            "Le fichier de verrouillage d'une application (uv.lock)"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "L'environnement et le bytecode se régénèrent sur chaque machine. pyproject.toml et le fichier de verrouillage, au contraire, permettent à tous d'installer exactement les mêmes versions.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "py-defi-outillage",
+    "title": "Défi entretien : typage et outillage",
+    "summary": "Reproductibilité et annotations utiles.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "py-defi8-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "def ajouter(x: int,\n            l: list[int] = []) -> list[int]:\n    l.append(x)\n    return l\n\najouter(1)\nprint(ajouter(\"a\"))",
+        "choices": [
+          "[1, 'a']",
+          "['a']",
+          "TypeError : \"a\" n'est pas un int",
+          "[1]"
+        ],
+        "answerIndex": 0,
+        "explanation": "Deux pièges : les annotations ne bloquent rien à l'exécution, et la liste par défaut est partagée entre les appels.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi8-q2",
+        "prompt": "Cas pratique 1/3 — L'application marche sur ton poste, mais plante en production après un redéploiement. Quelle est la cause la plus probable ?",
+        "code": "# requirements.txt\nflask\nrequests",
+        "language": "text",
+        "choices": [
+          "Les versions ne sont pas figées : la production a installé des versions plus récentes",
+          "Le fichier devrait s'appeler requirements.json",
+          "pip n'installe pas Flask en production",
+          "Il faut lister la bibliothèque standard aussi"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans contrainte, pip installe la dernière version disponible au moment du déploiement, qui peut introduire un changement incompatible.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "py-defi8-q3",
+        "prompt": "Cas pratique 2/3 — Quelle est la bonne solution ?",
+        "choices": [
+          "Un fichier de verrouillage qui fige toutes les versions, dépendances indirectes comprises",
+          "Copier le dossier .venv sur le serveur",
+          "Écrire flask==latest",
+          "Installer les paquets à la main sur le serveur"
+        ],
+        "answerIndex": 0,
+        "explanation": "uv lock, poetry lock ou pip-compile produisent un fichier versionné : chaque installation obtient exactement les mêmes paquets. Copier .venv ne marche pas d'une machine à l'autre.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "py-defi8-q4",
+        "prompt": "Cas pratique 3/3 — Complète la déclaration des dépendances dans pyproject.toml.",
+        "code": "[project]\nname = \"monapp\"\n___ = [\n    \"flask>=3.0,<4\",\n    \"requests>=2.31\",\n]",
+        "language": "text",
+        "answers": [
+          "dependencies"
+        ],
+        "distractors": [
+          "requires",
+          "packages",
+          "install"
+        ],
+        "explanation": "La clé standard (PEP 621) est dependencies, sous [project]. Les plages indiquent ce qui est compatible ; le fichier de verrouillage fixe ce qui est installé.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "py-defi8-q5",
+        "prompt": "Revue de code : coche tous les problèmes de typage.",
+        "code": "from typing import Any\n\ndef traiter(donnees: Any) -> Any:\n    ...\n\ndef charger(chemin) -> dict:\n    ...",
+        "choices": [
+          "Any désactive toute vérification pour ces valeurs",
+          "Le paramètre chemin n'est pas annoté",
+          "dict sans paramètres est vague : dict[str, int] dirait ce qu'il contient",
+          "-> dict empêche de renvoyer un dict vide"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Des annotations trop larges ne protègent de rien. Un dict vide est bien un dict : il est accepté.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi8-q6",
+        "prompt": "En entretien : pourquoi annoter les types dans un langage dynamique ?",
+        "choices": [
+          "Pour détecter des erreurs avant l'exécution, documenter le code et améliorer l'autocomplétion, sans coût à l'exécution",
+          "Pour rendre Python compilé",
+          "Pour accélérer l'interpréteur",
+          "Parce que c'est obligatoire depuis Python 3.10"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les annotations restent facultatives. Sur un gros projet, elles évitent toute une famille de bugs (None inattendu, mauvais type d'argument) et facilitent les refactorisations.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

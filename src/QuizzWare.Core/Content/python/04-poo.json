@@ -7,19 +7,453 @@
       "id": "py-classes",
       "title": "Classes",
       "summary": "self, attributs et méthodes.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Classes et self",
+          "body": "__init__ initialise l'objet ; self, le premier paramètre de chaque méthode, est l'objet lui-même. Il est explicite : l'oublier dans la définition d'une méthode provoque une TypeError à l'appel.",
+          "code": "class Compte:\n    def __init__(self, titulaire):\n        self.titulaire = titulaire\n        self.solde = 0\n\n    def deposer(self, montant):\n        self.solde += montant"
+        },
+        {
+          "title": "Attributs de classe et d'instance",
+          "body": "Un attribut défini dans le corps de la classe est partagé par toutes les instances. Une liste déclarée ainsi est donc commune à tous les objets : les données propres à chaque objet se créent dans __init__."
+        },
+        {
+          "title": "classmethod et staticmethod",
+          "body": "@classmethod reçoit la classe (cls) au lieu de l'instance : idéal pour un constructeur alternatif. @staticmethod ne reçoit ni l'un ni l'autre : c'est une fonction rangée dans la classe.",
+          "code": "class Point:\n    def __init__(self, x, y):\n        self.x, self.y = x, y\n\n    @classmethod\n    def origine(cls):\n        return cls(0, 0)"
+        },
+        {
+          "title": "Encapsulation par convention",
+          "body": "Python n'a pas de private. Un nom qui commence par _ signale un détail interne. __nom est renommé en _Classe__nom (name mangling) pour éviter les collisions dans les sous-classes. @property expose un attribut calculé ou validé, lu comme un attribut.",
+          "code": "class Compte:\n    @property\n    def solde(self):\n        return self._solde"
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "py-classes-q1",
+          "prompt": "Le panier de p2 contient la pomme ajoutée à p1. Touche la ligne fautive.",
+          "code": "class Panier:\n    articles = []\n\n    def ajouter(self, a):\n        self.articles.append(a)\n\np1, p2 = Panier(), Panier()\np1.ajouter(\"pomme\")\nprint(p2.articles)  # ['pomme']",
+          "bugLines": [
+            2
+          ],
+          "explanation": "articles est un attribut de classe, partagé par tous les paniers. Il faut le créer dans __init__ : self.articles = [].",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-classes-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "class C:\n    n = 0\n\na, b = C(), C()\na.n = 5\nC.n = 1\nprint(a.n, b.n)",
+          "choices": [
+            "5 1",
+            "1 1",
+            "5 0",
+            "5 5"
+          ],
+          "answerIndex": 0,
+          "explanation": "a.n = 5 crée un attribut d'instance propre à a, qui masque celui de la classe. b n'en a pas : il lit C.n, qui vaut désormais 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-classes-q3",
+          "prompt": "Complète pour lire le solde comme un attribut (compte.solde) sans pouvoir le modifier.",
+          "code": "class Compte:\n    def __init__(self):\n        self._solde = 0\n\n    ___\n    def solde(self):\n        return self._solde",
+          "answers": [
+            "@property"
+          ],
+          "distractors": [
+            "@staticmethod",
+            "@classmethod",
+            "@getter"
+          ],
+          "explanation": "@property transforme la méthode en attribut calculé. Sans setter, compte.solde = 10 lève une AttributeError.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-classes-q4",
+          "prompt": "À quoi sert typiquement une @classmethod ?",
+          "choices": [
+            "Un constructeur alternatif, comme Date.depuis_texte(\"2024-05-17\")",
+            "Une méthode qui ne peut pas être redéfinie",
+            "Une méthode privée",
+            "Une méthode appelée automatiquement à la création de la classe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle reçoit cls, ce qui lui permet de créer une instance... y compris de la bonne sous-classe si elle est appelée sur une classe dérivée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-classes-q5",
+          "prompt": "Que se passe-t-il ?",
+          "code": "class Chien:\n    def aboyer():\n        print(\"Wouf\")\n\nChien().aboyer()",
+          "choices": [
+            "TypeError : aboyer() ne prend aucun argument mais en reçoit un",
+            "Affiche Wouf",
+            "AttributeError",
+            "SyntaxError"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'appel sur une instance passe automatiquement l'objet en premier argument. La méthode doit le recevoir : def aboyer(self):.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-classes-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "class A:\n    def __init__(self):\n        self.__secret = 42\n\na = A()\nprint(hasattr(a, \"__secret\"), a._A__secret)",
+          "choices": [
+            "False 42",
+            "True 42",
+            "AttributeError",
+            "False None"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les noms qui commencent par deux soulignés sont renommés en _A__secret. Ce n'est pas une vraie protection, seulement une façon d'éviter les collisions entre classes.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "py-dunder",
       "title": "Méthodes spéciales",
       "summary": "__repr__, __eq__, __len__…",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "__repr__ et __str__",
+          "body": "__repr__ est la représentation pour le développeur (débogage, journaux), idéalement le code qui recrée l'objet. __str__ est l'affichage pour l'utilisateur ; print l'utilise, et se rabat sur __repr__ s'il manque. Les éléments d'une liste affichée utilisent toujours __repr__."
+        },
+        {
+          "title": "__eq__ et __hash__",
+          "body": "__eq__ définit ==. Définir __eq__ sans __hash__ rend la classe non hachable : ses objets ne peuvent plus être des clés de dict ni des éléments de set. Si __eq__ reçoit un objet d'un autre type, il doit renvoyer NotImplemented plutôt que planter.",
+          "code": "def __eq__(self, autre):\n    if not isinstance(autre, Point):\n        return NotImplemented\n    return (self.x, self.y) == (autre.x, autre.y)\n\ndef __hash__(self):\n    return hash((self.x, self.y))"
+        },
+        {
+          "title": "Se comporter comme un conteneur",
+          "body": "__len__ permet len(obj) et sert de valeur de vérité (0 est faux), __getitem__ permet obj[i], __iter__ permet for, __contains__ permet in. On peut aussi surcharger les opérateurs : __add__ pour +, __lt__ pour <..."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-dunder-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "class P:\n    def __repr__(self):\n        return \"P()\"\n    def __str__(self):\n        return \"un P\"\n\np = P()\nprint(p, [p])",
+          "choices": [
+            "un P [P()]",
+            "un P [un P]",
+            "P() [P()]",
+            "P() [un P]"
+          ],
+          "answerIndex": 0,
+          "explanation": "print utilise __str__ pour p, mais l'affichage d'une liste utilise __repr__ pour chacun de ses éléments.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-dunder-q2",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "class Point:\n    def __init__(self, x):\n        self.x = x\n    def __eq__(self, o):\n        return self.x == o.x\n\ns = {Point(1)}",
+          "choices": [
+            "TypeError: unhashable type: 'Point'",
+            "s contient un Point",
+            "s est vide",
+            "AttributeError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Redéfinir __eq__ met __hash__ à None : deux objets égaux doivent avoir le même hash, et Python ne peut pas le deviner. Il faut définir __hash__ aussi.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "py-dunder-q3",
+          "prompt": "Complète pour que len(playlist) fonctionne.",
+          "code": "class Playlist:\n    def __init__(self, titres):\n        self.titres = titres\n\n    def ___(self):\n        return len(self.titres)",
+          "answers": [
+            "__len__"
+          ],
+          "distractors": [
+            "__size__",
+            "length",
+            "__count__"
+          ],
+          "explanation": "len(obj) appelle obj.__len__(). C'est le principe des méthodes spéciales : les fonctions intégrées et les opérateurs délèguent à l'objet.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-dunder-q4",
+          "prompt": "Avec la Playlist précédente, qu'affiche ce code ?",
+          "code": "p = Playlist([])\nprint(\"pleine\" if p else \"vide\")",
+          "choices": [
+            "vide",
+            "pleine",
+            "TypeError",
+            "None"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans __bool__, Python utilise __len__ comme valeur de vérité : une longueur de 0 est fausse.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "py-dunder-q5",
+          "prompt": "Point(1, 2) == None lève AttributeError. Touche la ligne fautive.",
+          "code": "class Point:\n    def __init__(self, x, y):\n        self.x, self.y = x, y\n\n    def __eq__(self, autre):\n        return self.x == autre.x and self.y == autre.y",
+          "bugLines": [
+            6
+          ],
+          "explanation": "__eq__ suppose que autre est un Point. Il faut d'abord tester son type et renvoyer NotImplemented sinon : Python essaie alors la comparaison dans l'autre sens, puis renvoie False.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "py-dunder-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "__repr__ sert au débogage et devrait idéalement ressembler au code qui recrée l'objet",
+            "Définir __eq__ sans __hash__ rend la classe non hachable",
+            "Un objet avec __getitem__ (indices à partir de 0) peut être parcouru avec for",
+            "Les éléments d'une liste affichée avec print utilisent __str__"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "for essaie __iter__, puis à défaut __getitem__ avec 0, 1, 2... jusqu'à IndexError. Les éléments d'une liste s'affichent avec leur __repr__.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "py-dataclasses",
       "title": "Dataclasses et héritage",
       "summary": "MRO et super().",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "@dataclass",
+          "body": "Le décorateur génère __init__, __repr__ et __eq__ à partir des champs annotés. frozen=True rend les objets immuables et hachables. Une valeur par défaut mutable (une liste) est refusée : on utilise field(default_factory=list).",
+          "code": "from dataclasses import dataclass, field\n\n@dataclass(frozen=True)\nclass Point:\n    x: int\n    y: int = 0\n\n@dataclass\nclass Panier:\n    articles: list = field(default_factory=list)"
+        },
+        {
+          "title": "Héritage et super()",
+          "body": "class Chien(Animal) hérite des méthodes d'Animal. Si Chien définit son propre __init__, il doit appeler super().__init__(...), sinon l'initialisation de la base n'a jamais lieu."
+        },
+        {
+          "title": "Héritage multiple et MRO",
+          "body": "Avec plusieurs bases, Python calcule un ordre de résolution des méthodes (MRO, visible dans Classe.__mro__). super() ne désigne pas « le parent », mais la classe suivante dans ce MRO : chaque classe d'un losange est appelée une seule fois."
+        },
+        {
+          "title": "Classes abstraites",
+          "body": "Avec abc.ABC et @abstractmethod, une classe déclare des méthodes que ses dérivées doivent implémenter. Instancier une classe qui en laisse une abstraite lève une TypeError."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-dataclasses-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from dataclasses import dataclass\n\n@dataclass\nclass Point:\n    x: int\n    y: int = 0\n\np = Point(1)\nprint(p, p == Point(1, 0))",
+          "choices": [
+            "Point(x=1, y=0) True",
+            "<Point object at 0x...> True",
+            "Point(x=1, y=0) False",
+            "Point(1, 0) True"
+          ],
+          "answerIndex": 0,
+          "explanation": "La dataclass génère un __repr__ lisible et un __eq__ qui compare les champs dans l'ordre.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-dataclasses-q2",
+          "prompt": "Que se passe-t-il ?",
+          "code": "from dataclasses import dataclass\n\n@dataclass\nclass Panier:\n    articles: list = []",
+          "choices": [
+            "ValueError : une valeur par défaut mutable est refusée",
+            "Tous les paniers partagent la même liste",
+            "Chaque panier a sa propre liste vide",
+            "SyntaxError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les dataclasses détectent ce piège classique et le refusent à la définition de la classe. Il faut field(default_factory=list).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-dataclasses-q3",
+          "prompt": "Complète pour que chaque panier ait sa propre liste.",
+          "code": "from dataclasses import dataclass, field\n\n@dataclass\nclass Panier:\n    articles: list = ___(default_factory=list)",
+          "answers": [
+            "field"
+          ],
+          "distractors": [
+            "default",
+            "factory",
+            "list"
+          ],
+          "explanation": "field(default_factory=list) appelle list() à chaque création d'objet.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-dataclasses-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "class A:\n    def qui(self): return \"A\"\nclass B(A):\n    def qui(self): return \"B\" + super().qui()\nclass C(A):\n    def qui(self): return \"C\" + super().qui()\nclass D(B, C):\n    def qui(self): return \"D\" + super().qui()\n\nprint(D().qui())",
+          "choices": [
+            "DBCA",
+            "DBA",
+            "DBACA",
+            "DCBA"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le MRO de D est D, B, C, A. Dans B, super() désigne la suivante dans ce MRO, donc C (et non A) ; A n'est appelée qu'une fois.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "py-dataclasses-q5",
+          "prompt": "Chien(\"Rex\", \"berger\").nom lève AttributeError. Touche la ligne où il manque quelque chose.",
+          "code": "class Animal:\n    def __init__(self, nom):\n        self.nom = nom\n\nclass Chien(Animal):\n    def __init__(self, nom, race):\n        self.race = race",
+          "bugLines": [
+            6,
+            7
+          ],
+          "explanation": "Le __init__ de Chien remplace celui d'Animal sans l'appeler : self.nom n'est jamais défini. Il faut super().__init__(nom) au début.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-dataclasses-q6",
+          "prompt": "Qu'apporte @dataclass(frozen=True) ?",
+          "choices": [
+            "Des objets immuables et hachables, utilisables comme clés de dict",
+            "Des objets plus rapides à créer",
+            "Une classe qu'on ne peut pas dériver",
+            "La sérialisation automatique en JSON"
+          ],
+          "answerIndex": 0,
+          "explanation": "Toute modification d'un champ lève FrozenInstanceError, et un __hash__ cohérent avec __eq__ est généré.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-dataclasses-q7",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "from abc import ABC, abstractmethod\n\nclass Forme(ABC):\n    @abstractmethod\n    def aire(self): ...\n\nf = Forme()",
+          "choices": [
+            "TypeError : impossible d'instancier une classe abstraite",
+            "f est créée, et f.aire() renvoie None",
+            "f est créée, et f.aire() lève NotImplementedError",
+            "SyntaxError à cause de ..."
+          ],
+          "answerIndex": 0,
+          "explanation": "Une classe qui garde une méthode abstraite ne peut pas être instanciée. ... (Ellipsis) est un corps valide, souvent utilisé pour les méthodes abstraites.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "py-defi-poo",
+    "title": "Défi entretien : orienté objet",
+    "summary": "Attributs, données sensibles et duck typing.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "py-defi4-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "class Compteur:\n    total = 0\n    def __init__(self):\n        self.total += 1\n\na = Compteur()\nb = Compteur()\nprint(Compteur.total, a.total)",
+        "choices": [
+          "0 1",
+          "2 2",
+          "2 1",
+          "1 1"
+        ],
+        "answerIndex": 0,
+        "explanation": "self.total += 1 lit l'attribut de classe (0) puis écrit un attribut d'instance (1). L'attribut de classe ne bouge jamais.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "py-defi4-q2",
+        "prompt": "Cas pratique 1/3 — On voulait compter les instances créées, mais Compteur.total reste à 0. Touche la ligne fautive.",
+        "code": "class Compteur:\n    total = 0\n    def __init__(self):\n        self.total += 1",
+        "bugLines": [
+          4
+        ],
+        "explanation": "L'affectation via self crée un attribut propre à l'instance, qui masque celui de la classe.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi4-q3",
+        "prompt": "Cas pratique 2/3 — Que fait exactement self.total += 1 ?",
+        "choices": [
+          "Il lit Compteur.total, puis crée un attribut d'instance total qui le masque",
+          "Il incrémente Compteur.total",
+          "Il lève AttributeError",
+          "Il incrémente une variable globale"
+        ],
+        "answerIndex": 0,
+        "explanation": "La lecture remonte à la classe si l'instance n'a pas l'attribut, mais l'écriture se fait toujours sur l'instance.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "py-defi4-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version corrigée.",
+        "code": "class Compteur:\n    total = 0\n    def __init__(self):\n        ___.total += 1",
+        "answers": [
+          "Compteur"
+        ],
+        "distractors": [
+          "self",
+          "super()",
+          "cls"
+        ],
+        "explanation": "On modifie l'attribut sur la classe elle-même. cls n'existe que dans une @classmethod ; type(self).total compterait séparément chaque sous-classe.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "py-defi4-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "from dataclasses import dataclass, field\n\n@dataclass\nclass Utilisateur:\n    nom: str\n    email: str\n    roles: list = field(default_factory=list)\n    mot_de_passe: str = \"\"",
+        "choices": [
+          "Le mot de passe apparaîtra dans le __repr__ généré, donc dans les journaux",
+          "Un mot de passe ne devrait pas être stocké en clair, mais haché",
+          "field(default_factory=list) est incorrect ici",
+          "Une dataclass ne peut pas avoir de valeur par défaut"
+        ],
+        "answerIndices": [
+          0,
+          1
+        ],
+        "explanation": "field(repr=False) exclut un champ du __repr__, mais la vraie correction est de ne garder qu'un hachage (bcrypt, argon2). default_factory=list est justement la bonne façon d'avoir une liste par défaut.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi4-q6",
+        "prompt": "En entretien : qu'est-ce que le duck typing ?",
+        "choices": [
+          "On s'intéresse aux méthodes qu'un objet possède, pas à son type déclaré",
+          "Le typage statique avec des annotations",
+          "La conversion automatique entre types",
+          "L'héritage multiple"
+        ],
+        "answerIndex": 0,
+        "explanation": "« Si ça marche comme un canard et cancane comme un canard... » : une fonction qui fait for x in obj accepte tout objet itérable, liste, fichier ou générateur. Les Protocol du module typing permettent de l'exprimer pour les vérificateurs de types.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

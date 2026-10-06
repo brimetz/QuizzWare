@@ -7,19 +7,463 @@
       "id": "py-listes-tuples",
       "title": "Listes et tuples",
       "summary": "Opérations et complexités.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "list",
+          "body": "Un tableau dynamique : accès par indice et append en O(1) (amorti), mais insert(0, x), pop(0) et x in liste parcourent les éléments, en O(n). liste.sort() trie sur place et renvoie None ; sorted(liste) renvoie une nouvelle liste.",
+          "code": "notes = [12, 8, 15]\nnotes.sort()              # notes est triée\ntriees = sorted(notes, reverse=True)\npar_taille = sorted(mots, key=len)"
+        },
+        {
+          "title": "tuple",
+          "body": "Une séquence immuable, souvent utilisée pour regrouper quelques valeurs (coordonnées, retour multiple). Attention : (5) est juste l'entier 5 entre parenthèses ; un tuple d'un élément s'écrit (5,).",
+          "code": "point = (3, 4)\nx, y = point               # déballage\npremier, *reste = [1, 2, 3, 4]\na, b = b, a                # échange"
+        },
+        {
+          "title": "Copies superficielles",
+          "body": "liste[:], list(liste) et liste.copy() créent une nouvelle liste, mais ses éléments restent les mêmes objets. Pour une liste de listes indépendante, il faut copy.deepcopy."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "py-listes-q1",
+          "prompt": "Ce code lève TypeError: 'NoneType' object is not subscriptable. Touche la ligne fautive.",
+          "code": "notes = [12, 8, 15]\nnotes = notes.sort()\nprint(notes[0])",
+          "bugLines": [
+            2
+          ],
+          "explanation": "sort trie sur place et renvoie None : notes est écrasée par None. Il faut écrire notes.sort() seul, ou notes = sorted(notes).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-listes-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "premier, *reste = [1, 2, 3, 4]\nprint(premier, reste)",
+          "choices": [
+            "1 [2, 3, 4]",
+            "1 (2, 3, 4)",
+            "[1] [2, 3, 4]",
+            "Une erreur : trop de valeurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'étoile récupère « le reste » dans une liste (même si la source était un tuple).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-listes-q3",
+          "prompt": "Quelle est la complexité de liste.pop(0) sur une list de n éléments ?",
+          "choices": [
+            "O(n) : tous les éléments suivants sont décalés",
+            "O(1)",
+            "O(log n)",
+            "O(n²)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Retirer en tête oblige à décaler tout le tableau. Pour une file, collections.deque offre popleft en O(1).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-listes-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "a = [[1], [2]]\nb = a.copy()\nb[0].append(9)\nb.append([3])\nprint(a)",
+          "choices": [
+            "[[1, 9], [2]]",
+            "[[1], [2]]",
+            "[[1, 9], [2], [3]]",
+            "[[1], [2], [3]]"
+          ],
+          "answerIndex": 0,
+          "explanation": "copy() crée une nouvelle liste extérieure (l'ajout de [3] ne touche pas a), mais les listes intérieures sont partagées : b[0].append(9) modifie aussi a[0].",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "py-listes-q5",
+          "prompt": "Complète pour obtenir une nouvelle liste triée par longueur de mot.",
+          "code": "mots = [\"kiwi\", \"ananas\", \"figue\"]\npar_taille = ___(mots, ___=len)",
+          "answers": [
+            "sorted",
+            "key"
+          ],
+          "distractors": [
+            "sort",
+            "cmp",
+            "order"
+          ],
+          "explanation": "sorted renvoie une nouvelle liste ; key indique la valeur à comparer pour chaque élément. Le paramètre cmp n'existe plus depuis Python 3.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-listes-q6",
+          "prompt": "Quel est le type de t ?",
+          "code": "t = (5)",
+          "choices": [
+            "int",
+            "tuple",
+            "list",
+            "Une erreur de syntaxe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les parenthèses seules ne font qu'entourer une expression. C'est la virgule qui crée un tuple : t = (5,) ou t = 5,.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "py-listes-q7",
+          "prompt": "Quelles opérations sont en O(1) (éventuellement amorti) sur une list ?",
+          "choices": [
+            "liste.append(x)",
+            "liste[i]",
+            "liste.insert(0, x)",
+            "len(liste)"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "La longueur est stockée dans l'objet. insert(0, x) décale tous les éléments : O(n).",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "py-dict-set",
       "title": "Dictionnaires et ensembles",
       "summary": "Hachage et usages.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "dict",
+          "body": "Une table de hachage : accès par clé en O(1) en moyenne. Les clés doivent être hachables (str, int, tuple...). Depuis Python 3.7, l'ordre d'insertion est garanti. d[cle] lève KeyError si la clé manque ; d.get(cle, defaut) renvoie une valeur de repli.",
+          "code": "ages = {\"Ana\": 31, \"Léo\": 25}\nages.get(\"Zoé\", 0)        # 0\nfor nom, age in ages.items():\n    print(nom, age)\ncarres = {x: x * x for x in range(4)}"
+        },
+        {
+          "title": "Ne pas modifier pendant le parcours",
+          "body": "Ajouter ou supprimer des clés pendant qu'on parcourt un dict lève RuntimeError: dictionary changed size during iteration. On parcourt une copie des clés (list(d)), ou on construit un nouveau dict."
+        },
+        {
+          "title": "set",
+          "body": "Un ensemble d'éléments uniques, avec un test d'appartenance en O(1). Les opérations ensemblistes sont directes : | (union), & (intersection), - (différence), ^ (différence symétrique). frozenset est la version immuable.",
+          "code": "a = {1, 2, 3}\nb = {2, 3, 4}\na & b   # {2, 3}\na - b   # {1}\nvide = set()   # {} est un dict vide !"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-dict-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "d = {\"a\": 1}\nprint(d.get(\"b\", 0), \"b\" in d)",
+          "choices": [
+            "0 False",
+            "None False",
+            "0 True",
+            "KeyError"
+          ],
+          "answerIndex": 0,
+          "explanation": "get renvoie la valeur de repli sans ajouter la clé : \"b\" in d reste False.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-dict-q2",
+          "prompt": "Que se passe-t-il ?",
+          "code": "stock = {\"pomme\": 3}\nprint(stock[\"poire\"])",
+          "choices": [
+            "KeyError: 'poire'",
+            "Affiche None",
+            "Affiche 0",
+            "La clé est créée avec None"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'accès par crochets exige que la clé existe. Pour une valeur par défaut : stock.get(\"poire\", 0).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-dict-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "a = {1, 2, 3}\nb = {2, 3, 4}\nprint(a & b, a - b)",
+          "choices": [
+            "{2, 3} {1}",
+            "{1, 2, 3, 4} {1}",
+            "{2, 3} {1, 4}",
+            "{1} {2, 3}"
+          ],
+          "answerIndex": 0,
+          "explanation": "& garde les éléments communs ; a - b garde ceux de a absents de b.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "py-dict-q4",
+          "prompt": "Ce code lève RuntimeError. Touche la ligne fautive.",
+          "code": "stock = {\"pomme\": 0, \"poire\": 3}\nfor fruit in stock:\n    if stock[fruit] == 0:\n        del stock[fruit]",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Supprimer une clé pendant le parcours change la taille du dict. Correctifs : for fruit in list(stock), ou stock = {f: q for f, q in stock.items() if q > 0}.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-dict-q5",
+          "prompt": "Complète cette compréhension de dict.",
+          "code": "carres = {x: x * x ___ x ___ range(4)}",
+          "answers": [
+            "for",
+            "in"
+          ],
+          "distractors": [
+            "if",
+            "of",
+            "each"
+          ],
+          "explanation": "Même syntaxe qu'une compréhension de liste, avec une paire clé: valeur. Résultat : {0: 0, 1: 1, 2: 4, 3: 9}.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-dict-q6",
+          "prompt": "Pour tester très souvent si un identifiant fait partie d'un million d'identifiants, quelle structure choisir ?",
+          "choices": [
+            "Un set : test d'appartenance en O(1) en moyenne",
+            "Une list triée",
+            "Un tuple",
+            "Une str contenant tous les identifiants"
+          ],
+          "answerIndex": 0,
+          "explanation": "x in liste parcourt les éléments (O(n)) ; x in ensemble calcule un hash et regarde directement au bon endroit.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-dict-q7",
+          "prompt": "Qu'affiche ce code (Python 3.7+) ?",
+          "code": "d = {\"b\": 1, \"a\": 2}\nd[\"c\"] = 3\nprint(list(d))",
+          "choices": [
+            "['b', 'a', 'c']",
+            "['a', 'b', 'c']",
+            "Un ordre imprévisible",
+            "[1, 2, 3]"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un dict conserve l'ordre d'insertion, et list(d) donne les clés. Ce n'est pas un tri : 'b' reste avant 'a'.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "py-collections",
       "title": "Le module collections",
       "summary": "Counter, defaultdict, deque.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Counter",
+          "body": "Un dict spécialisé pour compter : Counter(iterable) compte les occurrences, most_common(n) donne les plus fréquents. Une clé absente vaut 0, sans KeyError.",
+          "code": "from collections import Counter\nmots = \"le chat et le chien\".split()\nCounter(mots).most_common(1)   # [('le', 2)]"
+        },
+        {
+          "title": "defaultdict",
+          "body": "Un dict qui crée automatiquement une valeur par défaut pour une clé absente, à partir d'une fabrique : list, int, set... Idéal pour regrouper. Attention : une simple lecture d'une clé absente l'ajoute.",
+          "code": "from collections import defaultdict\npar_ville = defaultdict(list)\nfor nom, ville in clients:\n    par_ville[ville].append(nom)"
+        },
+        {
+          "title": "deque",
+          "body": "Une file à double extrémité : append, appendleft, pop et popleft en O(1). Avec maxlen, les éléments les plus anciens sont retirés automatiquement : parfait pour une fenêtre glissante ou un historique.",
+          "code": "from collections import deque\nfile = deque()\nfile.append(\"tâche\")\nfile.popleft()\nderniers = deque(maxlen=3)"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-collections-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from collections import Counter\nc = Counter(\"abracadabra\")\nprint(c.most_common(2))",
+          "choices": [
+            "[('a', 5), ('b', 2)]",
+            "[('a', 5), ('r', 2)]",
+            "[('a', 5), ('c', 1)]",
+            "{'a': 5, 'b': 2}"
+          ],
+          "answerIndex": 0,
+          "explanation": "a apparaît 5 fois ; b et r 2 fois chacun. À égalité, most_common garde l'ordre de première apparition : b avant r.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-collections-q2",
+          "prompt": "Complète pour regrouper les noms par ville.",
+          "code": "from collections import defaultdict\npar_ville = defaultdict(___)\nfor nom, ville in clients:\n    par_ville[ville].append(nom)",
+          "answers": [
+            "list"
+          ],
+          "distractors": [
+            "dict",
+            "int",
+            "None"
+          ],
+          "explanation": "La fabrique list() crée une liste vide pour chaque nouvelle ville, sur laquelle on peut appeler append.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-collections-q3",
+          "prompt": "Pourquoi utiliser deque plutôt que list pour une file d'attente ?",
+          "choices": [
+            "popleft est en O(1), alors que list.pop(0) est en O(n)",
+            "deque trie automatiquement ses éléments",
+            "deque est thread-safe pour toutes ses opérations composées",
+            "list ne peut pas contenir plus de 1 000 éléments"
+          ],
+          "answerIndex": 0,
+          "explanation": "deque est conçue pour ajouter et retirer aux deux extrémités sans décaler les éléments.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-collections-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from collections import deque\nd = deque(maxlen=3)\nfor i in range(5):\n    d.append(i)\nprint(list(d))",
+          "choices": [
+            "[2, 3, 4]",
+            "[0, 1, 2]",
+            "[0, 1, 2, 3, 4]",
+            "Une IndexError au 4e ajout"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une fois pleine, la deque retire l'élément le plus ancien à chaque ajout : il reste les trois derniers.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "py-collections-q5",
+          "prompt": "Une simple lecture a ajouté une entrée. Touche la ligne en cause.",
+          "code": "from collections import defaultdict\nscores = defaultdict(int)\nif scores[\"ana\"] > 10:\n    print(\"bravo\")\nprint(len(scores))  # 1",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Avec un defaultdict, accéder à une clé absente la crée (ici avec 0). Pour lire sans créer : scores.get(\"ana\", 0).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-collections-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from collections import Counter\nprint(Counter(a=3, b=1) - Counter(a=1, b=2))",
+          "choices": [
+            "Counter({'a': 2})",
+            "Counter({'a': 2, 'b': -1})",
+            "Counter({'b': -1, 'a': 2})",
+            "Une TypeError"
+          ],
+          "answerIndex": 0,
+          "explanation": "La soustraction de Counter ne garde que les comptes strictement positifs : b (1 - 2) disparaît. Pour garder les négatifs : c.subtract(autre).",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "py-defi-structures",
+    "title": "Défi entretien : structures de données",
+    "summary": "Complexité et choix de structure.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "py-defi2-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "notes = {\"ana\": 15, \"leo\": 9, \"zoe\": 12}\nadmis = sorted(\n    (n for n, v in notes.items() if v >= 10),\n    key=lambda n: -notes[n])\nprint(admis)",
+        "choices": [
+          "['ana', 'zoe']",
+          "['zoe', 'ana']",
+          "['ana', 'leo', 'zoe']",
+          "[15, 12]"
+        ],
+        "answerIndex": 0,
+        "explanation": "On garde les noms dont la note est au moins 10, triés par note décroissante (la clé est l'opposé de la note) : ana (15) puis zoe (12).",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "py-defi2-q2",
+        "prompt": "Cas pratique 1/3 — Avec deux listes de 100 000 éléments, communs prend plusieurs minutes. Touche la ligne qui coûte le plus.",
+        "code": "def communs(a, b):\n    resultat = []\n    for x in a:\n        if x in b:\n            resultat.append(x)\n    return resultat",
+        "bugLines": [
+          4
+        ],
+        "explanation": "x in b parcourt toute la liste b à chaque tour de boucle.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi2-q3",
+        "prompt": "Cas pratique 2/3 — Quelle est la complexité de cette version ?",
+        "choices": [
+          "O(n × m) : un parcours de b pour chaque élément de a",
+          "O(n + m)",
+          "O(n log m)",
+          "O(1)"
+        ],
+        "answerIndex": 0,
+        "explanation": "100 000 × 100 000, soit 10 milliards de comparaisons dans le pire cas.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "py-defi2-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version en O(n + m).",
+        "code": "def communs(a, b):\n    b_rapide = ___(b)\n    return [x for x in a if x in b_rapide]",
+        "answers": [
+          "set"
+        ],
+        "distractors": [
+          "list",
+          "tuple",
+          "sorted"
+        ],
+        "explanation": "Construire le set coûte O(m), puis chaque test est en O(1) en moyenne. Si l'ordre et les doublons n'importent pas, set(a) & set(b) suffit.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "py-defi2-q5",
+        "prompt": "Revue de code : coche toutes les améliorations pertinentes.",
+        "code": "def top3(mots):\n    freq = {}\n    for m in mots:\n        if m in freq.keys():\n            freq[m] = freq[m] + 1\n        else:\n            freq[m] = 1\n    paires = sorted(freq.items(), key=lambda p: p[1])\n    return paires[::-1][:3]",
+        "choices": [
+          "Counter(mots).most_common(3) remplace toute la fonction",
+          "m in freq suffit : .keys() est inutile",
+          "sorted(..., reverse=True) serait plus clair que [::-1]",
+          "freq[m] + 1 coûte O(n)"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'accès à une clé de dict est en O(1). La bibliothèque standard a déjà la bonne abstraction : Counter.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi2-q6",
+        "prompt": "En entretien : depuis quelle version l'ordre d'insertion des dict est-il garanti par le langage ?",
+        "choices": [
+          "Python 3.7",
+          "Python 2.7",
+          "Python 3.0",
+          "Il n'est pas garanti"
+        ],
+        "answerIndex": 0,
+        "explanation": "CPython 3.6 conservait déjà l'ordre (détail d'implémentation de son nouveau dict compact) ; Python 3.7 en a fait une garantie du langage.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

@@ -1,19 +1,325 @@
 {
   "id": "py-ch-internes",
   "title": "Fonctionnement interne",
-  "summary": "CPython, mémoire et GIL.",
+  "summary": "CPython, mémoire et performances.",
   "lessons": [
     {
       "id": "py-cpython",
       "title": "CPython",
       "summary": "Bytecode et interprétation.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Du source au bytecode",
+          "body": "CPython, l'implémentation de référence écrite en C, compile chaque module en bytecode, puis l'exécute instruction par instruction dans une boucle d'interprétation. Le bytecode est mis en cache dans __pycache__/*.pyc, propre à chaque version de Python. Le module dis permet de le lire.",
+          "code": "import dis\n\ndef carre(x):\n    return x * x\n\ndis.dis(carre)\n# LOAD_FAST x, LOAD_FAST x, BINARY_OP *, RETURN_VALUE"
+        },
+        {
+          "title": "Un interpréteur qui accélère",
+          "body": "Python 3.11 a introduit un interpréteur « spécialisant » qui adapte les instructions aux types réellement rencontrés : de l'ordre de 25 % plus rapide. Python 3.13 ajoute un compilateur JIT expérimental et un build sans GIL. PyPy, une autre implémentation, utilise un JIT depuis longtemps."
+        },
+        {
+          "title": "Ce qui est rapide en Python",
+          "body": "Chaque instruction interprétée a un coût. Les fonctions intégrées (sum, sorted, min, les méthodes de str et de dict) sont écrites en C : déléguer la boucle à l'une d'elles est bien plus rapide qu'une boucle Python. Pour le calcul numérique, NumPy travaille sur des tableaux entiers en code natif."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-cpython-q1",
+          "prompt": "Que fait CPython d'un fichier .py ?",
+          "choices": [
+            "Il le compile en bytecode, puis interprète ce bytecode",
+            "Il l'interprète ligne par ligne, sans compilation",
+            "Il le compile en code machine à l'avance, comme un compilateur C",
+            "Il le traduit en Java"
+          ],
+          "answerIndex": 0,
+          "explanation": "La compilation en bytecode est rapide et automatique ; c'est ce bytecode que la machine virtuelle exécute.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-cpython-q2",
+          "prompt": "À quoi servent les fichiers .pyc du dossier __pycache__ ?",
+          "choices": [
+            "À éviter de recompiler un module inchangé à chaque import",
+            "À protéger le code source",
+            "À exécuter le programme sans Python installé",
+            "À stocker les données du programme"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est un cache du bytecode, propre à une version de Python (le nom contient par exemple cpython-311). On ne les commite pas.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "py-cpython-q3",
+          "prompt": "Complète pour afficher le bytecode de la fonction carre.",
+          "code": "import ___\n\n___.dis(carre)",
+          "answers": [
+            "dis",
+            "dis"
+          ],
+          "distractors": [
+            "ast",
+            "inspect",
+            "bytecode"
+          ],
+          "explanation": "dis (pour « désassembleur ») affiche les instructions du bytecode. ast, lui, donne l'arbre syntaxique, une étape avant le bytecode.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-cpython-q4",
+          "prompt": "Pourquoi sum(valeurs) est-il bien plus rapide qu'une boucle for qui additionne ?",
+          "choices": [
+            "sum est écrite en C : la boucle tourne en code natif, sans interpréter chaque itération",
+            "sum utilise plusieurs cœurs",
+            "sum met le résultat en cache",
+            "La boucle for recopie la liste à chaque tour"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une boucle Python exécute plusieurs instructions de bytecode par élément. Les fonctions intégrées font tout le travail dans une seule boucle C.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-cpython-q5",
+          "prompt": "Qu'est-ce que PyPy ?",
+          "choices": [
+            "Une autre implémentation de Python, avec un compilateur JIT souvent plus rapide sur du Python pur",
+            "Le gestionnaire de paquets de Python",
+            "Une version de Python pour le navigateur",
+            "Un outil de vérification de types"
+          ],
+          "answerIndex": 0,
+          "explanation": "Python est un langage ; CPython, PyPy ou MicroPython en sont des implémentations. PyPy brille sur les boucles Python, moins avec les extensions écrites en C.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "py-cpython-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Python 3.11 a nettement accéléré l'interpréteur",
+            "CPython est écrit en C",
+            "Un fichier .pyc fonctionne avec toutes les versions de Python",
+            "Python 3.13 propose un compilateur JIT expérimental"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Le format du bytecode change d'une version à l'autre : chaque version a ses propres .pyc.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "py-memoire",
       "title": "Gestion de la mémoire",
       "summary": "Comptage de références et ramasse-miettes.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le comptage de références",
+          "body": "Chaque objet compte les références qui pointent vers lui. Quand ce nombre tombe à zéro, CPython le libère immédiatement : un fichier qui n'est plus référencé est fermé tout de suite. del supprime un nom, pas l'objet : celui-ci n'est libéré que s'il n'a plus d'autre référence."
+        },
+        {
+          "title": "Les cycles",
+          "body": "Deux objets qui se référencent mutuellement gardent un compteur à au moins 1, même s'ils sont devenus inaccessibles. Un ramasse-miettes générationnel (module gc) les détecte et les libère périodiquement."
+        },
+        {
+          "title": "Identité et caches",
+          "body": "CPython réutilise certains objets : les petits entiers (de -5 à 256) et beaucoup de chaînes courtes. x is 256 peut donc être vrai et x is 1000 faux pour la même valeur : seule la comparaison avec == est fiable. Python avertit d'ailleurs quand on utilise is avec un littéral."
+        },
+        {
+          "title": "Économiser la mémoire",
+          "body": "Par défaut, chaque instance stocke ses attributs dans un dict. __slots__ remplace ce dict par des emplacements fixes : beaucoup moins de mémoire pour des millions d'objets, mais plus d'ajout d'attributs non prévus. Les caches globaux sans limite sont la première cause de « fuites » en Python.",
+          "code": "class Point:\n    __slots__ = (\"x\", \"y\")\n    def __init__(self, x, y):\n        self.x, self.y = x, y"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-memoire-q1",
+          "prompt": "Pourquoi ne faut-il jamais écrire if x is 1000: ?",
+          "choices": [
+            "L'identité des entiers dépend de l'implémentation : il faut comparer les valeurs avec ==",
+            "is est plus lent que ==",
+            "is ne fonctionne qu'avec des chaînes",
+            "C'est une erreur de syntaxe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Deux entiers égaux peuvent être des objets distincts. CPython met en cache ceux de -5 à 256, ce qui rend le bug intermittent. Python émet un SyntaxWarning sur is avec un littéral.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-memoire-q2",
+          "prompt": "Dans CPython, quand un objet sans cycle est-il libéré ?",
+          "choices": [
+            "Dès que son compteur de références tombe à zéro",
+            "Au prochain passage du ramasse-miettes, à un moment imprévisible",
+            "À la fin du programme",
+            "Quand on appelle gc.collect()"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le comptage de références rend la libération immédiate et prévisible dans CPython. Ce n'est pas garanti par le langage : PyPy, par exemple, libère plus tard.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-memoire-q3",
+          "prompt": "a.autre = b et b.autre = a, puis plus aucune variable ne désigne a ni b. Que se passe-t-il ?",
+          "choices": [
+            "Les compteurs restent à 1 ; le ramasse-miettes cyclique les libérera plus tard",
+            "Ils sont libérés immédiatement",
+            "Ils ne sont jamais libérés",
+            "Python lève une RecursionError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chacun garde l'autre en vie du point de vue du comptage. Le module gc détecte ces groupes inaccessibles et les libère.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "py-memoire-q4",
+          "prompt": "Complète pour que des millions de Point occupent moins de mémoire.",
+          "code": "class Point:\n    ___ = (\"x\", \"y\")\n    def __init__(self, x, y):\n        self.x, self.y = x, y",
+          "answers": [
+            "__slots__"
+          ],
+          "distractors": [
+            "__dict__",
+            "__fields__",
+            "__attrs__"
+          ],
+          "explanation": "__slots__ supprime le dict d'attributs de chaque instance. Contrepartie : impossible d'ajouter un attribut qui n'est pas dans la liste.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "py-memoire-q5",
+          "prompt": "La mémoire du service ne cesse de croître. Touche une ligne en cause.",
+          "code": "_cache = {}\n\ndef charger_image(chemin):\n    if chemin not in _cache:\n        _cache[chemin] = Image.open(chemin)\n    return _cache[chemin]",
+          "bugLines": [
+            1,
+            5
+          ],
+          "explanation": "Un cache global sans limite garde chaque image pour toujours. functools.lru_cache(maxsize=...) ou une politique d'expiration bornent la mémoire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-memoire-q6",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "class P:\n    __slots__ = (\"x\",)\n\np = P()\np.x = 1\np.y = 2",
+          "choices": [
+            "AttributeError : y n'est pas dans __slots__",
+            "p.y vaut 2",
+            "p.y est ignoré silencieusement",
+            "TypeError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans dict d'instance, seuls les attributs déclarés dans __slots__ peuvent exister.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "py-defi-internes",
+    "title": "Défi entretien : performances",
+    "summary": "Complexité cachée et mémoire.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "py-defi9-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "a = [1, 2]\nb = a\ndel a\nprint(b)",
+        "choices": [
+          "[1, 2]",
+          "NameError",
+          "None",
+          "[]"
+        ],
+        "answerIndex": 0,
+        "explanation": "del supprime le nom a, pas la liste : b la référence toujours, elle reste donc en vie.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "py-defi9-q2",
+        "prompt": "Cas pratique 1/3 — Sur un million de valeurs, normaliser ne termine pas. Touche la ligne en cause.",
+        "code": "def normaliser(valeurs):\n    resultat = []\n    for v in valeurs:\n        resultat.append(v / max(valeurs))\n    return resultat",
+        "bugLines": [
+          4
+        ],
+        "explanation": "max(valeurs) parcourt toute la liste, et il est recalculé à chaque tour.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi9-q3",
+        "prompt": "Cas pratique 2/3 — Quelle est la complexité de cette version ?",
+        "choices": [
+          "O(n²)",
+          "O(n)",
+          "O(n log n)",
+          "O(1)"
+        ],
+        "answerIndex": 0,
+        "explanation": "n tours de boucle, chacun avec un max en O(n) : de l'ordre de 10^12 opérations pour un million de valeurs.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "py-defi9-q4",
+        "prompt": "Cas pratique 3/3 — Remets dans l'ordre la version en O(n).",
+        "lines": [
+          "def normaliser(valeurs):",
+          "    m = max(valeurs)",
+          "    return [v / m for v in valeurs]"
+        ],
+        "explanation": "On calcule le maximum une seule fois, puis une compréhension produit la liste (plus rapide qu'append dans une boucle).",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "py-defi9-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "resultat = \"\"\nfor ligne in open(\"log.txt\"):\n    if \"ERREUR\" in ligne:\n        resultat = resultat + ligne",
+        "choices": [
+          "La concaténation répétée de chaînes peut devenir quadratique",
+          "Le fichier n'est pas fermé explicitement : il faudrait with",
+          "Rassembler les lignes dans une liste puis faire \"\".join(...) serait plus sûr",
+          "Le test \"ERREUR\" in ligne parcourt tout le fichier à chaque fois"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "CPython optimise parfois resultat += ... en place, mais ce n'est pas garanti : join reste la bonne pratique. Le test in ne porte que sur la ligne courante.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi9-q6",
+        "prompt": "En entretien : comment CPython libère-t-il la mémoire ?",
+        "choices": [
+          "Par comptage de références (libération immédiate), complété par un ramasse-miettes générationnel pour les cycles",
+          "Uniquement par un ramasse-miettes qui passe régulièrement",
+          "Le programmeur doit appeler free()",
+          "La mémoire n'est libérée qu'à la fin du programme"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le comptage gère la grande majorité des objets dès qu'ils ne servent plus ; le module gc s'occupe des cycles. On peut désactiver ce dernier (gc.disable) dans des cas très particuliers.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

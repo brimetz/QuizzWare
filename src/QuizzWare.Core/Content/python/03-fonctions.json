@@ -7,19 +7,434 @@
       "id": "py-arguments",
       "title": "Arguments",
       "summary": "Positionnels, nommés, *args et **kwargs.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Positionnels et nommés",
+          "body": "Un argument se passe par position ou par nom. Les arguments nommés rendent l'appel lisible et peuvent suivre les positionnels, jamais l'inverse. Une fonction qui renvoie plusieurs valeurs renvoie en fait un tuple.",
+          "code": "def envoyer(dest, sujet, corps=\"\"):\n    ...\n\nenvoyer(\"ana@x.fr\", sujet=\"Bonjour\")\n\ndef bornes(l):\n    return min(l), max(l)   # un tuple"
+        },
+        {
+          "title": "*args et **kwargs",
+          "body": "*args collecte les arguments positionnels en trop dans un tuple, **kwargs les arguments nommés en trop dans un dict. À l'appel, * et ** font l'inverse : ils déballent une séquence ou un dict en arguments.",
+          "code": "def f(a, *args, **kwargs):\n    print(a, args, kwargs)\n\nf(1, 2, 3, x=4)   # 1 (2, 3) {'x': 4}\n\ndims = {\"largeur\": 3, \"hauteur\": 4}\naire(**dims)"
+        },
+        {
+          "title": "Nommés obligatoires, positionnels obligatoires",
+          "body": "Les paramètres placés après * doivent être passés par nom : creer(\"ana\", admin=True) au lieu d'un mystérieux creer(\"ana\", True). Ceux placés avant / doivent être passés par position.",
+          "code": "def creer(nom, *, admin=False): ...\n\ncreer(\"ana\", admin=True)  # OK\ncreer(\"ana\", True)        # TypeError"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-arguments-q1",
+          "prompt": "Dans def f(*args, **kwargs), quels sont les types de args et kwargs ?",
+          "choices": [
+            "tuple et dict",
+            "list et dict",
+            "dict et tuple",
+            "list et list"
+          ],
+          "answerIndex": 0,
+          "explanation": "args est un tuple des positionnels en trop, kwargs un dict des arguments nommés en trop.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-arguments-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def f(a, b=2, *args, **kwargs):\n    print(a, b, args, kwargs)\n\nf(1, 3, 4, 5, x=6)",
+          "choices": [
+            "1 3 (4, 5) {'x': 6}",
+            "1 2 (3, 4, 5) {'x': 6}",
+            "1 3 [4, 5] {'x': 6}",
+            "Une TypeError"
+          ],
+          "answerIndex": 0,
+          "explanation": "3 remplit b (positionnel), 4 et 5 sont en trop et vont dans args, x=6 va dans kwargs.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-arguments-q3",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "def creer(nom, *, admin=False):\n    ...\n\ncreer(\"ana\", True)",
+          "choices": [
+            "TypeError : admin doit être passé par nom",
+            "admin vaut True",
+            "admin vaut False, True est ignoré",
+            "SyntaxError"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'étoile seule rend les paramètres suivants nommés obligatoires : la fonction n'accepte qu'un argument positionnel.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-arguments-q4",
+          "prompt": "Complète pour passer le contenu du dict comme arguments nommés.",
+          "code": "def aire(largeur, hauteur):\n    return largeur * hauteur\n\ndims = {\"largeur\": 3, \"hauteur\": 4}\naire(___dims)",
+          "answers": [
+            "**"
+          ],
+          "distractors": [
+            "*",
+            "&",
+            "..."
+          ],
+          "explanation": "** déballe un dict en arguments nommés. Avec *, on passerait les clés (\"largeur\", \"hauteur\") comme arguments positionnels.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-arguments-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def bornes(l):\n    return min(l), max(l)\n\nr = bornes([3, 1, 4])\nprint(r, type(r).__name__)",
+          "choices": [
+            "(1, 4) tuple",
+            "[1, 4] list",
+            "1 4 int",
+            "1 int"
+          ],
+          "answerIndex": 0,
+          "explanation": "return a, b renvoie un seul objet, un tuple, qu'on déballe souvent directement : mini, maxi = bornes(l).",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "py-arguments-q6",
+          "prompt": "Ce code ne s'exécute même pas (SyntaxError). Touche la ligne fautive.",
+          "code": "def envoyer(dest, sujet, corps=\"\"):\n    ...\n\nenvoyer(dest=\"ana@x.fr\", \"Bonjour\")",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Un argument positionnel ne peut pas suivre un argument nommé. Il faut tout nommer, ou passer dest par position en premier.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "py-portee",
       "title": "Portée (LEGB)",
       "summary": "global et nonlocal.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La règle LEGB",
+          "body": "Pour trouver un nom, Python cherche dans l'ordre : Local (la fonction), Enclosing (les fonctions englobantes), Global (le module), Built-in (print, len, list...). La portée est lexicale : elle dépend de l'endroit où le code est écrit, pas de l'endroit d'où il est appelé."
+        },
+        {
+          "title": "Une affectation rend le nom local",
+          "body": "Si une fonction affecte un nom (y compris avec +=), ce nom est local dans toute la fonction. Le lire avant l'affectation lève UnboundLocalError, même s'il existe une variable globale du même nom.",
+          "code": "compteur = 0\ndef incrementer():\n    compteur += 1   # UnboundLocalError"
+        },
+        {
+          "title": "global et nonlocal",
+          "body": "global indique qu'on modifie la variable du module, nonlocal celle d'une fonction englobante. Les deux sont à utiliser avec parcimonie : un état partagé rend le code plus difficile à suivre et à tester.",
+          "code": "def externe():\n    x = 1\n    def interne():\n        nonlocal x\n        x += 1\n    interne()\n    return x   # 2"
+        },
+        {
+          "title": "Ne pas masquer les noms intégrés",
+          "body": "Nommer une variable list, dict, id ou sum masque la fonction intégrée dans toute la portée : un appel list(...) plus loin échoue alors avec TypeError: 'list' object is not callable."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-portee-q1",
+          "prompt": "Que se passe-t-il ?",
+          "code": "compteur = 0\n\ndef incrementer():\n    compteur += 1\n\nincrementer()",
+          "choices": [
+            "UnboundLocalError : compteur est local à la fonction",
+            "compteur vaut 1",
+            "compteur reste à 0",
+            "NameError"
+          ],
+          "answerIndex": 0,
+          "explanation": "+= est une affectation : compteur devient local dans incrementer, et on le lit avant de l'avoir défini. Il faudrait global compteur, ou mieux, renvoyer la nouvelle valeur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-portee-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def externe():\n    x = 1\n    def interne():\n        nonlocal x\n        x += 1\n    interne()\n    interne()\n    return x\n\nprint(externe())",
+          "choices": [
+            "3",
+            "1",
+            "2",
+            "UnboundLocalError"
+          ],
+          "answerIndex": 0,
+          "explanation": "nonlocal fait modifier à interne la variable x d'externe : deux incréments, 1 + 2 = 3.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "py-portee-q3",
+          "prompt": "La dernière ligne lève TypeError: 'list' object is not callable. Touche la ligne qui en est la cause.",
+          "code": "list = [3, 1, 2]\ntotal = sum(list)\nprint(total)\ncopie = list(range(3))",
+          "bugLines": [
+            1
+          ],
+          "explanation": "La variable list masque le type intégré list. Un nom comme valeurs ou nombres évite le problème.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "py-portee-q4",
+          "prompt": "Complète pour que ajouter modifie la variable du module.",
+          "code": "total = 0\n\ndef ajouter(n):\n    ___ total\n    total += n",
+          "answers": [
+            "global"
+          ],
+          "distractors": [
+            "nonlocal",
+            "static",
+            "extern"
+          ],
+          "explanation": "global désigne la variable du module. nonlocal ne vise que les fonctions englobantes, et lèverait ici une SyntaxError.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-portee-q5",
+          "prompt": "Dans quel ordre Python cherche-t-il un nom ?",
+          "choices": [
+            "Local, fonctions englobantes, global (module), intégrés",
+            "Global, local, intégrés",
+            "Intégrés, global, local",
+            "Local, global, fonctions englobantes, intégrés"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la règle LEGB : Local, Enclosing, Global, Built-in.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-portee-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "x = \"global\"\n\ndef f():\n    print(x)\n\ndef g():\n    x = \"local\"\n    f()\n\ng()",
+          "choices": [
+            "global",
+            "local",
+            "NameError",
+            "UnboundLocalError"
+          ],
+          "answerIndex": 0,
+          "explanation": "La portée est lexicale : f est définie au niveau du module, elle voit le x global, quel que soit l'endroit d'où on l'appelle.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "py-closures",
       "title": "Closures",
       "summary": "Des fonctions qui capturent leur contexte.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Une fonction qui se souvient",
+          "body": "Une fonction définie dans une autre peut utiliser les variables de la fonction englobante, même après que celle-ci a terminé : c'est une closure. On s'en sert pour fabriquer des fonctions paramétrées.",
+          "code": "def multiplicateur(n):\n    def fois(x):\n        return x * n\n    return fois\n\ndouble = multiplicateur(2)\ndouble(5)   # 10"
+        },
+        {
+          "title": "Le piège de la liaison tardive",
+          "body": "Une closure capture la variable, pas sa valeur : elle lit la valeur au moment où elle s'exécute. Des lambdas créées dans une boucle voient donc toutes la dernière valeur. L'astuce classique : figer la valeur avec un argument par défaut.",
+          "code": "fs = [lambda: i for i in range(3)]\n[f() for f in fs]        # [2, 2, 2]\n\nfs = [lambda i=i: i for i in range(3)]\n[f() for f in fs]        # [0, 1, 2]"
+        },
+        {
+          "title": "functools.partial",
+          "body": "partial fixe certains arguments d'une fonction existante et renvoie une nouvelle fonction : une alternative lisible à une petite closure.",
+          "code": "from functools import partial\ncarre = partial(pow, exp=2)\ncarre(7)   # 49"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-closures-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def multiplicateur(n):\n    def fois(x):\n        return x * n\n    return fois\n\ndouble = multiplicateur(2)\ntriple = multiplicateur(3)\nprint(double(5), triple(5))",
+          "choices": [
+            "10 15",
+            "15 15",
+            "10 10",
+            "Une NameError : n n'existe plus"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque appel de multiplicateur crée sa propre variable n, que la fonction renvoyée garde en mémoire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-closures-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "fonctions = [lambda: i for i in range(3)]\nprint([f() for f in fonctions])",
+          "choices": [
+            "[2, 2, 2]",
+            "[0, 1, 2]",
+            "[3, 3, 3]",
+            "Une NameError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les trois lambdas lisent la même variable i au moment de leur appel, quand elle vaut 2 (la dernière valeur de la boucle).",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "py-closures-q3",
+          "prompt": "Le bouton « ok » affiche « annuler ». Touche la ligne fautive.",
+          "code": "boutons = []\nfor nom in [\"ok\", \"annuler\"]:\n    boutons.append(lambda: print(nom))\n\nboutons[0]()  # annuler",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Les lambdas lisent nom au moment du clic, après la boucle. Correctif : lambda nom=nom: print(nom), qui fige la valeur à la création.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-closures-q4",
+          "prompt": "Complète pour fabriquer une fonction qui met au carré.",
+          "code": "from functools import partial\n\ndef puissance(base, exp):\n    return base ** exp\n\ncarre = ___(puissance, exp=2)",
+          "answers": [
+            "partial"
+          ],
+          "distractors": [
+            "lambda",
+            "wraps",
+            "reduce"
+          ],
+          "explanation": "partial(puissance, exp=2) renvoie une fonction qui n'attend plus que base.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-closures-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def compteur():\n    n = 0\n    def suivant():\n        nonlocal n\n        n += 1\n        return n\n    return suivant\n\nc1 = compteur()\nc2 = compteur()\nc1()\nc1()\nprint(c1(), c2())",
+          "choices": [
+            "3 1",
+            "3 4",
+            "1 1",
+            "3 3"
+          ],
+          "answerIndex": 0,
+          "explanation": "c1 et c2 ont chacun leur propre n : c1 en est à 3, c2 démarre à 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "py-closures-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Une closure garde l'accès aux variables de la fonction englobante après son retour",
+            "Une closure lit la valeur actuelle de la variable, pas celle du moment de sa création",
+            "Pour réaffecter une variable capturée, il faut nonlocal",
+            "Une lambda ne peut pas capturer de variable"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une lambda est une fonction comme une autre : elle peut capturer des variables, avec le même piège de liaison tardive.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "py-defi-fonctions",
+    "title": "Défi entretien : fonctions",
+    "summary": "Passage des arguments et effets de bord.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "py-defi3-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "def f(x, l=None):\n    l = l or []\n    l.append(x)\n    return l\n\na = []\nf(1, a)\nprint(a, f(2, a))",
+        "choices": [
+          "[] [2]",
+          "[1] [1, 2]",
+          "[1, 2] [1, 2]",
+          "[] [1, 2]"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une liste vide est fausse : l or [] crée alors une nouvelle liste au lieu d'utiliser a. a n'est jamais modifiée.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "py-defi3-q2",
+        "prompt": "Cas pratique 1/3 — On passe une liste vide à f pour la remplir, mais elle reste vide. Touche la ligne fautive.",
+        "code": "def f(x, l=None):\n    l = l or []\n    l.append(x)\n    return l",
+        "bugLines": [
+          2
+        ],
+        "explanation": "l or [] remplace toute valeur fausse, et pas seulement None : une liste vide fournie par l'appelant est ignorée.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi3-q3",
+        "prompt": "Cas pratique 2/3 — Quelle est la règle à retenir ?",
+        "choices": [
+          "Tester l'absence de valeur avec is None, pas avec la valeur de vérité",
+          "Ne jamais utiliser l'opérateur or",
+          "Toujours copier les listes reçues",
+          "Ne jamais donner None comme valeur par défaut"
+        ],
+        "answerIndex": 0,
+        "explanation": "0, \"\" et [] sont des valeurs légitimes mais fausses. x or defaut ne convient que si toutes les valeurs fausses doivent être remplacées.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "py-defi3-q4",
+        "prompt": "Cas pratique 3/3 — Remets la version corrigée dans l'ordre.",
+        "lines": [
+          "def f(x, l=None):",
+          "    if l is None:",
+          "        l = []",
+          "    l.append(x)",
+          "    return l"
+        ],
+        "explanation": "On ne crée une nouvelle liste que si l'appelant n'en a fourni aucune ; une liste vide fournie est bien remplie.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "py-defi3-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "def charger(chemin, mode=\"r\", encodage=\"utf-8\", *args):\n    global dernier\n    dernier = chemin\n    with open(chemin, mode, encoding=encodage) as f:\n        return f.read()",
+        "choices": [
+          "La fonction modifie une variable globale : un effet de bord caché",
+          "*args n'est jamais utilisé",
+          "with ne ferme pas le fichier en cas de return",
+          "Préciser l'encodage est une mauvaise pratique"
+        ],
+        "answerIndices": [
+          0,
+          1
+        ],
+        "explanation": "with garantit la fermeture du fichier, même sur un return ou une exception, et préciser l'encodage évite des surprises d'un système à l'autre. En revanche, l'état global et les paramètres inutiles rendent la fonction confuse.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi3-q6",
+        "prompt": "En entretien : Python passe-t-il les arguments par valeur ou par référence ?",
+        "choices": [
+          "Par référence d'objet : la fonction reçoit le même objet ; le modifier se voit, réaffecter le paramètre non",
+          "Par valeur : la fonction reçoit toujours une copie",
+          "Par référence, comme le & du C++ : réaffecter le paramètre modifie la variable de l'appelant",
+          "Par valeur pour les listes, par référence pour les nombres"
+        ],
+        "answerIndex": 0,
+        "explanation": "On parle de passage « par affectation » : le paramètre est un nouveau nom pour le même objet. Avec un objet mutable, les modifications sont visibles ; une réaffectation ne touche que le nom local.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

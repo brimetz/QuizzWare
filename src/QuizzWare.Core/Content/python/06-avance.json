@@ -1,78 +1,161 @@
 {
   "id": "python-ch-avance",
   "title": "Fonctions avancées et concurrence",
-  "summary": "Décorateurs, générateurs et GIL.",
+  "summary": "Décorateurs, threads, processus et asyncio.",
   "lessons": [
     {
       "id": "python-avance",
-      "title": "Fonctions avancées et concurrence",
-      "summary": "Décorateurs, générateurs, GIL et parallélisme.",
+      "title": "Décorateurs et gestionnaires de contexte",
+      "summary": "@décorateur, with et functools.",
       "difficulty": 2,
       "sections": [
         {
-          "title": "*args et **kwargs",
-          "body": "*args collecte les arguments positionnels supplémentaires dans un tuple, **kwargs collecte les arguments nommés dans un dict."
-        },
-        {
-          "title": "Décorateurs",
-          "body": "Un décorateur est une fonction qui prend une fonction et en renvoie une nouvelle, qui l'enveloppe pour ajouter un comportement (log, cache, contrôle d'accès...).",
+          "title": "Les décorateurs",
+          "body": "Un décorateur est une fonction qui reçoit une fonction et en renvoie une nouvelle qui l'enveloppe (journalisation, cache, contrôle d'accès...). @deco au-dessus de f équivaut à f = deco(f). functools.wraps recopie le nom et la documentation de la fonction d'origine.",
           "code": "import functools\n\ndef log(func):\n    @functools.wraps(func)\n    def wrapper(*args, **kwargs):\n        print(f\"appel de {func.__name__}\")\n        return func(*args, **kwargs)\n    return wrapper\n\n@log\ndef saluer(nom):\n    return f\"Bonjour {nom}\""
         },
         {
-          "title": "Générateurs",
-          "body": "Une fonction contenant yield est un générateur : elle produit ses valeurs à la demande, sans construire toute la séquence en mémoire."
+          "title": "Des décorateurs prêts à l'emploi",
+          "body": "@functools.lru_cache (ou @cache) mémorise les résultats selon les arguments, qui doivent être hachables. @property, @staticmethod, @classmethod et @dataclass sont aussi des décorateurs."
         },
         {
-          "title": "Le GIL",
-          "body": "Dans CPython standard, le Global Interpreter Lock empêche plusieurs threads d'exécuter du bytecode Python en même temps. Les threads restent utiles pour l'I/O ; pour du calcul intensif (CPU-bound), on utilise multiprocessing ou des bibliothèques natives. (Python 3.13 propose un build expérimental sans GIL.)"
+          "title": "Les gestionnaires de contexte",
+          "body": "with garantit un nettoyage (fermer un fichier, libérer un verrou...) même en cas d'exception : il appelle __enter__ au début et __exit__ à la fin. contextlib.contextmanager permet d'en écrire un avec un simple générateur : le code avant yield est l'entrée, celui après est la sortie.",
+          "code": "from contextlib import contextmanager\n\n@contextmanager\ndef chrono():\n    debut = time.perf_counter()\n    yield\n    print(time.perf_counter() - debut)\n\nwith chrono():\n    traiter()"
         }
       ],
       "questions": [
         {
           "type": "choice",
           "id": "python-avance-q1",
-          "prompt": "Dans def f(*args, **kwargs), quel est le type de kwargs ?",
+          "prompt": "À quoi équivaut @deco placé au-dessus de def f() ?",
           "choices": [
-            "list",
-            "tuple",
-            "dict",
-            "set"
+            "f = deco(f)",
+            "f = f(deco)",
+            "deco est appelé à chaque appel de f, avant f",
+            "f hérite de deco"
           ],
-          "answerIndex": 2,
-          "explanation": "kwargs est un dict des arguments nommés ; args est un tuple.",
+          "answerIndex": 0,
+          "explanation": "Le décorateur est appelé une seule fois, à la définition de f, et le nom f désigne ensuite ce qu'il renvoie.",
           "difficulty": 1
         },
         {
           "type": "choice",
           "id": "python-avance-q2",
-          "prompt": "Qu'est-ce qu'un décorateur en Python ?",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def log(f):\n    def wrapper(*a):\n        print(\"avant\")\n        r = f(*a)\n        print(\"après\")\n        return r\n    return wrapper\n\n@log\ndef carre(x):\n    print(\"calcul\")\n    return x * x\n\nprint(carre(3))",
           "choices": [
-            "Une classe abstraite",
-            "Une fonction qui enveloppe une autre fonction",
-            "Un commentaire spécial",
-            "Un type de boucle"
+            "avant, calcul, après, 9",
+            "calcul, avant, après, 9",
+            "avant, après, calcul, 9",
+            "9"
           ],
-          "answerIndex": 1,
-          "explanation": "@decorateur au-dessus de f équivaut à f = decorateur(f).",
+          "answerIndex": 0,
+          "explanation": "carre désigne wrapper : il affiche « avant », appelle la vraie fonction, affiche « après », puis renvoie le résultat que print affiche.",
           "difficulty": 1
         },
         {
-          "type": "choice",
+          "type": "bug",
           "id": "python-avance-q3",
-          "prompt": "Quel mot-clé transforme une fonction en générateur ?",
-          "choices": [
-            "return",
-            "async",
-            "yield",
-            "lambda"
+          "prompt": "Depuis l'ajout de @chrono, somme(1, 2) renvoie None. Touche la ligne fautive.",
+          "code": "def chrono(f):\n    def wrapper(*args, **kwargs):\n        debut = time.perf_counter()\n        f(*args, **kwargs)\n        print(time.perf_counter() - debut)\n    return wrapper\n\n@chrono\ndef somme(a, b):\n    return a + b",
+          "bugLines": [
+            4
           ],
-          "answerIndex": 2,
-          "explanation": "yield suspend la fonction et produit une valeur ; l'exécution reprend au prochain next().",
-          "difficulty": 1
+          "explanation": "Le résultat de f est perdu : wrapper ne renvoie rien. Il faut r = f(*args, **kwargs), puis return r après la mesure.",
+          "difficulty": 2
         },
         {
           "type": "choice",
           "id": "python-avance-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def deco(f):\n    def wrapper():\n        return f()\n    return wrapper\n\n@deco\ndef saluer():\n    ...\n\nprint(saluer.__name__)",
+          "choices": [
+            "wrapper",
+            "saluer",
+            "deco",
+            "None"
+          ],
+          "answerIndex": 0,
+          "explanation": "saluer désigne désormais wrapper. @functools.wraps(f) sur wrapper recopierait le nom, la documentation et la signature, utiles au débogage et aux outils.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "python-avance-q5",
+          "prompt": "Complète ce gestionnaire de contexte et son utilisation.",
+          "code": "@contextmanager\ndef chrono():\n    debut = time.perf_counter()\n    ___\n    print(time.perf_counter() - debut)\n\n___ chrono():\n    traiter()",
+          "answers": [
+            "yield",
+            "with"
+          ],
+          "distractors": [
+            "return",
+            "async",
+            "try"
+          ],
+          "explanation": "yield marque le moment où le bloc with s'exécute. Pour garantir la sortie même en cas d'exception, on l'entoure de try/finally.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "python-avance-q6",
+          "prompt": "Combien de fois le corps de fib est-il exécuté ?",
+          "code": "from functools import lru_cache\nappels = 0\n\n@lru_cache\ndef fib(n):\n    global appels\n    appels += 1\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n\nfib(30)\nprint(appels)",
+          "choices": [
+            "31",
+            "2 692 537",
+            "30",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Grâce au cache, chaque valeur de 0 à 30 n'est calculée qu'une fois : 31 appels réels, au lieu de 2 692 537 sans cache.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "python-avance-q7",
+          "prompt": "Quelles affirmations sur with sont vraies ?",
+          "choices": [
+            "__exit__ est appelé même si le bloc lève une exception",
+            "open() renvoie un gestionnaire de contexte",
+            "__exit__ peut empêcher l'exception de se propager en renvoyant True",
+            "with crée une nouvelle portée : les variables du bloc disparaissent après"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un bloc with ne crée pas de portée : une variable définie dedans reste accessible après. contextlib.suppress utilise justement le retour True de __exit__ pour ignorer certaines exceptions.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "py-concurrence",
+      "title": "Threads, processus et GIL",
+      "summary": "Choisir le bon outil selon la tâche.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le GIL",
+          "body": "Dans CPython standard, le Global Interpreter Lock empêche plusieurs threads d'exécuter du bytecode Python en même temps. Il est relâché pendant les entrées-sorties bloquantes (réseau, disque). Python 3.13 propose un build expérimental sans GIL."
+        },
+        {
+          "title": "Entrées-sorties ou calcul",
+          "body": "Pour une tâche qui attend (requêtes réseau, fichiers), des threads accélèrent bien malgré le GIL. Pour un calcul intensif, il faut des processus (multiprocessing, ProcessPoolExecutor), chacun avec son propre interpréteur et son propre GIL, ou des bibliothèques natives comme NumPy.",
+          "code": "from concurrent.futures import ThreadPoolExecutor\n\nwith ThreadPoolExecutor(max_workers=8) as pool:\n    pages = list(pool.map(telecharger, urls))"
+        },
+        {
+          "title": "Le GIL ne protège pas vos données",
+          "body": "compteur += 1 se décompose en plusieurs instructions de bytecode : un thread peut être interrompu au milieu. Les données partagées entre threads doivent être protégées par un threading.Lock (ou échangées via une queue.Queue)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "python-avance-q8",
           "prompt": "Dans CPython standard, qu'empêche le GIL ?",
           "choices": [
             "L'utilisation de threads",
@@ -81,24 +164,291 @@
             "L'utilisation de plusieurs processus"
           ],
           "answerIndex": 1,
-          "explanation": "Un seul thread exécute du bytecode Python à la fois ; les threads bloqués sur de l'I/O libèrent le GIL.",
+          "explanation": "Un seul thread exécute du bytecode Python à la fois ; les threads bloqués sur de l'entrée-sortie libèrent le GIL.",
           "difficulty": 2
         },
         {
           "type": "choice",
-          "id": "python-avance-q5",
-          "prompt": "Pour paralléliser un calcul intensif CPU en CPython standard, quel module utiliser ?",
+          "id": "python-avance-q9",
+          "prompt": "Pour paralléliser un calcul intensif sur plusieurs cœurs en CPython standard, quel outil utiliser ?",
           "choices": [
             "threading",
             "asyncio",
-            "multiprocessing",
+            "multiprocessing (ou ProcessPoolExecutor)",
             "queue"
           ],
           "answerIndex": 2,
-          "explanation": "multiprocessing utilise plusieurs processus, chacun avec son propre interpréteur et donc son propre GIL.",
+          "explanation": "Chaque processus a son propre interpréteur et son propre GIL : les calculs tournent vraiment en parallèle.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-concurrence-q1",
+          "prompt": "Pour télécharger 100 pages web le plus vite possible, des threads sont-ils utiles malgré le GIL ?",
+          "choices": [
+            "Oui : le GIL est relâché pendant l'attente réseau",
+            "Non : le GIL rend les threads inutiles",
+            "Seulement avec Python 3.13",
+            "Seulement sur un processeur à un cœur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le temps est passé à attendre les serveurs, pas à exécuter du Python : pendant qu'un thread attend, les autres avancent. asyncio est une autre bonne option.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "py-concurrence-q2",
+          "prompt": "Ce code n'est pas sûr quand plusieurs threads exécutent travail. Touche la ligne en cause.",
+          "code": "compteur = 0\n\ndef travail():\n    global compteur\n    for _ in range(100_000):\n        compteur += 1\n\nfor t in [Thread(target=travail) for _ in range(4)]:\n    t.start()",
+          "bugLines": [
+            6
+          ],
+          "explanation": "+= lit la valeur, l'incrémente puis l'écrit : un changement de thread entre la lecture et l'écriture perd un incrément. Il faut un verrou : with verrou: compteur += 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-concurrence-q3",
+          "prompt": "Complète : télécharger les pages en parallèle avec 8 threads.",
+          "code": "from concurrent.futures import ThreadPoolExecutor\n\nwith ___(max_workers=8) as pool:\n    pages = list(pool.___(telecharger, urls))",
+          "answers": [
+            "ThreadPoolExecutor",
+            "map"
+          ],
+          "distractors": [
+            "Thread",
+            "apply",
+            "run"
+          ],
+          "explanation": "pool.map applique la fonction à chaque URL dans les threads du pool et renvoie les résultats dans l'ordre des URL. with attend la fin de toutes les tâches.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "py-concurrence-q4",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Le GIL est relâché pendant les entrées-sorties bloquantes",
+            "Grâce au GIL, les data races sont impossibles",
+            "Chaque processus de multiprocessing a son propre GIL",
+            "Les données échangées entre processus doivent être sérialisées (pickle)"
+          ],
+          "answerIndices": [
+            0,
+            2,
+            3
+          ],
+          "explanation": "Le GIL protège l'interpréteur, pas la logique de votre programme : une séquence de plusieurs instructions peut être interrompue. Entre processus, il n'y a pas de mémoire partagée par défaut, d'où la sérialisation.",
           "difficulty": 3
         }
       ]
+    },
+    {
+      "id": "py-asyncio",
+      "title": "asyncio",
+      "summary": "Des milliers d'attentes sur un seul thread.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Coroutines et boucle d'événements",
+          "body": "Une fonction async def renvoie une coroutine, qui ne s'exécute que lorsqu'on l'attend avec await (ou qu'on en fait une tâche). La boucle d'événements fait avancer les coroutines sur un seul thread : chaque await qui attend rend la main aux autres.",
+          "code": "import asyncio\n\nasync def tache(nom, delai):\n    await asyncio.sleep(delai)\n    return nom\n\nasync def main():\n    r = await asyncio.gather(\n        tache(\"A\", 1), tache(\"B\", 2))\n\nasyncio.run(main())   # environ 2 s, pas 3"
+        },
+        {
+          "title": "Ne jamais bloquer la boucle",
+          "body": "Un appel bloquant (time.sleep, requests.get, un calcul long) dans une coroutine bloque toute la boucle, donc toutes les tâches. On utilise les versions asynchrones (asyncio.sleep, httpx, aiohttp), ou asyncio.to_thread pour déporter un appel bloquant."
+        },
+        {
+          "title": "Oublier await",
+          "body": "Appeler une fonction async sans await crée une coroutine qui ne s'exécute jamais ; Python affiche seulement l'avertissement « coroutine ... was never awaited ». C'est un bug fréquent et silencieux."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-asyncio-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "import asyncio\n\nasync def tache(nom, d):\n    await asyncio.sleep(d)\n    print(nom)\n\nasync def main():\n    await asyncio.gather(tache(\"A\", 0.2),\n                         tache(\"B\", 0.1))\n\nasyncio.run(main())",
+          "choices": [
+            "B puis A",
+            "A puis B",
+            "A et B dans un ordre imprévisible",
+            "Rien : il manque await devant tache"
+          ],
+          "answerIndex": 0,
+          "explanation": "gather lance les deux coroutines en même temps : B attend moins longtemps et s'affiche en premier.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-asyncio-q2",
+          "prompt": "Combien de temps dure asyncio.gather(attendre(1), attendre(2)), si attendre(n) fait await asyncio.sleep(n) ?",
+          "choices": [
+            "Environ 2 secondes",
+            "Environ 3 secondes",
+            "Environ 1 seconde",
+            "Instantané"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les attentes se chevauchent : la durée totale est celle de la plus longue.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "py-asyncio-q3",
+          "prompt": "main met 10 secondes au lieu d'une. Touche la ligne fautive.",
+          "code": "async def ping(n):\n    time.sleep(1)\n    return n\n\nasync def main():\n    await asyncio.gather(\n        *(ping(i) for i in range(10)))",
+          "bugLines": [
+            2
+          ],
+          "explanation": "time.sleep bloque tout le thread, donc la boucle d'événements : les dix coroutines s'exécutent l'une après l'autre. Il faut await asyncio.sleep(1).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-asyncio-q4",
+          "prompt": "charger est définie avec async def. Que contient resultat ?",
+          "code": "async def main():\n    resultat = charger(\"data.json\")\n    print(resultat)",
+          "choices": [
+            "Un objet coroutine, jamais exécuté",
+            "Le contenu du fichier",
+            "None",
+            "Une erreur de syntaxe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans await, la coroutine est créée mais jamais lancée ; Python avertira « coroutine 'charger' was never awaited ».",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-asyncio-q5",
+          "prompt": "Complète cette fonction asynchrone (client est un httpx.AsyncClient).",
+          "code": "___ def charger(url):\n    reponse = ___ client.get(url)\n    return reponse.text",
+          "answers": [
+            "async",
+            "await"
+          ],
+          "distractors": [
+            "yield",
+            "thread",
+            "defer"
+          ],
+          "explanation": "async def déclare la coroutine ; await suspend charger pendant la requête et laisse la boucle faire avancer les autres tâches.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-asyncio-q6",
+          "prompt": "Quel est le principal avantage d'asyncio sur les threads ?",
+          "choices": [
+            "Gérer des milliers d'attentes simultanées sur un seul thread, avec des bascules explicites aux await",
+            "Utiliser plusieurs cœurs pour le calcul",
+            "Supprimer le GIL",
+            "Rendre le code synchrone plus rapide sans le modifier"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une coroutine coûte bien moins qu'un thread, et les changements de tâche n'ont lieu qu'aux await, ce qui limite les surprises. En revanche, tout le code doit être asynchrone, et le calcul reste sur un seul cœur.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "python-defi-avance",
+    "title": "Défi entretien : décorateurs et concurrence",
+    "summary": "Choisir entre threads, processus et asyncio.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "python-defi6-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "def compter(f):\n    def wrapper(*args):\n        wrapper.appels += 1\n        return f(*args)\n    wrapper.appels = 0\n    return wrapper\n\n@compter\ndef ident(x):\n    return x\n\nident(1)\nident(2)\nprint(ident.appels)",
+        "choices": [
+          "2",
+          "0",
+          "1",
+          "AttributeError"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une fonction est un objet : on peut lui ajouter un attribut. ident désigne wrapper, dont le compteur est incrémenté à chaque appel.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "python-defi6-q2",
+        "prompt": "Cas pratique 1/3 — 200 URL, environ 0,5 s chacune : tout_telecharger prend près de 2 minutes. Pourquoi ?",
+        "code": "def tout_telecharger(urls):\n    pages = []\n    for url in urls:\n        pages.append(requests.get(url).text)\n    return pages",
+        "choices": [
+          "Les requêtes sont faites l'une après l'autre, et le temps passé est surtout de l'attente réseau",
+          "requests est une bibliothèque lente",
+          "La liste pages grossit trop",
+          "Le GIL ralentit chaque requête"
+        ],
+        "answerIndex": 0,
+        "explanation": "200 × 0,5 s = 100 s, passées à attendre les serveurs sans rien faire d'autre.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "python-defi6-q3",
+        "prompt": "Cas pratique 2/3 — Le GIL empêche-t-il d'accélérer ce code avec des threads ?",
+        "choices": [
+          "Non : il est relâché pendant l'attente réseau, les requêtes peuvent se chevaucher",
+          "Oui : il faut absolument des processus",
+          "Oui : seul asyncio peut l'accélérer",
+          "Non, car requests désactive le GIL définitivement"
+        ],
+        "answerIndex": 0,
+        "explanation": "La tâche est limitée par les entrées-sorties : threads ou asyncio conviennent. Les processus serviraient pour un calcul intensif.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "python-defi6-q4",
+        "prompt": "Cas pratique 3/3 — Remets dans l'ordre la version avec un pool de 20 threads.",
+        "lines": [
+          "def tout_telecharger(urls):",
+          "    with ThreadPoolExecutor(max_workers=20) as pool:",
+          "        return list(pool.map(",
+          "            lambda u: requests.get(u).text,",
+          "            urls,",
+          "        ))"
+        ],
+        "explanation": "Avec 20 requêtes en parallèle, on passe d'environ 100 s à environ 5 s. pool.map conserve l'ordre des URL.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "python-defi6-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "@lru_cache\ndef prix_client(client):\n    return calculer(client.panier)",
+        "choices": [
+          "Le prix reste en cache même si le panier du client change",
+          "Le cache garde les objets client en vie tant qu'ils y sont",
+          "lru_cache sans argument a une taille illimitée",
+          "lru_cache ne fonctionne qu'avec des arguments entiers"
+        ],
+        "answerIndices": [
+          0,
+          1
+        ],
+        "explanation": "La clé du cache est l'objet client (haché par identité), pas le contenu de son panier : le résultat devient faux dès que le panier change. Sans argument, lru_cache garde 128 entrées ; c'est @cache qui est illimité.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "python-defi6-q6",
+        "prompt": "En entretien : comment choisir entre threads, processus et asyncio ?",
+        "choices": [
+          "Calcul intensif : processus ; quelques entrées-sorties : threads ; des milliers d'entrées-sorties : asyncio",
+          "Toujours asyncio, c'est le plus moderne",
+          "Toujours des processus, à cause du GIL",
+          "Toujours des threads, ils sont les plus légers"
+        ],
+        "answerIndex": 0,
+        "explanation": "Tout dépend de ce qui limite la tâche : le processeur ou l'attente. Les threads restent les plus simples à ajouter dans du code synchrone existant.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

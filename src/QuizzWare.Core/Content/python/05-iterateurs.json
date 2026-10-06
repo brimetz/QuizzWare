@@ -7,13 +7,327 @@
       "id": "py-iterateurs",
       "title": "Le protocole d'itération",
       "summary": "__iter__ et __next__.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Itérable et itérateur",
+          "body": "Un itérable (liste, dict, str, fichier...) fournit un itérateur avec iter(obj). L'itérateur produit les éléments un par un avec next(it), puis lève StopIteration quand il n'y en a plus. for fait exactement cela.",
+          "code": "it = iter([10, 20])\nnext(it)          # 10\nnext(it)          # 20\nnext(it, \"fin\")   # \"fin\" au lieu de StopIteration"
+        },
+        {
+          "title": "Un itérateur s'épuise",
+          "body": "Une liste peut être parcourue autant de fois qu'on veut : chaque for crée un nouvel itérateur. Mais map, filter, zip, un fichier ouvert ou un générateur sont eux-mêmes des itérateurs : une fois parcourus, ils sont vides."
+        },
+        {
+          "title": "Écrire son itérateur",
+          "body": "Une classe devient itérable avec __iter__ ; un itérateur a en plus __next__, et son __iter__ renvoie self. En pratique, écrire __iter__ comme un générateur (avec yield) est bien plus simple."
+        },
+        {
+          "title": "itertools",
+          "body": "Le module itertools fournit des briques paresseuses : count (compteur infini), islice (découpe un itérateur), chain (enchaîne), product (produit cartésien), groupby (regroupe des éléments consécutifs : il faut donc trier avant).",
+          "code": "from itertools import count, islice\nlist(islice(count(5, 2), 3))   # [5, 7, 9]"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-iterateurs-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "carres = map(lambda x: x * x, [1, 2, 3])\nprint(sum(carres), sum(carres))",
+          "choices": [
+            "14 0",
+            "14 14",
+            "14 28",
+            "Une TypeError"
+          ],
+          "answerIndex": 0,
+          "explanation": "map renvoie un itérateur : le premier sum le consomme entièrement, le second ne trouve plus rien. Pour réutiliser les valeurs : list(map(...)).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-iterateurs-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "it = iter([10, 20])\nprint(next(it), next(it), next(it, \"fin\"))",
+          "choices": [
+            "10 20 fin",
+            "10 20 None",
+            "10 10 10",
+            "StopIteration"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le second argument de next est une valeur par défaut, renvoyée au lieu de lever StopIteration quand l'itérateur est épuisé.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-iterateurs-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from itertools import count, islice\nprint(list(islice(count(5, 2), 3)))",
+          "choices": [
+            "[5, 7, 9]",
+            "[5, 6, 7]",
+            "[2, 4, 6]",
+            "Rien : count est infini"
+          ],
+          "answerIndex": 0,
+          "explanation": "count(5, 2) produit 5, 7, 9, 11... à l'infini, mais paresseusement : islice s'arrête après 3 éléments.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "py-iterateurs-q4",
+          "prompt": "On voulait un seul groupe par lettre, mais « a » apparaît deux fois. Touche une ligne en cause.",
+          "code": "from itertools import groupby\nmots = [\"ane\", \"bob\", \"avion\"]\nfor lettre, groupe in groupby(mots, key=lambda m: m[0]):\n    print(lettre, list(groupe))",
+          "bugLines": [
+            2,
+            3
+          ],
+          "explanation": "groupby ne regroupe que des éléments consécutifs. Il faut trier selon la même clé avant : groupby(sorted(mots, key=...), key=...).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-iterateurs-q5",
+          "prompt": "Complète cet itérateur de compte à rebours.",
+          "code": "class Rebours:\n    def __init__(self, n):\n        self.n = n\n    def __iter__(self):\n        return ___\n    def __next__(self):\n        if self.n <= 0:\n            raise ___\n        self.n -= 1\n        return self.n + 1",
+          "answers": [
+            "self",
+            "StopIteration"
+          ],
+          "distractors": [
+            "None",
+            "IndexError",
+            "iter(self)"
+          ],
+          "explanation": "Un itérateur est son propre itérable : __iter__ renvoie self. La fin est signalée par StopIteration, que for intercepte.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "py-iterateurs-q6",
+          "prompt": "Lesquels sont des itérateurs qui s'épuisent après un parcours ?",
+          "choices": [
+            "map(f, liste)",
+            "zip(a, b)",
+            "Une list",
+            "Un générateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Une liste est un itérable : chaque parcours obtient un nouvel itérateur. map, zip et les générateurs sont eux-mêmes des itérateurs.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "py-generateurs",
       "title": "Générateurs",
       "summary": "yield et expressions génératrices.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "yield",
+          "body": "Une fonction qui contient yield renvoie un générateur, sans exécuter son corps. Chaque next() exécute le code jusqu'au yield suivant, puis la fonction se met en pause en gardant son état.",
+          "code": "def lire_lignes(chemin):\n    with open(chemin) as f:\n        for ligne in f:\n            yield ligne.strip()"
+        },
+        {
+          "title": "Expressions génératrices",
+          "body": "Avec des parenthèses au lieu de crochets, une compréhension devient un générateur : les valeurs sont produites à la demande, sans construire de liste. Passée seule à une fonction, les parenthèses suffisent.",
+          "code": "total = sum(x * x for x in range(10**7))\n# aucune liste de 10 millions d'éléments"
+        },
+        {
+          "title": "yield from et pipelines",
+          "body": "yield from délègue à un autre itérable. On peut enchaîner des générateurs en pipeline (lire, filtrer, transformer) : chaque élément traverse toute la chaîne avant le suivant, avec une mémoire constante, même sur un fichier énorme."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-generateurs-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def gen():\n    print(\"début\")\n    yield 1\n    print(\"milieu\")\n    yield 2\n\ng = gen()\nprint(\"créé\")\nprint(next(g))",
+          "choices": [
+            "créé, début, 1",
+            "début, créé, 1",
+            "créé, début, 1, milieu",
+            "début, milieu, créé, 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "gen() ne fait que créer le générateur. Le premier next() exécute le corps jusqu'au premier yield ; « milieu » attendrait un second next().",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-generateurs-q2",
+          "prompt": "Quelle est la différence entre [x * x for x in data] et (x * x for x in data) ?",
+          "choices": [
+            "La première construit toute la liste en mémoire, la seconde produit les valeurs à la demande",
+            "La seconde est un tuple",
+            "Aucune, à part la syntaxe",
+            "La seconde est calculée en parallèle"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'expression génératrice ne stocke rien : idéale pour un traitement en un seul passage (sum, max, any...). La liste permet en revanche plusieurs parcours et l'accès par indice.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-generateurs-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def aplatir(listes):\n    for l in listes:\n        yield from l\n\nprint(list(aplatir([[1, 2], [3], []])))",
+          "choices": [
+            "[1, 2, 3]",
+            "[[1, 2], [3], []]",
+            "[1, 2, 3, []]",
+            "[[1, 2, 3]]"
+          ],
+          "answerIndex": 0,
+          "explanation": "yield from l produit chacun des éléments de l : les sous-listes sont mises bout à bout.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "py-generateurs-q4",
+          "prompt": "La boucle finale ne traite aucune ligne. Touche la ligne en cause.",
+          "code": "def lire_lignes(chemin):\n    with open(chemin) as f:\n        for ligne in f:\n            yield ligne.strip()\n\nlignes = lire_lignes(\"data.txt\")\nnb = len(list(lignes))\nfor l in lignes:\n    traiter(l)",
+          "bugLines": [
+            7
+          ],
+          "explanation": "list(lignes) consomme tout le générateur pour le compter ; la boucle ne trouve plus rien. Il faut garder la liste (lignes = list(...)) ou relancer lire_lignes.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "py-generateurs-q5",
+          "prompt": "Complète : un générateur de nombres pairs, puis la somme de leurs carrés sans liste intermédiaire.",
+          "code": "def pairs(n):\n    for i in range(n):\n        if i % 2 == 0:\n            ___ i\n\ntotal = ___(x * x for x in pairs(10))",
+          "answers": [
+            "yield",
+            "sum"
+          ],
+          "distractors": [
+            "return",
+            "len",
+            "list"
+          ],
+          "explanation": "yield produit chaque nombre pair à la demande ; sum consomme l'expression génératrice élément par élément.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-generateurs-q6",
+          "prompt": "Que vaut cette expression ?",
+          "code": "sum(x for x in range(5) if x % 2)",
+          "choices": [
+            "4",
+            "6",
+            "10",
+            "2"
+          ],
+          "answerIndex": 0,
+          "explanation": "x % 2 est vrai (1) pour les impairs : on additionne 1 et 3.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "py-defi-iterateurs",
+    "title": "Défi entretien : itérateurs",
+    "summary": "Paresse, mémoire et gros fichiers.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "py-defi5-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "it = iter([1, 2, 3, 4, 5, 6])\nprint(list(zip(it, it)))",
+        "choices": [
+          "[(1, 2), (3, 4), (5, 6)]",
+          "[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6)]",
+          "[(1, 2, 3), (4, 5, 6)]",
+          "[]"
+        ],
+        "answerIndex": 0,
+        "explanation": "zip tire un élément de chaque argument à tour de rôle ; or c'est le même itérateur : il prend 1 puis 2, puis 3 et 4... Une astuce connue pour regrouper par paires.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "py-defi5-q2",
+        "prompt": "Cas pratique 1/3 — Sur un fichier de 20 Go, le serveur manque de mémoire. Touche la première ligne en cause.",
+        "code": "def total_ventes(chemin):\n    lignes = open(chemin).readlines()\n    montants = [float(l.split(\";\")[2])\n                for l in lignes]\n    return sum(montants)",
+        "bugLines": [
+          2
+        ],
+        "explanation": "readlines charge tout le fichier en mémoire sous forme de liste. (Et le fichier n'est jamais fermé explicitement.)",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi5-q3",
+        "prompt": "Cas pratique 2/3 — Combien de fois les données sont-elles entièrement en mémoire au pire moment ?",
+        "choices": [
+          "Deux : la liste des lignes, puis la liste des montants",
+          "Aucune : Python lit le fichier à la demande",
+          "Une seule",
+          "Autant de fois qu'il y a de lignes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les lignes et les montants coexistent en mémoire au moment du sum. Pourtant, une somme n'a besoin que d'un élément à la fois.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "py-defi5-q4",
+        "prompt": "Cas pratique 3/3 — Remets dans l'ordre la version à mémoire constante.",
+        "lines": [
+          "def total_ventes(chemin):",
+          "    with open(chemin) as f:",
+          "        return sum(",
+          "            float(l.split(\";\")[2])",
+          "            for l in f",
+          "        )"
+        ],
+        "explanation": "Un fichier se parcourt ligne par ligne ; l'expression génératrice transmet chaque montant à sum sans rien stocker, et with ferme le fichier.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "py-defi5-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "def premiers_pairs(nombres, n):\n    resultat = []\n    for x in nombres:\n        if x % 2 == 0:\n            resultat.append(x)\n    return resultat[:n]",
+        "choices": [
+          "La fonction parcourt toute la source alors qu'il ne faut que n éléments",
+          "Avec une source infinie (un générateur sans fin), elle ne se termine jamais",
+          "islice((x for x in nombres if x % 2 == 0), n) serait paresseux",
+          "x % 2 == 0 est faux pour les nombres pairs négatifs"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "En Python, -4 % 2 vaut 0 : le test est correct pour les négatifs. Le vrai problème est de tout parcourir pour ne garder que le début.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi5-q6",
+        "prompt": "En entretien : quelle est la différence entre un itérable et un itérateur ?",
+        "choices": [
+          "Un itérable fournit un nouvel itérateur à chaque iter() ; un itérateur produit les éléments avec next() et s'épuise",
+          "Un itérateur est plus rapide qu'un itérable",
+          "Un itérable est toujours une liste",
+          "Il n'y a aucune différence"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est pourquoi on peut parcourir une liste plusieurs fois, mais pas un générateur. Tout itérateur est itérable (son __iter__ renvoie lui-même), mais l'inverse n'est pas vrai.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

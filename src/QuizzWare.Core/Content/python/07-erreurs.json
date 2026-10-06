@@ -7,13 +7,330 @@
       "id": "py-exceptions",
       "title": "Exceptions",
       "summary": "try, except, finally et exceptions personnalisées.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "try, except, else, finally",
+          "body": "except traite une exception d'un type donné ; else s'exécute seulement si aucune exception n'a eu lieu ; finally s'exécute toujours, même après un return.",
+          "code": "try:\n    valeur = int(saisie)\nexcept ValueError:\n    print(\"pas un nombre\")\nelse:\n    print(\"lu :\", valeur)\nfinally:\n    print(\"terminé\")"
+        },
+        {
+          "title": "Attraper précisément",
+          "body": "Un except: nu (ou except BaseException) attrape tout, y compris Ctrl+C (KeyboardInterrupt) et sys.exit(). except Exception est déjà très large : on attrape ce qu'on sait traiter, et on laisse remonter le reste."
+        },
+        {
+          "title": "Lever et chaîner",
+          "body": "raise lève une exception ; raise seul, dans un except, relance l'exception en cours. raise NouvelleErreur(...) from e garde la cause d'origine, visible dans la trace. Les exceptions métier héritent d'Exception, idéalement d'une base propre au projet.",
+          "code": "class ErreurPaiement(Exception): ...\nclass SoldeInsuffisant(ErreurPaiement): ...\n\ntry:\n    config = json.loads(texte)\nexcept json.JSONDecodeError as e:\n    raise ConfigInvalide(\"illisible\") from e"
+        },
+        {
+          "title": "EAFP",
+          "body": "« Il est plus facile de demander pardon que la permission » : le style Python consiste souvent à essayer puis traiter l'exception (try: d[cle]) plutôt qu'à tout vérifier avant (if cle in d). C'est aussi plus sûr en concurrence : rien ne change entre la vérification et l'action."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-exceptions-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def f(x):\n    try:\n        r = 10 / x\n    except ZeroDivisionError:\n        print(\"div0\")\n        return None\n    else:\n        print(\"ok\")\n        return r\n    finally:\n        print(\"fin\")\n\nprint(f(2))",
+          "choices": [
+            "ok, fin, 5.0",
+            "ok, 5.0, fin",
+            "fin, ok, 5.0",
+            "ok, 5.0"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pas d'exception : else s'exécute et prépare le retour, finally s'exécute avant que la fonction rende la main, puis print affiche 5.0 (une division / donne un float).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "py-exceptions-q2",
+          "prompt": "Ce bloc avale aussi Ctrl+C et les fautes de frappe dans les noms de variables. Touche la ligne à corriger.",
+          "code": "try:\n    valeur = int(saisie)\nexcept:\n    valeur = 0",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Un except nu attrape tout, y compris KeyboardInterrupt et NameError. Il faut except ValueError: (et TypeError si saisie peut être None).",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "py-exceptions-q3",
+          "prompt": "Complète pour lever une erreur métier en gardant la cause d'origine.",
+          "code": "try:\n    config = json.loads(texte)\nexcept json.JSONDecodeError as e:\n    ___ ConfigInvalide(\"illisible\") ___ e",
+          "answers": [
+            "raise",
+            "from"
+          ],
+          "distractors": [
+            "throw",
+            "with",
+            "as"
+          ],
+          "explanation": "raise ... from e attache l'exception d'origine (__cause__) : la trace affiche les deux, ce qui aide énormément au débogage.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-exceptions-q4",
+          "prompt": "Quel style est le plus idiomatique en Python pour lire une clé qui peut manquer et doit être signalée ?",
+          "choices": [
+            "try: valeur = d[cle] / except KeyError: ... (EAFP)",
+            "if cle in d.keys(): valeur = d[cle]",
+            "if d.has_key(cle): ...",
+            "Parcourir d pour chercher la clé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Essayer puis traiter l'exception est le style recommandé. has_key n'existe plus depuis Python 3, et .keys() est inutile pour un test d'appartenance. (Quand une valeur par défaut suffit, d.get(cle) est encore plus simple.)",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "py-exceptions-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def f():\n    try:\n        return \"try\"\n    finally:\n        return \"finally\"\n\nprint(f())",
+          "choices": [
+            "finally",
+            "try",
+            "try puis finally",
+            "SyntaxError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le return du finally remplace celui du try (et masquerait même une exception). C'est pourquoi on évite return dans un finally ; Python 3.14 émet d'ailleurs un avertissement.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "py-exceptions-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Une exception métier hérite d'Exception",
+            "except Exception n'attrape pas KeyboardInterrupt",
+            "Un except général placé avant un except précis rend ce dernier inatteignable",
+            "finally ne s'exécute pas quand le try contient un return"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "KeyboardInterrupt et SystemExit héritent de BaseException, pas d'Exception, justement pour échapper aux except Exception. finally s'exécute toujours, return compris.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "py-tests",
       "title": "Tests avec pytest",
       "summary": "Fixtures et assertions.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des tests simples",
+          "body": "pytest découvre les fichiers test_*.py et les fonctions test_*. Un simple assert suffit : en cas d'échec, pytest affiche les valeurs comparées. pytest.raises vérifie qu'une exception est levée.",
+          "code": "def test_addition():\n    assert addition(2, 3) == 5\n\ndef test_division_par_zero():\n    with pytest.raises(ZeroDivisionError):\n        diviser(1, 0)"
+        },
+        {
+          "title": "Les fixtures",
+          "body": "Une fixture prépare ce dont un test a besoin ; le test la reçoit en déclarant un paramètre du même nom. Avec yield, le code après yield nettoie. pytest en fournit plusieurs, comme tmp_path (un dossier temporaire) ou monkeypatch (remplacer une fonction ou une variable d'environnement).",
+          "code": "@pytest.fixture\ndef panier():\n    return Panier()\n\ndef test_vide(panier):\n    assert panier.total() == 0"
+        },
+        {
+          "title": "parametrize",
+          "body": "@pytest.mark.parametrize exécute le même test avec plusieurs jeux de données : chacun apparaît comme un test séparé dans le rapport.",
+          "code": "@pytest.mark.parametrize(\"a, b, attendu\", [\n    (1, 2, 3),\n    (0, 0, 0),\n    (-1, 1, 0),\n])\ndef test_addition(a, b, attendu):\n    assert addition(a, b) == attendu"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "py-tests-q1",
+          "prompt": "Comment pytest trouve-t-il les tests ?",
+          "choices": [
+            "Les fichiers test_*.py (ou *_test.py) et les fonctions test_*",
+            "Toutes les fonctions qui contiennent assert",
+            "Les classes qui héritent de pytest.Test",
+            "Il faut les lister dans un fichier de configuration"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une convention de nommage : pas besoin d'hériter d'une classe ni d'enregistrer les tests.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "py-tests-q2",
+          "prompt": "Complète pour vérifier que diviser(1, 0) lève ZeroDivisionError.",
+          "code": "def test_division_par_zero():\n    ___ pytest.raises(ZeroDivisionError):\n        diviser(1, 0)",
+          "answers": [
+            "with"
+          ],
+          "distractors": [
+            "try",
+            "assert",
+            "async"
+          ],
+          "explanation": "pytest.raises est un gestionnaire de contexte : le test échoue si le bloc ne lève pas l'exception attendue.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "py-tests-q3",
+          "prompt": "Avec le parametrize de la leçon, combien de tests pytest exécute-t-il pour test_addition ?",
+          "choices": [
+            "3",
+            "1",
+            "9",
+            "0 : il manque une fixture"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un test par jeu de paramètres, nommés test_addition[1-2-3], test_addition[0-0-0]...",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "py-tests-q4",
+          "prompt": "Ce test passe toujours, même quand est_pair est faux. Touche la ligne fautive.",
+          "code": "def test_est_pair():\n    assert (est_pair(3), False)",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Les parenthèses forment un tuple non vide, donc toujours vrai. Il fallait assert est_pair(3) is False (ou == False). pytest émet d'ailleurs un avertissement sur ce motif.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "py-tests-q5",
+          "prompt": "Complète la fixture et le test qui l'utilise.",
+          "code": "import pytest\n\n@pytest.___\ndef panier():\n    return Panier()\n\ndef test_vide(___):\n    assert panier.total() == 0",
+          "answers": [
+            "fixture",
+            "panier"
+          ],
+          "distractors": [
+            "setup",
+            "mock",
+            "self"
+          ],
+          "explanation": "pytest injecte la fixture d'après le nom du paramètre : test_vide(panier) reçoit le Panier créé par la fixture panier.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "py-tests-q6",
+          "prompt": "Quelles pratiques sont recommandées ?",
+          "choices": [
+            "Des tests indépendants les uns des autres et de leur ordre d'exécution",
+            "Un comportement vérifié par test, avec un nom qui le décrit",
+            "tmp_path pour les fichiers créés par un test",
+            "Tester en priorité les méthodes privées"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On teste le comportement visible (l'interface publique) : des tests liés aux détails internes cassent à chaque refactorisation sans détecter de vrai bug.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "py-defi-erreurs",
+    "title": "Défi entretien : erreurs et tests",
+    "summary": "Exceptions avalées et tests fragiles.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "py-defi7-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "try:\n    try:\n        int(\"x\")\n    except ValueError as e:\n        raise KeyError(\"cle\") from e\nexcept KeyError as k:\n    print(type(k.__cause__).__name__)",
+        "choices": [
+          "ValueError",
+          "KeyError",
+          "None",
+          "NoneType"
+        ],
+        "answerIndex": 0,
+        "explanation": "from e enregistre l'exception d'origine dans __cause__ : c'est la ValueError levée par int(\"x\").",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "py-defi7-q2",
+        "prompt": "Cas pratique 1/3 — Une virgule en trop dans config.json, et l'application démarre avec la configuration par défaut, sans aucun message. Touche la ligne en cause.",
+        "code": "def lire_config(chemin):\n    try:\n        with open(chemin) as f:\n            return json.load(f)\n    except Exception:\n        return {}",
+        "bugLines": [
+          5
+        ],
+        "explanation": "except Exception traite de la même façon un fichier absent (cas prévu) et un fichier invalide (une erreur à signaler).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi7-q3",
+        "prompt": "Cas pratique 2/3 — Quel comportement est le bon ?",
+        "choices": [
+          "Fichier absent : configuration par défaut ; fichier invalide : laisser remonter l'erreur (ou la signaler clairement)",
+          "Toujours renvoyer la configuration par défaut",
+          "Toujours planter",
+          "Réessayer de lire le fichier en boucle"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une configuration illisible est un problème à corriger : le masquer conduit à des comportements faux beaucoup plus difficiles à diagnostiquer.",
+        "difficulty": 1
+      },
+      {
+        "type": "fill",
+        "id": "py-defi7-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version corrigée.",
+        "code": "def lire_config(chemin):\n    try:\n        with open(chemin) as f:\n            return json.load(f)\n    except ___:\n        return {}",
+        "answers": [
+          "FileNotFoundError"
+        ],
+        "distractors": [
+          "Exception",
+          "OSError",
+          "BaseException"
+        ],
+        "explanation": "Seul le fichier absent est un cas normal. OSError engloberait aussi un problème de droits, qu'il vaut mieux voir. Une JSONDecodeError remonte désormais avec la ligne fautive.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "py-defi7-q5",
+        "prompt": "Revue de code : coche tous les problèmes de ce test.",
+        "code": "def test_utilisateur():\n    u = creer_utilisateur(\"ana\")\n    assert u.nom == \"ana\"\n    u.supprimer()\n    assert base.compter() == 0\n    envoyer_email(u)\n    assert boite.derniere().dest == \"ana\"",
+        "choices": [
+          "Il vérifie plusieurs comportements à la fois",
+          "Il dépend d'un état partagé (base, boite) : il peut casser selon les autres tests",
+          "Il peut envoyer un vrai e-mail : il faudrait une doublure",
+          "assert ne fonctionne pas avec pytest"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un test par comportement (création, suppression, envoi), avec des fixtures qui isolent la base et un faux service d'e-mail, rend chaque échec clair et les tests fiables.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "py-defi7-q6",
+        "prompt": "En entretien : quand créer ses propres exceptions ?",
+        "choices": [
+          "Pour des erreurs métier que l'appelant doit distinguer et traiter, comme SoldeInsuffisant",
+          "Pour chaque fonction du projet",
+          "Jamais : il faut toujours utiliser Exception",
+          "Uniquement pour remplacer ValueError"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une hiérarchie propre au projet (ErreurPaiement → SoldeInsuffisant, CarteRefusee) permet d'attraper précisément un cas, ou toute une famille d'erreurs.",
+        "difficulty": 2
+      }
+    ]
+  }
 }
