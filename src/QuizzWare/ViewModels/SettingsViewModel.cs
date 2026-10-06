@@ -27,6 +27,12 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
     private TimeSpan reminderTime = new(19, 0, 0);
 
     [ObservableProperty]
+    private bool soundEnabled = true;
+
+    [ObservableProperty]
+    private bool hapticsEnabled = true;
+
+    [ObservableProperty]
     private string statsText = string.Empty;
 
     public async Task LoadAsync()
@@ -41,6 +47,8 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
 
         RemindersEnabled = progress.Settings.RemindersEnabled;
         ReminderTime = progress.Settings.ReminderTime.ToTimeSpan();
+        SoundEnabled = progress.Settings.SoundEnabled;
+        HapticsEnabled = progress.Settings.HapticsEnabled;
         StatsText = $"🧠 {progressService.CountMasteredQuestions(progress)} questions maîtrisées · " +
                     $"{progressService.CountDueReviews(progress)} à réviser · 🔥 meilleure série : {progress.BestStreak} jours";
         _loading = false;
@@ -76,6 +84,18 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
         if (_loading)
             return;
         await progressService.UpdateSettingsAsync(s => s.ReminderTime = TimeOnly.FromTimeSpan(value));
+    }
+
+    async partial void OnSoundEnabledChanged(bool value)
+    {
+        if (!_loading)
+            await progressService.UpdateSettingsAsync(s => s.SoundEnabled = value);
+    }
+
+    async partial void OnHapticsEnabledChanged(bool value)
+    {
+        if (!_loading)
+            await progressService.UpdateSettingsAsync(s => s.HapticsEnabled = value);
     }
 
     [RelayCommand]

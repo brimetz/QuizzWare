@@ -61,6 +61,23 @@
                 </Border>
             </VerticalStackLayout>
 
+            <!-- Sons et vibrations -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="🔊 Sons et vibrations" Style="{StaticResource HeaderLabel}" />
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Sons" Style="{StaticResource SubHeaderLabel}" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" IsToggled="{Binding SoundEnabled}" OnColor="{StaticResource Primary}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Vibrations" Style="{StaticResource SubHeaderLabel}" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" IsToggled="{Binding HapticsEnabled}" OnColor="{StaticResource Primary}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
             <!-- Compte -->
             <VerticalStackLayout Spacing="10">
                 <Label Text="👤 Compte" Style="{StaticResource HeaderLabel}" />

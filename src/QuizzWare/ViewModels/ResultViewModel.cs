@@ -1,11 +1,22 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QuizzWare.Core.Progress;
+using QuizzWare.Services;
 
 namespace QuizzWare.ViewModels;
 
-public partial class ResultViewModel : ObservableObject, IQueryAttributable
+public partial class ResultViewModel(ProgressService progressService, FeedbackService feedback) : ObservableObject, IQueryAttributable
 {
+    /// <summary>Leçon validée, sans faute ou objectif du jour atteint : la page lance les confettis.</summary>
+    public bool ShouldCelebrate { get; private set; }
+
+    /// <summary>Le son de fin, joué à l'apparition de la page.</summary>
+    public async Task PlayEndSoundAsync()
+    {
+        var settings = (await progressService.GetProgressAsync()).Settings;
+        await feedback.PlayAsync(ShouldCelebrate ? FeedbackKind.Complete : FeedbackKind.Correct, settings);
+    }
+
     [ObservableProperty]
     private string headline = string.Empty;
 
@@ -63,6 +74,7 @@ public partial class ResultViewModel : ObservableObject, IQueryAttributable
     private void Populate(ProgressUpdate update)
     {
         var result = update.Result;
+        ShouldCelebrate = result.IsPerfect || update.UnitNewlyCompleted || update.LeveledUp || update.DailyGoalJustReached;
 
         Headline = result.IsPerfect ? "Parfait ! 🎯"
             : result.ScorePercent >= ProgressService.PassPercent ? "Bien joué ! 💪"

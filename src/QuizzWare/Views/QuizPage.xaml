@@ -122,8 +122,14 @@
 
         <!-- Avancement -->
         <Grid Padding="16,8,16,8" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="8">
-            <ProgressBar Grid.ColumnSpan="2" Progress="{Binding Progress}" />
-            <Label Grid.Row="1" Text="{Binding Kind}" TextColor="{StaticResource Primary}" FontAttributes="Bold" FontSize="14" />
+            <ProgressBar x:Name="Bar" Grid.ColumnSpan="2" Progress="{Binding Progress}" />
+            <Label Grid.Row="1" Text="{Binding Kind}" TextColor="{StaticResource Primary}" FontAttributes="Bold" FontSize="14">
+                <Label.Triggers>
+                    <DataTrigger TargetType="Label" Binding="{Binding IsRetry}" Value="True">
+                        <Setter Property="TextColor" Value="{StaticResource Warning}" />
+                    </DataTrigger>
+                </Label.Triggers>
+            </Label>
             <Label Grid.Row="1" Grid.Column="1" Text="{Binding ProgressText}" Style="{StaticResource MutedLabel}" />
         </Grid>
 
@@ -143,7 +149,7 @@
         </Border>
 
         <!-- Correction -->
-        <Border Grid.Row="2" IsVisible="{Binding IsAnswered}"
+        <Border x:Name="FeedbackPanel" Grid.Row="2" IsVisible="{Binding IsAnswered}"
                 BackgroundColor="{StaticResource Surface}" Stroke="{Binding FeedbackColor}" StrokeThickness="2"
                 StrokeShape="RoundRectangle 20,20,0,0" Padding="16,16,16,20">
             <VerticalStackLayout Spacing="10">

@@ -102,6 +102,58 @@ public class QuizTests
     }
 
     [Fact]
+    public void Session_WrongAnswer_IsReplayedAtTheEnd_WithoutXpOrScoreChange()
+    {
+        var category = Cat();
+        var session = _builder.ForLesson(category, category.Chapters[0].Lessons[0]);
+        var firstId = session.Current.Source.Id;
+
+        // Première question ratée, les autres réussies.
+        var first = (ChoiceQuizQuestion)session.Current;
+        Assert.False(session.Submit(new ChoiceAnswer((first.CorrectIndex + 1) % first.Choices.Count)).IsCorrect);
+        Assert.Equal(1, session.PendingRetries);
+        while (session.MoveNext() && !session.IsRetry)
+        {
+            var q = (ChoiceQuizQuestion)session.Current;
+            session.Submit(new ChoiceAnswer(q.CorrectIndex));
+        }
+
+        // La reprise arrive après les 4 questions, et sa réussite ne rapporte rien.
+        Assert.True(session.IsRetry);
+        Assert.Equal(4, session.CurrentIndex);
+        Assert.Equal(firstId, session.Current.Source.Id);
+        var retry = (ChoiceQuizQuestion)session.Current;
+        var answer = session.Submit(new ChoiceAnswer(retry.CorrectIndex));
+        Assert.True(answer.IsCorrect);
+        Assert.Equal(0, answer.XpEarned);
+        Assert.True(session.IsCompleted);
+        Assert.Equal(4, session.SettledCount);
+
+        var result = session.BuildResult();
+        Assert.Equal(3, result.CorrectAnswers);
+        Assert.False(result.IsPerfect);
+        Assert.False(result.Outcomes!.Single(o => o.QuestionId == firstId).IsCorrect);
+    }
+
+    [Fact]
+    public void Session_RetriesAreLimited()
+    {
+        var category = Cat();
+        var session = _builder.ForLesson(category, category.Chapters[0].Lessons[0]);
+        var steps = 0;
+
+        do
+        {
+            var q = (ChoiceQuizQuestion)session.Current;
+            session.Submit(new ChoiceAnswer((q.CorrectIndex + 1) % q.Choices.Count));
+            steps++;
+        } while (session.MoveNext());
+
+        Assert.Equal(4 * (1 + QuizSession.MaxRetries), steps);
+        Assert.True(session.IsCompleted);
+    }
+
+    [Fact]
     public void Session_CannotAnswerTwiceOrSkip()
     {
         var category = Cat();

@@ -61,6 +61,8 @@ public sealed class UserSettings
     public int DailyGoalXp { get; set; } = DefaultDailyGoalXp;
     public bool RemindersEnabled { get; set; }
     public TimeOnly ReminderTime { get; set; } = new(19, 0);
+    public bool SoundEnabled { get; set; } = true;
+    public bool HapticsEnabled { get; set; } = true;
 }
 
 /// <summary>Fiche de révision (système de Leitner) : plus la boîte est haute, plus la révision suivante est lointaine.</summary>

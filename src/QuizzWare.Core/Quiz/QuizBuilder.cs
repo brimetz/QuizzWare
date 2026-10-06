@@ -10,11 +10,11 @@ public sealed class QuizBuilder(Random random)
 
     /// <summary>Quizz de fin de leçon : toutes les questions de la leçon, dans un ordre aléatoire.</summary>
     public QuizSession ForLesson(Category category, Lesson lesson) =>
-        new(category.Id, lesson.Id, Shuffle(lesson.Questions ?? []).Select(Prepare).ToList());
+        new(category.Id, lesson.Id, Shuffle(lesson.Questions ?? []).Select(Prepare).ToList(), Prepare);
 
     /// <summary>Défi entretien : l'ordre est conservé pour que les cas pratiques s'enchaînent.</summary>
     public QuizSession ForChallenge(Category category, Challenge challenge) =>
-        new(category.Id, challenge.Id, (challenge.Questions ?? []).Select(Prepare).ToList());
+        new(category.Id, challenge.Id, (challenge.Questions ?? []).Select(Prepare).ToList(), Prepare);
 
     /// <summary>
     /// Entraînement : questions piochées dans les leçons déjà accessibles, filtrées selon le niveau
@@ -35,12 +35,12 @@ public sealed class QuizBuilder(Random random)
             eligible.AddRange(all.Except(eligible).OrderBy(q => q.Difficulty).Take(count - eligible.Count));
 
         var picked = Shuffle(eligible).Take(count).Select(Prepare).ToList();
-        return new QuizSession(category.Id, unitId: null, picked);
+        return new QuizSession(category.Id, unitId: null, picked, Prepare);
     }
 
     /// <summary>Révision espacée : les questions dues, toutes catégories confondues, dans un ordre aléatoire.</summary>
     public QuizSession ForReview(IEnumerable<Question> dueQuestions) =>
-        new(categoryId: null, unitId: null, Shuffle(dueQuestions).Select(Prepare).ToList());
+        new(categoryId: null, unitId: null, Shuffle(dueQuestions).Select(Prepare).ToList(), Prepare);
 
     public QuizQuestion Prepare(Question question) => question switch
     {

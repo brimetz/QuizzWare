@@ -35,12 +35,15 @@
   <ItemGroup>
     <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0F1221" />
     <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0F1221" BaseSize="128,128" />
+    <!-- Sons générés par tools/GenerateurSons.ps1 -->
+    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Plugin.Maui.Audio" Version="4.0.0" />
   </ItemGroup>
 
   <!-- Notifications locales (rappels quotidiens) : Android et iOS seulement. Version 12.x = dernière compatible .NET 9. -->

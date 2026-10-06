@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Plugin.Maui.Audio;
 using QuizzWare.Core.Content;
 using QuizzWare.Core.Progress;
 using QuizzWare.Core.Quiz;
@@ -23,6 +24,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<IReminderService, NoReminderService>();
 #endif
         builder.Services.AddSingleton<ReminderCoordinator>();
+
+        // Sons et vibrations des réponses
+        builder.AddAudio();
+        builder.Services.AddSingleton<FeedbackService>();
 
         // Core
         builder.Services.AddSingleton(_ => ContentRepository.LoadEmbedded());

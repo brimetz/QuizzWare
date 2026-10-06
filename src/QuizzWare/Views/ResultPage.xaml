@@ -10,7 +10,7 @@
         <ScrollView>
             <VerticalStackLayout Padding="16,32,16,16" Spacing="20">
 
-                <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                <VerticalStackLayout x:Name="ScoreBlock" Spacing="6" HorizontalOptions="Center">
                     <Label Text="{Binding Headline}" Style="{StaticResource TitleLabel}" HorizontalTextAlignment="Center" />
                     <Label Text="{Binding ScoreText}" FontSize="56" FontAttributes="Bold" HorizontalTextAlignment="Center" />
                     <Label Text="{Binding XpText}" TextColor="{StaticResource Warning}" FontSize="18" FontAttributes="Bold"
@@ -49,6 +49,9 @@
         <Border Grid.Row="1" BackgroundColor="{StaticResource Background}" StrokeThickness="0" Padding="16,12,16,20">
             <Button Text="Continuer" Command="{Binding ContinueCommand}" />
         </Border>
+
+        <!-- Confettis, par-dessus la page sans bloquer les touches -->
+        <AbsoluteLayout x:Name="Confetti" Grid.RowSpan="2" InputTransparent="True" />
     </Grid>
 
 </ContentPage>

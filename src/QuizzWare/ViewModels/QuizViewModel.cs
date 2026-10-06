@@ -6,12 +6,13 @@ using QuizzWare.Core.Content;
 using QuizzWare.Core.Models;
 using QuizzWare.Core.Progress;
 using QuizzWare.Core.Quiz;
+using QuizzWare.Services;
 using QuizzWare.ViewModels.Questions;
 using QuizzWare.Views;
 
 namespace QuizzWare.ViewModels;
 
-public partial class QuizViewModel(ContentRepository content, ProgressService progressService, QuizBuilder builder)
+public partial class QuizViewModel(ContentRepository content, ProgressService progressService, QuizBuilder builder, FeedbackService feedback)
     : ObservableObject, IQueryAttributable
 {
     private string? _categoryId;
@@ -19,6 +20,13 @@ public partial class QuizViewModel(ContentRepository content, ProgressService pr
     private bool _isReview;
     private bool _startedFromLesson;
     private QuizSession? _session;
+    private UserSettings _settings = new();
+
+    /// <summary>Levé après chaque vérification (true = bonne réponse) : la page anime la correction.</summary>
+    public event EventHandler<bool>? AnswerChecked;
+
+    [ObservableProperty]
+    private bool isRetry;
 
     [ObservableProperty]
     private string title = string.Empty;
@@ -72,6 +80,8 @@ public partial class QuizViewModel(ContentRepository content, ProgressService pr
     {
         if (_session is not null)
             return;
+
+        _settings = (await progressService.GetProgressAsync()).Settings;
 
         if (_isReview)
         {
@@ -140,12 +150,20 @@ public partial class QuizViewModel(ContentRepository content, ProgressService pr
         CurrentQuestion.Clear();
         CurrentQuestion.Add(Current);
 
-        Kind = _isReview && location is not null ? $"{location.Category.Name} · {Current.Kind}" : Current.Kind;
+        IsRetry = _session.IsRetry;
+        Kind = IsRetry ? "🔁 Erreur à revoir"
+            : _isReview && location is not null ? $"{location.Category.Name} · {Current.Kind}"
+            : Current.Kind;
         Prompt = question.Source.Prompt;
-        ProgressText = $"{_session.CurrentIndex + 1} / {_session.Questions.Count}";
-        Progress = (double)_session.CurrentIndex / _session.Questions.Count;
+        ProgressText = IsRetry
+            ? $"{_session.PendingRetries} à revoir"
+            : $"{_session.CurrentIndex + 1} / {_session.Questions.Count}";
+        UpdateProgress();
         IsAnswered = false;
     }
+
+    /// <summary>La barre n'avance que pour les questions terminées : une erreur se rattrape avant la fin.</summary>
+    private void UpdateProgress() => Progress = (double)_session!.SettledCount / _session.Questions.Count;
 
     private void OnCurrentChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -161,15 +179,29 @@ public partial class QuizViewModel(ContentRepository content, ProgressService pr
         if (_session is null || Current is null || IsAnswered)
             return;
 
+        var wasRetry = _session.IsRetry;
+        var retriesBefore = _session.PendingRetries;
         var result = _session.Submit(Current.BuildAnswer());
+        var willComeBack = _session.PendingRetries > retriesBefore;
         Current.ShowCorrection(result.IsCorrect);
 
-        FeedbackTitle = result.IsCorrect ? $"Bonne réponse !  +{result.XpEarned} XP" : "Pas tout à fait…";
+        FeedbackTitle = (result.IsCorrect, wasRetry) switch
+        {
+            (true, true) => "Bien rattrapé ! 💪",
+            (true, false) => $"Bonne réponse !  +{result.XpEarned} XP",
+            _ when willComeBack => "Pas tout à fait… elle reviendra à la fin",
+            _ => "Pas tout à fait…",
+        };
         FeedbackColor = result.IsCorrect ? Palette.Success : Palette.Error;
         Explanation = result.Explanation;
-        ContinueText = _session.HasNext ? "Continuer" : "Voir les résultats";
-        Progress = (double)(_session.CurrentIndex + 1) / _session.Questions.Count;
+        ContinueText = !_session.HasNext ? "Voir les résultats"
+            : !wasRetry && _session.CurrentIndex == _session.Questions.Count - 1 ? "Revoir mes erreurs"
+            : "Continuer";
+        UpdateProgress();
         IsAnswered = true;
+
+        AnswerChecked?.Invoke(this, result.IsCorrect);
+        _ = feedback.PlayAsync(result.IsCorrect ? FeedbackKind.Correct : FeedbackKind.Wrong, _settings);
     }
 
     [RelayCommand]
