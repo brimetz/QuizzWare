@@ -24,8 +24,8 @@ public class ProgressServiceTests
     {
         var update = await _service.ApplyResultAsync(new QuizResult("cat", null, 5, 5, 120));
 
-        Assert.Equal(1, update.Before.Level);
-        Assert.Equal(2, update.After.Level);
+        Assert.Equal(1, update.Before!.Level);
+        Assert.Equal(2, update.After!.Level);
         Assert.True(update.LeveledUp);
         Assert.Equal(120, _store.Stored.Categories["cat"].TotalXp);
         Assert.Equal(1, _store.SaveCount);

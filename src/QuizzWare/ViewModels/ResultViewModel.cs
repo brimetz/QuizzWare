@@ -39,6 +39,18 @@ public partial class ResultViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     private Color lessonColor = Palette.Success;
 
+    [ObservableProperty]
+    private bool hasLevel;
+
+    [ObservableProperty]
+    private string dailyGoalText = string.Empty;
+
+    [ObservableProperty]
+    private double dailyGoalProgress;
+
+    [ObservableProperty]
+    private Color dailyGoalColor = Palette.Warning;
+
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("update", out var value) && value is ProgressUpdate update)
@@ -56,17 +68,38 @@ public partial class ResultViewModel : ObservableObject, IQueryAttributable
             : result.ScorePercent >= ProgressService.PassPercent ? "Bien joué ! 💪"
             : "Continue, tu progresses 📚";
         ScoreText = $"{result.CorrectAnswers} / {result.TotalQuestions}";
-        XpText = result.IsPerfect ? $"+{result.XpEarned} XP (bonus sans faute inclus)" : $"+{result.XpEarned} XP";
+        XpText = result.IsPerfect && !result.IsReview ? $"+{result.XpEarned} XP (bonus sans faute inclus)" : $"+{result.XpEarned} XP";
 
+        // Une révision touche plusieurs catégories : pas de carte de niveau.
+        HasLevel = update.After is not null;
         IsLevelUp = update.LeveledUp;
-        LevelUpText = $"⬆️ Niveau {update.After.Level} atteint : {update.After.Title} !";
-        LevelText = LevelFormat.Level(update.After);
-        LevelXpText = LevelFormat.Xp(update.After);
-        LevelProgress = update.After.Progress;
+        if (update.After is { } after)
+        {
+            LevelUpText = $"⬆️ Niveau {after.Level} atteint : {after.Title} !";
+            LevelText = LevelFormat.Level(after);
+            LevelXpText = LevelFormat.Xp(after);
+            LevelProgress = after.Progress;
+        }
+
         StreakText = update.Streak > 1 ? $"🔥 Série de {update.Streak} jours" : "🔥 Série démarrée : reviens demain !";
 
+        var goal = update.DailyGoal;
+        DailyGoalProgress = goal.Progress;
+        DailyGoalColor = goal.IsReached ? Palette.Success : Palette.Warning;
+        DailyGoalText = update.DailyGoalJustReached ? $"🎉 Objectif du jour atteint : {goal.XpToday} / {goal.GoalXp} XP !"
+            : goal.IsReached ? $"✅ Objectif du jour : {goal.XpToday} / {goal.GoalXp} XP"
+            : $"🎯 Objectif du jour : {goal.XpToday} / {goal.GoalXp} XP";
+
         var unit = update.IsChallenge ? "le défi" : "la leçon";
-        if (result.UnitId is null)
+        if (result.IsReview)
+        {
+            var failed = result.TotalQuestions - result.CorrectAnswers;
+            LessonText = failed == 0
+                ? "🧠 Révisions réussies : ces questions reviendront plus tard, de plus en plus espacées."
+                : $"🧠 {failed} question{(failed > 1 ? "s" : "")} à revoir demain.";
+            LessonColor = failed == 0 ? Palette.Success : Palette.Warning;
+        }
+        else if (result.UnitId is null)
         {
             LessonText = null;
         }

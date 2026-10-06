@@ -109,7 +109,7 @@ public class QuestionTypeTests
             }
             """);
 
-        var questions = category.Chapters[0].Lessons[0].Questions;
+        var questions = category.Chapters[0].Lessons[0].Questions!;
         Assert.IsType<ChoiceQuestion>(questions[0]);
         Assert.IsType<MultiChoiceQuestion>(questions[1]); // "type" pas en premier : accepté
         Assert.Equal(3, Assert.IsType<BugQuestion>(questions[2]).Difficulty);

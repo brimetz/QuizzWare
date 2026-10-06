@@ -43,6 +43,11 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
   </ItemGroup>
 
+  <!-- Notifications locales (rappels quotidiens) : Android et iOS seulement. Version 12.x = dernière compatible .NET 9. -->
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+    <PackageReference Include="Plugin.LocalNotification" Version="12.0.2" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\QuizzWare.Core\QuizzWare.Core.csproj" />
   </ItemGroup>

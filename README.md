@@ -30,11 +30,12 @@ src/
     Leveling/              Règles d'XP et de niveaux
     Models/                Catégorie → chapitres → leçons / défi, types de questions
     Quiz/                  Préparation (mélange), correction et déroulement d'un quizz
-    Progress/              Progression, déblocage, série de jours, persistance
+    Progress/              Progression, déblocage, série, objectif du jour, révision espacée, rappels, persistance
   QuizzWare/               Application MAUI
     ViewModels/Questions/  Un ViewModel par type de question
     ViewModels/Code/       Coloration syntaxique, lignes de code
     Views/Controls/        Bloc de code réutilisable, sélection du template de question
+    Services/              Notifications locales (Plugin.LocalNotification, Android / iOS uniquement)
 tests/
   QuizzWare.Core.Tests/    Tests xUnit du Core (y compris validation du contenu JSON)
 docs/
@@ -58,8 +59,13 @@ tools/
 | Défi entretien | Débloqué quand toutes les leçons du chapitre sont validées ; facultatif pour avancer |
 | Entraînement rapide | 5 questions tirées des leçons débloquées ; difficulté max 1 (niv. 1-3), 2 (niv. 4-6), 3 (niv. 7+) |
 | Série (streak) | +1 par jour consécutif avec au moins un quizz |
+| Objectif du jour | 10, 30 (par défaut), 50 ou 100 XP, réglable dans ⚙️ Réglages |
+| Révision espacée | Chaque question répondue entre dans un système de Leitner à 6 boîtes (intervalles 1, 3, 7, 14, 30, 60 jours). Bonne réponse à l'échéance → boîte suivante ; erreur → boîte 1, à revoir demain. « 🧠 Réviser » propose jusqu'à 10 questions dues, toutes catégories confondues ; leur XP va à la catégorie de chaque question (sans bonus sans faute) |
+| Rappels | Notification locale quotidienne à l'heure choisie (Android / iOS), sur 3 jours glissants ; pas de rappel le jour même si l'objectif est atteint |
 
-Les règles sont dans [LevelSystem.cs](src/QuizzWare.Core/Leveling/LevelSystem.cs) et [ProgressService.cs](src/QuizzWare.Core/Progress/ProgressService.cs).
+Les règles sont dans [LevelSystem.cs](src/QuizzWare.Core/Leveling/LevelSystem.cs), [ProgressService.cs](src/QuizzWare.Core/Progress/ProgressService.cs), [SpacedRepetition.cs](src/QuizzWare.Core/Progress/SpacedRepetition.cs) et [ReminderPlanner.cs](src/QuizzWare.Core/Progress/ReminderPlanner.cs).
+
+La sauvegarde (`progress.json`) porte un `SchemaVersion` et une date `UpdatedAt` : elle est prête à être synchronisée avec un futur compte utilisateur.
 
 ## Démarrer
 

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using QuizzWare.Core.Content;
 using QuizzWare.Core.Progress;
 using QuizzWare.Core.Quiz;
+using QuizzWare.Services;
 using QuizzWare.ViewModels;
 using QuizzWare.Views;
 
@@ -13,6 +14,15 @@ public static class MauiProgram
     {
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>();
+
+        // Rappels quotidiens : notifications locales sur mobile, rien sur Windows (développement).
+#if ANDROID || IOS
+        Plugin.LocalNotification.LocalNotificationExtensions.UseLocalNotification(builder, _ => { });
+        builder.Services.AddSingleton<IReminderService, LocalReminderService>();
+#else
+        builder.Services.AddSingleton<IReminderService, NoReminderService>();
+#endif
+        builder.Services.AddSingleton<ReminderCoordinator>();
 
         // Core
         builder.Services.AddSingleton(_ => ContentRepository.LoadEmbedded());
@@ -30,6 +40,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ResultPage>().AddTransient<ResultViewModel>();
         builder.Services.AddTransient<SpecializationsPage>().AddTransient<SpecializationsViewModel>();
         builder.Services.AddTransient<TrackPage>().AddTransient<TrackViewModel>();
+        builder.Services.AddTransient<SettingsPage>().AddTransient<SettingsViewModel>();
 
 #if DEBUG
         builder.Logging.AddDebug();

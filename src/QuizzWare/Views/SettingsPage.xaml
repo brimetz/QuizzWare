@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:QuizzWare.ViewModels"
+             x:Class="QuizzWare.Views.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             Title="Réglages">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16,8,16,32" Spacing="24">
+
+            <!-- Objectif quotidien -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="🎯 Objectif quotidien" Style="{StaticResource HeaderLabel}" />
+                <Label Text="L'XP à gagner chaque jour. Les rappels ne se déclenchent que tant qu'il n'est pas atteint."
+                       Style="{StaticResource MutedLabel}" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Goals}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GoalOptionViewModel">
+                            <Border Style="{StaticResource Card}" Padding="14,12"
+                                    Stroke="{Binding StrokeColor}" BackgroundColor="{Binding BackgroundColor}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding TapCommand}" />
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{Binding Label}" Style="{StaticResource SubHeaderLabel}" />
+                                        <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="1" Text="{Binding XpText}" TextColor="{StaticResource Warning}"
+                                           FontAttributes="Bold" VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- Rappels -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="🔔 Rappels" Style="{StaticResource HeaderLabel}" />
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Rappel quotidien" Style="{StaticResource SubHeaderLabel}" />
+                                <Label Text="Pour protéger ta série et faire tes révisions."
+                                       Style="{StaticResource MutedLabel}" FontSize="13" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding RemindersEnabled}" IsEnabled="{Binding RemindersSupported}"
+                                    OnColor="{StaticResource Primary}" VerticalOptions="Center" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding RemindersEnabled}">
+                            <Label Text="Heure du rappel" VerticalOptions="Center" />
+                            <TimePicker Grid.Column="1" Time="{Binding ReminderTime}" Format="HH:mm"
+                                        TextColor="{StaticResource TextPrimary}" />
+                        </Grid>
+                        <Label Text="Les rappels sont disponibles sur Android et iOS." Style="{StaticResource MutedLabel}"
+                               FontSize="13" IsVisible="{Binding RemindersUnsupported}" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Compte -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="👤 Compte" Style="{StaticResource HeaderLabel}" />
+                <Border Style="{StaticResource Card}" Opacity="0.6">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Bientôt disponible" Style="{StaticResource SubHeaderLabel}" />
+                        <Label Text="Crée ton profil pour sauvegarder ta progression et la retrouver sur tous tes appareils. En attendant, elle est enregistrée sur ce téléphone."
+                               Style="{StaticResource MutedLabel}" FontSize="13" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Progression -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="📊 Progression" Style="{StaticResource HeaderLabel}" />
+                <Label Text="{Binding StatsText}" Style="{StaticResource MutedLabel}" />
+                <Button Text="Réinitialiser la progression" Command="{Binding ResetCommand}"
+                        Style="{StaticResource SecondaryButton}" TextColor="{StaticResource Error}" />
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

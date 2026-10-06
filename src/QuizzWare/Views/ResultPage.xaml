@@ -22,11 +22,18 @@
                     <Label Text="{Binding LevelUpText}" FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="Center" />
                 </Border>
 
-                <Border Style="{StaticResource Card}">
+                <Border Style="{StaticResource Card}" IsVisible="{Binding HasLevel}">
                     <VerticalStackLayout Spacing="10">
                         <Label Text="{Binding LevelText}" Style="{StaticResource SubHeaderLabel}" />
                         <ProgressBar Progress="{Binding LevelProgress}" />
                         <Label Text="{Binding LevelXpText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="{Binding DailyGoalText}" Style="{StaticResource SubHeaderLabel}" />
+                        <ProgressBar Progress="{Binding DailyGoalProgress}" ProgressColor="{Binding DailyGoalColor}" />
                     </VerticalStackLayout>
                 </Border>
 

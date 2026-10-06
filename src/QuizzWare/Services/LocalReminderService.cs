@@ -1,0 +1,50 @@
+#if ANDROID || IOS
+using Plugin.LocalNotification;
+using Plugin.LocalNotification.AndroidOption;
+using QuizzWare.Core.Progress;
+
+namespace QuizzWare.Services;
+
+/// <summary>Rappels via les notifications locales d'Android et d'iOS (Plugin.LocalNotification).</summary>
+public sealed class LocalReminderService : IReminderService
+{
+    public bool IsSupported => true;
+
+    public async Task<bool> RequestPermissionAsync()
+    {
+        var center = LocalNotificationCenter.Current;
+        if (await center.AreNotificationsEnabled())
+            return true;
+
+        // Un rappel quotidien n'a pas besoin d'être à la seconde près : pas d'alarme « exacte » (permission spéciale sur Android 12+).
+        return await center.RequestNotificationPermission(new NotificationPermission
+        {
+            Android = new AndroidNotificationPermission { RequestPermissionToScheduleExactAlarm = false },
+        });
+    }
+
+    public async Task ScheduleAsync(IReadOnlyList<PlannedReminder> reminders)
+    {
+        var center = LocalNotificationCenter.Current;
+        center.Cancel(ReminderPlanner.AllIds.ToArray());
+
+        if (reminders.Count == 0 || !await center.AreNotificationsEnabled())
+            return;
+
+        foreach (var reminder in reminders)
+        {
+            await center.Show(new NotificationRequest
+            {
+                NotificationId = reminder.Id,
+                Title = reminder.Title,
+                Description = reminder.Message,
+                Schedule = new NotificationRequestSchedule
+                {
+                    NotifyTime = reminder.When,
+                    Android = new AndroidScheduleOptions { AlarmType = AndroidAlarmType.Rtc },
+                },
+            });
+        }
+    }
+}
+#endif

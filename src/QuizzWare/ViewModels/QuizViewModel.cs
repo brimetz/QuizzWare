@@ -16,7 +16,7 @@ public partial class QuizViewModel(ContentRepository content, ProgressService pr
 {
     private string? _categoryId;
     private string? _unitId;
-    private string? _language;
+    private bool _isReview;
     private bool _startedFromLesson;
     private QuizSession? _session;
 
@@ -65,15 +65,24 @@ public partial class QuizViewModel(ContentRepository content, ProgressService pr
     {
         _categoryId = query.TryGetValue("categoryId", out var c) ? c as string : null;
         _unitId = query.TryGetValue("unitId", out var u) ? u as string : null;
+        _isReview = query.TryGetValue("mode", out var m) && m as string == "review";
     }
 
     public async Task LoadAsync()
     {
-        if (_session is not null || _categoryId is null)
+        if (_session is not null)
+            return;
+
+        if (_isReview)
+        {
+            await LoadReviewAsync();
+            return;
+        }
+
+        if (_categoryId is null)
             return;
 
         var category = content.GetCategory(_categoryId);
-        _language = content.GetCodeLanguage(_categoryId, _unitId);
 
         switch (_unitId is null ? null : content.GetUnit(_categoryId, _unitId))
         {
@@ -99,18 +108,39 @@ public partial class QuizViewModel(ContentRepository content, ProgressService pr
         ShowCurrentQuestion();
     }
 
+    /// <summary>Révision espacée : les questions dues aujourd'hui, toutes catégories confondues.</summary>
+    private async Task LoadReviewAsync()
+    {
+        var userProgress = await progressService.GetProgressAsync();
+        var due = progressService.GetDueReviews(userProgress);
+        if (due.Count == 0)
+        {
+            await Shell.Current.DisplayAlert("Rien à réviser", "Toutes tes révisions du jour sont faites. Reviens demain !", "OK");
+            await Shell.Current.GoToAsync("..");
+            return;
+        }
+
+        _session = builder.ForReview(due);
+        Title = "🧠 Révisions";
+        ShowCurrentQuestion();
+    }
+
     private void ShowCurrentQuestion()
     {
         var question = _session!.Current;
 
+        // Le langage (et, en révision, la catégorie) dépend de la question : une révision mélange les catégories.
+        var location = content.FindQuestion(question.Source.Id);
+        var language = location is null ? null : content.GetCodeLanguage(location.Category.Id, location.Unit.Id);
+
         if (Current is not null)
             Current.PropertyChanged -= OnCurrentChanged;
-        Current = QuestionViewModel.Create(question, _language);
+        Current = QuestionViewModel.Create(question, language);
         Current.PropertyChanged += OnCurrentChanged;
         CurrentQuestion.Clear();
         CurrentQuestion.Add(Current);
 
-        Kind = Current.Kind;
+        Kind = _isReview && location is not null ? $"{location.Category.Name} · {Current.Kind}" : Current.Kind;
         Prompt = question.Source.Prompt;
         ProgressText = $"{_session.CurrentIndex + 1} / {_session.Questions.Count}";
         Progress = (double)_session.CurrentIndex / _session.Questions.Count;

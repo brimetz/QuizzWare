@@ -17,7 +17,28 @@ public partial class HomeViewModel(ContentRepository content, ProgressService pr
     [ObservableProperty]
     private string summaryText = string.Empty;
 
+    [ObservableProperty]
+    private string dailyGoalText = string.Empty;
+
+    [ObservableProperty]
+    private double dailyGoalProgress;
+
+    [ObservableProperty]
+    private Color dailyGoalColor = Palette.Warning;
+
+    [ObservableProperty]
+    private bool hasReviews;
+
+    [ObservableProperty]
+    private string reviewText = string.Empty;
+
     public ObservableCollection<CategoryCardViewModel> Categories { get; } = [];
+
+    [RelayCommand]
+    private Task StartReviewAsync() => Shell.Current.GoToAsync($"{nameof(QuizPage)}?mode=review");
+
+    [RelayCommand]
+    private Task OpenSettingsAsync() => Shell.Current.GoToAsync(nameof(SettingsPage));
 
     public async Task LoadAsync()
     {
@@ -32,6 +53,17 @@ public partial class HomeViewModel(ContentRepository content, ProgressService pr
         var completedLessons = progress.Categories.Values.Sum(c => c.CompletedLessons.Count(playableLessons.Contains));
 
         StreakText = $"🔥 {progressService.GetCurrentStreak(progress)}";
+
+        var goal = progressService.GetDailyGoal(progress);
+        DailyGoalProgress = goal.Progress;
+        DailyGoalColor = goal.IsReached ? Palette.Success : Palette.Warning;
+        DailyGoalText = goal.IsReached
+            ? $"✅ Objectif du jour atteint · {goal.XpToday} XP"
+            : $"🎯 Objectif du jour · {goal.XpToday} / {goal.GoalXp} XP";
+
+        var due = progressService.CountDueReviews(progress);
+        HasReviews = due > 0;
+        ReviewText = $"🧠 Réviser · {due} question{(due > 1 ? "s" : "")}";
         SummaryText = $"{totalXp} XP · {completedLessons}/{playableLessons.Count} leçons terminées · {content.Categories.Count} catégories";
     }
 }

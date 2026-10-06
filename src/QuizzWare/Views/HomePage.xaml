@@ -8,15 +8,33 @@
 
     <CollectionView ItemsSource="{Binding Categories}" SelectionMode="None" Margin="16,0">
         <CollectionView.Header>
-            <Grid ColumnDefinitions="*,Auto" Padding="0,32,0,20">
-                <VerticalStackLayout Spacing="4">
-                    <Label Text="QuizzWare" Style="{StaticResource TitleLabel}" />
-                    <Label Text="{Binding SummaryText}" Style="{StaticResource MutedLabel}" />
-                </VerticalStackLayout>
-                <Border Grid.Column="1" Style="{StaticResource Pill}" VerticalOptions="Start">
-                    <Label Text="{Binding StreakText}" FontAttributes="Bold" FontSize="16" />
+            <VerticalStackLayout Padding="0,32,0,20" Spacing="16">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="QuizzWare" Style="{StaticResource TitleLabel}" />
+                        <Label Text="{Binding SummaryText}" Style="{StaticResource MutedLabel}" />
+                    </VerticalStackLayout>
+                    <Border Grid.Column="1" Style="{StaticResource Pill}" VerticalOptions="Start">
+                        <Label Text="{Binding StreakText}" FontAttributes="Bold" FontSize="16" />
+                    </Border>
+                    <Border Grid.Column="2" Style="{StaticResource Pill}" VerticalOptions="Start">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenSettingsCommand}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="⚙️" FontSize="16" />
+                    </Border>
+                </Grid>
+
+                <!-- Objectif du jour et révisions -->
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="{Binding DailyGoalText}" Style="{StaticResource SubHeaderLabel}" />
+                        <ProgressBar Progress="{Binding DailyGoalProgress}" ProgressColor="{Binding DailyGoalColor}" />
+                        <Button Text="{Binding ReviewText}" Command="{Binding StartReviewCommand}" IsVisible="{Binding HasReviews}"
+                                Margin="0,4,0,0" />
+                    </VerticalStackLayout>
                 </Border>
-            </Grid>
+            </VerticalStackLayout>
         </CollectionView.Header>
 
         <CollectionView.ItemsLayout>

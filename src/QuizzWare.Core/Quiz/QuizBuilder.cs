@@ -38,6 +38,10 @@ public sealed class QuizBuilder(Random random)
         return new QuizSession(category.Id, unitId: null, picked);
     }
 
+    /// <summary>Révision espacée : les questions dues, toutes catégories confondues, dans un ordre aléatoire.</summary>
+    public QuizSession ForReview(IEnumerable<Question> dueQuestions) =>
+        new(categoryId: null, unitId: null, Shuffle(dueQuestions).Select(Prepare).ToList());
+
     public QuizQuestion Prepare(Question question) => question switch
     {
         ChoiceQuestion q => PrepareChoice(q),

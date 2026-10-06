@@ -3,6 +3,8 @@ using QuizzWare.Core.Models;
 
 namespace QuizzWare.Core.Content;
 
+public sealed record QuestionLocation(Category Category, IQuizUnit Unit, Question Question);
+
 /// <summary>Accès en lecture seule aux catégories, chapitres, leçons et défis.</summary>
 public sealed class ContentRepository
 {
@@ -15,13 +17,24 @@ public sealed class ContentRepository
     };
 
     private readonly Dictionary<string, Category> _byId;
+    private readonly Dictionary<string, QuestionLocation> _questions;
 
     public ContentRepository(IEnumerable<Category> categories)
     {
         Categories = categories.OrderBy(c => c.Order).ToList();
         ContentValidator.Validate(Categories);
         _byId = Categories.ToDictionary(c => c.Id);
+        _questions = Categories
+            .SelectMany(c => c.AllChapters.SelectMany(Units).Select(u => (Category: c, Unit: u)))
+            .SelectMany(x => x.Unit.Questions.Select(q => new QuestionLocation(x.Category, x.Unit, q)))
+            .ToDictionary(l => l.Question.Id);
     }
+
+    private static IEnumerable<IQuizUnit> Units(Chapter chapter) =>
+        chapter.Challenge is { } challenge ? chapter.Lessons.Append<IQuizUnit>(challenge) : chapter.Lessons;
+
+    /// <summary>Retrouve une question (et sa catégorie, sa leçon ou son défi) : utile aux révisions, qui mélangent les catégories.</summary>
+    public QuestionLocation? FindQuestion(string questionId) => _questions.GetValueOrDefault(questionId);
 
     public IReadOnlyList<Category> Categories { get; }
 

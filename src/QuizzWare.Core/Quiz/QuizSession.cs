@@ -4,11 +4,22 @@ namespace QuizzWare.Core.Quiz;
 
 public sealed record AnswerResult(bool IsCorrect, string Explanation, int XpEarned);
 
-/// <param name="UnitId">Leçon ou défi joué ; null pour un entraînement.</param>
-public sealed record QuizResult(string CategoryId, string? UnitId, int TotalQuestions, int CorrectAnswers, int XpEarned)
+/// <summary>Résultat d'une question : alimente la révision espacée et, pour une révision, l'XP de chaque catégorie.</summary>
+public sealed record QuestionOutcome(string QuestionId, bool IsCorrect, int XpEarned);
+
+/// <param name="CategoryId">Catégorie jouée ; null pour une session de révision, qui mélange les catégories.</param>
+/// <param name="UnitId">Leçon ou défi joué ; null pour un entraînement ou une révision.</param>
+public sealed record QuizResult(
+    string? CategoryId,
+    string? UnitId,
+    int TotalQuestions,
+    int CorrectAnswers,
+    int XpEarned,
+    IReadOnlyList<QuestionOutcome>? Outcomes = null)
 {
     public bool IsPerfect => TotalQuestions > 0 && CorrectAnswers == TotalQuestions;
     public int ScorePercent => TotalQuestions == 0 ? 0 : CorrectAnswers * 100 / TotalQuestions;
+    public bool IsReview => CategoryId is null;
 }
 
 /// <summary>Déroulement d'un quizz : une réponse par question, dans l'ordre.</summary>
@@ -16,7 +27,8 @@ public sealed class QuizSession
 {
     private readonly List<AnswerResult> _answers = [];
 
-    public QuizSession(string categoryId, string? unitId, IReadOnlyList<QuizQuestion> questions)
+    /// <param name="categoryId">null pour une session de révision.</param>
+    public QuizSession(string? categoryId, string? unitId, IReadOnlyList<QuizQuestion> questions)
     {
         if (questions.Count == 0)
             throw new ArgumentException("Un quizz doit contenir au moins une question.", nameof(questions));
@@ -26,7 +38,8 @@ public sealed class QuizSession
         Questions = questions;
     }
 
-    public string CategoryId { get; }
+    public string? CategoryId { get; }
+    public bool IsReview => CategoryId is null;
     public string? UnitId { get; }
     public IReadOnlyList<QuizQuestion> Questions { get; }
     public int CurrentIndex { get; private set; }
@@ -63,9 +76,12 @@ public sealed class QuizSession
 
         var correct = CorrectCount;
         var xp = _answers.Sum(a => a.XpEarned);
-        if (correct == Questions.Count)
+
+        // Le bonus sans faute récompense une leçon ou un entraînement, pas une révision (dont l'XP est répartie par catégorie).
+        if (correct == Questions.Count && !IsReview)
             xp += LevelSystem.PerfectQuizBonus;
 
-        return new QuizResult(CategoryId, UnitId, Questions.Count, correct, xp);
+        var outcomes = Questions.Zip(_answers, (q, a) => new QuestionOutcome(q.Source.Id, a.IsCorrect, a.XpEarned)).ToList();
+        return new QuizResult(CategoryId, UnitId, Questions.Count, correct, xp, outcomes);
     }
 }
