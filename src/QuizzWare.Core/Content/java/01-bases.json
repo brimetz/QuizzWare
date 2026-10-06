@@ -7,19 +7,452 @@
       "id": "java-types",
       "title": "Types primitifs et objets",
       "summary": "int, Integer et autoboxing.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Primitifs et objets",
+          "body": "Java a huit types primitifs (int, long, double, float, boolean, char, byte, short), qui contiennent directement une valeur et ne peuvent pas valoir null. Tout le reste est un objet, manipulé par référence. Chaque primitif a une classe d'emballage (Integer, Long...) utilisée dans les collections : List<Integer>, jamais List<int>."
+        },
+        {
+          "title": "L'autoboxing et ses pièges",
+          "body": "Java convertit automatiquement int en Integer et inversement. Mais == entre deux Integer compare des références : il fonctionne « par hasard » entre -128 et 127 (valeurs mises en cache), puis échoue. Et convertir un Integer null en int lève une NullPointerException.",
+          "code": "Integer a = 127, b = 127;\na == b;        // true (cache)\nInteger c = 128, d = 128;\nc == d;        // false !\nc.equals(d);   // true"
+        },
+        {
+          "title": "Calculs entiers",
+          "body": "La division entre deux int est entière (7 / 2 vaut 3). Un dépassement est silencieux : Integer.MAX_VALUE + 1 donne la plus petite valeur négative. Math.addExact lève une exception à la place. Un littéral trop grand pour un int doit porter le suffixe L."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-types-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Integer a = 127, b = 127;\nInteger c = 128, d = 128;\nSystem.out.println((a == b) + \" \" + (c == d));",
+          "choices": [
+            "true false",
+            "true true",
+            "false false",
+            "false true"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les Integer de -128 à 127 sont mis en cache : a et b désignent le même objet. 128 crée deux objets distincts. Il faut comparer avec equals.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-types-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int max = Integer.MAX_VALUE;\nSystem.out.println(max + 1);",
+          "choices": [
+            "-2147483648",
+            "2147483648",
+            "Une ArithmeticException",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le dépassement d'un int est silencieux : la valeur « fait le tour » vers le minimum. Math.addExact(max, 1) lèverait une ArithmeticException.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-types-q3",
+          "prompt": "Ce code lève NullPointerException. Touche la ligne fautive.",
+          "code": "Map<String, Integer> stock = new HashMap<>();\nstock.put(\"poire\", 3);\nint quantite = stock.get(\"pomme\");",
+          "bugLines": [
+            3
+          ],
+          "explanation": "get renvoie null pour une clé absente, et convertir null en int lève une NullPointerException. stock.getOrDefault(\"pomme\", 0) évite le problème.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-types-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "System.out.println(7 / 2 + \" \" + 7 / 2.0);",
+          "choices": [
+            "3 3.5",
+            "3.5 3.5",
+            "3 3",
+            "3.5 3"
+          ],
+          "answerIndex": 0,
+          "explanation": "7 / 2 est une division entière ; il suffit qu'un opérande soit un double pour obtenir 3.5.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-types-q5",
+          "prompt": "Complète : ce nombre ne tient pas dans un int.",
+          "code": "long population = 8_000_000_000___;",
+          "answers": [
+            "L"
+          ],
+          "distractors": [
+            "f",
+            "d",
+            "i"
+          ],
+          "explanation": "Sans suffixe, un littéral entier est un int : 8 milliards dépasse sa capacité et ne compile pas. Le suffixe L en fait un long.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-types-q6",
+          "prompt": "Comment comparer correctement deux variables de type Integer ?",
+          "choices": [
+            "Avec equals (ou Objects.equals si l'une peut être null)",
+            "Avec ==",
+            "Avec ===",
+            "Avec compareTo == true"
+          ],
+          "answerIndex": 0,
+          "explanation": "== compare les références des objets. equals compare les valeurs ; Objects.equals(a, b) gère en plus le cas null.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "java-types-q7",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Un int ne peut pas valoir null",
+            "List<int> n'est pas valide : il faut List<Integer>",
+            "char est un type numérique sur 16 bits",
+            "String est un type primitif"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "String est une classe, même si elle bénéficie d'une syntaxe littérale. char contient un code UTF-16 : 'a' + 1 vaut 98.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "java-classes",
       "title": "Classes et objets",
       "summary": "Constructeurs et static.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Classes et constructeurs",
+          "body": "Les champs sont privés, et on expose des méthodes. Un constructeur porte le nom de la classe ; this désigne l'objet courant. Si aucun constructeur n'est écrit, Java en fournit un sans paramètre, mais plus du tout dès qu'on en déclare un.",
+          "code": "public class Compte {\n    private final String titulaire;\n    private double solde;\n\n    public Compte(String titulaire) {\n        this.titulaire = titulaire;\n    }\n}"
+        },
+        {
+          "title": "static et final",
+          "body": "static attache un champ ou une méthode à la classe, partagé par toutes les instances. final interdit la réaffectation d'un champ ou d'une variable. Une constante s'écrit public static final int MAX = 10;."
+        },
+        {
+          "title": "Passage par valeur",
+          "body": "Java passe toujours les arguments par valeur. Pour un objet, c'est la référence qui est copiée : la méthode peut modifier l'objet, mais réaffecter le paramètre n'a aucun effet chez l'appelant."
+        },
+        {
+          "title": "Visibilité",
+          "body": "private : la classe seule. Sans modificateur : le même package. protected : le package et les sous-classes. public : tout le monde."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-classes-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "static void modifier(StringBuilder sb, int n) {\n    sb.append(\"!\");\n    n++;\n    sb = new StringBuilder(\"autre\");\n}\n\nStringBuilder s = new StringBuilder(\"ok\");\nint x = 1;\nmodifier(s, x);\nSystem.out.println(s + \" \" + x);",
+          "choices": [
+            "ok! 1",
+            "autre 1",
+            "ok! 2",
+            "ok 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "La méthode reçoit une copie de la référence : append modifie l'objet partagé, mais la réaffectation de sb ne touche que la copie locale. n est une copie de x.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-classes-q2",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "class Point {\n    int x, y;\n    Point(int x, int y) { this.x = x; this.y = y; }\n}\n\nPoint p = new Point();",
+          "choices": [
+            "Erreur de compilation : aucun constructeur sans paramètre",
+            "p vaut (0, 0)",
+            "p vaut null",
+            "NullPointerException"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le constructeur par défaut n'est généré que si la classe n'en déclare aucun.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "java-classes-q3",
+          "prompt": "Le solde vaut toujours 0 après la construction. Touche la ligne fautive.",
+          "code": "class Compte {\n    private double solde;\n\n    Compte(double solde) {\n        solde = solde;\n    }\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Le paramètre solde masque le champ : la ligne affecte le paramètre à lui-même. Il faut this.solde = solde;.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-classes-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "class Objet {\n    static int compteur = 0;\n    Objet() { compteur++; }\n}\n\nnew Objet();\nnew Objet();\nSystem.out.println(Objet.compteur);",
+          "choices": [
+            "2",
+            "1",
+            "0",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "compteur est static : un seul compteur partagé par toute la classe, incrémenté par chaque constructeur.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-classes-q5",
+          "prompt": "Complète cette constante de classe.",
+          "code": "public ___ ___ int MAX_ESSAIS = 3;",
+          "answers": [
+            "static",
+            "final"
+          ],
+          "distractors": [
+            "const",
+            "readonly",
+            "var"
+          ],
+          "explanation": "static : partagée par la classe ; final : jamais réaffectée. const est réservé en Java mais inutilisé ; readonly est du C#.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "java-classes-q6",
+          "prompt": "Quelles affirmations sur la visibilité sont vraies ?",
+          "choices": [
+            "private : accessible uniquement dans la classe",
+            "Sans modificateur : accessible dans le même package",
+            "protected : accessible aux sous-classes (et au package)",
+            "Rendre les champs public est la bonne pratique"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les champs restent privés : l'objet contrôle ses invariants via ses méthodes. Exposer les champs empêche de changer l'implémentation plus tard.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "java-strings",
       "title": "Chaînes",
       "summary": "String immuable, StringBuilder et equals.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "equals, pas ==",
+          "body": "== compare les références. Les littéraux identiques partagent souvent le même objet (pool de chaînes), ce qui rend == trompeur : il marche avec deux littéraux, puis échoue avec une chaîne lue depuis une base ou un fichier. On compare toujours avec equals ; écrire \"admin\".equals(role) évite en plus une NullPointerException si role est null.",
+          "code": "String a = \"java\";\nString c = new String(\"java\");\na == c;         // false\na.equals(c);    // true"
+        },
+        {
+          "title": "Immuable",
+          "body": "Une String ne change jamais : toUpperCase, replace ou trim renvoient une nouvelle chaîne. Pour construire une chaîne dans une boucle, on utilise StringBuilder ; String.join assemble une liste avec un séparateur."
+        },
+        {
+          "title": "Les pièges de split",
+          "body": "split prend une expression régulière : \"a.b.c\".split(\".\") ne donne pas trois morceaux, car le point signifie « n'importe quel caractère ». Il faut échapper : split(\"\\\\.\")."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-strings-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "String a = \"java\";\nString b = \"java\";\nString c = new String(\"java\");\nSystem.out.println((a == b) + \" \" + (a == c)\n    + \" \" + a.equals(c));",
+          "choices": [
+            "true false true",
+            "true true true",
+            "false false true",
+            "true false false"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux littéraux sont le même objet du pool de chaînes. new String crée un objet distinct : == est faux, mais equals compare bien le contenu.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-strings-q2",
+          "prompt": "L'administrateur n'est jamais autorisé. Touche la ligne fautive.",
+          "code": "String role = lireRole(); // lu depuis la base\nif (role == \"admin\") {\n    autoriser();\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "La chaîne lue depuis la base est un autre objet que le littéral : == est faux. Il faut \"admin\".equals(role).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-strings-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "String[] parties = \"a.b.c\".split(\".\");\nSystem.out.println(parties.length);",
+          "choices": [
+            "0",
+            "3",
+            "5",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le point est un métacaractère d'expression régulière : chaque caractère est un séparateur. On obtient uniquement des chaînes vides finales, que split supprime. Il faut split(\"\\\\.\").",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "java-strings-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "String s = \"java\";\ns.toUpperCase();\nSystem.out.println(s);",
+          "choices": [
+            "java",
+            "JAVA",
+            "Erreur de compilation",
+            "null"
+          ],
+          "answerIndex": 0,
+          "explanation": "toUpperCase renvoie une nouvelle chaîne, ignorée ici. Il faut s = s.toUpperCase();.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-strings-q5",
+          "prompt": "Complète pour assembler les lignes efficacement.",
+          "code": "StringBuilder sb = new ___();\nfor (String ligne : lignes) {\n    sb.___(ligne).append('\\n');\n}\nString texte = sb.toString();",
+          "answers": [
+            "StringBuilder",
+            "append"
+          ],
+          "distractors": [
+            "String",
+            "add",
+            "concat"
+          ],
+          "explanation": "StringBuilder ajoute dans un tampon modifiable ; append renvoie le StringBuilder, ce qui permet d'enchaîner les appels.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-strings-q6",
+          "prompt": "Pourquoi écrire \"admin\".equals(role) plutôt que role.equals(\"admin\") ?",
+          "choices": [
+            "Pas de NullPointerException si role vaut null",
+            "C'est plus rapide",
+            "equals ne fonctionne que sur les littéraux",
+            "Pour éviter la sensibilité à la casse"
+          ],
+          "answerIndex": 0,
+          "explanation": "Appeler une méthode sur null lève une NullPointerException ; le littéral, lui, n'est jamais null. Objects.equals(role, \"admin\") est une autre option.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "java-defi-bases",
+    "title": "Défi entretien : bases du langage",
+    "summary": "Autoboxing, chaînes et code idiomatique.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "java-defi1-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "System.out.println('a' + 1 + \"\" + 'a' + 1);",
+        "choices": [
+          "98a1",
+          "a1a1",
+          "b\"\"a1",
+          "98981"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'évaluation va de gauche à droite : 'a' + 1 est une addition numérique (97 + 1 = 98). Une fois une chaîne apparue, + concatène : \"98\" + 'a' + 1 donne \"98a1\".",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "java-defi1-q2",
+        "prompt": "Cas pratique 1/3 — memeClient(1000L, 1000L) renvoie false. Touche la ligne fautive.",
+        "code": "public boolean memeClient(Long id1, Long id2) {\n    return id1 == id2;\n}",
+        "bugLines": [
+          2
+        ],
+        "explanation": "== compare les références des deux objets Long, et non leurs valeurs.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi1-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi les tests passaient-ils avec des identifiants comme 1, 2 ou 42 ?",
+        "choices": [
+          "Les Long de -128 à 127 sont mis en cache : ce sont les mêmes objets",
+          "Les petits nombres sont des primitifs",
+          "== compare les valeurs pour les petits nombres",
+          "La JVM optimise les tests unitaires"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le bug n'apparaît qu'en production, avec de vrais identifiants. C'est pourquoi on compare toujours des objets avec equals.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "java-defi1-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version correcte, qui gère aussi null.",
+        "code": "public boolean memeClient(Long id1, Long id2) {\n    return ___.equals(id1, id2);\n}",
+        "answers": [
+          "Objects"
+        ],
+        "distractors": [
+          "Long",
+          "Object",
+          "Arrays"
+        ],
+        "explanation": "java.util.Objects.equals compare avec equals, et renvoie true si les deux valent null, sans NullPointerException.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "java-defi1-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "public String formater(List<String> noms) {\n    String res = \"\";\n    for (int i = 0; i < noms.size(); i++) {\n        res += noms.get(i);\n        if (i < noms.size() - 1) res += \", \";\n    }\n    return res;\n}",
+        "choices": [
+          "+= dans la boucle crée une nouvelle chaîne à chaque tour",
+          "String.join(\", \", noms) fait tout en une ligne",
+          "Avec une LinkedList, get(i) parcourt la liste à chaque appel",
+          "size() est recalculé en parcourant la liste à chaque tour"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "size() est en O(1) dans toutes les listes standard. Mais get(i) est en O(n) pour une LinkedList : la boucle devient quadratique. Une boucle for-each ou String.join évitent ces pièges.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi1-q6",
+        "prompt": "En entretien : pourquoi String est-elle immuable en Java ?",
+        "choices": [
+          "Pour pouvoir partager les chaînes sans risque : clés de HashMap fiables, pool de chaînes, sûreté entre threads",
+          "Pour économiser des octets",
+          "Parce que Java ne sait pas modifier un tableau de char",
+          "Pour accélérer la concaténation"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une chaîne utilisée comme clé ne peut pas changer de hash ; le hash est même mis en cache. Elle peut être partagée par plusieurs threads ou dans le pool sans copie.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

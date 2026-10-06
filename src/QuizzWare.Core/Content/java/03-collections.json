@@ -7,19 +7,450 @@
       "id": "java-collections",
       "title": "Le framework Collections",
       "summary": "Choisir la bonne collection.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les grandes familles",
+          "body": "List : séquence ordonnée (ArrayList par défaut). Set : éléments uniques (HashSet sans ordre, LinkedHashSet dans l'ordre d'insertion, TreeSet trié). Map : clé → valeur (HashMap, LinkedHashMap, TreeMap). Deque : pile ou file (ArrayDeque). On déclare la variable avec l'interface : List<String> noms = new ArrayList<>();."
+        },
+        {
+          "title": "Collections non modifiables",
+          "body": "List.of, Set.of et Map.of (Java 9) créent des collections immuables : toute modification lève UnsupportedOperationException. Arrays.asList renvoie une liste de taille fixe : on peut remplacer un élément, pas en ajouter."
+        },
+        {
+          "title": "Modifier pendant un parcours",
+          "body": "Retirer un élément d'une collection pendant un for-each lève ConcurrentModificationException. On utilise removeIf, ou explicitement un Iterator et sa méthode remove.",
+          "code": "noms.removeIf(String::isEmpty);\n\nMap<String, Integer> compte = new HashMap<>();\nfor (String mot : mots)\n    compte.merge(mot, 1, Integer::sum);"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-collections-q1",
+          "prompt": "Quelle implémentation de List choisir par défaut ?",
+          "choices": [
+            "ArrayList",
+            "LinkedList",
+            "Vector",
+            "Stack"
+          ],
+          "answerIndex": 0,
+          "explanation": "ArrayList offre un accès par indice en O(1) et un parcours rapide (mémoire contiguë). LinkedList est rarement plus rapide en pratique ; Vector et Stack sont d'anciennes classes synchronisées.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-collections-q2",
+          "prompt": "Que se passe-t-il ?",
+          "code": "List<String> l = Arrays.asList(\"a\", \"b\");\nl.add(\"c\");",
+          "choices": [
+            "UnsupportedOperationException : la liste a une taille fixe",
+            "l contient a, b, c",
+            "Erreur de compilation",
+            "IndexOutOfBoundsException"
+          ],
+          "answerIndex": 0,
+          "explanation": "Arrays.asList est une vue de taille fixe sur un tableau. Pour une liste modifiable : new ArrayList<>(Arrays.asList(...)).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-collections-q3",
+          "prompt": "Ce code lève ConcurrentModificationException (ou, selon la position de l'élément retiré, s'arrête trop tôt). Touche la ligne fautive.",
+          "code": "for (String nom : noms) {\n    if (nom.isEmpty()) noms.remove(nom);\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "La boucle for-each utilise un itérateur, que la suppression directe invalide. Piège dans le piège : si l'élément retiré est l'avant-dernier, la boucle s'arrête sans exception... et le dernier élément n'est jamais examiné. noms.removeIf(String::isEmpty) fait le travail correctement.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-collections-q4",
+          "prompt": "Complète pour retirer les noms vides.",
+          "code": "noms.___(String::isEmpty);",
+          "answers": [
+            "removeIf"
+          ],
+          "distractors": [
+            "filter",
+            "deleteIf",
+            "removeAll"
+          ],
+          "explanation": "removeIf (Java 8) retire tous les éléments qui vérifient le prédicat. filter existe sur les streams, et produit une nouvelle séquence au lieu de modifier la liste.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-collections-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Map<String, Integer> m = new TreeMap<>();\nm.put(\"pomme\", 1);\nm.put(\"ananas\", 2);\nm.put(\"kiwi\", 3);\nSystem.out.println(m.keySet());",
+          "choices": [
+            "[ananas, kiwi, pomme]",
+            "[pomme, ananas, kiwi]",
+            "Un ordre imprévisible",
+            "[1, 2, 3]"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une TreeMap garde ses clés triées. Une LinkedHashMap conserverait l'ordre d'insertion ; une HashMap ne garantit aucun ordre.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-collections-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Map<String, Integer> compte = new HashMap<>();\nfor (String m : \"a b a\".split(\" \"))\n    compte.merge(m, 1, Integer::sum);\nSystem.out.println(compte.get(\"a\"));",
+          "choices": [
+            "2",
+            "1",
+            "null",
+            "3"
+          ],
+          "answerIndex": 0,
+          "explanation": "merge insère 1 si la clé est absente, sinon combine l'ancienne valeur et 1 avec Integer::sum : un compteur en une ligne.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "java-collections-q7",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Un HashSet ne garantit aucun ordre",
+            "Une LinkedHashMap conserve l'ordre d'insertion",
+            "ArrayDeque convient comme pile et comme file",
+            "Une HashMap trie ses clés"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "C'est TreeMap qui trie ses clés (en O(log n)). ArrayDeque remplace avantageusement Stack et LinkedList pour les piles et les files.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "java-equals-hashcode",
       "title": "equals et hashCode",
       "summary": "Le contrat à respecter.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le contrat",
+          "body": "Par défaut, equals compare les références. Pour comparer des valeurs, on redéfinit equals(Object) et hashCode ensemble : deux objets égaux doivent avoir le même hashCode, sinon HashMap et HashSet ne les retrouvent pas. L'inverse n'est pas exigé : des collisions sont possibles.",
+          "code": "@Override\npublic boolean equals(Object o) {\n    if (this == o) return true;\n    if (!(o instanceof Point p)) return false;\n    return x == p.x && y == p.y;\n}\n\n@Override\npublic int hashCode() { return Objects.hash(x, y); }"
+        },
+        {
+          "title": "Le piège de la signature",
+          "body": "equals(Point autre) ne redéfinit pas equals(Object) : c'est une surcharge, ignorée par les collections, qui appellent equals(Object). @Override détecte cette erreur."
+        },
+        {
+          "title": "Des clés immuables",
+          "body": "Si un champ utilisé par hashCode change pendant que l'objet est dans un HashSet ou sert de clé de HashMap, l'objet devient introuvable. On base l'égalité sur des valeurs qui ne changent pas, et les records génèrent equals et hashCode correctement."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-equals-q1",
+          "prompt": "Point redéfinit equals (comparaison de x et y), mais pas hashCode. Qu'affiche ce code ?",
+          "code": "Set<Point> s = new HashSet<>();\ns.add(new Point(1, 2));\nSystem.out.println(s.contains(new Point(1, 2)));",
+          "choices": [
+            "false (en pratique)",
+            "true",
+            "Une erreur de compilation",
+            "NullPointerException"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans hashCode redéfini, chaque objet a un hash lié à son identité : le HashSet cherche dans le mauvais compartiment et n'appelle même pas equals.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-equals-q2",
+          "prompt": "liste.contains(new Point(1, 2)) renvoie false, alors que la liste contient ce point. Touche la ligne fautive.",
+          "code": "class Point {\n    int x, y;\n    public boolean equals(Point autre) {\n        return x == autre.x && y == autre.y;\n    }\n    @Override\n    public int hashCode() { return Objects.hash(x, y); }\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "equals(Point) est une surcharge : contains appelle equals(Object), hérité d'Object, qui compare les références. La signature doit être equals(Object o), avec @Override.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "java-equals-q3",
+          "prompt": "Si a.equals(b) est vrai, que doit-on avoir ?",
+          "choices": [
+            "a.hashCode() == b.hashCode()",
+            "a == b",
+            "a.hashCode() != b.hashCode()",
+            "Rien de particulier"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la règle centrale du contrat. Deux hashCode égaux, en revanche, n'impliquent pas l'égalité (collision).",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-equals-q4",
+          "prompt": "Complète un hashCode cohérent avec un equals qui compare x et y.",
+          "code": "@Override\npublic int hashCode() {\n    return ___.hash(x, y);\n}",
+          "answers": [
+            "Objects"
+          ],
+          "distractors": [
+            "Arrays",
+            "Integer",
+            "Math"
+          ],
+          "explanation": "java.util.Objects.hash combine les hash des champs. Il doit utiliser exactement les champs comparés par equals.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-equals-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Set<List<Integer>> s = new HashSet<>();\nList<Integer> l = new ArrayList<>(List.of(1));\ns.add(l);\nl.add(2);\nSystem.out.println(s.contains(l));",
+          "choices": [
+            "false",
+            "true",
+            "ConcurrentModificationException",
+            "UnsupportedOperationException"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le hash d'une liste dépend de son contenu. Après l'ajout, le HashSet cherche dans le compartiment du nouveau hash, alors que la liste est rangée sous l'ancien.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "java-equals-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Deux objets égaux doivent avoir le même hashCode",
+            "Deux objets de même hashCode ne sont pas forcément égaux",
+            "x.equals(null) doit renvoyer false",
+            "Redéfinir equals suffit pour qu'un objet fonctionne comme clé de HashMap"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "HashMap utilise d'abord hashCode pour trouver le compartiment, puis equals pour départager : il faut redéfinir les deux.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "java-streams",
       "title": "Streams",
       "summary": "map, filter et collect.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le pipeline",
+          "body": "Un stream enchaîne des opérations intermédiaires (filter, map, sorted...) et se termine par une opération terminale (collect, toList, count, forEach...). Les opérations intermédiaires sont paresseuses : rien ne s'exécute avant l'opération terminale.",
+          "code": "List<String> actifs = clients.stream()\n    .filter(Client::actif)\n    .map(Client::email)\n    .sorted()\n    .toList();   // Java 16, non modifiable"
+        },
+        {
+          "title": "Usage unique",
+          "body": "Un stream ne se parcourt qu'une fois : le réutiliser lève IllegalStateException. On repart de la source (clients.stream()) pour un second traitement."
+        },
+        {
+          "title": "Collectors",
+          "body": "groupingBy regroupe (avec un collecteur en aval comme counting), joining assemble des chaînes, toMap construit une Map mais lève IllegalStateException en cas de clé en double, sauf si on fournit une fonction de fusion.",
+          "code": "Map<String, Long> parVille = clients.stream()\n    .collect(Collectors.groupingBy(\n        Client::ville, Collectors.counting()));"
+        },
+        {
+          "title": "Streams de primitifs",
+          "body": "IntStream, LongStream et DoubleStream évitent l'autoboxing et offrent sum, average, max... range(a, b) exclut b, rangeClosed(a, b) l'inclut."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-streams-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "List<String> r = Stream.of(\"kiwi\", \"pomme\",\n        \"ananas\", \"figue\")\n    .filter(f -> f.length() > 4)\n    .map(String::toUpperCase)\n    .sorted()\n    .collect(Collectors.toList());\nSystem.out.println(r);",
+          "choices": [
+            "[ANANAS, FIGUE, POMME]",
+            "[POMME, ANANAS, FIGUE]",
+            "[KIWI, POMME, ANANAS, FIGUE]",
+            "[ananas, figue, pomme]"
+          ],
+          "answerIndex": 0,
+          "explanation": "kiwi est écarté (4 lettres), les autres passent en majuscules, puis sont triés par ordre alphabétique.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-streams-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Stream.of(1, 2, 3)\n    .peek(System.out::println)\n    .map(x -> x * 2);",
+          "choices": [
+            "Rien",
+            "1 2 3",
+            "2 4 6",
+            "1 2 3 puis 2 4 6"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans opération terminale, le pipeline est seulement décrit, jamais exécuté.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-streams-q3",
+          "prompt": "Ce code lève IllegalStateException. Touche la ligne fautive.",
+          "code": "Stream<String> noms = clients.stream()\n    .map(Client::nom);\nlong n = noms.count();\nList<String> liste = noms.collect(Collectors.toList());",
+          "bugLines": [
+            4
+          ],
+          "explanation": "count a déjà consommé le stream. Il faut en créer un second à partir de clients, ou collecter la liste d'abord et utiliser liste.size().",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "java-streams-q4",
+          "prompt": "Complète : compter les clients par ville.",
+          "code": "Map<String, Long> parVille = clients.stream()\n    .collect(Collectors.___(\n        Client::ville, Collectors.___()));",
+          "answers": [
+            "groupingBy",
+            "counting"
+          ],
+          "distractors": [
+            "toMap",
+            "sum",
+            "groupBy"
+          ],
+          "explanation": "groupingBy regroupe par ville, et le collecteur en aval counting compte les éléments de chaque groupe (en Long).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-streams-q5",
+          "prompt": "Que se passe-t-il ?",
+          "code": "Map<Character, String> m = Stream.of(\"ana\", \"anne\")\n    .collect(Collectors.toMap(\n        s -> s.charAt(0), s -> s));",
+          "choices": [
+            "IllegalStateException : clé en double 'a'",
+            "m contient {a=anne}",
+            "m contient {a=ana}",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "toMap refuse les clés en double par défaut. Un troisième argument choisit la fusion : toMap(k, v, (ancien, nouveau) -> nouveau).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-streams-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "System.out.println(IntStream.rangeClosed(1, 4)\n    .map(x -> x * x)\n    .sum());",
+          "choices": [
+            "30",
+            "14",
+            "10",
+            "20"
+          ],
+          "answerIndex": 0,
+          "explanation": "rangeClosed inclut 4 : 1 + 4 + 9 + 16 = 30. Avec range(1, 4), on aurait 14.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "java-defi-collections",
+    "title": "Défi entretien : collections",
+    "summary": "HashMap, clés mutables et streams.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "java-defi3-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "List<Integer> l = new ArrayList<>(List.of(1, 2, 3));\nl.remove(1);\nSystem.out.println(l);",
+        "choices": [
+          "[1, 3]",
+          "[2, 3]",
+          "[1, 2, 3]",
+          "IndexOutOfBoundsException"
+        ],
+        "answerIndex": 0,
+        "explanation": "remove(int) retire l'élément à l'indice 1 (la valeur 2). Pour retirer la valeur 1 : l.remove(Integer.valueOf(1)).",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "java-defi3-q2",
+        "prompt": "Cas pratique 1/3 — equals et hashCode de Client reposent sur l'e-mail. La dernière ligne affiche false. Touche la ligne en cause.",
+        "code": "Set<Client> vus = new HashSet<>();\nClient c = new Client(\"ana@x.fr\");\nvus.add(c);\nc.setEmail(\"ana@y.fr\");\nSystem.out.println(vus.contains(c));",
+        "bugLines": [
+          4
+        ],
+        "explanation": "Modifier l'e-mail change le hashCode d'un objet déjà rangé dans le HashSet.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi3-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi l'objet devient-il introuvable ?",
+        "choices": [
+          "Il est rangé dans le compartiment de son ancien hash, alors qu'on cherche avec le nouveau",
+          "HashSet copie les objets à l'insertion",
+          "setEmail supprime l'objet du HashSet",
+          "contains compare les références"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'entrée reste dans la table, mais au mauvais endroit : elle est désormais impossible à retrouver ou à retirer.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi3-q4",
+        "prompt": "Cas pratique 3/3 — Quelle est la bonne correction ?",
+        "choices": [
+          "Baser equals et hashCode sur un identifiant qui ne change jamais (ou rendre Client immuable)",
+          "Supprimer hashCode",
+          "Remplacer HashSet par ArrayList",
+          "Appeler vus.rehash() après chaque modification"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'égalité doit reposer sur des valeurs stables. Remplacer par une liste masquerait le problème au prix de recherches en O(n).",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "java-defi3-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "List<String> emails = new ArrayList<>();\nclients.stream()\n    .filter(c -> c.actif())\n    .forEach(c -> emails.add(c.email()));",
+        "choices": [
+          "Effet de bord dans forEach : collect ou toList sont faits pour produire une liste",
+          "Ce code deviendrait incorrect avec parallelStream()",
+          ".map(Client::email).toList() serait plus lisible",
+          "filter ne peut pas recevoir de lambda"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Avec un stream parallèle, plusieurs threads ajouteraient en même temps dans une ArrayList non synchronisée. clients.stream().filter(Client::actif).map(Client::email).toList() est sûr et clair.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi3-q6",
+        "prompt": "En entretien : comment fonctionne une HashMap ?",
+        "choices": [
+          "Un tableau de compartiments indexé par le hash de la clé ; equals départage les collisions ; O(1) en moyenne",
+          "Une liste triée de paires clé-valeur",
+          "Un arbre binaire de recherche équilibré",
+          "Une recherche séquentielle dans un tableau"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les collisions d'un compartiment forment une liste, transformée en arbre au-delà d'un seuil depuis Java 8. La table double de taille quand elle se remplit (facteur de charge 0,75).",
+        "difficulty": 2
+      }
+    ]
+  }
 }

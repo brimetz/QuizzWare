@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (52 écrits) | 332 (123 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (58 écrits) | 333 (138 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -626,26 +626,27 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Bases du langage
-   - Types primitifs et objets
-   - Classes et objets
-   - Chaînes
-2. 🕓 Orienté objet
-   - Héritage et interfaces
-   - Records et sealed classes
-3. 🕓 Collections et génériques
-   - Le framework Collections
-   - equals et hashCode
-   - Streams
-4. 🕓 Exceptions
-   - Exceptions
-5. 🕓 Concurrence
-   - Threads et synchronized
-   - Executors et CompletableFuture
-   - Virtual threads
-6. 🕓 La JVM
-   - Mémoire et garbage collectors
-   - Bytecode et JIT
+1. ✅ Bases du langage
+   - ✅ Types primitifs et objets
+   - ✅ Classes et objets
+   - ✅ Chaînes
+2. ✅ Orienté objet
+   - ✅ Héritage et interfaces
+   - ✅ Records et sealed classes
+3. ✅ Collections et génériques
+   - ✅ Le framework Collections
+   - ✅ equals et hashCode
+   - ✅ Streams
+4. ✅ Exceptions
+   - ✅ Exceptions
+   - ✅ Optional et null
+5. ✅ Concurrence
+   - ✅ Threads et synchronized
+   - ✅ Executors et CompletableFuture
+   - ✅ Virtual threads
+6. ✅ La JVM
+   - ✅ Mémoire et garbage collectors
+   - ✅ Bytecode et JIT
 
 **Spécialisations**
 

@@ -1,13 +1,353 @@
 {
   "id": "java-ch-exceptions",
   "title": "Exceptions",
-  "summary": "Checked et unchecked.",
+  "summary": "Checked, unchecked et Optional.",
   "lessons": [
     {
       "id": "java-exceptions",
       "title": "Exceptions",
       "summary": "try-with-resources et bonnes pratiques.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La hiérarchie",
+          "body": "Tout dérive de Throwable. Les Error (OutOfMemoryError...) signalent un problème grave de la JVM : on ne les attrape pas. Les exceptions « checked » (IOException...) doivent être attrapées ou déclarées avec throws. Les RuntimeException (NullPointerException, IllegalArgumentException...) sont « unchecked » : aucune obligation."
+        },
+        {
+          "title": "try, catch, finally",
+          "body": "Les catch sont testés dans l'ordre : un catch plus général placé avant un plus précis est une erreur de compilation. Un multi-catch traite plusieurs types : catch (IOException | SQLException e). finally s'exécute toujours, même après un return."
+        },
+        {
+          "title": "try-with-resources",
+          "body": "Toute ressource AutoCloseable déclarée dans les parenthèses du try est fermée automatiquement, dans l'ordre inverse de son ouverture, même en cas d'exception.",
+          "code": "try (BufferedReader r = Files.newBufferedReader(chemin)) {\n    return r.readLine();\n}   // r.close() est garanti"
+        },
+        {
+          "title": "Bonnes pratiques",
+          "body": "Ne jamais avaler une exception dans un catch vide. Pour traduire une exception technique en exception métier, on garde la cause : throw new ServiceException(\"...\", e). On attrape ce qu'on sait traiter, et on laisse remonter le reste."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-exceptions-q1",
+          "prompt": "Une méthode appelle Files.readString(chemin), qui peut lever IOException. Que doit-elle faire ?",
+          "choices": [
+            "L'attraper, ou la déclarer avec throws IOException",
+            "Rien : les exceptions sont facultatives en Java",
+            "L'attraper obligatoirement avec catch (Exception e)",
+            "La transformer en Error"
+          ],
+          "answerIndex": 0,
+          "explanation": "IOException est checked : le compilateur exige qu'elle soit traitée ou déclarée. Une RuntimeException n'aurait pas cette exigence.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-exceptions-q2",
+          "prompt": "Que se passe-t-il ?",
+          "code": "try { lire(); }\ncatch (Exception e) { journaliser(e); }\ncatch (IOException e) { reessayer(); }",
+          "choices": [
+            "Erreur de compilation : IOException est déjà attrapée par le catch précédent",
+            "Une IOException est traitée par le second catch",
+            "Les deux catch s'exécutent pour une IOException",
+            "Un avertissement seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "IOException dérive d'Exception : le second catch est inatteignable. Le catch le plus précis doit venir en premier.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "java-exceptions-q3",
+          "prompt": "Complète pour que le fichier soit toujours fermé.",
+          "code": "___ (BufferedReader r = Files.newBufferedReader(chemin)) {\n    return r.readLine();\n}",
+          "answers": [
+            "try"
+          ],
+          "distractors": [
+            "using",
+            "with",
+            "finally"
+          ],
+          "explanation": "try-with-resources appelle close() à la sortie du bloc, quelle qu'elle soit. using est l'équivalent en C#, with en Python.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-exceptions-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "static int f() {\n    try { return 1; }\n    finally { System.out.println(\"finally\"); }\n}\n\nSystem.out.println(f());",
+          "choices": [
+            "finally puis 1",
+            "1 puis finally",
+            "1",
+            "finally"
+          ],
+          "answerIndex": 0,
+          "explanation": "La valeur de retour est préparée, puis finally s'exécute avant que la méthode ne rende la main ; l'appelant affiche ensuite 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-exceptions-q5",
+          "prompt": "Des commandes sont confirmées alors que le paiement a échoué. Touche une ligne en cause.",
+          "code": "try {\n    paiement.debiter(montant);\n} catch (Exception e) {\n    // ignoré\n}\nconfirmerCommande();",
+          "bugLines": [
+            3,
+            4
+          ],
+          "explanation": "Le catch vide avale l'échec : le programme continue comme si le paiement avait réussi. Il faut traiter l'erreur (annuler, prévenir) ou la laisser remonter.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "java-exceptions-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "On n'attrape généralement pas les Error",
+            "NullPointerException est unchecked",
+            "Une méthode qui peut lever une exception checked doit la déclarer avec throws (ou l'attraper)",
+            "Une RuntimeException doit être déclarée avec throws"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les RuntimeException représentent en général des erreurs de programmation : aucune déclaration n'est exigée.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-exceptions-q7",
+          "prompt": "Complète pour garder la cause d'origine dans la trace.",
+          "code": "try {\n    return Files.readString(chemin);\n} catch (IOException e) {\n    throw new ServiceException(\"lecture impossible\", ___);\n}",
+          "answers": [
+            "e"
+          ],
+          "distractors": [
+            "null",
+            "e.getMessage()",
+            "this"
+          ],
+          "explanation": "Passer e comme cause conserve la trace complète de l'erreur d'origine (« Caused by: ... »). Ne passer que le message en perd l'essentiel.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "java-optional",
+      "title": "Optional et null",
+      "summary": "Exprimer l'absence de valeur.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le problème de null",
+          "body": "Une référence null utilisée lève une NullPointerException, souvent loin de l'endroit où le null est apparu. Depuis Java 14, le message indique précisément quelle expression valait null. Objects.requireNonNull valide un paramètre dès l'entrée d'une méthode."
+        },
+        {
+          "title": "Optional",
+          "body": "Optional<T> est un type de retour qui dit explicitement « il peut ne pas y avoir de résultat ». On le transforme avec map, on fournit une valeur de repli avec orElse ou orElseGet, ou on lève une exception avec orElseThrow.",
+          "code": "String nom = repo.trouver(id)\n    .map(Client::nom)\n    .orElse(\"inconnu\");\n\nClient c = repo.trouver(id)\n    .orElseThrow(() -> new ClientIntrouvable(id));"
+        },
+        {
+          "title": "orElse ou orElseGet",
+          "body": "L'argument de orElse est toujours évalué, même si l'Optional contient une valeur. orElseGet reçoit une fonction, appelée seulement si l'Optional est vide : à préférer pour une valeur de repli coûteuse."
+        },
+        {
+          "title": "Les mauvais usages",
+          "body": "Optional n'est pas fait pour les champs ni pour les paramètres. get() sans vérification revient à ignorer le problème. Et pour une collection, on renvoie une liste vide, pas un Optional<List> ni null."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-optional-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Optional<String> nom = Optional.of(\"ana\");\nSystem.out.println(\n    nom.map(String::toUpperCase).orElse(\"?\"));\nSystem.out.println(Optional.<String>empty()\n    .map(String::length).orElse(0));",
+          "choices": [
+            "ANA puis 0",
+            "ana puis 0",
+            "ANA puis ?",
+            "Optional[ANA] puis 0"
+          ],
+          "answerIndex": 0,
+          "explanation": "map transforme la valeur si elle est présente ; sur un Optional vide, il ne fait rien et orElse fournit la valeur de repli.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-optional-q2",
+          "prompt": "calculCouteux() est-il appelé ?",
+          "code": "String n = Optional.of(\"ana\")\n    .orElse(calculCouteux());",
+          "choices": [
+            "Oui : l'argument d'orElse est toujours évalué",
+            "Non : l'Optional contient une valeur",
+            "Seulement en mode debug",
+            "Seulement la première fois"
+          ],
+          "answerIndex": 0,
+          "explanation": "En Java, les arguments sont évalués avant l'appel. orElseGet(() -> calculCouteux()) ne l'appellerait que si l'Optional était vide.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-optional-q3",
+          "prompt": "Ce code lève NoSuchElementException quand le client n'existe pas. Touche la ligne fautive.",
+          "code": "Optional<Client> c = repo.trouver(id);\nSystem.out.println(c.get().nom());",
+          "bugLines": [
+            2
+          ],
+          "explanation": "get() sur un Optional vide lève une exception : c'est un null déguisé. On utilise map/orElse, ifPresent, ou orElseThrow avec une exception explicite.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-optional-q4",
+          "prompt": "Complète : lever une exception métier si le client n'existe pas.",
+          "code": "Client c = repo.trouver(id)\n    .___(() -> new ClientIntrouvable(id));",
+          "answers": [
+            "orElseThrow"
+          ],
+          "distractors": [
+            "orElse",
+            "get",
+            "ifPresent"
+          ],
+          "explanation": "orElseThrow renvoie la valeur, ou lève l'exception fournie par la fonction si l'Optional est vide.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-optional-q5",
+          "prompt": "Une recherche de commandes ne trouve rien. Que doit-elle renvoyer ?",
+          "choices": [
+            "Une liste vide",
+            "null",
+            "Optional.empty()",
+            "Lever une exception"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une collection vide exprime déjà l'absence de résultat, et l'appelant peut la parcourir sans aucun test. List.of() est une liste vide immuable.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "java-optional-q6",
+          "prompt": "Lesquels sont de mauvais usages d'Optional ?",
+          "choices": [
+            "Un champ Optional<String> dans une entité",
+            "Un paramètre de méthode de type Optional<Integer>",
+            "Le type de retour d'une recherche par identifiant",
+            "Appeler get() sans vérifier la présence"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Optional a été conçu pour les valeurs de retour. Comme paramètre, il complique les appels ; comme champ, il n'est pas sérialisable et alourdit l'objet.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "java-defi-exceptions",
+    "title": "Défi entretien : erreurs et null",
+    "summary": "Ressources, absence de valeur et API claires.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "java-defi4-q1",
+        "prompt": "R affiche « ouvre X » à sa construction et « ferme X » dans close(). Qu'affiche ce code ?",
+        "code": "try (R a = new R(\"A\"); R b = new R(\"B\")) {\n    System.out.print(\"corps \");\n}",
+        "choices": [
+          "ouvre A ouvre B corps ferme B ferme A",
+          "ouvre A ouvre B corps ferme A ferme B",
+          "ouvre A corps ferme A ouvre B ferme B",
+          "corps ouvre A ouvre B ferme B ferme A"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les ressources sont ouvertes dans l'ordre de déclaration et fermées dans l'ordre inverse, comme des destructeurs.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "java-defi4-q2",
+        "prompt": "Cas pratique 1/3 — Une NullPointerException survient bien plus loin, dans un tout autre fichier. Touche une ligne qui laisse passer le null.",
+        "code": "public Utilisateur charger(long id) {\n    Utilisateur u = repo.trouver(id); // peut renvoyer null\n    return u;\n}\n\n// ailleurs :\nString nom = charger(42).getNom().toUpperCase();",
+        "bugLines": [
+          2,
+          3
+        ],
+        "explanation": "charger renvoie null sans que sa signature le dise : rien n'oblige l'appelant à traiter ce cas.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi4-q3",
+        "prompt": "Cas pratique 2/3 — Quelle API est meilleure ?",
+        "choices": [
+          "Optional<Utilisateur> si l'absence est normale, ou une exception explicite si elle est anormale",
+          "Toujours renvoyer null et documenter",
+          "Renvoyer un Utilisateur vide",
+          "Attraper NullPointerException chez l'appelant"
+        ],
+        "answerIndex": 0,
+        "explanation": "La signature exprime le contrat : un Optional oblige l'appelant à décider quoi faire. Un objet « vide » cacherait le problème encore plus loin.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "java-defi4-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version avec Optional (repo.trouver peut toujours renvoyer null).",
+        "code": "public ___<Utilisateur> charger(long id) {\n    return Optional.___(repo.trouver(id));\n}",
+        "answers": [
+          "Optional",
+          "ofNullable"
+        ],
+        "distractors": [
+          "of",
+          "empty",
+          "List"
+        ],
+        "explanation": "ofNullable accepte null et produit un Optional vide. Le piège : Optional.of(null) lève immédiatement une NullPointerException.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "java-defi4-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "public void exporter(File f) throws Exception {\n    FileWriter w = new FileWriter(f);\n    w.write(contenu());\n    w.close();\n}",
+        "choices": [
+          "Si write lève une exception, le fichier n'est jamais fermé : il faut try-with-resources",
+          "throws Exception est trop large : l'appelant ne sait pas ce qui peut échouer",
+          "FileWriter ne peut pas écrire de texte",
+          "close() est appelé deux fois"
+        ],
+        "answerIndices": [
+          0,
+          1
+        ],
+        "explanation": "Version propre : try (Writer w = Files.newBufferedWriter(f.toPath())) { w.write(contenu()); }, avec throws IOException.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi4-q6",
+        "prompt": "En entretien : quand utiliser une exception checked plutôt qu'unchecked ?",
+        "choices": [
+          "Checked pour un échec prévisible que l'appelant peut traiter (fichier absent) ; unchecked pour une erreur de programmation",
+          "Toujours checked, c'est plus sûr",
+          "Toujours unchecked, les checked sont dépréciées",
+          "Checked uniquement dans les tests"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est la règle d'origine de Java. En pratique, beaucoup de bibliothèques modernes (Spring par exemple) préfèrent les exceptions unchecked, qui s'intègrent mieux aux lambdas et aux streams.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

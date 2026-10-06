@@ -7,13 +7,326 @@
       "id": "java-memoire",
       "title": "Mémoire et garbage collectors",
       "summary": "Heap, stack et GC.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La pile et le tas",
+          "body": "Chaque thread a sa pile : un cadre par appel de méthode, avec les variables locales (valeurs primitives et références). Les objets vivent dans le tas, partagé par tous les threads. Une récursion trop profonde épuise la pile : StackOverflowError. Un tas plein : OutOfMemoryError: Java heap space."
+        },
+        {
+          "title": "Un GC générationnel",
+          "body": "La plupart des objets meurent jeunes. Le tas est donc divisé en une jeune génération, collectée souvent et rapidement, et une ancienne génération où vont les survivants. Un objet est collectable dès qu'il n'est plus atteignable depuis les racines (piles des threads, champs static...)."
+        },
+        {
+          "title": "Les collecteurs",
+          "body": "G1 est le collecteur par défaut depuis Java 9 : un compromis entre débit et pauses. ZGC et Shenandoah visent des pauses de l'ordre de la milliseconde, même sur de très gros tas. Parallel privilégie le débit. La taille maximale du tas se règle avec -Xmx (par exemple -Xmx2g)."
+        },
+        {
+          "title": "Les fuites en Java",
+          "body": "Le GC ne libère pas un objet encore référencé. Les causes classiques : une collection static qui grandit sans limite, des écouteurs jamais retirés, un ThreadLocal jamais nettoyé dans un pool de threads. System.gc() n'est qu'une suggestion, et ne règle rien."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-memoire-q1",
+          "prompt": "Dans String s = new String(\"x\"); écrit dans une méthode, où se trouvent s et l'objet ?",
+          "choices": [
+            "La référence s est dans la pile du thread ; l'objet String est dans le tas",
+            "Les deux sont dans la pile",
+            "Les deux sont dans le tas",
+            "s est dans le tas, l'objet dans la pile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les variables locales vivent dans le cadre de la méthode ; les objets, dans le tas. (Le JIT peut parfois éviter l'allocation grâce à l'analyse d'échappement.)",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-memoire-q2",
+          "prompt": "Quelle est la cause typique d'une StackOverflowError ?",
+          "choices": [
+            "Une récursion trop profonde (ou infinie)",
+            "Trop d'objets dans le tas",
+            "Une boucle while infinie",
+            "Un fichier trop gros"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque appel empile un cadre ; la pile d'un thread a une taille limitée (réglable avec -Xss). Une boucle infinie, elle, n'empile rien.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-memoire-q3",
+          "prompt": "Quel est le ramasse-miettes par défaut depuis Java 9 ?",
+          "choices": [
+            "G1",
+            "Serial",
+            "Parallel",
+            "ZGC"
+          ],
+          "answerIndex": 0,
+          "explanation": "G1 (Garbage First) découpe le tas en régions et collecte d'abord celles qui contiennent le plus de déchets. ZGC s'active avec -XX:+UseZGC.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-memoire-q4",
+          "prompt": "La mémoire du serveur augmente sans fin. Touche une ligne en cause.",
+          "code": "public class Session {\n    private static final List<byte[]> historique =\n        new ArrayList<>();\n\n    public void enregistrer(byte[] donnees) {\n        historique.add(donnees);\n    }\n}",
+          "bugLines": [
+            2,
+            6
+          ],
+          "explanation": "Une liste static vit aussi longtemps que la classe, c'est-à-dire toute l'application : tout ce qu'on y ajoute reste atteignable, donc jamais collecté.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "java-memoire-q5",
+          "prompt": "Complète pour autoriser un tas de 2 Go au maximum.",
+          "code": "java ___2g -jar app.jar",
+          "language": "shell",
+          "answers": [
+            "-Xmx"
+          ],
+          "distractors": [
+            "-Xss",
+            "-Xms",
+            "--memory"
+          ],
+          "explanation": "-Xmx fixe la taille maximale du tas, -Xms sa taille initiale, -Xss la taille de la pile de chaque thread.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "java-memoire-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Un objet devient collectable quand il n'est plus atteignable depuis les racines",
+            "System.gc() déclenche immédiatement une collection complète",
+            "ZGC vise des pauses très courtes, même sur de gros tas",
+            "La plupart des objets meurent jeunes"
+          ],
+          "answerIndices": [
+            0,
+            2,
+            3
+          ],
+          "explanation": "System.gc() n'est qu'une demande, que la JVM peut ignorer (et qu'on désactive souvent en production).",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "java-bytecode",
       "title": "Bytecode et JIT",
       "summary": "De la source à l'exécution.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Du code source au bytecode",
+          "body": "javac compile le code en bytecode (.class), indépendant du système. La JVM l'interprète d'abord, puis le compilateur JIT de HotSpot compile en code machine les méthodes très utilisées : d'abord rapidement (C1), puis avec des optimisations poussées (C2). javap -c affiche le bytecode."
+        },
+        {
+          "title": "Ce que fait le JIT",
+          "body": "Il optimise d'après le comportement réel du programme : inlining des petites méthodes, suppression du code inutile, analyse d'échappement (un objet qui ne sort pas d'une méthode peut ne jamais être alloué sur le tas). Si une hypothèse devient fausse, il revient en arrière (désoptimisation)."
+        },
+        {
+          "title": "L'échauffement",
+          "body": "Juste après le démarrage, le code est encore interprété : les premières requêtes sont plus lentes. Une mesure naïve avec System.nanoTime confond tout cela ; on utilise JMH, qui gère l'échauffement et empêche le JIT de supprimer le code mesuré."
+        },
+        {
+          "title": "La compilation à l'avance",
+          "body": "GraalVM native-image compile l'application en un exécutable natif : démarrage en quelques millisecondes et moins de mémoire, idéal pour le serverless. En échange, la réflexion doit être déclarée et le code chargé dynamiquement est limité."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-bytecode-q1",
+          "prompt": "Que produit javac ?",
+          "choices": [
+            "Du bytecode (.class) exécuté par la JVM",
+            "Du code machine pour le processeur",
+            "Du code C",
+            "Du JavaScript"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le même .class tourne sur Windows, Linux ou macOS : c'est la JVM de chaque système qui le traduit.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-bytecode-q2",
+          "prompt": "Pourquoi les premières requêtes d'un service Java sont-elles plus lentes ?",
+          "choices": [
+            "Le code est d'abord interprété, puis compilé par le JIT au fil de l'utilisation (échauffement)",
+            "Le ramasse-miettes est désactivé au démarrage",
+            "La JVM télécharge le bytecode",
+            "Le réseau est plus lent au démarrage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les classes se chargent et les méthodes chaudes se compilent progressivement. On peut « échauffer » un service avant de lui envoyer du trafic.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-bytecode-q3",
+          "prompt": "Pourquoi utiliser JMH plutôt qu'une boucle chronométrée avec System.nanoTime ?",
+          "choices": [
+            "JMH gère l'échauffement du JIT et empêche qu'il supprime le code mesuré",
+            "nanoTime est imprécis à la seconde près",
+            "JMH rend le code plus rapide",
+            "System.nanoTime est déprécié"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une boucle naïve mesure un mélange d'interprétation et de compilation, et le JIT peut éliminer un calcul dont le résultat n'est pas utilisé.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "java-bytecode-q4",
+          "prompt": "Complète la commande qui affiche le bytecode d'une classe.",
+          "code": "___ -c Main.class",
+          "language": "shell",
+          "answers": [
+            "javap"
+          ],
+          "distractors": [
+            "javac",
+            "java",
+            "jar"
+          ],
+          "explanation": "javap est le désassembleur du JDK ; -c affiche les instructions du bytecode de chaque méthode.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-bytecode-q5",
+          "prompt": "Qu'apporte GraalVM native-image ?",
+          "choices": [
+            "Un exécutable natif qui démarre très vite et consomme moins de mémoire, au prix de restrictions sur la réflexion",
+            "Un JIT plus rapide que HotSpot",
+            "La suppression du ramasse-miettes",
+            "Un bytecode compatible avec toutes les versions de Java"
+          ],
+          "answerIndex": 0,
+          "explanation": "La compilation à l'avance suppose un « monde fermé » : tout le code atteignable doit être connu à la compilation. Les frameworks modernes (Quarkus, Spring Boot) savent générer cette configuration.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "java-bytecode-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Le même fichier .class s'exécute sous Windows et sous Linux",
+            "Le JIT peut intégrer (inliner) une petite méthode dans son appelant",
+            "Le JIT optimise selon le profil d'exécution réel",
+            "Le bytecode est du code machine x86"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le bytecode est un jeu d'instructions abstrait, pour une machine virtuelle à pile. C'est le JIT qui produit le code machine du processeur réel.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "java-defi-jvm",
+    "title": "Défi entretien : la JVM",
+    "summary": "Fuites mémoire, diagnostic et mesures.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "java-defi6-q1",
+        "prompt": "Que peut faire le JIT d'un petit objet créé et utilisé uniquement à l'intérieur d'une méthode ?",
+        "choices": [
+          "Éviter de l'allouer sur le tas, grâce à l'analyse d'échappement",
+          "Le partager avec les autres threads",
+          "Le rendre immuable",
+          "Le placer dans l'ancienne génération"
+        ],
+        "answerIndex": 0,
+        "explanation": "Si l'objet ne « s'échappe » pas de la méthode, ses champs peuvent devenir de simples variables locales (remplacement scalaire) : pas d'allocation, pas de travail pour le GC.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "java-defi6-q2",
+        "prompt": "Cas pratique 1/3 — Après quelques jours, OutOfMemoryError: Java heap space. Touche la ligne en cause.",
+        "code": "private static final Map<Long, Rapport> CACHE =\n    new HashMap<>();\n\npublic Rapport rapport(long id) {\n    return CACHE.computeIfAbsent(id, this::generer);\n}",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Le cache static n'a ni limite ni expiration : chaque rapport généré y reste pour toujours.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi6-q3",
+        "prompt": "Cas pratique 2/3 — Comment confirmer la cause en production ?",
+        "choices": [
+          "Avec un heap dump (-XX:+HeapDumpOnOutOfMemoryError) analysé dans un outil comme Eclipse MAT",
+          "En augmentant -Xmx jusqu'à ce que l'erreur disparaisse",
+          "En appelant System.gc() toutes les minutes",
+          "En redémarrant le serveur chaque nuit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le heap dump montre quels objets occupent la mémoire et qui les retient : ici, des milliers de Rapport retenus par la HashMap CACHE. Augmenter -Xmx ne ferait que retarder le plantage.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi6-q4",
+        "prompt": "Cas pratique 3/3 — Quel est le bon correctif ?",
+        "choices": [
+          "Un cache borné avec expiration, comme Caffeine",
+          "Remplacer HashMap par ConcurrentHashMap",
+          "Rendre le champ non static",
+          "Augmenter la taille du tas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un cache doit avoir une politique d'éviction (taille maximale, durée de vie). ConcurrentHashMap corrigerait la sécurité entre threads, pas la croissance.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "java-defi6-q5",
+        "prompt": "Revue d'un micro-benchmark : coche tous les problèmes.",
+        "code": "long debut = System.nanoTime();\nfor (int i = 0; i < 1000; i++) calcul(i);\nSystem.out.println(System.nanoTime() - debut);",
+        "choices": [
+          "Pas d'échauffement : on mesure aussi l'interprétation et la compilation",
+          "Le résultat de calcul n'est pas utilisé : le JIT peut supprimer la boucle",
+          "Une seule mesure, sans répétition ni statistiques",
+          "System.nanoTime n'existe pas"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "JMH règle ces trois problèmes : phases d'échauffement, Blackhole pour consommer les résultats, et itérations répétées avec des statistiques.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "java-defi6-q6",
+        "prompt": "En entretien : quelle différence entre la pile et le tas ?",
+        "choices": [
+          "La pile : une par thread, avec les cadres d'appels et les variables locales ; le tas : partagé, avec les objets, géré par le GC",
+          "La pile contient les objets, le tas les variables",
+          "Il n'y a qu'un seul espace mémoire en Java",
+          "Le tas est réservé aux types primitifs"
+        ],
+        "answerIndex": 0,
+        "explanation": "La pile se libère automatiquement à la sortie des méthodes ; le tas dépend du ramasse-miettes. C'est pourquoi un objet peut survivre à la méthode qui l'a créé.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

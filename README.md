@@ -14,7 +14,7 @@ Chaque catégorie a un **tronc commun** en chapitres (des leçons, cours + quizz
 | Complète le code | Placer des mots dans les trous |
 | Remets dans l'ordre | Toucher les lignes dans le bon ordre |
 
-Les troncs communs **C++** (12 chapitres) et **C#** (9 chapitres) sont entièrement écrits, chaque chapitre avec son défi entretien. Les extraits « qu'affiche ce code ? » ont été compilés et exécutés (clang++ en C++23, Roslyn en C# 13). Chaque question et chaque cours a un lien **⚑ Signaler** qui ouvre une issue GitHub pré-remplie.
+Les troncs communs **C++** (12 chapitres), **C#** (9), **Python** (9), **JavaScript / TypeScript** (6) et **Java** (6) sont entièrement écrits, chaque chapitre avec son défi entretien, ainsi que celui de **Bases de données**. Les extraits « qu'affiche ce code ? » ont été exécutés : clang++ (C++23), Roslyn (C# 13), Python 3.11, le moteur V8 d'Edge pour JavaScript et le JDK 8 pour Java (les fonctionnalités Java 16 à 21 et le typage TypeScript, faute de compilateur récent, ont été relus mais non compilés). Chaque question et chaque cours a un lien **⚑ Signaler** qui ouvre une issue GitHub pré-remplie.
 
 Au-delà des leçons :
 

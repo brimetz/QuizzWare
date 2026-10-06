@@ -7,19 +7,442 @@
       "id": "java-threads",
       "title": "Threads et synchronized",
       "summary": "Visibilité et verrous.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Lancer un thread",
+          "body": "start() crée un nouveau thread qui exécute run(). Appeler run() directement exécute le code dans le thread courant, sans aucun parallélisme : une erreur classique. join() attend la fin d'un thread.",
+          "code": "Thread t = new Thread(() -> telecharger());\nt.start();\n// ... autre chose en parallèle\nt.join();"
+        },
+        {
+          "title": "Les accès concurrents",
+          "body": "compteur++ est une lecture, un calcul et une écriture : deux threads peuvent s'entrelacer et perdre des incréments. synchronized garantit qu'un seul thread à la fois exécute le bloc (sur un même objet). Pour un simple compteur, AtomicInteger suffit.",
+          "code": "private final AtomicInteger visites = new AtomicInteger();\nvisites.incrementAndGet();"
+        },
+        {
+          "title": "La visibilité",
+          "body": "Sans synchronisation, rien ne garantit qu'un thread voie les écritures d'un autre : une boucle while (!arret) peut ne jamais s'arrêter. volatile garantit la visibilité d'une variable, mais ne rend pas compteur++ atomique. synchronized garantit les deux."
+        },
+        {
+          "title": "Collections et deadlocks",
+          "body": "HashMap et ArrayList ne sont pas thread-safe : on utilise ConcurrentHashMap ou CopyOnWriteArrayList. Deux threads qui prennent deux verrous dans un ordre différent peuvent s'attendre mutuellement pour toujours (deadlock)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "java-threads-q1",
+          "prompt": "L'interface ne s'affiche qu'après la fin du téléchargement. Touche la ligne fautive.",
+          "code": "Thread t = new Thread(() -> telecharger());\nt.run();\nafficherInterface();",
+          "bugLines": [
+            2
+          ],
+          "explanation": "run() exécute le Runnable dans le thread courant, comme un appel de méthode ordinaire. Il faut t.start() pour lancer un nouveau thread.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-threads-q2",
+          "prompt": "Quatre threads exécutent chacun 1000 fois n.incrementAndGet() sur un AtomicInteger n, puis le main attend leur fin avec join. Que vaut n.get() ?",
+          "choices": [
+            "4000",
+            "Une valeur entre 1000 et 4000",
+            "1000",
+            "Une valeur imprévisible"
+          ],
+          "answerIndex": 0,
+          "explanation": "incrementAndGet est atomique : aucun incrément n'est perdu. Avec un int et n++, le résultat serait souvent inférieur à 4000.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-threads-q3",
+          "prompt": "Que garantit volatile ?",
+          "choices": [
+            "Que les écritures sur la variable sont visibles par les autres threads",
+            "Que compteur++ devient atomique",
+            "Qu'un seul thread à la fois accède à la variable",
+            "Que la variable est stockée dans un registre"
+          ],
+          "answerIndex": 0,
+          "explanation": "volatile convient à un drapeau écrit par un thread et lu par d'autres. Pour une opération lecture-modification-écriture, il faut synchronized ou une classe Atomic.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-threads-q4",
+          "prompt": "Après arreter(), le thread peut continuer à tourner indéfiniment. Touche la ligne à corriger.",
+          "code": "class Tache implements Runnable {\n    private boolean arret = false;\n\n    public void run() {\n        while (!arret) { travailler(); }\n    }\n\n    public void arreter() { arret = true; }\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Sans volatile, la JVM peut garder une copie locale de arret dans le thread qui boucle et ne jamais relire la mémoire. private volatile boolean arret; garantit que l'écriture sera vue.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "java-threads-q5",
+          "prompt": "Complète : un seul thread à la fois doit pouvoir incrémenter le compteur.",
+          "code": "public ___ void incrementer() {\n    compteur++;\n}",
+          "answers": [
+            "synchronized"
+          ],
+          "distractors": [
+            "volatile",
+            "atomic",
+            "static"
+          ],
+          "explanation": "Une méthode synchronized verrouille l'objet (this) pendant son exécution. volatile ne s'applique qu'aux champs et ne protège pas compteur++.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "java-threads-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "ConcurrentHashMap peut être utilisée par plusieurs threads à la fois",
+            "volatile rend compteur++ atomique",
+            "Deux threads qui verrouillent deux objets dans un ordre inverse peuvent se bloquer",
+            "t.join() attend la fin du thread t"
+          ],
+          "answerIndices": [
+            0,
+            2,
+            3
+          ],
+          "explanation": "volatile garantit seulement la visibilité. Pour éviter les deadlocks, on prend toujours les verrous dans le même ordre.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "java-executors",
       "title": "Executors et CompletableFuture",
       "summary": "La programmation asynchrone.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les pools de threads",
+          "body": "Créer un thread par tâche coûte cher. Un ExecutorService réutilise un nombre limité de threads : submit renvoie un Future, dont get() bloque jusqu'au résultat. Un pool doit être arrêté (shutdown) ; depuis Java 19, ExecutorService est AutoCloseable.",
+          "code": "ExecutorService pool = Executors.newFixedThreadPool(4);\nFuture<Integer> f = pool.submit(() -> calcul());\nint r = f.get();   // bloque\npool.shutdown();"
+        },
+        {
+          "title": "CompletableFuture",
+          "body": "CompletableFuture compose des traitements asynchrones sans bloquer : thenApply transforme le résultat, thenCompose enchaîne une autre tâche asynchrone, thenCombine combine deux résultats, allOf attend plusieurs tâches, exceptionally fournit une valeur de repli en cas d'erreur.",
+          "code": "CompletableFuture.supplyAsync(() -> chargerProfil(id))\n    .thenCompose(p -> chargerCommandes(p))\n    .thenApply(Commandes::total)\n    .exceptionally(e -> 0.0);"
+        },
+        {
+          "title": "Dimensionner",
+          "body": "Pour du calcul, autant de threads que de cœurs. Pour des tâches qui attendent (réseau, base), il en faut plus... ou des virtual threads, qui rendent ce dimensionnement inutile."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-executors-q1",
+          "prompt": "Que fait future.get() si la tâche n'est pas terminée ?",
+          "choices": [
+            "Il bloque le thread courant jusqu'au résultat",
+            "Il renvoie null",
+            "Il lève une exception immédiatement",
+            "Il annule la tâche"
+          ],
+          "answerIndex": 0,
+          "explanation": "get() est bloquant (une version avec délai existe). CompletableFuture permet au contraire d'enchaîner la suite sans bloquer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-executors-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "String r = CompletableFuture.supplyAsync(() -> 21)\n    .thenApply(x -> x * 2)\n    .thenApply(x -> \"réponse \" + x)\n    .join();\nSystem.out.println(r);",
+          "choices": [
+            "réponse 42",
+            "réponse 21",
+            "42",
+            "CompletableFuture[...]"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque thenApply transforme le résultat précédent ; join attend la fin et renvoie la valeur.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-executors-q3",
+          "prompt": "Complète : un pool de 4 threads, puis une tâche qui renvoie un résultat.",
+          "code": "ExecutorService pool = Executors.___(4);\nFuture<Integer> f = pool.___(() -> calcul());",
+          "answers": [
+            "newFixedThreadPool",
+            "submit"
+          ],
+          "distractors": [
+            "newThread",
+            "run",
+            "start"
+          ],
+          "explanation": "newFixedThreadPool(4) crée un pool de taille fixe. submit renvoie un Future ; execute, lui, ne renvoie rien.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-executors-q4",
+          "prompt": "Pourquoi ce programme ne se termine-t-il jamais ?",
+          "code": "public static void main(String[] args) {\n    ExecutorService pool = Executors.newFixedThreadPool(4);\n    pool.submit(() -> traiter());\n    System.out.println(\"fin du main\");\n}",
+          "choices": [
+            "Les threads du pool restent actifs : il manque pool.shutdown()",
+            "traiter() boucle à l'infini",
+            "submit bloque le main",
+            "System.out.println ne se termine pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "La JVM attend la fin des threads non démons, et ceux du pool attendent de nouvelles tâches. shutdown() les laisse finir puis les arrête.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-executors-q5",
+          "prompt": "Que vaut r ?",
+          "code": "int r = CompletableFuture\n    .supplyAsync(() -> {\n        if (true) throw new IllegalStateException();\n        return 1;\n    })\n    .exceptionally(e -> -1)\n    .join();",
+          "choices": [
+            "-1",
+            "1",
+            "Une IllegalStateException est levée par join",
+            "0"
+          ],
+          "answerIndex": 0,
+          "explanation": "La tâche échoue ; exceptionally fournit une valeur de remplacement, et la chaîne se termine normalement.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "java-executors-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "thenCompose enchaîne une étape qui renvoie elle-même un CompletableFuture",
+            "CompletableFuture.allOf attend la fin de plusieurs tâches",
+            "join() ne bloque jamais",
+            "Un pool évite de créer un thread par tâche"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "join, comme get, bloque jusqu'au résultat (sans exception checked). On l'utilise en bout de chaîne, idéalement une seule fois.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "java-virtual-threads",
       "title": "Virtual threads",
       "summary": "Le projet Loom.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des threads légers",
+          "body": "Un thread classique correspond à un thread du système : coûteux, on en crée quelques milliers au plus. Un virtual thread (Java 21) est géré par la JVM : on peut en créer des millions. Quand il bloque sur une entrée-sortie, il libère le thread système (le « porteur ») qui l'exécutait.",
+          "code": "try (var executor =\n        Executors.newVirtualThreadPerTaskExecutor()) {\n    for (Requete r : requetes)\n        executor.submit(() -> traiter(r));\n}"
+        },
+        {
+          "title": "Du code bloquant simple qui passe à l'échelle",
+          "body": "Avec un thread par requête, on écrit du code séquentiel classique (JDBC, client HTTP bloquant) qui supporte pourtant des dizaines de milliers de requêtes simultanées, sans la complexité de la programmation réactive."
+        },
+        {
+          "title": "Les limites",
+          "body": "Les virtual threads n'accélèrent pas le calcul : ils servent aux tâches qui attendent. On ne les met pas en pool : on en crée un par tâche, et on limite l'accès à une ressource rare avec un Semaphore. Jusqu'à Java 23, un blocage à l'intérieur d'un bloc synchronized « épinglait » le thread virtuel sur son porteur (corrigé en Java 24)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-virtual-threads-q1",
+          "prompt": "Qu'est-ce qu'un virtual thread ?",
+          "choices": [
+            "Un thread léger géré par la JVM, qui libère son thread système quand il attend une entrée-sortie",
+            "Un thread qui s'exécute sur un autre ordinateur",
+            "Un thread simulé, sans vrai parallélisme",
+            "Un alias de CompletableFuture"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est un vrai java.lang.Thread, mais son coût est très faible : la JVM le place sur un thread porteur quand il travaille, et l'en retire quand il attend.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-virtual-threads-q2",
+          "prompt": "Dans quel cas les virtual threads apportent-ils le plus ?",
+          "choices": [
+            "Un serveur qui traite de nombreuses requêtes passant leur temps à attendre la base ou le réseau",
+            "Un calcul scientifique intensif",
+            "Une application avec un seul utilisateur",
+            "Le traitement d'images en mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ils multiplient le nombre de tâches en attente simultanées. Pour du calcul pur, le nombre de cœurs reste la limite.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-virtual-threads-q3",
+          "prompt": "Complète : un virtual thread par requête (Java 21).",
+          "code": "try (var executor = Executors.___()) {\n    for (Requete r : requetes)\n        executor.submit(() -> traiter(r));\n}",
+          "answers": [
+            "newVirtualThreadPerTaskExecutor"
+          ],
+          "distractors": [
+            "newFixedThreadPool",
+            "newCachedThreadPool",
+            "newSingleThreadExecutor"
+          ],
+          "explanation": "Cet executor crée un nouveau virtual thread pour chaque tâche. Le try-with-resources attend la fin de toutes les tâches avant de continuer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-virtual-threads-q4",
+          "prompt": "Faut-il mettre les virtual threads dans un pool de taille fixe ?",
+          "choices": [
+            "Non : ils sont bon marché, on en crée un par tâche ; pour limiter une ressource, on utilise un Semaphore",
+            "Oui, sinon la mémoire explose",
+            "Oui, un par cœur",
+            "Ce n'est pas possible techniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le pool servait à amortir le coût des threads système. Avec les virtual threads, ce coût disparaît ; limiter la concurrence (connexions à la base par exemple) devient un choix explicite.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-virtual-threads-q5",
+          "prompt": "Jusqu'à Java 23, qu'est-ce qui pouvait bloquer le thread porteur d'un virtual thread (« pinning ») ?",
+          "choices": [
+            "Une attente à l'intérieur d'un bloc synchronized",
+            "Un appel à une méthode static",
+            "L'utilisation d'une lambda",
+            "Une boucle for"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le thread virtuel restait attaché à son porteur pendant l'attente, ce qui réduisait le parallélisme. On remplaçait synchronized par un ReentrantLock ; Java 24 a levé cette limitation.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "java-virtual-threads-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Un virtual thread est un java.lang.Thread",
+            "On peut en créer des millions",
+            "Ils accélèrent un calcul intensif",
+            "Le code bloquant classique (JDBC, HTTP) en profite sans être réécrit"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Le calcul reste limité par le nombre de cœurs. Le grand intérêt est de garder un code simple et bloquant tout en passant à l'échelle.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "java-defi-concurrence",
+    "title": "Défi entretien : concurrence",
+    "summary": "Collections partagées et verrous.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "java-defi5-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "var a = CompletableFuture.supplyAsync(() -> 2);\nvar b = CompletableFuture.supplyAsync(() -> 3);\nSystem.out.println(\n    a.thenCombine(b, (x, y) -> x * y).join());",
+        "choices": [
+          "6",
+          "5",
+          "23",
+          "Un ordre imprévisible"
+        ],
+        "answerIndex": 0,
+        "explanation": "thenCombine attend les deux résultats, quel que soit l'ordre dans lequel ils arrivent, puis les combine.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "java-defi5-q2",
+        "prompt": "Cas pratique 1/3 — Appelée par de nombreux threads, enregistrer perd des visites sous charge. Touche une ligne en cause.",
+        "code": "private final Map<String, Integer> visites =\n    new HashMap<>();\n\npublic void enregistrer(String page) {\n    visites.put(page, visites.getOrDefault(page, 0) + 1);\n}",
+        "bugLines": [
+          2,
+          5
+        ],
+        "explanation": "HashMap n'est pas faite pour un accès concurrent, et lire puis écrire n'est pas atomique.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi5-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi des visites sont-elles perdues ?",
+        "choices": [
+          "Deux threads lisent la même valeur, ajoutent 1 chacun et écrivent le même résultat",
+          "HashMap supprime les entrées anciennes",
+          "getOrDefault renvoie toujours 0",
+          "put est asynchrone"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est une situation de compétition (race condition). Une HashMap modifiée en parallèle peut même corrompre sa structure interne.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "java-defi5-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version sûre.",
+        "code": "private final Map<String, Integer> visites =\n    new ___<>();\n\npublic void enregistrer(String page) {\n    visites.___(page, 1, Integer::sum);\n}",
+        "answers": [
+          "ConcurrentHashMap",
+          "merge"
+        ],
+        "distractors": [
+          "HashMap",
+          "TreeMap",
+          "put"
+        ],
+        "explanation": "ConcurrentHashMap accepte les accès simultanés, et merge y est atomique : la lecture et l'écriture se font en une seule opération.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "java-defi5-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "public synchronized Rapport generer() {\n    var donnees = api.telecharger(); // 3 secondes\n    return new Rapport(donnees);\n}",
+        "choices": [
+          "Le verrou est tenu pendant l'appel réseau : un seul rapport peut être généré à la fois",
+          "Tous les autres appelants attendent, même pour des rapports indépendants",
+          "Avec des virtual threads (Java 21 à 23), ce blocage dans synchronized épingle le thread porteur",
+          "synchronized ne fonctionne pas sur une méthode qui renvoie une valeur"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "On ne verrouille que ce qui doit l'être, le plus brièvement possible : ici, sans doute rien, ou seulement la mise à jour d'un état partagé après le téléchargement.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "java-defi5-q6",
+        "prompt": "En entretien : quelle différence entre volatile et synchronized ?",
+        "choices": [
+          "volatile garantit la visibilité d'une variable ; synchronized garantit en plus l'exclusion mutuelle d'un bloc",
+          "Ce sont deux syntaxes pour la même chose",
+          "volatile est plus sûr que synchronized",
+          "synchronized ne garantit pas la visibilité"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sortir d'un bloc synchronized publie les écritures pour le prochain thread qui prend le verrou. Seuls synchronized, les verrous ou les classes Atomic rendent une séquence lecture-modification-écriture sûre.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

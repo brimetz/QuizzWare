@@ -7,13 +7,343 @@
       "id": "java-heritage",
       "title": "Héritage et interfaces",
       "summary": "abstract et méthodes par défaut.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "extends et implements",
+          "body": "Une classe hérite d'une seule classe (extends) et peut implémenter plusieurs interfaces (implements). Toutes les classes dérivent d'Object. @Override demande au compilateur de vérifier qu'on redéfinit bien une méthode existante.",
+          "code": "public class Chien extends Animal\n        implements Comparable<Chien> {\n    @Override\n    public String crier() { return \"Wouf\"; }\n\n    @Override\n    public int compareTo(Chien o) { ... }\n}"
+        },
+        {
+          "title": "Le polymorphisme",
+          "body": "Les méthodes d'instance sont virtuelles par défaut : le type réel de l'objet décide. Ce n'est pas le cas des méthodes static ni des champs, choisis selon le type déclaré de la variable. final interdit de redéfinir une méthode (ou de dériver une classe)."
+        },
+        {
+          "title": "Classe abstraite ou interface",
+          "body": "Une classe abstraite peut avoir de l'état, des constructeurs et des méthodes abstraites, que les sous-classes concrètes doivent implémenter. Une interface est un contrat ; depuis Java 8, elle peut fournir des méthodes default, pour évoluer sans casser ses implémentations."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-heritage-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "class Animal {\n    String nom() { return \"animal\"; }\n    static String type() { return \"A\"; }\n}\nclass Chat extends Animal {\n    @Override String nom() { return \"chat\"; }\n    static String type() { return \"C\"; }\n}\n\nAnimal a = new Chat();\nSystem.out.println(a.nom() + \" \" + a.type());",
+          "choices": [
+            "chat A",
+            "chat C",
+            "animal A",
+            "animal C"
+          ],
+          "answerIndex": 0,
+          "explanation": "nom() est redéfinie : le type réel (Chat) décide. Une méthode static n'est pas redéfinie mais masquée : c'est le type déclaré (Animal) qui décide. Appeler une méthode static via une instance prête d'ailleurs à confusion.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "java-heritage-q2",
+          "prompt": "Que signale le compilateur ?",
+          "code": "class Forme {\n    double aire() { return 0; }\n}\nclass Carre extends Forme {\n    double cote;\n    @Override\n    double aire(int precision) { return cote * cote; }\n}",
+          "choices": [
+            "Une erreur : la méthode ne redéfinit rien",
+            "Rien : c'est une surcharge valide",
+            "Un avertissement seulement",
+            "Une erreur : un double ne peut pas être renvoyé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un paramètre en plus, c'est une surcharge, pas une redéfinition. Sans @Override, le code compilerait et forme.aire() renverrait 0 pour un carré.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-heritage-q3",
+          "prompt": "Ce code ne compile pas. Touche la ligne signalée par le compilateur.",
+          "code": "abstract class Forme {\n    abstract double aire();\n}\nclass Cercle extends Forme {\n    double rayon;\n    double perimetre() {\n        return 2 * Math.PI * rayon;\n    }\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Cercle n'est pas abstraite et n'implémente pas aire() : le compilateur refuse la classe. Il faut ajouter double aire() { return Math.PI * rayon * rayon; }.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-heritage-q4",
+          "prompt": "Complète la déclaration de la classe.",
+          "code": "public class Chien ___ Animal ___ Comparable<Chien> {\n    ...\n}",
+          "answers": [
+            "extends",
+            "implements"
+          ],
+          "distractors": [
+            "inherits",
+            "uses",
+            "with"
+          ],
+          "explanation": "extends pour la classe de base (une seule), implements pour les interfaces (plusieurs, séparées par des virgules).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-heritage-q5",
+          "prompt": "À quoi servent les méthodes default des interfaces (Java 8) ?",
+          "choices": [
+            "À ajouter une méthode à une interface sans casser les classes qui l'implémentent déjà",
+            "À rendre une interface instanciable",
+            "À définir des champs d'instance dans une interface",
+            "À remplacer les classes abstraites"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ainsi que Java 8 a ajouté forEach à Iterable ou stream à Collection, sans casser toutes les collections existantes.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "java-heritage-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Une classe hérite d'une seule classe",
+            "Une classe peut implémenter plusieurs interfaces",
+            "final sur une méthode empêche de la redéfinir",
+            "Les méthodes static sont polymorphes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les méthodes static sont liées au type déclaré : elles ne participent pas au polymorphisme.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "java-records",
       "title": "Records et sealed classes",
       "summary": "Le Java moderne.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les records (Java 16)",
+          "body": "Un record est une classe de données immuable : le compilateur génère le constructeur, les accesseurs (p.x(), sans préfixe get), equals, hashCode et toString. Un constructeur compact valide les valeurs.",
+          "code": "record Point(int x, int y) {\n    Point {\n        if (x < 0) throw new IllegalArgumentException();\n    }\n}\n\nvar p = new Point(1, 2);\np.x();   // 1"
+        },
+        {
+          "title": "Les sealed classes (Java 17)",
+          "body": "sealed limite les classes autorisées à hériter ou implémenter (permits). La hiérarchie devient fermée : le compilateur connaît tous les cas.",
+          "code": "sealed interface Forme permits Cercle, Carre {}\nrecord Cercle(double rayon) implements Forme {}\nrecord Carre(double cote) implements Forme {}"
+        },
+        {
+          "title": "Le pattern matching (Java 21)",
+          "body": "instanceof déclare directement une variable typée. Un switch accepte des patterns de type (avec des gardes when) ; sur une hiérarchie sealed, il peut être exhaustif sans default : oublier un cas devient une erreur de compilation.",
+          "code": "double aire(Forme f) {\n    return switch (f) {\n        case Cercle c -> Math.PI * c.rayon() * c.rayon();\n        case Carre c -> c.cote() * c.cote();\n    };\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-records-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "record Point(int x, int y) {}\n\nPoint a = new Point(1, 2);\nSystem.out.println(a + \" \" + a.equals(new Point(1, 2)));",
+          "choices": [
+            "Point[x=1, y=2] true",
+            "Point@1b6d3586 false",
+            "Point(1, 2) true",
+            "Point[x=1, y=2] false"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le record génère un toString lisible et un equals qui compare les composants. Une classe ordinaire afficherait son nom suivi d'un code de hachage, et comparerait les références.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-records-q2",
+          "prompt": "Comment lit-on le composant x d'un record Point ?",
+          "choices": [
+            "p.x()",
+            "p.getX()",
+            "p.x",
+            "p.get(\"x\")"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les accesseurs générés portent le nom du composant, sans préfixe get. Le champ lui-même est privé et final.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-records-q3",
+          "prompt": "Complète la validation dans le constructeur compact.",
+          "code": "record Age(int valeur) {\n    Age {\n        if (valeur < 0)\n            throw new ___(\"âge négatif\");\n    }\n}",
+          "answers": [
+            "IllegalArgumentException"
+          ],
+          "distractors": [
+            "Exception",
+            "RuntimeError",
+            "ValueError"
+          ],
+          "explanation": "IllegalArgumentException est l'exception standard pour un argument invalide. Exception est vérifiée et le constructeur d'un record ne peut pas déclarer de throws ; ValueError et RuntimeError viennent d'autres langages.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-records-q4",
+          "prompt": "Qu'apporte cette déclaration ?",
+          "code": "sealed interface Forme permits Cercle, Carre {}",
+          "choices": [
+            "Seuls Cercle et Carre peuvent implémenter Forme ; un switch sur Forme peut être exhaustif sans default",
+            "Forme ne peut plus être utilisée en dehors de son package",
+            "Les objets Forme deviennent immuables",
+            "Cercle et Carre ne peuvent plus avoir de sous-classes"
+          ],
+          "answerIndex": 0,
+          "explanation": "La liste des sous-types est connue du compilateur. (Chaque sous-type doit lui-même être final, sealed ou non-sealed ; un record est implicitement final.)",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-records-q5",
+          "prompt": "Qu'affiche ce code (Java 21) ?",
+          "code": "static String decrire(Object o) {\n    return switch (o) {\n        case Integer i when i > 10 -> \"grand\";\n        case Integer i -> \"entier\";\n        case String s -> \"texte de \" + s.length();\n        default -> \"autre\";\n    };\n}\n\nSystem.out.println(decrire(5) + \", \" + decrire(\"abc\"));",
+          "choices": [
+            "entier, texte de 3",
+            "grand, texte de 3",
+            "entier, autre",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "5 ne passe pas la garde when i > 10 : on tombe sur le cas Integer suivant. \"abc\" correspond au pattern String.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-records-q6",
+          "prompt": "Ce record ne compile pas. Touche la ligne fautive.",
+          "code": "record Compte(String id, double solde) {\n    void deposer(double m) {\n        solde += m;\n    }\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Les champs d'un record sont final. Une opération renvoie un nouveau record : Compte deposer(double m) { return new Compte(id, solde + m); }.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "java-records-q7",
+          "prompt": "Quelles affirmations sur les records sont vraies ?",
+          "choices": [
+            "Leurs champs sont final",
+            "Ils peuvent implémenter des interfaces",
+            "Ils ne peuvent pas hériter d'une autre classe",
+            "Ils sont modifiables par défaut"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un record hérite implicitement de java.lang.Record : il ne peut donc pas utiliser extends. Attention, l'immuabilité est superficielle : un composant List reste modifiable.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "java-defi-poo",
+    "title": "Défi entretien : orienté objet",
+    "summary": "Polymorphisme, hiérarchies fermées et encapsulation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "java-defi2-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "class A {\n    String nom = \"A\";\n    String qui() { return nom; }\n}\nclass B extends A {\n    String nom = \"B\";\n}\n\nA x = new B();\nSystem.out.println(x.nom + x.qui());",
+        "choices": [
+          "AA",
+          "BB",
+          "AB",
+          "BA"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les champs ne sont pas polymorphes : B déclare un second champ nom qui masque celui de A. x.nom suit le type déclaré (A), et qui(), définie dans A, lit le champ de A.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "java-defi2-q2",
+        "prompt": "Cas pratique 1/3 — On ajoute un moyen de paiement PayPal, sans modifier frais. Quand découvre-t-on l'oubli ?",
+        "code": "double frais(Paiement p) {\n    if (p instanceof Carte) return 0.5;\n    if (p instanceof Virement) return 0;\n    if (p instanceof Cheque) return 1;\n    throw new IllegalStateException();\n}",
+        "choices": [
+          "À l'exécution, quand un paiement PayPal arrive",
+          "À la compilation",
+          "Jamais : PayPal est ignoré",
+          "Au démarrage de l'application"
+        ],
+        "answerIndex": 0,
+        "explanation": "Rien n'oblige le compilateur à vérifier qu'une chaîne de instanceof couvre tous les cas : l'erreur arrive en production.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi2-q3",
+        "prompt": "Cas pratique 2/3 — Quelle conception rend l'oubli impossible ?",
+        "choices": [
+          "Une interface sealed, et un switch exhaustif sans default",
+          "Ajouter un default qui renvoie 0",
+          "Utiliser des chaînes de caractères pour le type de paiement",
+          "Mettre frais dans une classe abstraite"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec une hiérarchie sealed, un switch sans default doit traiter chaque sous-type : ajouter PayPal fait échouer la compilation tant que frais ne le gère pas. Un default ferait disparaître cette vérification.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "java-defi2-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version sûre (Java 21).",
+        "code": "___ interface Paiement\n    permits Carte, Virement, Cheque {}\n\ndouble frais(Paiement p) {\n    return switch (p) {\n        case Carte c -> 0.5;\n        case Virement v -> 0;\n        case Cheque c -> 1;\n    };\n}",
+        "answers": [
+          "sealed"
+        ],
+        "distractors": [
+          "abstract",
+          "final",
+          "static"
+        ],
+        "explanation": "sealed et permits ferment la hiérarchie ; le switch, sans default, est vérifié exhaustif par le compilateur.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "java-defi2-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "public class Utilisateur {\n    public String nom;\n    public List<String> roles;\n\n    public Utilisateur(String nom, List<String> roles) {\n        this.nom = nom;\n        this.roles = roles;\n    }\n}",
+        "choices": [
+          "Les champs sont publics : n'importe qui peut les modifier",
+          "La liste reçue est stockée telle quelle : l'appelant peut la modifier ensuite",
+          "Sans equals ni hashCode, deux utilisateurs identiques sont différents : un record conviendrait",
+          "Un constructeur ne peut pas recevoir une List"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une copie défensive (List.copyOf(roles)) protège l'objet. record Utilisateur(String nom, List<String> roles), avec cette copie dans un constructeur compact, règle tout.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi2-q6",
+        "prompt": "En entretien : classe abstraite ou interface ?",
+        "choices": [
+          "Interface pour un contrat (une classe peut en implémenter plusieurs) ; classe abstraite pour partager état et code entre classes proches",
+          "Toujours une classe abstraite, plus puissante",
+          "Toujours une interface, les classes abstraites sont obsolètes",
+          "Les deux sont équivalentes depuis Java 8"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les méthodes default rapprochent les deux notions, mais une interface n'a pas d'état d'instance ni de constructeur. On commence souvent par une interface, et on ajoute une classe abstraite de base si du code commun apparaît.",
+        "difficulty": 2
+      }
+    ]
+  }
 }
