@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (46 écrits) | 332 (108 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (52 écrits) | 332 (123 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -582,27 +582,27 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Bases du langage
-   - Types et coercition
-   - let, const et portée
-   - Fonctions
-2. 🕓 Objets et prototypes
-   - Objets et déstructuration
-   - Prototypes et classes
-3. 🕓 Asynchrone
-   - La boucle d'événements
-   - Promesses
-   - async / await
-4. 🕓 TypeScript
-   - Types de base
-   - Types avancés
-   - Narrowing
-5. 🕓 Modules et outillage
-   - Modules
-   - npm et les dépendances
-6. 🕓 Le navigateur
-   - Le DOM
-   - Événements
+1. ✅ Bases du langage
+   - ✅ Types et coercition
+   - ✅ let, const et portée
+   - ✅ Fonctions
+2. ✅ Objets et prototypes
+   - ✅ Objets et déstructuration
+   - ✅ Prototypes et classes
+3. ✅ Asynchrone
+   - ✅ La boucle d'événements
+   - ✅ Promesses
+   - ✅ async / await
+4. ✅ TypeScript
+   - ✅ Types de base
+   - ✅ Types avancés
+   - ✅ Narrowing
+5. ✅ Modules et outillage
+   - ✅ Modules
+   - ✅ npm et les dépendances
+6. ✅ Le navigateur
+   - ✅ Le DOM
+   - ✅ Événements
 
 **Spécialisations**
 

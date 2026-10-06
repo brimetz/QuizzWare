@@ -7,13 +7,320 @@
       "id": "js-dom",
       "title": "Le DOM",
       "summary": "Sélectionner et modifier la page.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Sélectionner",
+          "body": "querySelector renvoie le premier élément correspondant à un sélecteur CSS, querySelectorAll une NodeList statique de tous les éléments (elle ne se met pas à jour si la page change). getElementById reste le plus direct pour un identifiant.",
+          "code": "const titre = document.querySelector(\"h1\");\nconst boutons = document.querySelectorAll(\".btn\");\nboutons.forEach((b) => b.classList.add(\"pret\"));"
+        },
+        {
+          "title": "textContent ou innerHTML",
+          "body": "textContent insère du texte brut : les caractères < et > sont affichés, jamais interprétés. innerHTML interprète du HTML : y mettre une donnée venant de l'utilisateur ou de l'URL ouvre une faille XSS (exécution de script dans la page)."
+        },
+        {
+          "title": "Classes, attributs et data-*",
+          "body": "classList (add, remove, toggle, contains) gère les classes CSS. Les attributs data-* sont accessibles via dataset, en camelCase : data-id-produit devient dataset.idProduit, toujours sous forme de chaîne."
+        },
+        {
+          "title": "Modifier efficacement",
+          "body": "Lire une mesure (offsetHeight, getBoundingClientRect) juste après une modification force le navigateur à recalculer la mise en page. Alterner lectures et écritures dans une boucle provoque ce recalcul à chaque tour (« layout thrashing ») : on lit tout, puis on écrit tout, ou on construit les éléments dans un DocumentFragment avant de l'insérer."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-dom-q1",
+          "prompt": "Que renvoie document.querySelectorAll(\".carte\") ?",
+          "choices": [
+            "Une NodeList statique des éléments présents à cet instant",
+            "Le premier élément .carte",
+            "Une liste qui se met à jour quand on ajoute des .carte",
+            "Un tableau de chaînes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les éléments ajoutés plus tard n'y apparaissent pas. Elle dispose de forEach ; pour map ou filter, on la convertit : [...liste] ou Array.from(liste).",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "js-dom-q2",
+          "prompt": "Cette page est vulnérable à une faille XSS. Touche la ligne fautive.",
+          "code": "const params = new URLSearchParams(location.search);\nconst nom = params.get(\"nom\");\ntitre.innerHTML = \"Bonjour \" + nom;",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Une URL comme ?nom=<img src=x onerror=...> injecte du code dans la page. Avec titre.textContent, le nom est affiché comme du texte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-dom-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const p = document.createElement(\"p\");\np.textContent = \"<b>gras</b>\";\nconsole.log(p.innerHTML);",
+          "choices": [
+            "&lt;b&gt;gras&lt;/b&gt;",
+            "<b>gras</b>",
+            "gras",
+            "Une chaîne vide"
+          ],
+          "answerIndex": 0,
+          "explanation": "textContent a créé un nœud texte : relu en HTML, les chevrons sont échappés. Le paragraphe affiche littéralement <b>gras</b>.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "js-dom-q4",
+          "prompt": "Complète : ajouter la classe si elle est absente, la retirer sinon.",
+          "code": "bouton.classList.___(\"actif\");",
+          "answers": [
+            "toggle"
+          ],
+          "distractors": [
+            "switch",
+            "add",
+            "flip"
+          ],
+          "explanation": "toggle bascule la classe et renvoie true si elle est maintenant présente. Un second argument force l'état : toggle(\"actif\", estActif).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-dom-q5",
+          "prompt": "Que vaut el.dataset.idProduit pour <div data-id-produit=\"42\"> ?",
+          "choices": [
+            "\"42\" (une chaîne)",
+            "42 (un nombre)",
+            "undefined : il faut écrire dataset[\"id-produit\"]",
+            "null"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les tirets deviennent du camelCase, et les valeurs sont toujours des chaînes : Number(el.dataset.idProduit) pour un nombre.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "js-dom-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Lire offsetHeight juste après une modification force un recalcul de la mise en page",
+            "Un DocumentFragment permet d'insérer plusieurs éléments en une seule opération",
+            "textContent interprète les balises HTML",
+            "innerHTML avec une donnée utilisateur expose à une faille XSS"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "textContent n'interprète rien : c'est justement ce qui le rend sûr pour afficher du texte.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "js-evenements",
       "title": "Événements",
       "summary": "Propagation et délégation.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Écouter un événement",
+          "body": "addEventListener(type, fonction, options) attache un écouteur. Pour le retirer, removeEventListener doit recevoir exactement la même fonction : une fonction fléchée réécrite est une autre fonction. L'option { once: true } retire l'écouteur après le premier appel."
+        },
+        {
+          "title": "La propagation",
+          "body": "Un événement descend du document vers la cible (capture), puis remonte vers le document (bouillonnement). Par défaut, les écouteurs réagissent pendant la remontée. stopPropagation arrête ce trajet ; preventDefault annule l'action par défaut du navigateur (soumettre un formulaire, suivre un lien). event.target est l'élément d'origine, event.currentTarget celui qui porte l'écouteur."
+        },
+        {
+          "title": "La délégation",
+          "body": "Au lieu d'un écouteur par bouton, on en pose un seul sur le conteneur, et on identifie l'élément visé avec closest. Cela fonctionne aussi pour les éléments ajoutés plus tard.",
+          "code": "liste.addEventListener(\"click\", (e) => {\n  const item = e.target.closest(\"li\");\n  if (item) supprimer(item.dataset.id);\n});"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-evenements-q1",
+          "prompt": "Le bouton #enfant est dans la div #parent. Qu'affiche ce code ?",
+          "code": "parent.addEventListener(\"click\",\n  () => console.log(\"parent\"));\nenfant.addEventListener(\"click\",\n  () => console.log(\"enfant\"));\nenfant.click();",
+          "choices": [
+            "enfant puis parent",
+            "parent puis enfant",
+            "enfant seulement",
+            "parent seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le clic atteint d'abord la cible, puis remonte vers ses ancêtres (bouillonnement).",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "js-evenements-q2",
+          "prompt": "Après fermer(), recalculer est toujours appelée au redimensionnement. Touche la ligne fautive.",
+          "code": "function ouvrir() {\n  window.addEventListener(\"resize\", () => recalculer());\n}\nfunction fermer() {\n  window.removeEventListener(\"resize\", () => recalculer());\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "La fonction passée à removeEventListener est une nouvelle fonction, différente de celle enregistrée : rien n'est retiré. Il faut passer la même référence (window.addEventListener(\"resize\", recalculer) puis removeEventListener(\"resize\", recalculer)), ou utiliser un AbortController.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "js-evenements-q3",
+          "prompt": "Complète : envoyer le formulaire en JavaScript, sans recharger la page.",
+          "code": "formulaire.addEventListener(\"submit\", (e) => {\n  e.___();\n  envoyer(new FormData(formulaire));\n});",
+          "answers": [
+            "preventDefault"
+          ],
+          "distractors": [
+            "stopPropagation",
+            "cancel",
+            "return"
+          ],
+          "explanation": "preventDefault annule l'envoi classique du formulaire (et le rechargement de la page). stopPropagation ne fait qu'arrêter la remontée de l'événement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-evenements-q4",
+          "prompt": "Quel est l'avantage principal de la délégation d'événements ?",
+          "choices": [
+            "Un seul écouteur gère tous les éléments, y compris ceux ajoutés plus tard",
+            "Les événements sont traités sur un autre thread",
+            "Elle empêche le bouillonnement",
+            "Elle rend les événements synchrones"
+          ],
+          "answerIndex": 0,
+          "explanation": "Moins d'écouteurs à créer et à nettoyer, et rien à faire quand la liste change. Elle repose justement sur le bouillonnement.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "js-evenements-q5",
+          "prompt": "Complète : retrouver l'élément <li> cliqué, même si le clic a eu lieu sur une icône à l'intérieur.",
+          "code": "liste.addEventListener(\"click\", (e) => {\n  const item = e.target.___(\"li\");\n  if (item) supprimer(item.dataset.id);\n});",
+          "answers": [
+            "closest"
+          ],
+          "distractors": [
+            "parent",
+            "find",
+            "querySelector"
+          ],
+          "explanation": "closest remonte depuis l'élément lui-même jusqu'au premier ancêtre qui correspond au sélecteur, ou renvoie null.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-evenements-q6",
+          "prompt": "Le bouton #enfant est dans la div #parent. Qu'affiche ce code ?",
+          "code": "parent.addEventListener(\"click\", (e) => {\n  console.log(e.target.id, e.currentTarget.id);\n});\nenfant.click();",
+          "choices": [
+            "enfant parent",
+            "parent parent",
+            "enfant enfant",
+            "parent enfant"
+          ],
+          "answerIndex": 0,
+          "explanation": "target est l'élément d'où vient l'événement ; currentTarget est celui dont l'écouteur s'exécute.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "js-defi-navigateur",
+    "title": "Défi entretien : le navigateur",
+    "summary": "Propagation, délégation et recherche en direct.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "js-defi6-q1",
+        "prompt": "Le bouton #enfant est dans la div #parent. Qu'affiche ce code ?",
+        "code": "parent.addEventListener(\"click\",\n  () => console.log(\"parent\"));\nenfant.addEventListener(\"click\", (e) => {\n  e.stopPropagation();\n  console.log(\"enfant\");\n});\nparent.addEventListener(\"click\",\n  () => console.log(\"capture\"), true);\nenfant.click();",
+        "choices": [
+          "capture puis enfant",
+          "enfant puis parent",
+          "enfant seulement",
+          "capture, enfant puis parent"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le troisième argument true place l'écouteur en phase de capture : il s'exécute à la descente, avant la cible. stopPropagation empêche ensuite la remontée vers l'écouteur parent.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "js-defi6-q2",
+        "prompt": "Cas pratique 1/3 — Les boutons des lignes ajoutées après le chargement ne font rien. Touche la ligne en cause.",
+        "code": "document.querySelectorAll(\".supprimer\").forEach((b) => {\n  b.addEventListener(\"click\",\n    () => supprimer(b.dataset.id));\n});\n// plus tard : ajouterLigne() insère de nouvelles lignes",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Les écouteurs ne sont posés que sur les boutons présents au moment de l'appel : querySelectorAll ne voit pas les lignes futures.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi6-q3",
+        "prompt": "Cas pratique 2/3 — Quelle est la meilleure solution ?",
+        "choices": [
+          "La délégation : un seul écouteur sur le tableau, qui identifie le bouton cliqué",
+          "Appeler de nouveau querySelectorAll après chaque ajout",
+          "Recharger la page après chaque ajout",
+          "Utiliser setInterval pour poser les écouteurs régulièrement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Réappeler querySelectorAll poserait des écouteurs en double sur les anciens boutons. La délégation règle le problème une fois pour toutes.",
+        "difficulty": 1
+      },
+      {
+        "type": "order",
+        "id": "js-defi6-q4",
+        "prompt": "Cas pratique 3/3 — Remets la version avec délégation dans l'ordre.",
+        "lines": [
+          "tableau.addEventListener(\"click\", (e) => {",
+          "  const bouton = e.target.closest(\".supprimer\");",
+          "  if (!bouton) return;",
+          "  supprimer(bouton.dataset.id);",
+          "});"
+        ],
+        "explanation": "On ignore les clics qui ne viennent pas d'un bouton de suppression ; closest gère aussi un clic sur une icône à l'intérieur du bouton.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "js-defi6-q5",
+        "prompt": "Revue de code : coche tous les problèmes de cette recherche en direct.",
+        "code": "recherche.addEventListener(\"input\", async () => {\n  const r = await fetch(\"/api?q=\" + recherche.value);\n  liste.innerHTML = await r.text();\n});",
+        "choices": [
+          "Une requête part à chaque frappe : il faudrait attendre une pause (debounce)",
+          "Les réponses peuvent arriver dans le désordre : une ancienne peut écraser la plus récente",
+          "La saisie n'est pas encodée : encodeURIComponent est nécessaire",
+          "input ne se déclenche que lorsque le champ perd le focus"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "input se déclenche à chaque modification (c'est change qui attend la perte du focus). Il faut espacer les requêtes, annuler les précédentes (AbortController) et encoder le texte saisi.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "js-defi6-q6",
+        "prompt": "En entretien : qu'est-ce que la délégation d'événements ?",
+        "choices": [
+          "Poser un seul écouteur sur un ancêtre et identifier l'élément visé via event.target, grâce au bouillonnement",
+          "Transmettre un événement à un Web Worker",
+          "Déclencher un événement depuis un autre événement",
+          "Empêcher un événement de se propager"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est la technique utilisée en interne par de nombreux frameworks : moins d'écouteurs, et une gestion naturelle des éléments créés dynamiquement.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

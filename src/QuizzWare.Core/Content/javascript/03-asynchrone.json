@@ -7,19 +7,429 @@
       "id": "js-event-loop",
       "title": "La boucle d'événements",
       "summary": "Tâches et microtâches.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Un seul thread",
+          "body": "Le code JavaScript d'une page s'exécute sur un seul thread. Quand la pile d'appels est vide, la boucle d'événements prend la tâche suivante dans la file : un minuteur (setTimeout), un clic, une réponse réseau..."
+        },
+        {
+          "title": "Tâches et microtâches",
+          "body": "Les callbacks des promesses (then, await) sont des microtâches. Après chaque tâche, toutes les microtâches en attente sont exécutées, avant la tâche suivante. C'est pourquoi un then passe toujours avant un setTimeout(..., 0).",
+          "code": "console.log(\"A\");\nsetTimeout(() => console.log(\"B\"), 0);\nPromise.resolve().then(() => console.log(\"C\"));\nconsole.log(\"D\");\n// A D C B"
+        },
+        {
+          "title": "Ne pas bloquer",
+          "body": "Pendant qu'une tâche s'exécute, rien d'autre ne se passe : pas de clic traité, pas même de rafraîchissement de l'écran. Un calcul de plusieurs secondes fige la page. On le découpe en petits morceaux, ou on le confie à un Web Worker, qui tourne sur un autre thread."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-event-loop-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "console.log(\"A\");\nsetTimeout(() => console.log(\"B\"), 0);\nPromise.resolve().then(() => console.log(\"C\"));\nconsole.log(\"D\");",
+          "choices": [
+            "A D C B",
+            "A B C D",
+            "A D B C",
+            "A C D B"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le code synchrone d'abord (A, D), puis les microtâches (C), puis la tâche du minuteur (B).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-event-loop-q2",
+          "prompt": "Quand s'exécutent les microtâches (callbacks des promesses) ?",
+          "choices": [
+            "Juste après la tâche en cours, toutes, avant la tâche suivante",
+            "Au prochain tour, après les setTimeout",
+            "Sur un thread séparé",
+            "Uniquement quand la page est inactive"
+          ],
+          "answerIndex": 0,
+          "explanation": "La file des microtâches est vidée entièrement entre deux tâches. Une microtâche qui en ajoute d'autres en boucle peut même bloquer la page.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-event-loop-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "setTimeout(() => console.log(\"1\"), 0);\nPromise.resolve()\n  .then(() => {\n    console.log(\"2\");\n    setTimeout(() => console.log(\"3\"), 0);\n  })\n  .then(() => console.log(\"4\"));\nconsole.log(\"5\");",
+          "choices": [
+            "5 2 4 1 3",
+            "5 2 1 4 3",
+            "1 2 3 4 5",
+            "5 2 4 3 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Synchrone : 5. Microtâches : 2 (qui programme le minuteur 3), puis 4. Tâches dans l'ordre de programmation : 1, puis 3.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "js-event-loop-q4",
+          "prompt": "« Calcul… » ne s'affiche jamais, et la page est figée 5 secondes. Touche la ligne en cause.",
+          "code": "bouton.addEventListener(\"click\", () => {\n  statut.textContent = \"Calcul…\";\n  const r = calculLong(); // 5 secondes\n  statut.textContent = r;\n});",
+          "bugLines": [
+            3
+          ],
+          "explanation": "L'écran n'est redessiné qu'après la fin de la tâche : le texte intermédiaire n'apparaît jamais, et les clics attendent. Le calcul doit partir dans un Web Worker (ou être découpé).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-event-loop-q5",
+          "prompt": "Quand s'exécute le callback de setTimeout(f, 0) ?",
+          "choices": [
+            "Au plus tôt après le code en cours et toutes les microtâches",
+            "Immédiatement, avant la ligne suivante",
+            "Exactement 0 ms plus tard, même si le code en cours n'est pas fini",
+            "Jamais : un délai de 0 est ignoré"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le délai est un minimum : le callback est placé dans la file des tâches, et attend que la pile soit vide.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "js-event-loop-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Le code d'une page s'exécute sur un seul thread principal",
+            "Le then d'une promesse déjà résolue s'exécute immédiatement, de façon synchrone",
+            "Les Web Workers permettent un vrai parallélisme",
+            "Le navigateur ne redessine pas la page pendant l'exécution d'une tâche"
+          ],
+          "answerIndices": [
+            0,
+            2,
+            3
+          ],
+          "explanation": "Un then est toujours asynchrone, même si la promesse est déjà résolue : il passe en microtâche, après le code en cours.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "js-promesses",
       "title": "Promesses",
       "summary": "then, catch et Promise.all.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Une valeur future",
+          "body": "Une promesse est en attente, puis tenue (avec une valeur) ou rejetée (avec une erreur). then et catch renvoient chacun une nouvelle promesse : la valeur renvoyée par un then devient l'entrée du suivant. Si elle est elle-même une promesse, la chaîne l'attend.",
+          "code": "chargerUtilisateur(id)\n  .then((u) => chargerCommandes(u.id))\n  .then((commandes) => afficher(commandes))\n  .catch((e) => signaler(e))\n  .finally(() => masquerChargement());"
+        },
+        {
+          "title": "Les erreurs",
+          "body": "Une exception dans un then rejette la promesse : l'erreur saute les then suivants jusqu'au premier catch. Une promesse rejetée sans catch produit une « unhandled rejection »."
+        },
+        {
+          "title": "Combiner",
+          "body": "Promise.all attend toutes les promesses, et rejette dès que l'une échoue. Promise.allSettled attend toutes les issues et rapporte chacune ({ status, value | reason }). Promise.race prend la première promesse terminée, Promise.any la première tenue."
+        },
+        {
+          "title": "Créer une promesse",
+          "body": "new Promise((resolve, reject) => ...) sert à envelopper une API à callbacks. La fonction passée au constructeur s'exécute immédiatement, de façon synchrone."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-promesses-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Promise.resolve(1)\n  .then((x) => x + 1)\n  .then((x) => { throw new Error(\"oups \" + x); })\n  .then(() => console.log(\"jamais\"))\n  .catch((e) => console.log(e.message))\n  .then(() => console.log(\"suite\"));",
+          "choices": [
+            "oups 2 puis suite",
+            "oups 1",
+            "jamais puis oups 2",
+            "oups 2 seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'erreur saute le then suivant jusqu'au catch. Le catch renvoie une promesse tenue : la chaîne reprend normalement après lui.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "js-promesses-q2",
+          "prompt": "afficher reçoit undefined. Touche la ligne fautive.",
+          "code": "chargerUtilisateur(id)\n  .then((u) => {\n    chargerCommandes(u.id);\n  })\n  .then((commandes) => afficher(commandes));",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Avec des accolades, une fonction fléchée doit faire return explicitement. Sans return, le then renvoie undefined, n'attend pas le chargement, et une erreur de chargerCommandes ne serait jamais attrapée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-promesses-q3",
+          "prompt": "Que fait Promise.all si l'une des promesses est rejetée ?",
+          "choices": [
+            "Il rejette aussitôt avec cette erreur ; les autres résultats sont perdus",
+            "Il attend toutes les promesses puis renvoie les résultats disponibles",
+            "Il ignore l'erreur",
+            "Il relance la promesse qui a échoué"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le comportement « fail-fast ». Pour récupérer toutes les issues, réussies ou non, on utilise Promise.allSettled.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "js-promesses-q4",
+          "prompt": "Complète : obtenir l'issue de chaque appel, même si certains échouent.",
+          "code": "const resultats = await Promise.___([a(), b(), c()]);\nconst reussis = resultats\n  .filter((r) => r.status === \"fulfilled\");",
+          "answers": [
+            "allSettled"
+          ],
+          "distractors": [
+            "all",
+            "race",
+            "any"
+          ],
+          "explanation": "allSettled ne rejette jamais : chaque élément vaut { status: \"fulfilled\", value } ou { status: \"rejected\", reason }.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-promesses-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const lent = new Promise((r) =>\n  setTimeout(() => r(\"lent\"), 50));\nconst rapide = new Promise((r) =>\n  setTimeout(() => r(\"rapide\"), 10));\n\nPromise.race([lent, rapide]).then(console.log);",
+          "choices": [
+            "rapide",
+            "lent",
+            "lent puis rapide",
+            "[\"lent\", \"rapide\"]"
+          ],
+          "answerIndex": 0,
+          "explanation": "race suit la première promesse terminée. Usage classique : imposer un délai maximal à une requête.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-promesses-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const p = new Promise((resolve) => {\n  console.log(\"dans\");\n  resolve(\"ok\");\n});\nconsole.log(\"après\");\np.then(console.log);",
+          "choices": [
+            "dans, après, ok",
+            "après, dans, ok",
+            "dans, ok, après",
+            "après, ok, dans"
+          ],
+          "answerIndex": 0,
+          "explanation": "La fonction passée au constructeur s'exécute immédiatement. Le then, lui, est asynchrone : ok s'affiche après le code synchrone.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "js-async-await",
       "title": "async / await",
       "summary": "Du code asynchrone lisible.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "async et await",
+          "body": "Une fonction async renvoie toujours une promesse. await suspend la fonction jusqu'à ce que la promesse soit réglée, sans bloquer le thread ; une promesse rejetée devient une exception, qu'on traite avec try/catch.",
+          "code": "async function chargerProfil(id) {\n  try {\n    const rep = await fetch(`/api/profils/${id}`);\n    if (!rep.ok) throw new Error(rep.status);\n    return await rep.json();\n  } catch (e) {\n    console.error(e);\n  }\n}"
+        },
+        {
+          "title": "fetch ne rejette pas sur une erreur HTTP",
+          "body": "fetch ne rejette que si la requête n'aboutit pas (réseau coupé...). Une réponse 404 ou 500 est une promesse tenue : il faut tester rep.ok (ou rep.status) soi-même."
+        },
+        {
+          "title": "En série ou en parallèle",
+          "body": "Des await successifs attendent chaque opération l'une après l'autre. Pour des opérations indépendantes, on les lance toutes, puis on attend l'ensemble avec Promise.all. Et forEach n'attend pas les callbacks async : on utilise for...of (en série) ou Promise.all avec map (en parallèle).",
+          "code": "const [profil, commandes] = await Promise.all([\n  chargerProfil(id),\n  chargerCommandes(id),\n]);"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-async-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "async function f() { return 42; }\nconsole.log(f() instanceof Promise);\nf().then(console.log);",
+          "choices": [
+            "true puis 42",
+            "false puis 42",
+            "42 puis 42",
+            "true puis undefined"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une fonction async enveloppe toujours son résultat dans une promesse, même s'il n'y a aucun await.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "js-async-q2",
+          "prompt": "« tout est envoyé » s'affiche avant la fin des envois. Touche la ligne en cause.",
+          "code": "async function envoyerTous(messages) {\n  messages.forEach(async (m) => {\n    await envoyer(m);\n  });\n  console.log(\"tout est envoyé\");\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "forEach ignore les promesses renvoyées par le callback : il n'attend rien. Correctifs : for (const m of messages) await envoyer(m); ou await Promise.all(messages.map(envoyer));.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-async-q3",
+          "prompt": "attendre(ms) renvoie une promesse tenue après ms millisecondes. Combien de temps dure ce code ?",
+          "code": "const a = await attendre(1000);\nconst b = await attendre(1000);",
+          "choices": [
+            "Environ 2 secondes",
+            "Environ 1 seconde",
+            "Instantané",
+            "Environ 1,5 seconde"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le second appel n'est lancé qu'après la fin du premier. Avec Promise.all([attendre(1000), attendre(1000)]), on attendrait environ 1 seconde.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "js-async-q4",
+          "prompt": "Une réponse 404 avec un corps JSON d'erreur est traitée comme une réussite. Touche la ligne après laquelle il manque une vérification.",
+          "code": "async function charger(url) {\n  try {\n    const rep = await fetch(url);\n    return await rep.json();\n  } catch {\n    return null;\n  }\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "fetch tient sa promesse quel que soit le statut HTTP. Il faut ajouter if (!rep.ok) throw new Error(`HTTP ${rep.status}`); avant de lire le corps.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "js-async-q5",
+          "prompt": "Complète la gestion d'erreur.",
+          "code": "async function charger() {\n  ___ {\n    const r = await fetch(\"/api\");\n    return await r.json();\n  } ___ (e) {\n    console.error(e);\n  }\n}",
+          "answers": [
+            "try",
+            "catch"
+          ],
+          "distractors": [
+            "do",
+            "except",
+            "finally"
+          ],
+          "explanation": "Avec await, une promesse rejetée lève une exception : on l'attrape avec un try/catch classique.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-async-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "async function f() {\n  console.log(\"1\");\n  await null;\n  console.log(\"3\");\n}\nf();\nconsole.log(\"2\");",
+          "choices": [
+            "1 2 3",
+            "1 3 2",
+            "2 1 3",
+            "1 2"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une fonction async s'exécute de façon synchrone jusqu'à son premier await. La suite passe en microtâche, après le code synchrone qui suit l'appel.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "js-defi-async",
+    "title": "Défi entretien : asynchrone",
+    "summary": "Ordre d'exécution, parallélisme et fetch.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "js-defi3-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "console.log(\"a\");\nsetTimeout(() => console.log(\"b\"));\n(async () => {\n  console.log(\"c\");\n  await Promise.resolve();\n  console.log(\"d\");\n})();\nPromise.resolve().then(() => console.log(\"e\"));\nconsole.log(\"f\");",
+        "choices": [
+          "a c f d e b",
+          "a c f e d b",
+          "a f c d e b",
+          "a c d f e b"
+        ],
+        "answerIndex": 0,
+        "explanation": "Synchrone : a, c (jusqu'au await), f. Microtâches dans l'ordre où elles ont été programmées : la suite de la fonction async (d), puis le then (e). Enfin la tâche du minuteur : b.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "js-defi3-q2",
+        "prompt": "Cas pratique 1/3 — 50 profils à 200 ms chacun : profils met 10 secondes. Touche la ligne en cause.",
+        "code": "async function profils(ids) {\n  const res = [];\n  for (const id of ids) {\n    res.push(await chargerProfil(id));\n  }\n  return res;\n}",
+        "bugLines": [
+          4
+        ],
+        "explanation": "Chaque await attend la fin de l'appel précédent avant de lancer le suivant.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi3-q3",
+        "prompt": "Cas pratique 2/3 — Combien de temps prendrait une version qui lance tous les appels en même temps ?",
+        "choices": [
+          "Environ 200 ms (le plus lent des appels)",
+          "Toujours 10 secondes",
+          "Environ 4 ms",
+          "Environ 1 seconde"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les attentes réseau se chevauchent. En pratique, on limite souvent le nombre d'appels simultanés pour ne pas surcharger le serveur.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "js-defi3-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version parallèle.",
+        "code": "async function profils(ids) {\n  return Promise.___(ids.___(chargerProfil));\n}",
+        "answers": [
+          "all",
+          "map"
+        ],
+        "distractors": [
+          "race",
+          "forEach",
+          "filter"
+        ],
+        "explanation": "map lance un appel par identifiant et renvoie un tableau de promesses ; Promise.all les attend toutes et conserve l'ordre des résultats.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "js-defi3-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "async function sauver(donnees) {\n  fetch(\"/api/sauver\", {\n    method: \"POST\",\n    body: JSON.stringify(donnees),\n  });\n  afficher(\"Sauvegardé !\");\n}",
+        "choices": [
+          "fetch n'est pas attendu : le message s'affiche avant la fin de la requête",
+          "Les erreurs réseau ne sont pas gérées",
+          "Le statut HTTP de la réponse n'est jamais vérifié",
+          "JSON.stringify est asynchrone et devrait être attendu"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "JSON.stringify est synchrone. La version correcte attend fetch, vérifie rep.ok, et n'affiche « Sauvegardé ! » qu'en cas de réussite.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi3-q6",
+        "prompt": "En entretien : qu'est-ce que la boucle d'événements ?",
+        "choices": [
+          "Le mécanisme qui, sur un seul thread, exécute les tâches en attente dès que la pile d'appels est vide, en vidant d'abord les microtâches",
+          "Un thread séparé qui exécute les promesses",
+          "Une boucle while écrite dans chaque programme",
+          "Le moteur de rendu CSS du navigateur"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est ce qui permet à JavaScript d'être non bloquant sur un seul thread : les opérations longues (réseau, minuteurs) sont gérées par le navigateur ou Node.js, et leurs callbacks attendent leur tour.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

@@ -7,19 +7,463 @@
       "id": "ts-bases",
       "title": "Types de base",
       "summary": "Annotations et inférence.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des types effacés",
+          "body": "TypeScript ajoute des types à JavaScript. Le compilateur (tsc, ou un outil comme esbuild) vérifie le code puis efface les types : le JavaScript produit ne contient aucun contrôle. Les types protègent à la compilation, pas à l'exécution."
+        },
+        {
+          "title": "Annotations et inférence",
+          "body": "On annote les paramètres et les signatures publiques ; ailleurs, TypeScript déduit les types. let age = 31 a le type number : lui affecter une chaîne est une erreur.",
+          "code": "let age = 31;              // number (inféré)\nconst noms: string[] = [];\nconst point: [number, number] = [3, 4];\n\ninterface Utilisateur {\n  readonly id: number;\n  nom: string;\n  email?: string;          // optionnel\n}"
+        },
+        {
+          "title": "any et unknown",
+          "body": "any désactive toute vérification, et se propage. unknown accepte n'importe quelle valeur mais interdit de s'en servir avant d'avoir vérifié son type : c'est le bon type pour des données venues de l'extérieur."
+        },
+        {
+          "title": "Le mode strict",
+          "body": "Avec \"strict\": true (indispensable), null et undefined ne sont acceptés que si le type les prévoit (string | null). Le compilateur oblige alors à traiter ces cas avant d'utiliser la valeur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ts-bases-q1",
+          "prompt": "Que deviennent les types TypeScript à l'exécution ?",
+          "choices": [
+            "Ils sont effacés : aucun contrôle n'a lieu à l'exécution",
+            "Ils sont vérifiés à chaque appel de fonction",
+            "Ils sont convertis en assertions JavaScript",
+            "Ils ralentissent l'exécution"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le JavaScript produit est le même que si on avait écrit le code sans types. Pour valider des données externes à l'exécution, on utilise une bibliothèque comme zod.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ts-bases-q2",
+          "prompt": "Que signale le compilateur ?",
+          "code": "let age = 31;\nage = \"trente\";",
+          "choices": [
+            "Une erreur : string n'est pas assignable à number",
+            "Rien : age devient une chaîne",
+            "Rien : il faudrait annoter age pour avoir une erreur",
+            "Une erreur seulement en mode strict"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le type de age est inféré (number) à partir de sa valeur initiale, sans annotation.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "ts-bases-q3",
+          "prompt": "Complète : l'e-mail est facultatif, et l'id ne peut pas être modifié.",
+          "code": "interface Utilisateur {\n  nom: string;\n  email___: string;\n  ___ id: number;\n}",
+          "answers": [
+            "?",
+            "readonly"
+          ],
+          "distractors": [
+            "!",
+            "const",
+            "final"
+          ],
+          "explanation": "email?: string accepte l'absence de la propriété (son type devient string | undefined). readonly interdit la réaffectation... à la compilation seulement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ts-bases-q4",
+          "prompt": "Que signale le compilateur ?",
+          "code": "function crier(x: unknown) {\n  return x.toUpperCase();\n}",
+          "choices": [
+            "Une erreur : x est unknown, il faut d'abord vérifier son type",
+            "Rien : unknown accepte tout",
+            "Une erreur seulement si on appelle crier avec un nombre",
+            "Rien, mais un avertissement à l'exécution"
+          ],
+          "answerIndex": 0,
+          "explanation": "unknown oblige à affiner le type : if (typeof x === \"string\") return x.toUpperCase();. Avec any, le code compilerait et planterait à l'exécution sur un nombre.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "ts-bases-q5",
+          "prompt": "En mode strict, le compilateur refuse cette fonction. Touche la ligne fautive.",
+          "code": "function longueur(s: string | null): number {\n  return s.length;\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "s peut valoir null (« 's' is possibly 'null' »). Il faut traiter le cas : return s?.length ?? 0;.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "ts-bases-q6",
+          "prompt": "interface ou type : quelles affirmations sont vraies ?",
+          "choices": [
+            "Les deux peuvent décrire la forme d'un objet",
+            "Deux déclarations d'interface du même nom sont fusionnées",
+            "Seul type permet de définir une union (\"a\" | \"b\")",
+            "Une interface existe à l'exécution"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Comme tous les types, une interface disparaît à la compilation. Convention fréquente : interface pour les objets, type pour les unions et les types composés.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "ts-avance",
       "title": "Types avancés",
       "summary": "Unions, génériques et types utilitaires.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Unions et types littéraux",
+          "body": "type Taille = \"S\" | \"M\" | \"L\" n'accepte que ces trois chaînes. Attention à l'élargissement : const t = \"M\" a le type \"M\", mais let t = \"M\" a le type string."
+        },
+        {
+          "title": "Les génériques",
+          "body": "Un paramètre de type rend une fonction ou un type réutilisable sans perdre l'information de type. extends contraint ce paramètre.",
+          "code": "function premier<T>(liste: T[]): T | undefined {\n  return liste[0];\n}\n\nfunction longueur<T extends { length: number }>(x: T) {\n  return x.length;\n}"
+        },
+        {
+          "title": "Les types utilitaires",
+          "body": "Partial<T> rend tout optionnel, Required<T> tout obligatoire, Readonly<T> tout en lecture seule, Pick<T, K> et Omit<T, K> gardent ou retirent des propriétés, Record<K, V> décrit un dictionnaire, ReturnType<typeof f> récupère le type de retour d'une fonction. keyof T donne l'union des clés de T.",
+          "code": "type MiseAJour = Partial<Utilisateur>;\ntype Public = Omit<Utilisateur, \"motDePasse\">;\ntype Stock = Record<string, number>;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "ts-avance-q1",
+          "prompt": "Complète cette fonction générique.",
+          "code": "function premier___(liste: T[]): T | undefined {\n  return liste[0];\n}",
+          "answers": [
+            "<T>"
+          ],
+          "distractors": [
+            "<any>",
+            "(T)",
+            "[T]"
+          ],
+          "explanation": "premier([1, 2]) renvoie number | undefined, premier([\"a\"]) string | undefined : le type des éléments est conservé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ts-avance-q2",
+          "prompt": "Que représente Partial<Utilisateur> ?",
+          "choices": [
+            "Le type Utilisateur dont toutes les propriétés sont optionnelles",
+            "Une partie des utilisateurs",
+            "Un Utilisateur dont la moitié des propriétés est supprimée",
+            "Un Utilisateur en lecture seule"
+          ],
+          "answerIndex": 0,
+          "explanation": "Idéal pour une mise à jour partielle : mettreAJour(id, { email: \"...\" }).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ts-avance-q3",
+          "prompt": "Quel est le type Cle ?",
+          "code": "type Cle = keyof { nom: string; age: number };",
+          "choices": [
+            "\"nom\" | \"age\"",
+            "string | number",
+            "string",
+            "[\"nom\", \"age\"]"
+          ],
+          "answerIndex": 0,
+          "explanation": "keyof donne l'union des noms de propriétés, sous forme de types littéraux.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "ts-avance-q4",
+          "prompt": "prix(saisie) est refusé par le compilateur. Touche la ligne qui en est la cause.",
+          "code": "type Taille = \"S\" | \"M\" | \"L\";\nfunction prix(t: Taille): number { return 10; }\n\nlet saisie = \"M\";\nprix(saisie);",
+          "bugLines": [
+            4
+          ],
+          "explanation": "let saisie = \"M\" a le type string (il pourrait changer), qui n'est pas assignable à Taille. Il faut annoter : let saisie: Taille = \"M\"; ou utiliser const.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "ts-avance-q5",
+          "prompt": "Complète : le même type, sans le mot de passe.",
+          "code": "type UtilisateurPublic = ___<Utilisateur, \"motDePasse\">;",
+          "answers": [
+            "Omit"
+          ],
+          "distractors": [
+            "Pick",
+            "Partial",
+            "Exclude"
+          ],
+          "explanation": "Omit retire des propriétés d'un type objet. Exclude, lui, retire des membres d'une union.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ts-avance-q6",
+          "prompt": "Que signale le compilateur à la dernière ligne ?",
+          "code": "function longueur<T extends { length: number }>(x: T) {\n  return x.length;\n}\n\nlongueur(\"abc\");\nlongueur(42);",
+          "choices": [
+            "Une erreur : number n'a pas de propriété length",
+            "Rien",
+            "Une erreur sur les deux appels",
+            "Une erreur seulement sur longueur(\"abc\")"
+          ],
+          "answerIndex": 0,
+          "explanation": "La contrainte exige une propriété length : une chaîne ou un tableau conviennent, pas un nombre.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ts-avance-q7",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Record<string, number> décrit un objet dont les valeurs sont des nombres",
+            "ReturnType<typeof f> est le type de retour de f",
+            "Readonly<T> empêche les modifications à l'exécution",
+            "Pick<T, \"a\"> ne garde que la propriété a"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Readonly n'existe qu'à la compilation. Pour geler un objet à l'exécution, il faut Object.freeze.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "ts-narrowing",
       "title": "Narrowing",
       "summary": "Affiner les types.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Affiner par des tests",
+          "body": "Dans une branche, TypeScript affine le type d'une variable d'après les tests effectués : typeof, instanceof, in, comparaison avec null, valeur de vérité...",
+          "code": "function afficher(x: string | number) {\n  if (typeof x === \"string\") {\n    return x.toUpperCase();   // x : string\n  }\n  return x.toFixed(2);        // x : number\n}"
+        },
+        {
+          "title": "Les unions discriminées",
+          "body": "Chaque membre d'une union porte une propriété littérale commune (type, kind, statut). Un switch sur cette propriété affine le type dans chaque cas. Affecter la valeur à une variable de type never dans le default fait signaler par le compilateur tout cas oublié.",
+          "code": "type Forme =\n  | { type: \"cercle\"; rayon: number }\n  | { type: \"carre\"; cote: number };"
+        },
+        {
+          "title": "Les gardes de type",
+          "body": "Une fonction qui renvoie x is Chat informe le compilateur : après if (estChat(a)), a est un Chat."
+        },
+        {
+          "title": "Les assertions : à éviter",
+          "body": "valeur as Type et valeur! (non nul) font taire le compilateur sans rien vérifier. Si l'affirmation est fausse, l'erreur survient plus loin, à l'exécution."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ts-narrowing-q1",
+          "prompt": "x est de type string | number. Quel est son type dans le bloc if ?",
+          "code": "if (typeof x === \"string\") {\n  // ici\n}",
+          "choices": [
+            "string",
+            "string | number",
+            "unknown",
+            "any"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le test typeof affine le type dans la branche ; dans le else, x serait number.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "ts-narrowing-q2",
+          "prompt": "Complète le switch sur la propriété discriminante.",
+          "code": "function aire(f: Forme) {\n  switch (f.___) {\n    case \"cercle\":\n      return Math.PI * f.rayon ** 2;\n    case \"carre\":\n      return f.cote ** 2;\n  }\n}",
+          "answers": [
+            "type"
+          ],
+          "distractors": [
+            "kind",
+            "constructor",
+            "name"
+          ],
+          "explanation": "C'est la propriété commune aux membres de l'union Forme. Dans le cas \"cercle\", f est affiné en { type: \"cercle\"; rayon: number }, donc f.rayon est autorisé.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "ts-narrowing-q3",
+          "prompt": "Complète pour que l'ajout d'une nouvelle forme non traitée soit une erreur de compilation.",
+          "code": "  default:\n    const verif: ___ = f;\n    return verif;",
+          "answers": [
+            "never"
+          ],
+          "distractors": [
+            "any",
+            "unknown",
+            "void"
+          ],
+          "explanation": "Si tous les cas sont traités, f a le type never dans le default. Une forme oubliée aurait un autre type, non assignable à never : le compilateur le signale.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "ts-narrowing-q4",
+          "prompt": "Le code plante quand l'API renvoie une erreur, alors qu'il compile sans problème. Touche la ligne où le compilateur a été trompé.",
+          "code": "const rep = await fetch(\"/api/utilisateur\");\nconst u = (await rep.json()) as Utilisateur;\nconsole.log(u.nom.toUpperCase());",
+          "bugLines": [
+            2
+          ],
+          "explanation": "as affirme que le JSON est un Utilisateur, sans rien vérifier. Avec une réponse d'erreur, u.nom vaut undefined. Il faut valider les données à l'exécution, par exemple avec zod.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ts-narrowing-q5",
+          "prompt": "Que permet cette fonction ?",
+          "code": "function estChat(a: Animal): a is Chat {\n  return \"miauler\" in a;\n}",
+          "choices": [
+            "Après if (estChat(a)), le compilateur considère a comme un Chat",
+            "Elle convertit un Animal en Chat",
+            "Elle vérifie le type à la compilation uniquement",
+            "Rien : is n'est pas un mot-clé TypeScript"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une garde de type : sa valeur de retour affine le type de l'argument. Le compilateur fait confiance à son implémentation, qui doit donc être juste.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ts-narrowing-q6",
+          "prompt": "Que fait le ! dans ce code ?",
+          "code": "document.getElementById(\"app\")!.textContent = \"ok\";",
+          "choices": [
+            "Il affirme au compilateur que la valeur n'est pas null, sans vérification",
+            "Il lève une erreur explicite si l'élément n'existe pas",
+            "Il crée l'élément s'il n'existe pas",
+            "Il inverse la valeur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si l'élément manque, on obtient une TypeError à l'exécution. Un test explicite (if (!app) throw ...) donne une erreur bien plus claire.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "ts-defi",
+    "title": "Défi entretien : TypeScript",
+    "summary": "Modéliser des états, et ne pas tromper le compilateur.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "ts-defi4-q1",
+        "prompt": "Que signale le compilateur ?",
+        "code": "type Etat =\n  | { statut: \"chargement\" }\n  | { statut: \"ok\"; donnees: string[] }\n  | { statut: \"erreur\"; message: string };\n\nfunction afficher(e: Etat) {\n  console.log(e.donnees);\n}",
+        "choices": [
+          "Une erreur : donnees n'existe pas sur tous les membres de l'union",
+          "Rien : donnees vaut undefined quand il manque",
+          "Une erreur seulement si statut vaut \"erreur\" à l'exécution",
+          "Rien, mais un avertissement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sur une union, on ne peut lire que les propriétés communes à tous les membres. Il faut d'abord tester e.statut === \"ok\".",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ts-defi4-q2",
+        "prompt": "Cas pratique 1/3 — Quel est le problème de cette modélisation ?",
+        "code": "interface Etat {\n  chargement: boolean;\n  donnees?: string[];\n  erreur?: string;\n}",
+        "choices": [
+          "Elle autorise des états impossibles, comme un chargement en cours avec des données et une erreur",
+          "Une interface ne peut pas avoir de propriété optionnelle",
+          "boolean n'est pas un type TypeScript",
+          "Aucun problème"
+        ],
+        "answerIndex": 0,
+        "explanation": "Trois champs indépendants donnent 8 combinaisons, dont la plupart n'ont aucun sens. Le code doit alors tester des cas qui ne devraient jamais arriver.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ts-defi4-q3",
+        "prompt": "Cas pratique 2/3 — Quelle modélisation est meilleure ?",
+        "choices": [
+          "Une union discriminée : un membre par statut, avec seulement les champs qui ont un sens",
+          "Ajouter un champ statut: string en plus des autres",
+          "Remplacer les champs optionnels par any",
+          "Utiliser trois variables séparées"
+        ],
+        "answerIndex": 0,
+        "explanation": "« Rendre les états impossibles impossibles à représenter » : le compilateur empêche alors de lire donnees pendant un chargement.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "ts-defi4-q4",
+        "prompt": "Cas pratique 3/3 — Avec l'union Etat de la première question, complète le cas d'erreur.",
+        "code": "switch (e.statut) {\n  case \"ok\":\n    return e.donnees.join(\", \");\n  case \"erreur\":\n    return e.___;\n  case \"chargement\":\n    return \"…\";\n}",
+        "answers": [
+          "message"
+        ],
+        "distractors": [
+          "donnees",
+          "erreur",
+          "statut"
+        ],
+        "explanation": "Dans ce cas, e est affiné en { statut: \"erreur\"; message: string } : seule message est disponible (en plus de statut).",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "ts-defi4-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "function traiter(data: any) {\n  const items = data.items as Item[];\n  items!.forEach((i) => console.log(i.nom));\n}",
+        "choices": [
+          "any désactive toute vérification sur data",
+          "as Item[] affirme le type sans le vérifier",
+          "! masque un éventuel undefined",
+          "forEach n'existe pas en TypeScript"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le code compile, mais toutes les protections sont contournées. Avec data: unknown et une validation (zod, ou des gardes de type), le compilateur obligerait à traiter les cas invalides.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ts-defi4-q6",
+        "prompt": "En entretien : pourquoi préférer unknown à any pour des données externes ?",
+        "choices": [
+          "unknown oblige à vérifier le type avant d'utiliser la valeur ; any désactive tout contrôle et se propage",
+          "unknown est plus rapide à l'exécution",
+          "any n'existe plus en mode strict",
+          "Il n'y a aucune différence"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une valeur any contamine tout ce qui en dérive : les erreurs passent inaperçues jusqu'à l'exécution. unknown force à valider à la frontière du système.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

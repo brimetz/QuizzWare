@@ -7,13 +7,361 @@
       "id": "js-objets",
       "title": "Objets et déstructuration",
       "summary": "Spread et rest.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Objets littéraux",
+          "body": "Un objet associe des clés à des valeurs. On lit une propriété avec obj.cle ou obj[\"cle\"] (clé calculée). ?. (optional chaining) renvoie undefined au lieu de lever une erreur si une étape vaut null ou undefined.",
+          "code": "const nom = \"Ana\";\nconst u = { nom, age: 31 };   // raccourci nom: nom\nu.adresse?.ville              // undefined, pas d'erreur"
+        },
+        {
+          "title": "Déstructuration",
+          "body": "On extrait des propriétés ou des éléments dans des variables, avec renommage et valeurs par défaut. ...reste récupère ce qui n'a pas été extrait.",
+          "code": "const { nom, age = 18, ville: v } = u;\nconst [premier, ...autres] = [1, 2, 3];"
+        },
+        {
+          "title": "Spread et copies",
+          "body": "{ ...a, theme: \"sombre\" } crée un nouvel objet avec les propriétés de a, puis remplace theme. C'est une copie superficielle : les objets et tableaux imbriqués restent partagés. Pour une copie profonde : structuredClone(a)."
+        },
+        {
+          "title": "Comparer des objets",
+          "body": "=== compare les références : deux objets au contenu identique sont différents. C'est ce qui permet aux bibliothèques d'interface de détecter un changement d'état en comparant simplement les références, à condition de ne jamais modifier un objet en place."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-objets-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const { nom, age = 18, ville: v } =\n  { nom: \"Ana\", ville: \"Lyon\" };\nconsole.log(nom, age, v);",
+          "choices": [
+            "Ana 18 Lyon",
+            "Ana undefined Lyon",
+            "Ana 18 undefined",
+            "ReferenceError : ville"
+          ],
+          "answerIndex": 0,
+          "explanation": "age prend sa valeur par défaut, absente de l'objet ; ville est extraite sous le nom v.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-objets-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const defaut = { theme: \"clair\", taille: 12 };\nconst prefs = { ...defaut, theme: \"sombre\" };\nconsole.log(prefs.theme, defaut.theme);",
+          "choices": [
+            "sombre clair",
+            "sombre sombre",
+            "clair clair",
+            "clair sombre"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le spread copie les propriétés dans un nouvel objet, puis theme est remplacé. defaut n'est pas modifié. L'ordre compte : { theme: \"sombre\", ...defaut } garderait \"clair\".",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-objets-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const a = { tags: [\"x\"] };\nconst b = { ...a };\nb.tags.push(\"y\");\nconsole.log(a.tags.length);",
+          "choices": [
+            "2",
+            "1",
+            "0",
+            "TypeError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le spread est superficiel : b.tags et a.tags désignent le même tableau.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "js-objets-q4",
+          "prompt": "ville({ nom: \"Ana\" }) lève TypeError. Touche la ligne fautive.",
+          "code": "function ville(utilisateur) {\n  return utilisateur.adresse.ville;\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "utilisateur.adresse vaut undefined, et lire .ville sur undefined lève une erreur. utilisateur.adresse?.ville renvoie undefined à la place.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "js-objets-q5",
+          "prompt": "Complète : récupérer le reste du tableau, puis lire la ville même si l'adresse manque.",
+          "code": "const [premier, ___reste] = [1, 2, 3];\nconst ville = client.adresse___ville;",
+          "answers": [
+            "...",
+            "?."
+          ],
+          "distractors": [
+            "*",
+            ".",
+            "&&"
+          ],
+          "explanation": "...reste vaut [2, 3]. ?. arrête la lecture et renvoie undefined si adresse vaut null ou undefined.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-objets-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "console.log({ a: 1 } === { a: 1 });",
+          "choices": [
+            "false",
+            "true",
+            "undefined",
+            "SyntaxError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ce sont deux objets distincts : === compare les références, pas le contenu.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "js-objets-q7",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "structuredClone fait une copie profonde",
+            "JSON.parse(JSON.stringify(o)) transforme les Date en chaînes et supprime les undefined",
+            "Object.freeze ne gèle que le premier niveau",
+            "{ ...o } copie aussi les objets imbriqués"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le spread et Object.freeze ne travaillent que sur le premier niveau. L'aller-retour JSON est une copie profonde approximative, qui perd tout ce que JSON ne sait pas représenter.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "js-prototypes",
       "title": "Prototypes et classes",
       "summary": "L'héritage prototypal.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La chaîne de prototypes",
+          "body": "Chaque objet a un prototype. Quand une propriété est absente de l'objet, JavaScript la cherche dans son prototype, puis dans le prototype de celui-ci, et ainsi de suite. Les méthodes sont ainsi partagées sans être copiées.",
+          "code": "const animal = { parler() { return \"...\"; } };\nconst chien = Object.create(animal);\nchien.parler();   // trouvée sur le prototype"
+        },
+        {
+          "title": "Les classes",
+          "body": "class est une syntaxe plus lisible pour la même mécanique : les méthodes sont rangées dans Classe.prototype. extends chaîne les prototypes ; un constructeur dérivé doit appeler super() avant d'utiliser this.",
+          "code": "class Chien extends Animal {\n  constructor(nom, race) {\n    super(nom);\n    this.race = race;\n  }\n  parler() { return \"Wouf\"; }\n}"
+        },
+        {
+          "title": "Champs privés et statiques",
+          "body": "Un champ #prive n'est accessible que dans la classe : c'est une vraie encapsulation, vérifiée par le langage. static attache une méthode ou un champ à la classe elle-même."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-prototypes-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const animal = { parler() { return \"...\"; } };\nconst chien = Object.create(animal);\nchien.nom = \"Rex\";\nconsole.log(chien.parler(), Object.keys(chien).length);",
+          "choices": [
+            "... 1",
+            "... 2",
+            "TypeError : parler n'existe pas",
+            "undefined 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "parler est trouvée sur le prototype. Object.keys ne liste que les propriétés propres de l'objet : seulement nom.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-prototypes-q2",
+          "prompt": "Que sont les classes en JavaScript ?",
+          "choices": [
+            "Une syntaxe pour le mécanisme des prototypes : les méthodes vivent dans Classe.prototype",
+            "Un nouveau modèle objet, comme en Java, qui remplace les prototypes",
+            "Des objets copiés à chaque new",
+            "Une fonctionnalité réservée à TypeScript"
+          ],
+          "answerIndex": 0,
+          "explanation": "typeof d'une classe vaut d'ailleurs \"function\". La syntaxe ajoute quelques garanties (mode strict, appel obligatoire avec new, champs privés).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-prototypes-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "class A {\n  qui() { return \"A\"; }\n}\nconst x = new A();\nA.prototype.qui = () => \"modifié\";\nconsole.log(x.qui());",
+          "choices": [
+            "modifié",
+            "A",
+            "TypeError",
+            "undefined"
+          ],
+          "answerIndex": 0,
+          "explanation": "x ne possède pas qui : il la cherche dans son prototype au moment de l'appel. Modifier le prototype touche donc aussi les objets déjà créés.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "js-prototypes-q4",
+          "prompt": "new Chien(\"Rex\", \"berger\") lève ReferenceError. Touche la ligne fautive.",
+          "code": "class Animal {\n  constructor(nom) { this.nom = nom; }\n}\nclass Chien extends Animal {\n  constructor(nom, race) {\n    this.race = race;\n    super(nom);\n  }\n}",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Dans une classe dérivée, this n'existe qu'après super() : c'est la classe de base qui crée l'objet. Il faut appeler super(nom) en premier.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "js-prototypes-q5",
+          "prompt": "Complète : le solde ne doit pas être accessible hors de la classe.",
+          "code": "class Compte {\n  ___solde = 0;\n  deposer(m) { this.___solde += m; }\n}",
+          "answers": [
+            "#",
+            "#"
+          ],
+          "distractors": [
+            "_",
+            "private ",
+            "$"
+          ],
+          "explanation": "#solde est un champ privé : compte.#solde hors de la classe est une erreur de syntaxe. Le préfixe _ n'est qu'une convention ; private est un mot-clé de TypeScript, effacé à la compilation.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-prototypes-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "class Forme {\n  static creer() { return new this(); }\n}\nclass Carre extends Forme {}\n\nconst c = Carre.creer();\nconsole.log(c instanceof Carre, c instanceof Forme);",
+          "choices": [
+            "true true",
+            "false true",
+            "true false",
+            "TypeError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans une méthode statique, this est la classe sur laquelle on l'appelle : Carre. instanceof remonte la chaîne de prototypes, donc c est aussi une Forme.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "js-prototypes-q7",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Les méthodes d'une classe sont partagées via le prototype",
+            "Un champ #prive est inaccessible hors de la classe",
+            "class C extends A, B hérite de deux classes",
+            "Object.getPrototypeOf(new A()) === A.prototype"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "extends n'accepte qu'une classe : un objet n'a qu'un prototype. Pour combiner des comportements, on compose des objets ou on utilise des mixins.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "js-defi-objets",
+    "title": "Défi entretien : objets",
+    "summary": "this, immutabilité et prototypes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "js-defi2-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "const obj = {\n  nom: \"obj\",\n  classique() { return this?.nom; },\n  fleche: () => this?.nom,\n};\nconsole.log(obj.classique(), obj.fleche());",
+        "choices": [
+          "obj undefined",
+          "obj obj",
+          "undefined obj",
+          "undefined undefined"
+        ],
+        "answerIndex": 0,
+        "explanation": "La méthode classique reçoit l'objet comme this. La fonction fléchée prend le this de l'endroit où l'objet littéral est écrit (le niveau supérieur), pas l'objet lui-même.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "js-defi2-q2",
+        "prompt": "Cas pratique 1/3 — L'interface compare l'ancien et le nouvel état, et ne se met jamais à jour. Touche la ligne en cause.",
+        "code": "function ajouterArticle(panier, article) {\n  panier.articles.push(article);\n  return panier;\n}\n\nconst avant = { articles: [] };\nconst apres = ajouterArticle(avant, \"pomme\");\nconsole.log(avant === apres); // true",
+        "bugLines": [
+          2
+        ],
+        "explanation": "push modifie le panier existant : l'ancien et le nouvel état sont le même objet.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi2-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi l'interface ne voit-elle aucun changement ?",
+        "choices": [
+          "Elle compare les références : un objet modifié en place reste le même objet",
+          "push est asynchrone",
+          "Les tableaux ne peuvent pas être modifiés",
+          "return renvoie une copie du panier"
+        ],
+        "answerIndex": 0,
+        "explanation": "React, Redux ou Angular (avec OnPush) détectent un changement par avant !== apres. On produit donc un nouvel objet à chaque modification, sans toucher l'ancien.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "js-defi2-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version immuable.",
+        "code": "function ajouterArticle(panier, article) {\n  return {\n    ___panier,\n    articles: [___panier.articles, article],\n  };\n}",
+        "answers": [
+          "...",
+          "..."
+        ],
+        "distractors": [
+          "&",
+          "*",
+          "new "
+        ],
+        "explanation": "On copie le panier et on crée un nouveau tableau d'articles : l'ancien état reste intact, et avant !== apres.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "js-defi2-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "class Utilisateur {\n  constructor(nom) {\n    this.nom = nom;\n    this.saluer = function () {\n      return \"Bonjour \" + this.nom;\n    };\n  }\n}",
+        "choices": [
+          "saluer est recréée pour chaque instance au lieu d'être partagée par le prototype",
+          "Une méthode de classe (saluer() { ... }) serait plus claire",
+          "Un gabarit `Bonjour ${this.nom}` serait plus lisible",
+          "this.nom est inaccessible dans saluer"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Appelée comme u.saluer(), la fonction reçoit bien u comme this. Mais chaque instance porte sa propre copie de la fonction, ce qui gaspille de la mémoire.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi2-q6",
+        "prompt": "En entretien : qu'est-ce que l'héritage prototypal ?",
+        "choices": [
+          "Les objets héritent directement d'autres objets via une chaîne de prototypes ; les classes n'en sont qu'une syntaxe",
+          "Chaque objet copie les méthodes de sa classe à sa création",
+          "Un héritage multiple entre classes",
+          "Un mécanisme propre à TypeScript"
+        ],
+        "answerIndex": 0,
+        "explanation": "Il n'y a pas de « classe » au sens de Java dans le moteur : seulement des objets liés entre eux. C'est ce qui rend possible Object.create ou la modification d'un prototype à l'exécution.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

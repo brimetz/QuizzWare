@@ -7,13 +7,330 @@
       "id": "js-modules",
       "title": "Modules",
       "summary": "import, export, ESM et CommonJS.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les modules ES (ESM)",
+          "body": "Chaque fichier est un module avec sa propre portée. export rend une valeur disponible, import la récupère. On distingue les exports nommés (import { a }) de l'export par défaut (import x). Les imports sont statiques : les outils peuvent retirer le code inutilisé (tree shaking).",
+          "code": "// math.js\nexport function carre(x) { return x * x; }\nexport default function cube(x) { return x ** 3; }\n\n// app.js\nimport cube, { carre } from \"./math.js\";"
+        },
+        {
+          "title": "Un module s'évalue une seule fois",
+          "body": "Le premier import exécute le module ; les suivants réutilisent le même résultat. Un module est donc naturellement un singleton. Les modules sont aussi en mode strict par défaut."
+        },
+        {
+          "title": "import() dynamique",
+          "body": "import(\"./editeur.js\") renvoie une promesse : le module n'est chargé qu'au moment voulu. Les bundlers (Vite, webpack) en profitent pour découper l'application en morceaux chargés à la demande."
+        },
+        {
+          "title": "CommonJS",
+          "body": "L'ancien format de Node.js utilise require et module.exports, de façon synchrone. Dans un projet dont le package.json indique \"type\": \"module\", les fichiers .js sont des modules ES : require n'y existe pas."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "js-modules-q1",
+          "prompt": "Complète pour partager carre entre deux fichiers.",
+          "code": "// math.js\n___ function carre(x) { return x * x; }\n\n// app.js\n___ { carre } from \"./math.js\";",
+          "answers": [
+            "export",
+            "import"
+          ],
+          "distractors": [
+            "require",
+            "module",
+            "include"
+          ],
+          "explanation": "C'est un export nommé : on l'importe avec des accolades et le même nom (ou { carre as c } pour le renommer).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-modules-q2",
+          "prompt": "math.js n'a que des exports nommés. Que se passe-t-il ?",
+          "code": "import carre from \"./math.js\";",
+          "choices": [
+            "Une erreur au chargement : math.js n'a pas d'export par défaut",
+            "carre reçoit le premier export du fichier",
+            "carre reçoit un objet contenant tous les exports",
+            "carre vaut undefined, sans erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "import x (sans accolades) demande l'export par défaut. Les liens entre modules sont vérifiés avant l'exécution : un import introuvable est une SyntaxError.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-modules-q3",
+          "prompt": "config.js est importé par trois autres modules. Combien de fois son code est-il exécuté ?",
+          "choices": [
+            "Une seule fois",
+            "Trois fois",
+            "Quatre fois",
+            "À chaque utilisation d'un de ses exports"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le module est mis en cache après sa première évaluation. Tous les importeurs partagent les mêmes objets.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-modules-q4",
+          "prompt": "Que renvoie import(\"./editeur.js\") ?",
+          "choices": [
+            "Une promesse du module, chargé à la demande",
+            "Le module, de façon synchrone",
+            "Une chaîne contenant le code du module",
+            "Une erreur : import n'est pas une fonction"
+          ],
+          "answerIndex": 0,
+          "explanation": "const { Editeur } = await import(\"./editeur.js\"); ne charge le code que lorsqu'on en a besoin, par exemple à l'ouverture d'un écran rarement utilisé.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "js-modules-q5",
+          "prompt": "Le package.json contient \"type\": \"module\". Ce fichier lève ReferenceError. Touche la ligne fautive.",
+          "code": "// serveur.js\nconst express = require(\"express\");\nconst app = express();",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Dans un module ES, require n'est pas défini. Il faut écrire import express from \"express\";.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "js-modules-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Les imports statiques sont résolus avant l'exécution du module",
+            "Un module ES est en mode strict par défaut",
+            "Le tree shaking repose sur la structure statique des imports",
+            "import * as m recharge le module à chaque utilisation de m"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "import * as m crée un objet qui donne accès aux exports, chargés une seule fois comme pour tout import.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "js-npm",
       "title": "npm et les dépendances",
       "summary": "package.json et versions.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "package.json",
+          "body": "Il décrit le projet : ses dépendances (nécessaires à l'exécution), ses devDependencies (outils de test, de build...) et ses scripts, lancés avec npm run nom.",
+          "code": "{\n  \"scripts\": {\n    \"test\": \"vitest run\",\n    \"build\": \"vite build\"\n  },\n  \"dependencies\": { \"express\": \"^4.19.2\" },\n  \"devDependencies\": { \"vitest\": \"^2.0.0\" }\n}",
+          "language": "text"
+        },
+        {
+          "title": "Les versions sémantiques",
+          "body": "MAJEURE.MINEURE.CORRECTIF : une version majeure peut casser la compatibilité. ^4.17.1 accepte toute version < 5.0.0 ; ~4.17.1 accepte < 4.18.0. Exception : pour une version 0.x, ^0.3.1 n'accepte que < 0.4.0, car tout peut encore changer."
+        },
+        {
+          "title": "Le fichier de verrouillage",
+          "body": "package-lock.json fige les versions exactes de tout l'arbre de dépendances. Il se commite (contrairement à node_modules). En intégration continue, npm ci installe exactement ce qu'il contient, et échoue s'il ne correspond pas au package.json."
+        },
+        {
+          "title": "La chaîne d'approvisionnement",
+          "body": "Chaque dépendance peut exécuter du code à l'installation (scripts postinstall). Les attaques passent par des noms proches de paquets connus (typosquatting) ou des paquets compromis. npm audit signale les vulnérabilités connues ; on limite le nombre de dépendances."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-npm-q1",
+          "prompt": "Quelles versions accepte la contrainte \"^4.17.1\" ?",
+          "choices": [
+            "De 4.17.1 inclus à 5.0.0 exclu",
+            "Exactement 4.17.1",
+            "De 4.17.1 à 4.18.0 exclu",
+            "Toute version supérieure à 4.17.1, même 5.x"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le caret autorise les nouvelles versions mineures et correctives, qui ne doivent pas casser la compatibilité. ~4.17.1 n'autoriserait que les correctifs.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-npm-q2",
+          "prompt": "Où ranger vitest (le framework de tests) ?",
+          "choices": [
+            "Dans les devDependencies : il ne sert pas à l'exécution en production",
+            "Dans les dependencies",
+            "Dans les scripts",
+            "Nulle part : on l'installe globalement"
+          ],
+          "answerIndex": 0,
+          "explanation": "npm install --omit=dev (ou une image de production) n'installe pas les devDependencies : l'application déployée est plus légère.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-npm-q3",
+          "prompt": "Pourquoi utiliser npm ci plutôt que npm install en intégration continue ?",
+          "choices": [
+            "Il installe exactement le fichier de verrouillage, et échoue s'il n'est pas à jour",
+            "Il installe les dernières versions disponibles",
+            "Il est le seul à installer les devDependencies",
+            "Il met à jour package.json automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "npm install peut modifier le lockfile ; npm ci ne le modifie jamais et part d'un node_modules vide : les builds sont reproductibles.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "js-npm-q4",
+          "prompt": "Lesquels doivent être commités ?",
+          "choices": [
+            "package-lock.json",
+            "node_modules/",
+            "package.json",
+            ".env (avec les clés d'API)"
+          ],
+          "answerIndices": [
+            0,
+            2
+          ],
+          "explanation": "node_modules se régénère à partir du lockfile. Un .env contient des secrets : il ne doit jamais entrer dans le dépôt.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "js-npm-q5",
+          "prompt": "Complète la commande qui lance le script build du package.json.",
+          "code": "npm ___ build",
+          "language": "shell",
+          "answers": [
+            "run"
+          ],
+          "distractors": [
+            "exec",
+            "start",
+            "do"
+          ],
+          "explanation": "npm run nom lance un script. Quelques noms ont un raccourci (npm test, npm start), mais pas build.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "js-npm-q6",
+          "prompt": "Revue du package.json : touche la ligne dangereuse.",
+          "code": "\"dependencies\": {\n  \"express\": \"^4.19.2\",\n  \"lodash\": \"*\"\n}",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "\"*\" accepte n'importe quelle version, y compris une future version majeure incompatible. Il faut une plage explicite, comme ^4.17.21.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "js-defi-modules",
+    "title": "Défi entretien : modules et dépendances",
+    "summary": "Versions, reproductibilité et sécurité.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "js-defi5-q1",
+        "prompt": "Le package.json contient \"^0.3.1\", et les versions 0.3.4 et 0.4.0 sont publiées. Laquelle est installée ?",
+        "choices": [
+          "0.3.4",
+          "0.4.0",
+          "0.3.1 exactement",
+          "La plus récente, quelle qu'elle soit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Pour une version 0.x, le caret considère la mineure comme « majeure » : ^0.3.1 accepte < 0.4.0. Une version 0.x peut casser la compatibilité à chaque mineure.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "js-defi5-q2",
+        "prompt": "Cas pratique 1/3 — Le build passe sur ton poste, mais échoue en intégration continue avec une autre version d'une dépendance. Cause la plus probable ?",
+        "choices": [
+          "Le package-lock.json n'est pas commité, ou la CI utilise npm install au lieu de npm ci",
+          "La CI utilise un autre langage",
+          "npm est trop lent sur les serveurs",
+          "Les dépendances ne fonctionnent qu'en local"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans lockfile, chaque installation résout les plages de versions au moment présent, et peut tomber sur une version plus récente.",
+        "difficulty": 1
+      },
+      {
+        "type": "fill",
+        "id": "js-defi5-q3",
+        "prompt": "Cas pratique 2/3 — Complète l'étape d'installation de la CI.",
+        "code": "- name: Installer les dépendances\n  run: npm ___",
+        "language": "yaml",
+        "answers": [
+          "ci"
+        ],
+        "distractors": [
+          "install",
+          "update",
+          "audit"
+        ],
+        "explanation": "npm ci installe exactement le lockfile commité : la CI construit ce que tu as testé.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "js-defi5-q4",
+        "prompt": "Cas pratique 3/3 — Comment mettre à jour une dépendance volontairement ?",
+        "choices": [
+          "npm install paquet@version, lancer les tests, puis commiter le package.json et le lockfile mis à jour",
+          "Supprimer package-lock.json à chaque build",
+          "Modifier node_modules à la main",
+          "Ne jamais mettre à jour"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les mises à jour deviennent des changements explicites et relus, comme le reste du code. Des outils comme Dependabot ou Renovate proposent ces mises à jour automatiquement.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "js-defi5-q5",
+        "prompt": "Quels sont de vrais risques de la chaîne d'approvisionnement npm ?",
+        "choices": [
+          "Installer un paquet au nom proche d'un paquet connu (typosquatting)",
+          "Des scripts d'installation qui exécutent du code arbitraire",
+          "npm audit qui installe des correctifs sans vérification",
+          "Un paquet populaire ne peut pas être compromis"
+        ],
+        "answerIndices": [
+          0,
+          1
+        ],
+        "explanation": "npm audit signale les vulnérabilités sans rien modifier (npm audit fix, lui, met à jour). Des paquets très populaires ont déjà été compromis via le compte de leur mainteneur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi5-q6",
+        "prompt": "En entretien : quelle différence entre ESM et CommonJS ?",
+        "choices": [
+          "ESM : import/export statiques et standard, permettant le tree shaking ; CommonJS : require dynamique et synchrone, l'historique de Node.js",
+          "ESM ne fonctionne que dans le navigateur",
+          "CommonJS est plus récent qu'ESM",
+          "Ce sont deux noms pour le même format"
+        ],
+        "answerIndex": 0,
+        "explanation": "ESM est le format standard du langage, compris par les navigateurs et par Node.js. CommonJS reste très présent dans l'écosystème npm, d'où des problèmes d'interopérabilité.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

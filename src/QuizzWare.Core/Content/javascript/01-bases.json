@@ -7,19 +7,472 @@
       "id": "js-types",
       "title": "Types et coercition",
       "summary": "typeof, == et ===.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les types",
+          "body": "Sept types primitifs : string, number, bigint, boolean, undefined, null et symbol. Tout le reste est un objet, y compris les tableaux et les fonctions. typeof null renvoie \"object\" (un bug historique jamais corrigé) ; pour un tableau, on utilise Array.isArray.",
+          "code": "typeof \"a\"        // \"string\"\ntypeof 42         // \"number\"\ntypeof null       // \"object\" !\ntypeof [1, 2]     // \"object\"\ntypeof (() => 1)  // \"function\""
+        },
+        {
+          "title": "Les nombres",
+          "body": "number est un flottant IEEE 754 : 0.1 + 0.2 ne vaut pas exactement 0.3. NaN (« pas un nombre ») n'est égal à rien, pas même à lui-même : on le teste avec Number.isNaN. Pour les grands entiers exacts, il existe bigint (123n)."
+        },
+        {
+          "title": "== ou ===",
+          "body": "== convertit les opérandes avant de comparer, avec des règles surprenantes (0 == \"\" est vrai). === compare sans conversion : c'est la seule à utiliser, sauf l'idiome x == null qui teste à la fois null et undefined. De même, + concatène dès qu'un opérande est une chaîne, alors que - convertit en nombre."
+        },
+        {
+          "title": "Vrai, faux, || et ??",
+          "body": "Sont faux : false, 0, -0, 0n, \"\", null, undefined et NaN. Tout le reste est vrai, y compris [] et {}. a || b remplace toute valeur fausse (donc aussi 0 ou \"\"), alors que a ?? b ne remplace que null et undefined.",
+          "code": "const vies = options.vies ?? 3;  // 0 reste 0\nconst nom = saisie || \"Anonyme\"; // \"\" devient \"Anonyme\""
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-types-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "console.log(typeof null, typeof [], typeof NaN);",
+          "choices": [
+            "object object number",
+            "null array NaN",
+            "object array number",
+            "null object undefined"
+          ],
+          "answerIndex": 0,
+          "explanation": "typeof null vaut \"object\" (bug historique), un tableau est un objet, et NaN est... de type number.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-types-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "console.log(0 == \"\", null == undefined, \"0\" === 0);",
+          "choices": [
+            "true true false",
+            "false false false",
+            "true false false",
+            "false true true"
+          ],
+          "answerIndex": 0,
+          "explanation": "== convertit \"\" en 0, et considère null et undefined égaux entre eux. === ne convertit rien : une chaîne n'est jamais égale à un nombre.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-types-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "console.log(\"5\" + 3, \"5\" - 3, \"5\" * \"2\");",
+          "choices": [
+            "53 2 10",
+            "8 2 10",
+            "53 53 52",
+            "8 2 \"52\""
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec une chaîne, + concatène. Les autres opérateurs arithmétiques convertissent en nombre : \"5\" - 3 vaut 2 et \"5\" * \"2\" vaut 10.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "js-types-q4",
+          "prompt": "creerJeu({ vies: 0 }) renvoie { vies: 3 }. Touche la ligne fautive.",
+          "code": "function creerJeu(options) {\n  const vies = options.vies || 3;\n  return { vies };\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "0 est faux : || le remplace par 3. L'opérateur ?? ne remplace que null et undefined : options.vies ?? 3.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "js-types-q5",
+          "prompt": "Complète : le test ne doit être vrai que si valeur est NaN.",
+          "code": "if (Number.___(valeur)) {\n  console.log(\"calcul invalide\");\n}",
+          "answers": [
+            "isNaN"
+          ],
+          "distractors": [
+            "isNull",
+            "isInteger",
+            "parseFloat"
+          ],
+          "explanation": "valeur === NaN est toujours faux, puisque NaN n'est égal à rien. Number.isNaN est fiable, contrairement à l'ancienne fonction globale isNaN, qui convertit d'abord (isNaN(\"abc\") est vrai).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "js-types-q6",
+          "prompt": "Lesquelles de ces valeurs sont fausses (falsy) ?",
+          "choices": [
+            "0",
+            "\"\"",
+            "[]",
+            "NaN"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Un tableau vide est un objet, donc vrai : if (liste) ne teste pas qu'il contient des éléments. On écrit if (liste.length).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-types-q7",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "console.log(0.1 + 0.2 === 0.3);",
+          "choices": [
+            "false",
+            "true",
+            "NaN",
+            "TypeError"
+          ],
+          "answerIndex": 0,
+          "explanation": "0.1 + 0.2 vaut 0.30000000000000004 en virgule flottante binaire. Pour l'argent, on calcule en centimes entiers ; pour comparer des flottants, on tolère un petit écart.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "js-variables",
       "title": "let, const et portée",
       "summary": "Hoisting et zone morte temporelle.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "let, const et var",
+          "body": "let et const ont une portée de bloc (entre accolades). const interdit de réaffecter la variable, mais l'objet qu'elle désigne reste modifiable. var, l'ancienne syntaxe, a une portée de fonction : on ne l'utilise plus.",
+          "code": "const config = { debug: false };\nconfig.debug = true;   // OK : l'objet change\nconfig = {};           // TypeError"
+        },
+        {
+          "title": "Hoisting et zone morte",
+          "body": "Les déclarations sont « remontées » en haut de leur portée. Une variable var existe donc avant sa ligne, avec la valeur undefined. Une variable let ou const aussi, mais y accéder avant sa déclaration lève une ReferenceError : c'est la zone morte temporelle. Les déclarations function sont remontées entièrement."
+        },
+        {
+          "title": "Les boucles et les closures",
+          "body": "Avec var, toutes les fonctions créées dans une boucle partagent la même variable. Avec let, chaque itération a sa propre variable.",
+          "code": "for (var i = 0; i < 3; i++)\n  setTimeout(() => console.log(i)); // 3 3 3\n\nfor (let i = 0; i < 3; i++)\n  setTimeout(() => console.log(i)); // 0 1 2"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-variables-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "for (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}",
+          "choices": [
+            "3, 3, 3",
+            "0, 1, 2",
+            "2, 2, 2",
+            "undefined, undefined, undefined"
+          ],
+          "answerIndex": 0,
+          "explanation": "var crée une seule variable i pour toute la fonction. Les callbacks s'exécutent après la boucle, quand i vaut 3. Avec let, on obtiendrait 0, 1, 2.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-variables-q2",
+          "prompt": "Que se passe-t-il ?",
+          "code": "console.log(x);\nlet x = 5;",
+          "choices": [
+            "ReferenceError : x est dans sa zone morte",
+            "Affiche undefined",
+            "Affiche 5",
+            "SyntaxError"
+          ],
+          "answerIndex": 0,
+          "explanation": "x est bien déclarée (hoisting), mais inaccessible avant sa ligne de déclaration. Avec var, on aurait obtenu undefined, ce qui masque l'erreur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-variables-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const config = { debug: false };\nconfig.debug = true;\nconsole.log(config.debug);",
+          "choices": [
+            "true",
+            "false",
+            "TypeError",
+            "undefined"
+          ],
+          "answerIndex": 0,
+          "explanation": "const fige la variable, pas l'objet. Pour empêcher les modifications : Object.freeze(config), qui reste superficiel.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "js-variables-q4",
+          "prompt": "Ce code lève TypeError: Assignment to constant variable. Touche la ligne à changer.",
+          "code": "const total = 0;\nfor (const prix of panier) {\n  total += prix;\n}",
+          "bugLines": [
+            1
+          ],
+          "explanation": "total est réaffectée à chaque tour : il faut let total = 0. Le const de la boucle, lui, est correct : chaque itération crée une nouvelle variable prix.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "js-variables-q5",
+          "prompt": "Complète : compteur sera modifié, MAX jamais.",
+          "code": "___ compteur = 0;\ncompteur++;\n___ MAX = 10;",
+          "answers": [
+            "let",
+            "const"
+          ],
+          "distractors": [
+            "var",
+            "static",
+            "final"
+          ],
+          "explanation": "Règle simple : const par défaut, let quand la variable doit être réaffectée, et jamais var.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-variables-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "console.log(carre(3));\nfunction carre(x) { return x * x; }\n\nconsole.log(typeof cube);\nvar cube = (x) => x ** 3;",
+          "choices": [
+            "9 puis undefined",
+            "ReferenceError dès la première ligne",
+            "9 puis function",
+            "undefined puis undefined"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une déclaration function est remontée avec son corps : on peut l'appeler avant. Pour var cube, seule la déclaration remonte : elle vaut undefined jusqu'à l'affectation.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "js-fonctions",
       "title": "Fonctions",
       "summary": "Fonctions fléchées, this et closures.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les formes de fonctions",
+          "body": "Déclaration (function f() {}), expression (const f = function () {}), fonction fléchée (const f = (x) => x * 2). Les paramètres acceptent des valeurs par défaut ; ...reste regroupe les arguments, et ...tableau étale un tableau à l'appel.",
+          "code": "function somme(...nombres) {\n  return nombres.reduce((a, b) => a + b, 0);\n}\nsomme(...[1, 2, 3]);   // 6"
+        },
+        {
+          "title": "this dépend de l'appel",
+          "body": "Dans une fonction classique, this dépend de la façon dont elle est appelée : obj.f() donne obj, mais une fonction détachée (const g = obj.f; g()) perd son this. Une fonction fléchée n'a pas son propre this : elle utilise celui de l'endroit où elle est définie, ce qui en fait le bon choix pour les callbacks.",
+          "code": "class Minuteur {\n  secondes = 0;\n  demarrer() {\n    setInterval(() => this.secondes++, 1000);\n  }\n}"
+        },
+        {
+          "title": "Fonctions d'ordre supérieur",
+          "body": "Les fonctions sont des valeurs : on les passe en argument. filter, map et reduce enchaînent les traitements sans boucle ni variable intermédiaire."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-fonctions-q1",
+          "prompt": "Que se passe-t-il à la dernière ligne ?",
+          "code": "class Compteur {\n  n = 0;\n  incr() { this.n++; }\n}\n\nconst c = new Compteur();\nconst f = c.incr;\nf();",
+          "choices": [
+            "TypeError : this est undefined dans f",
+            "c.n vaut 1",
+            "Rien : f() ne fait rien",
+            "SyntaxError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Détachée de son objet, la méthode est appelée sans this (undefined, car le code des classes est en mode strict). Correctifs : c.incr.bind(c), ou une fonction fléchée () => c.incr().",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "js-fonctions-q2",
+          "prompt": "Le compteur de secondes ne bouge jamais. Touche la ligne fautive.",
+          "code": "class Minuteur {\n  secondes = 0;\n  demarrer() {\n    setInterval(function () {\n      this.secondes++;\n    }, 1000);\n  }\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Une fonction classique passée à setInterval n'est pas appelée sur le minuteur : son this n'est pas l'objet. Une fonction fléchée garde le this de demarrer : setInterval(() => { this.secondes++; }, 1000).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-fonctions-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const total = [1, 2, 3, 4]\n  .filter((n) => n % 2 === 0)\n  .map((n) => n * 10)\n  .reduce((acc, n) => acc + n, 0);\nconsole.log(total);",
+          "choices": [
+            "60",
+            "100",
+            "40",
+            "[20, 40]"
+          ],
+          "answerIndex": 0,
+          "explanation": "filter garde 2 et 4, map les multiplie par 10 (20 et 40), reduce les additionne en partant de 0.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "js-fonctions-q4",
+          "prompt": "Complète : somme accepte un nombre quelconque d'arguments, et on lui passe les éléments du tableau.",
+          "code": "function somme(___nombres) {\n  return nombres.reduce((a, b) => a + b, 0);\n}\n\nconst valeurs = [1, 2, 3];\nsomme(___valeurs);",
+          "answers": [
+            "...",
+            "..."
+          ],
+          "distractors": [
+            "*",
+            "**",
+            "&"
+          ],
+          "explanation": "La même syntaxe a deux rôles : dans la déclaration, ...nombres regroupe les arguments dans un tableau (rest) ; à l'appel, ...valeurs étale le tableau en arguments (spread).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-fonctions-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "function creerCompteur() {\n  let n = 0;\n  return () => ++n;\n}\n\nconst a = creerCompteur();\na();\na();\nconst b = creerCompteur();\nconsole.log(a(), b());",
+          "choices": [
+            "3 1",
+            "3 3",
+            "1 1",
+            "3 4"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque appel de creerCompteur crée sa propre variable n, capturée par la fonction renvoyée (une closure).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-fonctions-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "function f(a, b = a * 2) {\n  return a + b;\n}\nconsole.log(f(2), f(2, 0));",
+          "choices": [
+            "6 2",
+            "6 6",
+            "4 2",
+            "NaN 2"
+          ],
+          "answerIndex": 0,
+          "explanation": "La valeur par défaut peut utiliser les paramètres précédents, et ne s'applique que si l'argument vaut undefined : 0 est conservé.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "js-fonctions-q7",
+          "prompt": "Quelles affirmations sur les fonctions fléchées sont vraies ?",
+          "choices": [
+            "Elles n'ont pas leur propre this",
+            "On ne peut pas les appeler avec new",
+            "Elles n'ont pas d'objet arguments",
+            "Elles sont toujours plus rapides que les fonctions classiques"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les fonctions fléchées sont pensées pour les callbacks courts. Elles ne conviennent pas comme méthodes qui ont besoin de leur propre this, ni comme constructeurs. Il n'y a pas de différence de performance notable.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "js-defi-bases",
+    "title": "Défi entretien : bases du langage",
+    "summary": "Coercition, tri et code idiomatique.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "js-defi1-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "console.log([1, 10, 2].sort().join(\",\"));",
+        "choices": [
+          "1,10,2",
+          "1,2,10",
+          "10,2,1",
+          "2,10,1"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans fonction de comparaison, sort compare les éléments comme des chaînes : \"10\" vient avant \"2\". Pour des nombres : sort((a, b) => a - b).",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "js-defi1-q2",
+        "prompt": "Cas pratique 1/3 — Le total affiche « 010520 ». Touche la ligne en cause.",
+        "code": "const prix = [\"10\", \"5\", \"20\"];\nlet total = 0;\nfor (const p of prix) {\n  total += p;\n}\nconsole.log(total);",
+        "bugLines": [
+          4
+        ],
+        "explanation": "Les prix sont des chaînes (lues dans un formulaire ou un CSV par exemple) : 0 + \"10\" donne \"010\", et la suite est concaténée.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "js-defi1-q3",
+        "prompt": "Cas pratique 2/3 — Pourquoi + concatène-t-il ici ?",
+        "choices": [
+          "Dès qu'un opérande de + est une chaîne, l'autre est converti en chaîne",
+          "+= est toujours une concaténation en JavaScript",
+          "let total devrait être déclaré avec const",
+          "for...of convertit les éléments en chaînes"
+        ],
+        "answerIndex": 0,
+        "explanation": "+ est le seul opérateur arithmétique qui privilégie les chaînes. Il faut convertir explicitement les données d'entrée en nombres.",
+        "difficulty": 1
+      },
+      {
+        "type": "fill",
+        "id": "js-defi1-q4",
+        "prompt": "Cas pratique 3/3 — Complète la conversion.",
+        "code": "const total = prix\n  .map(___)\n  .reduce((a, b) => a + b, 0);",
+        "answers": [
+          "Number"
+        ],
+        "distractors": [
+          "parseInt",
+          "String",
+          "Boolean"
+        ],
+        "explanation": "Number convertit chaque chaîne : on obtient 35. Le piège : map(parseInt) donne [10, NaN, NaN], car map passe aussi l'indice, que parseInt prend pour la base (base 1, puis base 2).",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "js-defi1-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "function trouverUtilisateur(liste, id) {\n  for (var i = 0; i < liste.length; i++) {\n    if (liste[i].id == id) return liste[i];\n  }\n  return false;\n}",
+        "choices": [
+          "== au lieu de === : \"42\" et 42 seraient confondus",
+          "var au lieu de let",
+          "liste.find((u) => u.id === id) ferait la même chose plus simplement",
+          "Une boucle for ne peut pas parcourir un tableau"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "find renvoie l'élément ou undefined. Renvoyer false mélange en plus les types de retour (un objet ou un booléen).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi1-q6",
+        "prompt": "En entretien : quelle est la différence entre null et undefined ?",
+        "choices": [
+          "undefined : rien n'a été défini (variable non initialisée, propriété absente) ; null : absence de valeur choisie volontairement",
+          "C'est la même valeur",
+          "null est un nombre, undefined une chaîne",
+          "undefined n'existe qu'en mode strict"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le langage produit undefined tout seul (paramètre non fourni, fonction sans return). null est posé par le développeur. null == undefined est vrai, mais null === undefined est faux.",
+        "difficulty": 1
+      }
+    ]
+  }
 }
