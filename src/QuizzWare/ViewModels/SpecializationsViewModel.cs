@@ -16,6 +16,12 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
 {
     private string? _categoryId;
 
+    /// <summary>Choix explicites de l'utilisateur (déplié / replié), prioritaires sur l'état par défaut.</summary>
+    private readonly Dictionary<string, bool> _userExpanded = [];
+
+    /// <summary>Toutes les lignes de l'arbre, avec leurs ancêtres : une ligne n'est affichée que si tous sont dépliés.</summary>
+    private List<(TreeRowViewModel Row, IReadOnlyList<TreeRowViewModel> Ancestors)> _allRows = [];
+
     [ObservableProperty]
     private string title = string.Empty;
 
@@ -53,24 +59,48 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
 
         var main = category.MainLessons.ToList();
         var completed = progress.Categories.GetValueOrDefault(category.Id)?.CompletedLessons ?? [];
-        var rowList = new List<TreeRowViewModel>
+        var rowList = new List<(TreeRowViewModel, IReadOnlyList<TreeRowViewModel>)>
         {
-            TreeRowViewModel.Root(category, $"Tronc commun · {main.Count(l => completed.Contains(l.Id))}/{main.Count} leçons"),
+            (TreeRowViewModel.Root(category, $"Tronc commun · {main.Count(l => completed.Contains(l.Id))}/{main.Count} leçons"), []),
         };
 
-        void Visit(SpecializationNode node, IReadOnlyList<bool> guides, bool isLast)
+        void Visit(SpecializationNode node, IReadOnlyList<bool> guides, bool isLast, IReadOnlyList<TreeRowViewModel> ancestors)
         {
-            rowList.Add(CreateRow(category, node, progress, unlocked, lockedMessage, guides, isLast));
+            var row = CreateRow(category, node, progress, unlocked, lockedMessage, guides, isLast);
+            if (node.ChildNodes.Count > 0)
+            {
+                // Par défaut : déplié si le sous-arbre est en cours ou terminé, replié s'il est encore inconnu.
+                row.ExpandKey = node.Id;
+                row.HiddenCount = node.SelfAndDescendants.Count() - 1;
+                row.IsExpanded = _userExpanded.TryGetValue(node.Id, out var choice) ? choice : row.HasProgress;
+                row.OnToggle = ToggleRow;
+            }
+            rowList.Add((row, ancestors));
+
             var childGuides = guides.Append(!isLast).ToList();
+            var childAncestors = ancestors.Append(row).ToList();
             for (var i = 0; i < node.ChildNodes.Count; i++)
-                Visit(node.ChildNodes[i], childGuides, i == node.ChildNodes.Count - 1);
+                Visit(node.ChildNodes[i], childGuides, i == node.ChildNodes.Count - 1, childAncestors);
         }
 
         for (var i = 0; i < tree.Nodes.Count; i++)
-            Visit(tree.Nodes[i], [], i == tree.Nodes.Count - 1);
+            Visit(tree.Nodes[i], [], i == tree.Nodes.Count - 1, []);
 
-        Rows = rowList;
+        _allRows = rowList;
+        UpdateVisibleRows();
     }
+
+    private void ToggleRow(TreeRowViewModel row)
+    {
+        if (row.ExpandKey is null)
+            return;
+        row.IsExpanded = !row.IsExpanded;
+        _userExpanded[row.ExpandKey] = row.IsExpanded;
+        UpdateVisibleRows();
+    }
+
+    private void UpdateVisibleRows() =>
+        Rows = _allRows.Where(r => r.Ancestors.All(a => a.IsExpanded)).Select(r => r.Row).ToList();
 
     private TreeRowViewModel CreateRow(Category category, SpecializationNode node, UserProgress progress,
         bool unlocked, string lockedMessage, IReadOnlyList<bool> guides, bool isLast)
@@ -135,6 +165,7 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
             Opacity = !unlocked || (tracks.Count == 0 && doors == 0) || targetLocked ? 0.5 : 1,
             IsLocked = !unlocked || targetLocked,
             LockedMessage = lockedMessage,
+            HasProgress = unlocked && done > 0,
         };
     }
 
@@ -164,7 +195,29 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
 public sealed record TreeGuide(bool HasLine);
 
 public sealed partial class TreeRowViewModel(string categoryId, SpecializationNode? node, IReadOnlyList<TreeGuide> guides, bool isLast)
+    : ObservableObject
 {
+    /// <summary>Le nœud a des enfants et peut être replié ou déplié (double appui).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExpanderText))]
+    private bool isExpanded = true;
+
+    /// <summary>Identifiant du nœud d'origine (avant résolution d'un renvoi), null si la ligne n'a pas d'enfants.</summary>
+    public string? ExpandKey { get; set; }
+    public bool IsCollapsible => ExpandKey is not null;
+    public int HiddenCount { get; set; }
+    public Action<TreeRowViewModel>? OnToggle { get; set; }
+
+    /// <summary>Au moins une leçon faite sous ce nœud : il est « en cours » ou « terminé ».</summary>
+    public bool HasProgress { get; init; }
+
+    public string ExpanderText => IsExpanded
+        ? "▾ Touche deux fois pour replier"
+        : $"▸ {HiddenCount} élément{(HiddenCount > 1 ? "s" : "")} masqué{(HiddenCount > 1 ? "s" : "")} · touche deux fois pour déplier";
+
+    [RelayCommand]
+    private void ToggleExpand() => OnToggle?.Invoke(this);
+
     public IReadOnlyList<TreeGuide> Guides => guides;
 
     /// <summary>Coude « ├─ » ou « └─ » reliant la ligne à son parent (absent pour la racine).</summary>
@@ -210,6 +263,10 @@ public sealed partial class TreeRowViewModel(string categoryId, SpecializationNo
             await Shell.Current.GoToAsync("..");
             return;
         }
+
+        // Un nœud repliable sans parcours réagit au double appui : l'appui simple, déclenché aussi, ne fait rien.
+        if (IsCollapsible && !node.HasTrack)
+            return;
 
         if (IsLocked)
         {

@@ -41,6 +41,7 @@
                                     Opacity="{Binding Opacity}" Margin="0,5" Padding="12">
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding OpenCommand}" />
+                                    <TapGestureRecognizer NumberOfTapsRequired="2" Command="{Binding ToggleExpandCommand}" />
                                 </Border.GestureRecognizers>
                                 <Grid ColumnDefinitions="44,*" ColumnSpacing="12">
                                     <Border BackgroundColor="{Binding BadgeColor}" StrokeThickness="0" StrokeShape="RoundRectangle 12"
@@ -56,6 +57,8 @@
                                         <Label Text="{Binding RelatedText}" Style="{StaticResource MutedLabel}" FontSize="12"
                                                IsVisible="{Binding HasRelated}" />
                                         <Label Text="{Binding StatusText}" TextColor="{Binding StatusColor}" FontSize="13" Margin="0,2,0,0" />
+                                        <Label Text="{Binding ExpanderText}" TextColor="{StaticResource Primary}" FontSize="12"
+                                               IsVisible="{Binding IsCollapsible}" />
                                     </VerticalStackLayout>
                                 </Grid>
                             </Border>
