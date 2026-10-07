@@ -7,13 +7,320 @@
       "id": "mob-stores",
       "title": "Signature et stores",
       "summary": "App Store et Google Play.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La signature",
+          "body": "Toute application est signée par son éditeur. Sur Android, la clé de signature identifie l'application pour toujours : les mises à jour doivent être signées par la même clé. La perdre, c'est ne plus pouvoir publier de mise à jour. Play App Signing confie la clé de distribution à Google, l'éditeur gardant une clé d'envoi remplaçable."
+        },
+        {
+          "title": "Les stores",
+          "body": "Google Play attend un Android App Bundle (AAB), à partir duquel il génère des APK optimisés par appareil. L'App Store passe par App Store Connect et une revue humaine. Les deux exigent une fiche (captures, description), une politique de confidentialité, la déclaration des données collectées, et une catégorie d'âge."
+        },
+        {
+          "title": "Les tests avant publication",
+          "body": "Google Play propose des pistes de test interne, fermé et ouvert ; Apple propose TestFlight. Les nouveaux comptes développeurs Google doivent faire tester leur application par un groupe de testeurs pendant une période avant la production. Le déploiement progressif (5 %, 20 %, 100 %) limite l'impact d'un bug."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-stores-q1",
+          "prompt": "Que se passe-t-il si l'on perd la clé de signature d'une application Android (sans Play App Signing) ?",
+          "choices": [
+            "On ne peut plus publier de mise à jour de cette application : il faudrait en publier une nouvelle",
+            "Google en génère une nouvelle automatiquement",
+            "Rien, la clé n'est utilisée qu'une fois",
+            "L'application est supprimée du store"
+          ],
+          "answerIndex": 0,
+          "explanation": "D'où l'intérêt de Play App Signing, et de sauvegarder les clés en lieu sûr, hors du dépôt de code.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-stores-q2",
+          "prompt": "Quel format Google Play attend-il pour une nouvelle application ?",
+          "choices": [
+            "Un Android App Bundle (.aab)",
+            "Un fichier .exe",
+            "Un .zip du code source",
+            "Un .ipa"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le store génère des APK adaptés à chaque appareil, plus légers. L'.ipa est le format iOS.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-stores-q3",
+          "prompt": "À quoi sert le déploiement progressif d'une mise à jour ?",
+          "choices": [
+            "À ne la proposer d'abord qu'à une partie des utilisateurs, pour détecter un problème avant qu'il touche tout le monde",
+            "À accélérer le téléchargement",
+            "À réduire la taille de l'application",
+            "À contourner la revue"
+          ],
+          "answerIndex": 0,
+          "explanation": "On surveille les plantages et les avis, puis on étend ou on met en pause.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-stores-q4",
+          "prompt": "Quel outil Apple permet de distribuer une version de test à des testeurs externes ?",
+          "choices": [
+            "TestFlight",
+            "Xcode Cloud uniquement",
+            "Le site web de l'application",
+            "Un e-mail avec le fichier"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les testeurs installent la version depuis l'application TestFlight, sans passer par l'App Store.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-stores-q5",
+          "prompt": "Pourquoi une politique de confidentialité est-elle exigée même pour une application qui stocke tout en local ?",
+          "choices": [
+            "Les stores l'exigent pour informer les utilisateurs ; elle explique justement que les données restent sur l'appareil",
+            "Elle n'est jamais exigée",
+            "Pour des raisons de performance",
+            "Pour réserver le nom de l'application"
+          ],
+          "answerIndex": 0,
+          "explanation": "La fiche demande aussi de déclarer précisément les données collectées et leur usage.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-stores-q6",
+          "prompt": "Que contient une fiche de store ?",
+          "choices": [
+            "Des captures d'écran",
+            "Une description",
+            "La déclaration des données collectées",
+            "Le code source de l'application"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le code source n'est jamais demandé ; seul le binaire signé est envoyé.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "mob-cicd",
       "title": "CI/CD mobile",
       "summary": "Des builds et déploiements automatisés.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Automatiser le build",
+          "body": "Un build mobile signé demande des certificats, des profils de provisionnement (iOS) et des clés (Android). La CI les reçoit sous forme de secrets, jamais commités. Chaque fusion déclenche les tests, puis un build signé envoyé automatiquement à la piste de test. fastlane, Codemagic, Bitrise ou GitHub Actions automatisent ces étapes.",
+          "code": "dotnet publish -f net9.0-android -c Release \\\n  -p:AndroidKeyStore=true \\\n  -p:AndroidSigningKeyStore=$KEYSTORE \\\n  -p:AndroidSigningStorePass=env:KEYSTORE_PASS",
+          "language": "shell"
+        },
+        {
+          "title": "Les numéros de version",
+          "body": "Chaque envoi au store exige un numéro de build strictement croissant (versionCode sur Android, CFBundleVersion sur iOS), distinct du numéro affiché aux utilisateurs (2.4.1). La CI le dérive généralement du numéro d'exécution du pipeline, pour ne jamais l'oublier."
+        },
+        {
+          "title": "Vivre avec les anciennes versions",
+          "body": "On ne contrôle pas quand les utilisateurs mettent à jour : plusieurs versions de l'application coexistent pendant des mois. L'API doit rester compatible, les nouvelles fonctionnalités peuvent être activées à distance (feature flags), et une version minimale peut être imposée pour les correctifs critiques. Le suivi des plantages (Crashlytics, Sentry) est indispensable."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-cicd-q1",
+          "prompt": "Où ranger le keystore Android et son mot de passe pour la CI ?",
+          "choices": [
+            "Dans les secrets du système de CI, injectés au moment du build",
+            "Dans le dépôt Git",
+            "Dans le code source",
+            "Dans la description de l'application"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une clé commitée est une clé compromise : quiconque l'obtient peut signer des mises à jour piégées.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-cicd-q2",
+          "prompt": "Google Play refuse l'envoi : « Le code de version 12 a déjà été utilisé ». Que faire ?",
+          "choices": [
+            "Incrémenter le numéro de build (versionCode), idéalement automatiquement à partir du numéro de pipeline",
+            "Changer le nom de l'application",
+            "Créer un nouveau compte développeur",
+            "Attendre 24 heures"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque envoi doit avoir un code strictement supérieur aux précédents, même pour une version de test.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-cicd-q3",
+          "prompt": "Un bug grave est découvert dans une version déjà installée par des milliers d'utilisateurs. Pourquoi est-ce plus difficile que sur le web ?",
+          "choices": [
+            "On ne peut pas remplacer instantanément le code installé : il faut publier une mise à jour, passer la revue, et attendre que les utilisateurs l'installent",
+            "Ce n'est pas plus difficile",
+            "Les applications mobiles n'ont pas de bugs",
+            "On ne peut jamais corriger une application publiée"
+          ],
+          "answerIndex": 0,
+          "explanation": "D'où les feature flags pour couper une fonctionnalité à distance, et la version minimale imposée en dernier recours.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-cicd-q4",
+          "prompt": "Pourquoi l'API doit-elle rester compatible avec les anciennes versions de l'application ?",
+          "choices": [
+            "Une partie des utilisateurs garde d'anciennes versions pendant des mois",
+            "Pour la beauté du code",
+            "Parce que les stores l'imposent",
+            "Ce n'est pas nécessaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Casser l'API casse ces applications, sans que leurs utilisateurs comprennent pourquoi.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-cicd-q5",
+          "prompt": "À quoi sert un outil de suivi des plantages comme Crashlytics ou Sentry ?",
+          "choices": [
+            "À remonter automatiquement les plantages réels, avec la pile d'appels, l'appareil et la version",
+            "À empêcher tous les plantages",
+            "À publier l'application",
+            "À compresser l'application"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans lui, on ne connaît les plantages que par les avis négatifs du store.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "mob-cicd-q6",
+          "prompt": "Que peut faire un pipeline CI/CD mobile ?",
+          "choices": [
+            "Lancer les tests à chaque pull request",
+            "Produire un build signé et l'envoyer à la piste de test du store",
+            "Incrémenter automatiquement le numéro de build",
+            "Répondre aux avis des utilisateurs"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Répondre aux avis reste un travail humain, important pour la relation avec les utilisateurs.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "mob-defi-publication",
+    "title": "Défi entretien : publier une application",
+    "summary": "Une première mise en production.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mob-defi4-q1",
+        "prompt": "Cas pratique 1/3 — Première publication sur Google Play avec un compte personnel récent. Quelle étape préalable est exigée ?",
+        "choices": [
+          "Un test fermé avec un groupe de testeurs pendant une période minimale, avant l'accès à la production",
+          "Aucune",
+          "Une revue du code source par Google",
+          "Une publication sur l'App Store d'abord"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est une exigence récente pour les nouveaux comptes personnels, destinée à améliorer la qualité des applications.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi4-q2",
+        "prompt": "Cas pratique 2/3 — La version est prête. Comment la déployer en production prudemment ?",
+        "choices": [
+          "Un déploiement progressif (par exemple 10 %), en surveillant les plantages, avant d'étendre à tous",
+          "100 % d'un coup",
+          "Uniquement aux nouveaux utilisateurs",
+          "En désactivant le suivi des plantages"
+        ],
+        "answerIndex": 0,
+        "explanation": "On peut mettre en pause un déploiement progressif si les indicateurs se dégradent.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi4-q3",
+        "prompt": "Cas pratique 3/3 — Une semaine plus tard, une fonctionnalité de partage plante sur certains appareils. Comment réagir sans attendre une nouvelle version ?",
+        "choices": [
+          "La désactiver à distance grâce à un feature flag, puis corriger et publier une mise à jour",
+          "Demander aux utilisateurs de désinstaller",
+          "Retirer l'application du store",
+          "Attendre la prochaine version prévue dans trois mois"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les feature flags sont encore plus précieux sur mobile que sur le web, faute de déploiement instantané.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi4-q4",
+        "prompt": "Qu'affiche ce code, qui calcule un numéro de build à partir du numéro de pipeline ?",
+        "code": "int pipeline = 412;\nint majeure = 2;\nint versionCode = majeure * 10_000 + pipeline;\nConsole.WriteLine(versionCode);",
+        "language": "csharp",
+        "choices": [
+          "20412",
+          "2412",
+          "4122",
+          "412"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ce schéma garantit un code croissant, même en passant de la version 2 à la version 3.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "mob-defi4-q5",
+        "prompt": "Quels éléments surveiller après une mise à jour ?",
+        "choices": [
+          "Le taux de sessions sans plantage",
+          "Les avis et notes du store",
+          "Les indicateurs d'usage des fonctionnalités modifiées",
+          "Le nombre de lignes de code ajoutées"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le volume de code ne dit rien de l'expérience des utilisateurs.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi4-q6",
+        "prompt": "En entretien : « Quelle est la plus grande différence entre livrer une application web et une application mobile ? »",
+        "choices": [
+          "Sur mobile, on ne contrôle ni le moment de la mise à jour ni la version utilisée : plusieurs versions coexistent, et chaque publication passe par les stores",
+          "Aucune",
+          "Le mobile ne nécessite pas de tests",
+          "Le web nécessite une revue d'Apple"
+        ],
+        "answerIndex": 0,
+        "explanation": "Tout le processus en découle : compatibilité d'API, feature flags, déploiements progressifs, suivi des plantages.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

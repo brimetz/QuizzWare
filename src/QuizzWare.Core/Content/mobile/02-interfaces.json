@@ -7,13 +7,320 @@
       "id": "mob-navigation",
       "title": "Navigation",
       "summary": "Piles, onglets et liens profonds.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Pile, onglets et tiroir",
+          "body": "La navigation en pile empile les écrans : on ouvre un détail, le bouton retour revient au précédent. Les onglets donnent accès aux grandes sections, chacune avec sa propre pile. Le tiroir latéral regroupe des destinations secondaires. Le bouton retour d'Android et le geste de balayage d'iOS doivent toujours faire ce que l'utilisateur attend."
+        },
+        {
+          "title": "Les liens profonds",
+          "body": "Un lien profond (deep link) ouvre directement un écran précis de l'application : une notification « Votre commande est expédiée » ouvre la commande, un lien partagé ouvre le produit. Les liens universels (iOS) et App Links (Android) utilisent de vraies URL web, vérifiées par un fichier publié sur le domaine.",
+          "code": "// Shell MAUI : naviguer avec un paramètre\nawait Shell.Current.GoToAsync(\n    $\"commande?id={commande.Id}\");",
+          "language": "csharp"
+        },
+        {
+          "title": "Construire la pile",
+          "body": "Un lien profond qui ouvre un écran de détail doit construire une pile cohérente : retour mène à la liste, pas hors de l'application. Et si l'utilisateur n'est pas connecté, on mémorise la destination, on passe par la connexion, puis on y mène."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-nav-q1",
+          "prompt": "Une notification « Votre colis est arrivé » doit ouvrir directement le détail de la commande. Quel mécanisme ?",
+          "choices": [
+            "Un lien profond vers l'écran de la commande",
+            "Ouvrir l'écran d'accueil",
+            "Un e-mail",
+            "Un pop-up web"
+          ],
+          "answerIndex": 0,
+          "explanation": "Obliger l'utilisateur à chercher sa commande après avoir touché la notification est une source de frustration.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-nav-q2",
+          "prompt": "Ouvert depuis un lien profond, l'écran de détail d'un produit : que doit faire le bouton retour ?",
+          "choices": [
+            "Revenir à un écran logique de l'application (la liste ou l'accueil), pas quitter brutalement",
+            "Fermer l'application",
+            "Ne rien faire",
+            "Ouvrir le navigateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "On construit une pile cohérente derrière l'écran ouvert par le lien.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-nav-q3",
+          "prompt": "Quel est l'avantage des liens universels (iOS) et App Links (Android) sur un schéma personnalisé (monapp://) ?",
+          "choices": [
+            "Ce sont de vraies URL web : sans l'application, le site s'ouvre ; et le domaine prouve que l'application en est propriétaire",
+            "Ils sont plus courts",
+            "Ils ne nécessitent pas d'application",
+            "Ils fonctionnent sans Internet"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un schéma personnalisé peut être revendiqué par n'importe quelle application, et ne mène nulle part si l'application n'est pas installée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-nav-q4",
+          "prompt": "Quand utiliser une barre d'onglets ?",
+          "choices": [
+            "Pour 3 à 5 sections principales, consultées souvent, entre lesquelles on bascule librement",
+            "Pour 15 sections",
+            "Pour une seule section",
+            "Pour les réglages rarement utilisés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les destinations secondaires vont dans un menu ou un écran de profil.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-nav-q5",
+          "prompt": "Un lien profond mène à un écran réservé aux utilisateurs connectés. L'utilisateur ne l'est pas. Que faire ?",
+          "choices": [
+            "Mémoriser la destination, passer par la connexion, puis y mener l'utilisateur",
+            "Afficher une erreur",
+            "Ignorer le lien",
+            "Ouvrir l'écran sans vérifier"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'utilisateur arrive là où il voulait aller, et la sécurité est respectée.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-nav-q6",
+          "prompt": "Quels principes de navigation mobile sont recommandés ?",
+          "choices": [
+            "Le retour système ramène à l'écran précédent attendu",
+            "Chaque onglet conserve sa propre pile",
+            "Les liens profonds ouvrent l'écran précis concerné",
+            "Désactiver le bouton retour d'Android"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Désactiver le retour casse une habitude fondamentale des utilisateurs Android.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "mob-layout",
       "title": "Mises en page adaptatives",
       "summary": "Tailles d'écran et orientation.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des écrans de toutes tailles",
+          "body": "Petits téléphones, grands téléphones, pliables, tablettes, en portrait ou en paysage : les tailles sont mesurées en unités indépendantes de la densité (dp sous Android, points sous iOS), pour qu'un bouton garde la même taille physique quelle que soit la résolution."
+        },
+        {
+          "title": "Les zones sûres",
+          "body": "Encoches, coins arrondis, barre de navigation gestuelle : une partie de l'écran n'est pas entièrement utilisable. Le contenu interactif reste dans les zones sûres (safe areas), tandis que les fonds peuvent s'étendre jusqu'aux bords."
+        },
+        {
+          "title": "Des cibles tactiles confortables",
+          "body": "Un doigt est moins précis qu'une souris : les cibles tactiles font au moins 44 points (iOS) ou 48 dp (Android), avec un espacement suffisant. Les actions principales se placent dans la zone que le pouce atteint facilement, en bas de l'écran. Le texte suit la taille choisie par l'utilisateur dans les réglages d'accessibilité."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-layout-q1",
+          "prompt": "Pourquoi mesurer les éléments en dp ou en points plutôt qu'en pixels physiques ?",
+          "choices": [
+            "Pour qu'un élément garde la même taille physique sur des écrans de densités très différentes",
+            "Parce que les pixels n'existent pas sur mobile",
+            "Pour économiser la batterie",
+            "Pour accélérer le rendu"
+          ],
+          "answerIndex": 0,
+          "explanation": "100 pixels font 2 cm sur un écran peu dense et moins d'1 cm sur un écran haute définition.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-layout-q2",
+          "prompt": "Quelle taille minimale recommande Android pour une cible tactile ?",
+          "choices": [
+            "48 dp",
+            "12 dp",
+            "24 dp",
+            "100 dp"
+          ],
+          "answerIndex": 0,
+          "explanation": "Apple recommande 44 points. Des cibles plus petites provoquent des erreurs de toucher.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-layout-q3",
+          "prompt": "Le bouton « Valider » est caché derrière la barre de navigation gestuelle sur certains téléphones. Que manque-t-il ?",
+          "choices": [
+            "Le respect des zones sûres (safe area insets)",
+            "Une couleur plus vive",
+            "Une police plus grande",
+            "Un second bouton"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les marges des zones sûres varient selon l'appareil : on les lit dynamiquement, on ne les code pas en dur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-layout-q4",
+          "prompt": "Où placer l'action principale d'un écran sur un grand téléphone ?",
+          "choices": [
+            "En bas, dans la zone facilement atteignable avec le pouce",
+            "En haut à gauche",
+            "Au centre, en tout petit",
+            "Dans un menu caché"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sur les grands écrans, le haut de l'écran est difficile à atteindre d'une main.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-layout-q5",
+          "prompt": "L'utilisateur a agrandi la taille du texte dans ses réglages, et les libellés de l'application se coupent. Que faire ?",
+          "choices": [
+            "Concevoir des mises en page flexibles qui laissent le texte s'agrandir et passer à la ligne",
+            "Bloquer la taille du texte",
+            "Ignorer ces utilisateurs",
+            "Réduire le texte automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Bloquer la taille exclut les personnes malvoyantes. On teste toujours avec les plus grandes tailles de police.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-layout-q6",
+          "prompt": "Sur quels appareils et dans quelles situations tester une mise en page ?",
+          "choices": [
+            "Un petit téléphone et une tablette",
+            "En portrait et en paysage",
+            "Avec une grande taille de police système",
+            "Uniquement sur le téléphone du développeur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les émulateurs permettent de couvrir de nombreuses configurations sans posséder chaque appareil.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "mob-defi-interfaces",
+    "title": "Défi entretien : interfaces mobiles",
+    "summary": "Une application de commande de repas.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mob-defi2-q1",
+        "prompt": "Cas pratique 1/3 — Une application de commande de repas : restaurants, recherche, commandes, profil. Quelle navigation principale ?",
+        "choices": [
+          "Une barre d'onglets avec ces quatre sections, chacune avec sa pile",
+          "Un menu caché unique",
+          "Un seul écran qui fait tout",
+          "Quinze onglets"
+        ],
+        "answerIndex": 0,
+        "explanation": "Quatre sections principales consultées souvent : le cas d'usage idéal des onglets.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Le bouton « Commander » du panier : où et comment le placer ?",
+        "choices": [
+          "En bas de l'écran, large, dans les zones sûres, toujours visible pendant le défilement",
+          "En haut à droite, en petit",
+          "Dans un menu",
+          "À la fin d'une longue liste, après défilement"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'action principale doit être évidente et atteignable au pouce.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi2-q3",
+        "prompt": "Cas pratique 3/3 — Un ami partage le lien d'un restaurant. Votre ami n'a pas l'application. Que doit-il se passer ?",
+        "choices": [
+          "Le lien (universel ou App Link) ouvre la page web du restaurant, avec une invitation à installer l'application",
+          "Rien",
+          "Une erreur",
+          "Le Play Store, sans autre information"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est l'intérêt des liens basés sur de vraies URL web.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi2-q4",
+        "prompt": "Qu'affiche ce code, qui convertit des dp en pixels pour un écran de densité 2,75 ?",
+        "code": "double densite = 2.75;\nint dp = 48;\nConsole.WriteLine(Math.Round(dp * densite));",
+        "language": "csharp",
+        "choices": [
+          "132",
+          "48",
+          "17",
+          "275"
+        ],
+        "answerIndex": 0,
+        "explanation": "48 × 2,75 = 132 pixels physiques. Le système fait ce calcul pour vous : on raisonne en dp.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "mob-defi2-q5",
+        "prompt": "Quelles erreurs d'interface sont fréquentes sur mobile ?",
+        "choices": [
+          "Des cibles tactiles trop petites et trop rapprochées",
+          "Du contenu sous l'encoche ou la barre de navigation",
+          "Une mise en page qui casse avec une grande police",
+          "Des boutons de 48 dp bien espacés"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Des cibles de 48 dp bien espacées sont justement la recommandation.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi2-q6",
+        "prompt": "En entretien : « Faut-il la même interface sur iOS et Android ? »",
+        "choices": [
+          "Une identité commune, mais en respectant les conventions de chaque plateforme (navigation, gestes, composants) que les utilisateurs connaissent",
+          "Exactement la même, pixel pour pixel",
+          "Deux applications totalement différentes",
+          "Celle d'iOS partout"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les utilisateurs d'Android attendent le bouton retour ; ceux d'iOS, le balayage depuis le bord.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

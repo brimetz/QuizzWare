@@ -7,13 +7,322 @@
       "id": "mob-stockage",
       "title": "Stockage local",
       "summary": "Fichiers, SQLite et préférences.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Trois options",
+          "body": "Les préférences (SharedPreferences, UserDefaults, Preferences en MAUI) stockent de petites valeurs simples : un réglage, un indicateur. SQLite convient aux données structurées que l'on interroge : des messages, une liste de tâches. Les fichiers accueillent les contenus volumineux : images, documents, exports JSON.",
+          "code": "Preferences.Default.Set(\"theme\", \"sombre\");\nvar theme = Preferences.Default.Get(\"theme\", \"clair\");\n\nvar chemin = Path.Combine(\n    FileSystem.AppDataDirectory, \"progression.json\");",
+          "language": "csharp"
+        },
+        {
+          "title": "Les secrets",
+          "body": "Un jeton d'authentification ne va pas dans les préférences, lisibles sur un appareil compromis ou dans une sauvegarde. On utilise le stockage sécurisé du système : Keychain sur iOS, Keystore sur Android (SecureStorage en MAUI), qui chiffre avec des clés protégées par le matériel."
+        },
+        {
+          "title": "Cache et sauvegardes",
+          "body": "Le dossier de cache peut être vidé par le système quand l'espace manque : on n'y met que ce qui se retélécharge. Les données de l'application sont incluses dans les sauvegardes du téléphone par défaut, sauf exclusion. À la désinstallation, tout est supprimé : les données précieuses doivent aussi exister ailleurs (serveur, export)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-stockage-q1",
+          "prompt": "Où stocker le choix « thème sombre » de l'utilisateur ?",
+          "choices": [
+            "Dans les préférences de l'application",
+            "Dans une base SQLite dédiée",
+            "Dans le stockage sécurisé",
+            "Dans le dossier de cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une petite valeur simple, sans caractère secret : c'est l'usage exact des préférences.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-stockage-q2",
+          "prompt": "Où stocker le jeton de rafraîchissement d'une session ?",
+          "choices": [
+            "Dans le stockage sécurisé du système (Keychain, Keystore)",
+            "Dans les préférences",
+            "Dans un fichier texte",
+            "Dans le cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un jeton volé permet d'usurper l'utilisateur : il mérite le chiffrement protégé par le matériel.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-stockage-q3",
+          "prompt": "Une application de notes stocke des milliers de notes qu'on peut rechercher et trier. Quel stockage ?",
+          "choices": [
+            "Une base SQLite",
+            "Les préférences",
+            "Une seule chaîne JSON dans les préférences",
+            "Le cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "SQLite permet des requêtes, des index et des mises à jour partielles, sans tout relire à chaque fois.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-stockage-q4",
+          "prompt": "Des photos téléchargées sont rangées dans le dossier de cache. Un jour, elles ont disparu. Pourquoi ?",
+          "choices": [
+            "Le système peut vider le cache quand l'espace manque ; il ne doit contenir que ce qui se retélécharge",
+            "Un virus",
+            "L'application a été mise à jour",
+            "Les photos expirent toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les fichiers que l'utilisateur considère comme siens vont dans le dossier de données de l'application.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-stockage-q5",
+          "prompt": "Une application garde toute la progression de l'utilisateur uniquement en local. Que se passe-t-il s'il change de téléphone ?",
+          "choices": [
+            "Sans sauvegarde système ni synchronisation, la progression est perdue",
+            "Elle est automatiquement transférée dans tous les cas",
+            "Elle est envoyée au store",
+            "Rien de particulier"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les sauvegardes du système peuvent la restaurer, mais pas toujours ; un compte synchronisé est plus sûr.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-stockage-q6",
+          "prompt": "Quelles données ont leur place dans le stockage sécurisé ?",
+          "choices": [
+            "Les jetons d'authentification",
+            "Les clés d'API propres à l'utilisateur",
+            "Un mot de passe d'accès à un service tiers",
+            "Le choix de la langue de l'interface"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La langue est un réglage ordinaire : les préférences suffisent.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "mob-hors-ligne",
       "title": "Mode hors ligne",
       "summary": "Synchroniser sans perdre de données.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Local d'abord",
+          "body": "Une application « offline first » lit et écrit d'abord dans sa base locale, et synchronise avec le serveur quand le réseau le permet. L'interface réagit instantanément, et tout continue de fonctionner dans le métro. Les modifications en attente sont gardées dans une file, envoyée dès le retour du réseau."
+        },
+        {
+          "title": "Les conflits",
+          "body": "La même note modifiée sur le téléphone hors ligne et sur l'ordinateur : laquelle garder ? « Le dernier écrit gagne » est simple mais perd des modifications. Fusionner champ par champ en préserve davantage. Les CRDT (structures de données répliquées) fusionnent automatiquement et sans conflit, au prix de plus de complexité. Parfois, il faut demander à l'utilisateur."
+        },
+        {
+          "title": "Des opérations idempotentes",
+          "body": "Une requête envoyée juste avant une coupure peut avoir été traitée sans que la réponse arrive. La renvoyer ne doit pas créer de doublon : chaque opération porte un identifiant unique, et le serveur ignore celles déjà reçues. On horodate aussi les modifications pour ordonner la synchronisation.",
+          "code": "var op = new Operation(\n    Id: Guid.NewGuid(),\n    Type: \"note.modifiee\",\n    Donnees: note,\n    Date: DateTimeOffset.UtcNow);\nawait fileLocale.AjouterAsync(op);",
+          "language": "csharp"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-offline-q1",
+          "prompt": "Dans une application « offline first », où l'interface écrit-elle une nouvelle tâche ?",
+          "choices": [
+            "D'abord dans la base locale ; la synchronisation avec le serveur suit quand c'est possible",
+            "Uniquement sur le serveur, en attendant sa réponse",
+            "Dans le cache, effaçable",
+            "Nulle part tant qu'il n'y a pas de réseau"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'utilisateur voit sa tâche immédiatement, réseau ou pas.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-offline-q2",
+          "prompt": "Quel est le défaut de la stratégie « le dernier écrit gagne » ?",
+          "choices": [
+            "Elle peut écraser silencieusement des modifications faites ailleurs",
+            "Elle est trop complexe",
+            "Elle ne fonctionne qu'en ligne",
+            "Elle n'a aucun défaut"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour des données importantes, on fusionne plus finement ou on signale le conflit.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-offline-q3",
+          "prompt": "Pourquoi chaque opération de la file de synchronisation porte-t-elle un identifiant unique ?",
+          "choices": [
+            "Pour que le serveur ignore une opération déjà reçue si elle est renvoyée après une coupure",
+            "Pour trier les opérations par ordre alphabétique",
+            "Pour chiffrer les données",
+            "Ce n'est pas utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'idempotence : renvoyer une opération ne crée jamais de doublon.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-offline-q4",
+          "prompt": "Pourquoi horodater en UTC (DateTimeOffset.UtcNow) les modifications à synchroniser ?",
+          "choices": [
+            "Pour comparer sans ambiguïté des dates venant d'appareils dans des fuseaux horaires différents",
+            "Pour économiser de la mémoire",
+            "Parce que l'heure locale n'existe pas sur mobile",
+            "Pour afficher l'heure à l'utilisateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les horloges des appareils peuvent aussi être fausses : les systèmes robustes s'appuient plutôt sur des versions ou des horloges logiques.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mob-offline-q5",
+          "prompt": "Qu'apportent les CRDT ?",
+          "choices": [
+            "Des structures de données qui fusionnent automatiquement les modifications concurrentes, sans conflit",
+            "Un chiffrement des données",
+            "Une compression des fichiers",
+            "Un accès plus rapide au réseau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ils sont utilisés par des éditeurs collaboratifs (Figma, Apple Notes, certains éditeurs de texte).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "mob-offline-q6",
+          "prompt": "Que faut-il pour une synchronisation fiable ?",
+          "choices": [
+            "Une file locale des modifications en attente",
+            "Des opérations idempotentes",
+            "Une stratégie explicite de résolution des conflits",
+            "L'envoi des modifications uniquement quand l'application est ouverte au premier plan, sans file"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Sans file persistante, une modification faite hors ligne puis suivie d'une fermeture de l'application serait perdue.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "mob-defi-donnees",
+    "title": "Défi entretien : hors ligne",
+    "summary": "Une application de relevés terrain.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mob-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Des techniciens saisissent des relevés dans des caves sans réseau. Quelle architecture ?",
+        "choices": [
+          "Offline first : base locale SQLite, file de synchronisation persistante, envoi au retour du réseau",
+          "Une application web qui exige le réseau",
+          "Des relevés sur papier",
+          "Un envoi par SMS"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le réseau est l'exception, pas la règle, dans ce contexte.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi3-q2",
+        "prompt": "Cas pratique 2/3 — La synchronisation échoue au milieu : 30 relevés sur 50 sont partis. Que faire au prochain essai ?",
+        "choices": [
+          "Renvoyer les 20 restants ; grâce aux identifiants uniques, renvoyer par erreur un relevé déjà reçu ne crée pas de doublon",
+          "Tout renvoyer en créant des doublons",
+          "Supprimer les 20 restants",
+          "Demander au technicien de tout ressaisir"
+        ],
+        "answerIndex": 0,
+        "explanation": "La file locale ne retire une opération qu'une fois sa réception confirmée.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Deux techniciens modifient le même équipement hors ligne. Comment gérer le conflit ?",
+        "choices": [
+          "Fusionner les champs modifiés différents, et signaler à un responsable les champs modifiés des deux côtés",
+          "Garder une version au hasard",
+          "Supprimer les deux modifications",
+          "Bloquer l'application"
+        ],
+        "answerIndex": 0,
+        "explanation": "Pour des données de terrain importantes, mieux vaut un conflit visible qu'une perte silencieuse.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi3-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "var ids = new HashSet<Guid>();\nvar op = Guid.NewGuid();\nConsole.WriteLine(ids.Add(op) + \" \" + ids.Add(op));",
+        "language": "csharp",
+        "choices": [
+          "True False",
+          "True True",
+          "False False",
+          "False True"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est le principe de la déduplication côté serveur : une opération déjà vue est ignorée.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "mob-defi3-q5",
+        "prompt": "Que doit montrer l'interface d'une application hors ligne ?",
+        "choices": [
+          "Que l'appareil est hors ligne",
+          "Les éléments en attente de synchronisation",
+          "Les erreurs de synchronisation qui demandent une action",
+          "Rien, l'utilisateur n'a pas à le savoir"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'utilisateur doit savoir si son travail est en sécurité sur le serveur ou seulement sur son téléphone.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi3-q6",
+        "prompt": "En entretien : « Quelle est la principale difficulté du mode hors ligne ? »",
+        "choices": [
+          "La synchronisation : conflits, ordre des opérations, renvois sans doublon et reprise après échec",
+          "Le stockage local",
+          "L'affichage",
+          "Il n'y a aucune difficulté"
+        ],
+        "answerIndex": 0,
+        "explanation": "Stocker localement est simple ; réconcilier plusieurs copies modifiées indépendamment ne l'est pas.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

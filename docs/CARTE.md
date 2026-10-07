@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (120 écrits) | 341 (311 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (124 écrits) | 341 (319 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -937,18 +937,18 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Fondamentaux
-   - Cycle de vie des applications
-   - Contraintes mobiles
-2. 🕓 Interfaces mobiles
-   - Navigation
-   - Mises en page adaptatives
-3. 🕓 Données et réseau
-   - Stockage local
-   - Mode hors ligne
-4. 🕓 Publication
-   - Signature et stores
-   - CI/CD mobile
+1. ✅ Fondamentaux
+   - ✅ Cycle de vie des applications
+   - ✅ Contraintes mobiles
+2. ✅ Interfaces mobiles
+   - ✅ Navigation
+   - ✅ Mises en page adaptatives
+3. ✅ Données et réseau
+   - ✅ Stockage local
+   - ✅ Mode hors ligne
+4. ✅ Publication
+   - ✅ Signature et stores
+   - ✅ CI/CD mobile
 
 **Spécialisations**
 

@@ -7,13 +7,322 @@
       "id": "mob-cycle-vie",
       "title": "Cycle de vie des applications",
       "summary": "Premier plan, arrière-plan et suspension.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le système décide",
+          "body": "Sur mobile, ce n'est pas l'utilisateur qui ferme les applications, c'est le système. Une application passe au premier plan, en arrière-plan quand on change d'application, puis peut être suspendue ou tuée sans prévenir pour libérer de la mémoire. Elle doit pouvoir être relancée comme si de rien n'était."
+        },
+        {
+          "title": "Les événements du cycle de vie",
+          "body": "Android (onCreate, onStart, onResume, onPause, onStop, onDestroy) et iOS (scene active, inactive, background) notifient chaque transition. Les frameworks multiplateformes les exposent aussi. Le passage en arrière-plan est le moment de sauvegarder l'état : il n'y aura peut-être pas d'autre occasion.",
+          "code": "public partial class App : Application\n{\n    protected override Window CreateWindow(\n        IActivationState? etat)\n    {\n        var w = new Window(new AppShell());\n        w.Stopped += (s, e) => Brouillon.Sauver();\n        w.Resumed += (s, e) => Donnees.Rafraichir();\n        return w;\n    }\n}",
+          "language": "csharp"
+        },
+        {
+          "title": "La rotation et les changements de configuration",
+          "body": "Sous Android, tourner l'écran, changer de langue ou de thème recrée par défaut l'écran (l'activité). Un état gardé seulement dans les champs de l'écran est perdu. On le place dans un ViewModel qui survit à ces changements, ou on le sauvegarde explicitement."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-cycle-q1",
+          "prompt": "Un utilisateur rédige un long message, passe à une autre application, et revient une heure plus tard : le message a disparu. Pourquoi ?",
+          "choices": [
+            "Le système a tué l'application en arrière-plan, et le brouillon n'avait pas été sauvegardé lors du passage en arrière-plan",
+            "Le téléphone est en panne",
+            "Les messages expirent après une heure",
+            "C'est le comportement normal attendu"
+          ],
+          "answerIndex": 0,
+          "explanation": "On sauvegarde l'état important dès le passage en arrière-plan, sans compter sur une fermeture « propre ».",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-cycle-q2",
+          "prompt": "Quand sauvegarder les données de l'utilisateur ?",
+          "choices": [
+            "Au passage en arrière-plan (onPause, onStop, Stopped), car l'application peut être tuée ensuite sans autre notification",
+            "Uniquement quand l'utilisateur ferme l'application",
+            "Dans onDestroy, qui est toujours appelé",
+            "Jamais, le système s'en charge"
+          ],
+          "answerIndex": 0,
+          "explanation": "onDestroy n'est pas garanti quand le système tue le processus pour récupérer de la mémoire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-cycle-q3",
+          "prompt": "Sous Android, l'utilisateur tourne son téléphone et le formulaire se vide. Que s'est-il passé ?",
+          "choices": [
+            "La rotation a recréé l'écran, et l'état n'était gardé que dans ses champs",
+            "Le formulaire a expiré",
+            "L'application a planté",
+            "La rotation efface toujours les formulaires, rien à faire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un ViewModel survit aux changements de configuration ; un état de sauvegarde (saved state) survit même à la mort du processus.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-cycle-q4",
+          "prompt": "Une application de messagerie revient au premier plan après une heure. Que faire ?",
+          "choices": [
+            "Rafraîchir les données qui ont pu changer (nouveaux messages), sans bloquer l'affichage de ce qui est déjà connu",
+            "Rien, les données sont forcément à jour",
+            "Redémarrer complètement l'application",
+            "Demander à l'utilisateur de se reconnecter"
+          ],
+          "answerIndex": 0,
+          "explanation": "On affiche immédiatement l'état connu, puis on met à jour en arrière-plan.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-cycle-q5",
+          "prompt": "Une application lance un long téléchargement, puis passe en arrière-plan. Que risque-t-il ?",
+          "choices": [
+            "D'être interrompu : il faut utiliser les API prévues pour le travail en arrière-plan (WorkManager, tâches d'arrière-plan iOS)",
+            "Rien, il continue toujours",
+            "Il s'accélère",
+            "Il est automatiquement mis en cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les systèmes limitent fortement le travail en arrière-plan pour préserver la batterie.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-cycle-q6",
+          "prompt": "Quelles affirmations sur le cycle de vie mobile sont vraies ?",
+          "choices": [
+            "Le système peut tuer une application en arrière-plan sans prévenir",
+            "Il faut sauvegarder l'état au passage en arrière-plan",
+            "Sous Android, une rotation peut recréer l'écran",
+            "Une application en arrière-plan peut tourner sans aucune limite"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'arrière-plan est très encadré par iOS comme par Android.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "mob-contraintes",
       "title": "Contraintes mobiles",
       "summary": "Batterie, réseau et mémoire.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La batterie",
+          "body": "Chaque réveil du processeur, de la radio ou du GPS consomme. Les réseaux mobiles restent dans un état énergivore quelques secondes après chaque échange : vingt petites requêtes espacées coûtent bien plus qu'une seule groupée. On regroupe les appels, on limite le suivi de position et on évite les tâches périodiques fréquentes."
+        },
+        {
+          "title": "Le réseau",
+          "body": "Le réseau mobile est lent, variable et intermittent : métro, ascenseur, zone blanche. Chaque requête doit avoir un délai d'expiration, gérer l'échec et prévoir une nouvelle tentative. On évite de télécharger de gros volumes sur données mobiles, et on affiche un état clair quand la connexion manque."
+        },
+        {
+          "title": "La mémoire et le fil principal",
+          "body": "La mémoire est limitée : une application qui en consomme trop est tuée en priorité. Les images sont redimensionnées avant affichage. Le fil principal (UI thread) dessine l'interface : un calcul ou un accès réseau dessus fige l'écran, et Android affiche une alerte « l'application ne répond pas » après quelques secondes.",
+          "code": "// Ne bloque pas l'interface pendant l'appel\nvar profil = await api.ChargerProfilAsync();\nNom = profil.Nom;",
+          "language": "csharp"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-contraintes-q1",
+          "prompt": "Pourquoi regrouper plusieurs petites requêtes réseau en une seule sur mobile ?",
+          "choices": [
+            "La radio reste dans un état énergivore après chaque échange : des requêtes espacées la réveillent sans cesse",
+            "Pour simplifier le code uniquement",
+            "Parce que les serveurs refusent les petites requêtes",
+            "Ce n'est pas utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une des premières causes de consommation de batterie excessive.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-contraintes-q2",
+          "prompt": "Un calcul de 3 secondes est lancé sur le fil principal. Que voit l'utilisateur ?",
+          "choices": [
+            "Une interface figée qui ne répond plus aux touchers ; sous Android, une alerte « l'application ne répond pas » peut apparaître",
+            "Rien de particulier",
+            "Une animation de chargement automatique",
+            "Une interface plus rapide"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le travail long s'exécute ailleurs (tâche asynchrone, thread de fond), et le résultat revient sur le fil principal.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-contraintes-q3",
+          "prompt": "Une application affiche une galerie de photos de 12 mégapixels en vignettes. Quel risque ?",
+          "choices": [
+            "Une consommation mémoire énorme : chaque image décodée pèse des dizaines de Mo ; il faut les décoder à la taille d'affichage",
+            "Aucun",
+            "Les photos seront floues",
+            "Le réseau sera saturé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une photo de 4 000 × 3 000 pixels décodée en 4 octets par pixel pèse 48 Mo.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-contraintes-q4",
+          "prompt": "Que faire quand une requête échoue dans le métro ?",
+          "choices": [
+            "Afficher un message clair, garder les données de l'utilisateur, et réessayer quand le réseau revient",
+            "Planter",
+            "Effacer le formulaire",
+            "Réessayer en boucle sans délai"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'absence de réseau est un cas normal sur mobile, pas une exception rare.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-contraintes-q5",
+          "prompt": "Qu'affiche ce calcul de la mémoire d'une image décodée, en mégaoctets ?",
+          "code": "int largeur = 4000, hauteur = 3000;\nlong octets = (long)largeur * hauteur * 4;\nConsole.WriteLine(octets / 1_000_000);",
+          "language": "csharp",
+          "choices": [
+            "48",
+            "12",
+            "4",
+            "480"
+          ],
+          "answerIndex": 0,
+          "explanation": "4 octets par pixel (rouge, vert, bleu, transparence). La taille du fichier JPEG, compressé, est bien plus petite.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-contraintes-q6",
+          "prompt": "Quelles pratiques économisent la batterie ?",
+          "choices": [
+            "Regrouper les requêtes réseau",
+            "Limiter la fréquence et la précision du suivi de position",
+            "Éviter les tâches périodiques trop fréquentes",
+            "Interroger le serveur toutes les secondes pour être à jour"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Pour être à jour sans interroger en boucle, on utilise les notifications push.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "mob-defi-fondamentaux",
+    "title": "Défi entretien : contraintes mobiles",
+    "summary": "Une application qui vide la batterie.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mob-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Des utilisateurs se plaignent : votre application de livraison vide leur batterie. Quel est le suspect principal ?",
+        "choices": [
+          "Un suivi GPS haute précision actif en permanence, et des requêtes de position très fréquentes",
+          "La couleur de l'interface",
+          "La taille de l'icône",
+          "Le nombre d'écrans"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le GPS et la radio sont les plus gros consommateurs.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Le suivi de position n'est utile que pendant une livraison en cours. Que faire ?",
+        "choices": [
+          "Ne l'activer que pendant la livraison, avec une précision et une fréquence adaptées, et l'arrêter ensuite",
+          "Le laisser actif en permanence",
+          "Le désactiver complètement",
+          "Le relancer toutes les secondes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les utilisateurs acceptent aussi plus volontiers une permission limitée à l'usage.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi1-q3",
+        "prompt": "Cas pratique 3/3 — L'application interroge le serveur toutes les 10 secondes pour savoir si une commande est prête. Quelle alternative ?",
+        "choices": [
+          "Une notification push envoyée par le serveur quand la commande est prête",
+          "Interroger toutes les secondes",
+          "Interroger toutes les 10 secondes même en arrière-plan",
+          "Demander à l'utilisateur de rafraîchir à la main"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le système regroupe les notifications push de toutes les applications sur une seule connexion, très économe.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi1-q4",
+        "prompt": "Pourquoi ne pas compter sur la méthode de destruction de l'écran pour sauvegarder les données ?",
+        "choices": [
+          "Quand le système tue le processus pour récupérer de la mémoire, cette méthode n'est pas forcément appelée",
+          "Parce qu'elle est appelée trop souvent",
+          "Parce qu'elle est réservée au système",
+          "On peut toujours y compter"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le passage en arrière-plan est le dernier moment fiable.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "mob-defi1-q5",
+        "prompt": "Que doit gérer chaque appel réseau d'une application mobile ?",
+        "choices": [
+          "Un délai d'expiration",
+          "L'échec, avec un message clair",
+          "Une nouvelle tentative raisonnable",
+          "Le blocage du fil principal pendant l'attente"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'attente se fait de façon asynchrone, sans jamais bloquer le fil principal.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi1-q6",
+        "prompt": "En entretien : « Quelle est la principale différence entre développer pour le web et pour le mobile ? »",
+        "choices": [
+          "Le mobile impose des contraintes fortes de cycle de vie, de batterie, de réseau intermittent et de mémoire, sous le contrôle du système",
+          "Aucune",
+          "Le mobile n'a pas d'interface",
+          "Le web n'a pas de réseau"
+        ],
+        "answerIndex": 0,
+        "explanation": "S'y ajoutent la publication via des stores et la difficulté de mettre à jour les applications installées.",
+        "difficulty": 1
+      }
+    ]
+  }
 }
