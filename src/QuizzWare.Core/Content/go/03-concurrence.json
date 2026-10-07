@@ -7,19 +7,439 @@
       "id": "go-goroutines",
       "title": "Goroutines",
       "summary": "Lancer du travail concurrent.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "go devant un appel",
+          "body": "Le mot-clé go lance une fonction dans une goroutine, qui s'exécute de façon concurrente. Une goroutine démarre avec une pile de quelques Ko qui grandit au besoin, et le runtime répartit des milliers, voire des millions de goroutines sur quelques threads système."
+        },
+        {
+          "title": "Attendre la fin",
+          "body": "Quand main se termine, le programme s'arrête, même si des goroutines tournent encore. On attend leur fin avec un sync.WaitGroup, ou en recevant leurs résultats sur un channel. Depuis Go 1.25, wg.Go(f) lance la fonction et gère le compteur.",
+          "code": "var wg sync.WaitGroup\nfor _, url := range urls {\n    wg.Add(1)\n    go func() {\n        defer wg.Done()\n        telecharger(url)\n    }()\n}\nwg.Wait()"
+        },
+        {
+          "title": "La variable de boucle",
+          "body": "Depuis Go 1.22, chaque itération d'une boucle for crée une nouvelle variable : une goroutine lancée dans la boucle capture la bonne valeur. Avant, toutes les goroutines partageaient la même variable, un piège célèbre. Le détecteur de courses (go run -race) repère les accès concurrents non synchronisés."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-goroutines-q1",
+          "prompt": "Qu'affiche probablement ce programme ?",
+          "code": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    go fmt.Println(\"goroutine\")\n    fmt.Println(\"main\")\n}",
+          "choices": [
+            "main, et souvent rien d'autre : le programme s'arrête avant que la goroutine ne s'exécute",
+            "goroutine puis main, toujours",
+            "Une erreur de compilation",
+            "main puis goroutine, toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "La fin de main termine le programme sans attendre les goroutines : il faut les attendre explicitement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-goroutines-q2",
+          "prompt": "Pourquoi peut-on lancer des centaines de milliers de goroutines, mais pas autant de threads système ?",
+          "choices": [
+            "Une goroutine démarre avec une petite pile de quelques Ko, et le runtime les multiplexe sur peu de threads",
+            "Les goroutines n'utilisent pas de mémoire",
+            "Les goroutines ne s'exécutent jamais vraiment en parallèle",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un thread système réserve typiquement 1 à 8 Mo de pile et coûte un changement de contexte du noyau.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "go-goroutines-q3",
+          "prompt": "Complète l'attente de toutes les goroutines.",
+          "code": "var wg sync.WaitGroup\nfor _, f := range fichiers {\n    wg.___(1)\n    go func() {\n        defer wg.Done()\n        traiter(f)\n    }()\n}\nwg.___()",
+          "answers": [
+            "Add",
+            "Wait"
+          ],
+          "distractors": [
+            "Done",
+            "Lock",
+            "Join"
+          ],
+          "explanation": "Add avant de lancer la goroutine (pas dedans, sinon Wait pourrait passer trop tôt), Done à la fin de chacune, Wait pour attendre.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-goroutines-q4",
+          "prompt": "Quelle commande détecte les accès concurrents non synchronisés ?",
+          "choices": [
+            "go test -race (ou go run -race)",
+            "go vet -fast",
+            "go fmt",
+            "go mod tidy"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le détecteur de courses instrumente le programme : plus lent, il est fait pour les tests.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "go-goroutines-q5",
+          "prompt": "Ce compteur donne un résultat faux avec -race qui signale une course. Touche la ligne en cause.",
+          "code": "var wg sync.WaitGroup\ntotal := 0\nfor i := 0; i < 1000; i++ {\n    wg.Add(1)\n    go func() {\n        defer wg.Done()\n        total++\n    }()\n}\nwg.Wait()",
+          "bugLines": [
+            7
+          ],
+          "explanation": "1 000 goroutines modifient total sans synchronisation : des incrémentations se perdent. On protège par un sync.Mutex, ou on utilise atomic.Int64.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "go-goroutines-q6",
+          "prompt": "Quelles affirmations sur les goroutines sont vraies ?",
+          "choices": [
+            "Le programme s'arrête quand main se termine, même si des goroutines tournent",
+            "Depuis Go 1.22, chaque itération de boucle a sa propre variable",
+            "Une goroutine bloquée sur une E/S ne bloque pas les autres",
+            "Une goroutine est un processus système séparé"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les goroutines partagent la mémoire du processus ; le runtime les ordonnance lui-même.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "go-channels",
       "title": "Channels et select",
       "summary": "Communiquer plutôt que partager.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des tuyaux typés",
+          "body": "Un channel transporte des valeurs d'un type entre goroutines. Sans tampon, un envoi bloque jusqu'à ce qu'une autre goroutine reçoive : c'est un point de rendez-vous. Avec un tampon (make(chan int, 10)), l'envoi ne bloque que si le tampon est plein. « Ne communiquez pas en partageant la mémoire ; partagez la mémoire en communiquant. »",
+          "code": "resultats := make(chan int)\ngo func() {\n    resultats <- calculer()   // envoi\n}()\nr := <-resultats              // réception"
+        },
+        {
+          "title": "Fermer et parcourir",
+          "body": "L'émetteur ferme le channel avec close quand il n'enverra plus rien. range sur un channel reçoit les valeurs jusqu'à sa fermeture. Recevoir sur un channel fermé renvoie immédiatement la valeur zéro ; v, ok := <-c permet de le détecter. Envoyer sur un channel fermé provoque une panique.",
+          "code": "c := make(chan int, 3)\nc <- 1; c <- 2; c <- 3\nclose(c)\nfor v := range c {\n    fmt.Print(v, \" \")\n}"
+        },
+        {
+          "title": "select",
+          "body": "select attend sur plusieurs channels et exécute le premier cas prêt. Combiné à time.After ou à un context, il permet les délais d'expiration. Une branche default rend le select non bloquant."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-channels-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    c := make(chan int, 3)\n    c <- 1\n    c <- 2\n    close(c)\n    for v := range c {\n        fmt.Print(v, \" \")\n    }\n    v, ok := <-c\n    fmt.Println(v, ok)\n}",
+          "choices": [
+            "1 2 0 false",
+            "1 2 2 true",
+            "1 2 puis une panique",
+            "Le programme bloque"
+          ],
+          "answerIndex": 0,
+          "explanation": "range s'arrête à la fermeture ; recevoir ensuite donne la valeur zéro et ok vaut false.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-channels-q2",
+          "prompt": "Que fait ce programme ?",
+          "code": "package main\n\nfunc main() {\n    c := make(chan int)\n    c <- 1\n    println(<-c)\n}",
+          "choices": [
+            "Il s'arrête avec « all goroutines are asleep - deadlock! »",
+            "Il affiche 1",
+            "Il affiche 0",
+            "Il ne compile pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans tampon, l'envoi attend un receveur ; mais la seule goroutine est celle qui envoie. Le runtime détecte l'interblocage total.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "go-channels-q3",
+          "prompt": "Qui doit fermer un channel ?",
+          "choices": [
+            "L'émetteur, quand il n'enverra plus rien",
+            "Le receveur, après lecture",
+            "N'importe qui, n'importe quand",
+            "Personne, jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "Envoyer sur un channel fermé provoque une panique : seul celui qui envoie sait quand il a fini. Fermer n'est utile que si un receveur attend la fin (range).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "go-channels-q4",
+          "prompt": "Complète : attendre un résultat au plus 2 secondes.",
+          "code": "___ {\ncase r := <-resultats:\n    fmt.Println(r)\ncase <-time.___(2 * time.Second):\n    fmt.Println(\"délai dépassé\")\n}",
+          "answers": [
+            "select",
+            "After"
+          ],
+          "distractors": [
+            "switch",
+            "Sleep",
+            "Wait"
+          ],
+          "explanation": "time.After renvoie un channel qui reçoit une valeur après le délai ; select prend le premier cas prêt.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-channels-q5",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "func carres(n int) <-chan int {\n    c := make(chan int)\n    go func() {\n        defer close(c)\n        for i := 1; i <= n; i++ {\n            c <- i * i\n        }\n    }()\n    return c\n}\ns := 0\nfor v := range carres(3) {\n    s += v\n}\nfmt.Println(s)",
+          "choices": [
+            "14",
+            "9",
+            "6",
+            "Le programme bloque"
+          ],
+          "answerIndex": 0,
+          "explanation": "1 + 4 + 9 = 14. Le générateur ferme son channel à la fin, ce qui termine le range.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "go-channels-q6",
+          "prompt": "Quelles affirmations sur les channels sont vraies ?",
+          "choices": [
+            "Un envoi sur un channel sans tampon attend un receveur",
+            "Recevoir sur un channel fermé renvoie immédiatement la valeur zéro",
+            "Envoyer sur un channel fermé provoque une panique",
+            "Un channel doit toujours être fermé, sinon il fuit"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un channel non fermé est récupéré par le ramasse-miettes ; on ne ferme que pour signaler la fin aux receveurs.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "go-sync",
       "title": "sync et context",
       "summary": "Mutex, WaitGroup et annulation.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Mutex et atomiques",
+          "body": "Quand plusieurs goroutines partagent une donnée, sync.Mutex en protège l'accès ; sync.RWMutex autorise plusieurs lecteurs simultanés. Pour un simple compteur, sync/atomic est plus léger. Un mutex ne doit pas être copié : on passe la struct qui le contient par pointeur.",
+          "code": "type Compteur struct {\n    mu sync.Mutex\n    n  map[string]int\n}\n\nfunc (c *Compteur) Inc(cle string) {\n    c.mu.Lock()\n    defer c.mu.Unlock()\n    c.n[cle]++\n}"
+        },
+        {
+          "title": "context : annuler et limiter dans le temps",
+          "body": "Un context.Context transporte un signal d'annulation et une échéance à travers les appels. Une requête HTTP annulée par le client annule son context ; toutes les opérations qui en dépendent (requêtes SQL, appels d'API) s'arrêtent. On le passe toujours en premier paramètre, nommé ctx.",
+          "code": "ctx, cancel := context.WithTimeout(\n    context.Background(), 2*time.Second)\ndefer cancel()\nreq, _ := http.NewRequestWithContext(ctx,\n    \"GET\", url, nil)\nresp, err := http.DefaultClient.Do(req)"
+        },
+        {
+          "title": "Les fuites de goroutines",
+          "body": "Une goroutine bloquée pour toujours (sur un channel que personne ne lira, sur une requête sans délai) ne sera jamais libérée : c'est une fuite. Chaque goroutine lancée doit avoir une condition de fin claire : fermeture d'un channel, annulation d'un context, ou fin de son travail."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-sync-q1",
+          "prompt": "Pourquoi appeler defer cancel() juste après context.WithTimeout ?",
+          "choices": [
+            "Pour libérer les ressources du context (minuterie, goroutines associées) dès que la fonction se termine, même avant l'échéance",
+            "Pour annuler immédiatement l'opération",
+            "Pour prolonger le délai",
+            "Ce n'est pas nécessaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "go vet signale d'ailleurs un cancel oublié.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-sync-q2",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "func main() {\n    var n atomic.Int64\n    var wg sync.WaitGroup\n    for range 1000 {\n        wg.Go(func() { n.Add(1) })\n    }\n    wg.Wait()\n    fmt.Println(n.Load())\n}",
+          "choices": [
+            "1000",
+            "Une valeur imprévisible",
+            "0",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "atomic.Int64 rend chaque incrément indivisible ; wg.Go (Go 1.25) lance la goroutine en gérant Add et Done.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "go-sync-q3",
+          "prompt": "Ce code ne protège rien : chaque appel verrouille un mutex différent. Touche la ligne en cause.",
+          "code": "type Cache struct {\n    mu   sync.Mutex\n    vals map[string]string\n}\n\nfunc (c Cache) Set(k, v string) {\n    c.mu.Lock()\n    defer c.mu.Unlock()\n    c.vals[k] = v\n}",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Le receveur valeur copie la struct, et donc le mutex : chaque appel verrouille sa propre copie. Il faut un receveur pointeur (c *Cache). go vet signale cette copie de verrou.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "go-sync-q4",
+          "prompt": "Un client HTTP coupe sa connexion pendant que le serveur exécute une requête SQL de 30 secondes. Comment l'arrêter ?",
+          "choices": [
+            "Passer r.Context() à la requête SQL (QueryContext) : l'annulation de la requête HTTP annule la requête SQL",
+            "Impossible, elle ira jusqu'au bout",
+            "Redémarrer le serveur",
+            "Utiliser un mutex"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le rôle principal de context : propager l'annulation à travers toute la chaîne d'appels.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-sync-q5",
+          "prompt": "Qu'est-ce qu'une fuite de goroutine ?",
+          "choices": [
+            "Une goroutine bloquée pour toujours, jamais libérée, qui accumule mémoire et ressources",
+            "Une goroutine qui se termine trop tôt",
+            "Une goroutine qui consomme trop de CPU",
+            "Une goroutine lancée dans main"
+          ],
+          "answerIndex": 0,
+          "explanation": "Exemple typique : une goroutine qui envoie sur un channel que plus personne ne lit, après un délai dépassé.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "go-sync-q6",
+          "prompt": "Quelles conventions s'appliquent à context.Context ?",
+          "choices": [
+            "Il est passé en premier paramètre, nommé ctx",
+            "Il n'est pas stocké dans une struct, mais passé à chaque appel",
+            "Une fonction appelée respecte son annulation et son échéance",
+            "Il sert à transporter les paramètres métier d'une fonction"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Ses valeurs sont réservées aux données transverses d'une requête (identifiant de trace), pas aux paramètres métier.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "go-defi-concurrence",
+    "title": "Défi entretien : concurrence en Go",
+    "summary": "Un pool de workers.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "go-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Il faut télécharger 10 000 URL, au plus 20 à la fois. Quelle structure ?",
+        "choices": [
+          "Un pool de 20 workers qui lisent les URL depuis un channel de tâches et envoient les résultats sur un autre",
+          "10 000 goroutines lancées d'un coup sans limite",
+          "Un seul thread qui télécharge tout à la suite",
+          "Un mutex autour de chaque téléchargement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le nombre de workers borne la concurrence ; le channel répartit le travail.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "go-defi3-q2",
+        "prompt": "Cas pratique 2/3 — Remets dans l'ordre le lancement des workers.",
+        "lines": [
+          "taches := make(chan string)",
+          "var wg sync.WaitGroup",
+          "for range 20 {",
+          "    wg.Go(func() {",
+          "        for url := range taches { telecharger(url) }",
+          "    })",
+          "}"
+        ],
+        "explanation": "Chaque worker boucle sur le channel jusqu'à sa fermeture. Ensuite, on envoie les URL, on ferme taches, puis wg.Wait().",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "go-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Que se passe-t-il si l'on oublie close(taches) après avoir envoyé toutes les URL ?",
+        "choices": [
+          "Les workers attendent indéfiniment de nouvelles tâches, et wg.Wait() ne revient jamais",
+          "Rien, tout se termine normalement",
+          "Les URL sont téléchargées deux fois",
+          "Une erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "La fermeture est le signal « plus de travail » qui termine les range des workers.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi3-q4",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "func main() {\n    c := make(chan int, 1)\n    for i := range 3 {\n        select {\n        case c <- i:\n            fmt.Print(\"envoi \")\n        default:\n            fmt.Print(\"plein \")\n        }\n    }\n    fmt.Println(<-c)\n}",
+        "choices": [
+          "envoi plein plein 0",
+          "envoi envoi envoi 2",
+          "plein plein plein 0",
+          "Le programme bloque"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le tampon d'une place accepte le premier envoi ; le default rend les suivants non bloquants. On reçoit la valeur 0.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "go-defi3-q5",
+        "prompt": "Comment éviter les fuites de goroutines dans un pool de workers ?",
+        "choices": [
+          "Fermer le channel de tâches quand tout est envoyé",
+          "Propager un context pour pouvoir tout annuler",
+          "S'assurer que les résultats envoyés sont toujours lus (ou utiliser un tampon suffisant)",
+          "Ne jamais attendre la fin des workers"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Sans attente, main peut se terminer avant la fin du travail, ou des goroutines restent bloquées.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "go-defi3-q6",
+        "prompt": "En entretien : « Channel ou mutex ? »",
+        "choices": [
+          "Un channel pour transférer des données ou coordonner des goroutines ; un mutex pour protéger un état partagé simple, comme un cache",
+          "Toujours des channels",
+          "Toujours des mutex",
+          "Ni l'un ni l'autre"
+        ],
+        "answerIndex": 0,
+        "explanation": "La bibliothèque standard utilise beaucoup les deux : il faut choisir l'outil le plus simple pour chaque cas.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

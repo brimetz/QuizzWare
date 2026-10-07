@@ -7,19 +7,436 @@
       "id": "go-types",
       "title": "Types et variables",
       "summary": "Déclarations et valeurs zéro.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Déclarer",
+          "body": "var déclare une variable avec son type ; := déclare et infère le type, uniquement à l'intérieur d'une fonction. Go est statiquement typé et ne fait aucune conversion implicite : additionner un int et un float64 demande une conversion explicite.",
+          "code": "var compteur int\nnom := \"Ada\"          // string inféré\nprix := 9.99          // float64\ntotal := float64(3) * prix\nconst Max = 100"
+        },
+        {
+          "title": "Les valeurs zéro",
+          "body": "Une variable non initialisée reçoit la valeur zéro de son type : 0 pour les nombres, \"\" pour les chaînes, false pour les booléens, nil pour les pointeurs, slices, maps et interfaces. Il n'y a jamais de mémoire non initialisée. Bien conçu, un type est souvent utilisable directement à sa valeur zéro."
+        },
+        {
+          "title": "Variables inutilisées",
+          "body": "Une variable locale déclarée mais jamais utilisée, ou un import inutilisé, est une erreur de compilation, pas un avertissement. On ignore une valeur avec l'identifiant vide _. gofmt impose une mise en forme unique à tout le code Go : les débats de style n'existent pas."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-types-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    var n int\n    var s string\n    var ok bool\n    fmt.Printf(\"%d %q %t\\n\", n, s, ok)\n}",
+          "choices": [
+            "0 \"\" false",
+            "Une erreur : variables non initialisées",
+            "nil nil nil",
+            "0 nil false"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque type a sa valeur zéro. %q affiche la chaîne entre guillemets, ce qui montre qu'elle est vide.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-types-q2",
+          "prompt": "Ce programme compile-t-il ?",
+          "code": "package main\n\nfunc main() {\n    x := 10\n    y := 2.5\n    z := x * y\n    _ = z\n}",
+          "choices": [
+            "Non : int et float64 ne se mélangent pas sans conversion explicite",
+            "Oui, z vaut 25",
+            "Oui, z vaut 20",
+            "Non, à cause de _"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il faut écrire float64(x) * y. Go refuse toute conversion numérique implicite.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-types-q3",
+          "prompt": "Où peut-on utiliser l'opérateur := ?",
+          "choices": [
+            "Uniquement à l'intérieur d'une fonction",
+            "Partout, y compris au niveau du package",
+            "Uniquement pour les constantes",
+            "Uniquement dans les boucles"
+          ],
+          "answerIndex": 0,
+          "explanation": "Au niveau du package, il faut var.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "go-types-q4",
+          "prompt": "Ce programme ne compile pas. Touche la ligne en cause.",
+          "code": "package main\n\nimport (\n    \"fmt\"\n    \"os\"\n)\n\nfunc main() {\n    fmt.Println(\"bonjour\")\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Un import inutilisé est une erreur de compilation en Go : « \"os\" imported and not used ». goimports le retire automatiquement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-types-q5",
+          "prompt": "Quelle est la valeur zéro d'une slice, d'une map et d'un pointeur ?",
+          "choices": [
+            "nil",
+            "Une collection vide allouée",
+            "0",
+            "undefined"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut lire une slice nil (longueur 0) et une map nil, mais écrire dans une map nil provoque une panique.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "go-types-q6",
+          "prompt": "Quelles affirmations sur Go sont vraies ?",
+          "choices": [
+            "Une variable locale inutilisée empêche la compilation",
+            "gofmt impose une mise en forme unique",
+            "Les variables non initialisées valent la valeur zéro de leur type",
+            "Go convertit automatiquement int en float64"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Go privilégie l'explicite : aucune conversion numérique n'est implicite.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "go-fonctions",
       "title": "Fonctions et erreurs",
       "summary": "Retours multiples et type error.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Plusieurs valeurs de retour",
+          "body": "Une fonction Go peut renvoyer plusieurs valeurs. Par convention, la dernière est une error : nil si tout va bien. L'appelant vérifie immédiatement l'erreur. Go n'a pas d'exceptions pour les erreurs ordinaires.",
+          "code": "func diviser(a, b float64) (float64, error) {\n    if b == 0 {\n        return 0, errors.New(\"division par zéro\")\n    }\n    return a / b, nil\n}\n\nr, err := diviser(10, 0)\nif err != nil {\n    fmt.Println(\"erreur :\", err)\n}"
+        },
+        {
+          "title": "Envelopper les erreurs",
+          "body": "fmt.Errorf avec le verbe %w enveloppe une erreur en ajoutant du contexte, tout en gardant l'erreur d'origine. errors.Is teste si une erreur précise se trouve dans la chaîne, errors.As récupère une erreur d'un type donné.",
+          "code": "var ErrIntrouvable = errors.New(\"introuvable\")\n\nerr := fmt.Errorf(\"charger client 42 : %w\",\n                  ErrIntrouvable)\nfmt.Println(errors.Is(err, ErrIntrouvable)) // true"
+        },
+        {
+          "title": "defer",
+          "body": "defer programme un appel à l'exécution de la sortie de la fonction, quel que soit le chemin de sortie : idéal pour fermer un fichier ou relâcher un verrou juste après l'avoir obtenu. Les appels différés s'exécutent dans l'ordre inverse de leur déclaration. panic et recover existent, mais sont réservés aux situations vraiment exceptionnelles."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-fonctions-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    for i := 1; i <= 3; i++ {\n        defer fmt.Print(i, \" \")\n    }\n    fmt.Print(\"fin \")\n}",
+          "choices": [
+            "fin 3 2 1",
+            "1 2 3 fin",
+            "fin 1 2 3",
+            "3 2 1 fin"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les appels différés s'exécutent à la sortie de main, dans l'ordre inverse : comme une pile. Les arguments sont évalués au moment du defer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-fonctions-q2",
+          "prompt": "Comment Go signale-t-il une erreur ordinaire (fichier introuvable, entrée invalide) ?",
+          "choices": [
+            "En renvoyant une valeur de type error, que l'appelant vérifie",
+            "En levant une exception",
+            "En renvoyant -1",
+            "En arrêtant le programme"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les erreurs sont des valeurs : on les traite explicitement là où elles surviennent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-fonctions-q3",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "package main\n\nimport (\n    \"errors\"\n    \"fmt\"\n)\n\nvar ErrVide = errors.New(\"vide\")\n\nfunc main() {\n    err := fmt.Errorf(\"lecture : %w\", ErrVide)\n    fmt.Println(err, errors.Is(err, ErrVide))\n}",
+          "choices": [
+            "lecture : vide true",
+            "lecture : vide false",
+            "vide true",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "%w enveloppe l'erreur : son message est intégré, et errors.Is la retrouve dans la chaîne.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "go-fonctions-q4",
+          "prompt": "Cette fonction ignore une erreur importante. Touche la ligne en cause.",
+          "code": "func lireConfig(chemin string) (Config, error) {\n    data, _ := os.ReadFile(chemin)\n    var c Config\n    err := json.Unmarshal(data, &c)\n    return c, err\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Si le fichier est absent, l'erreur est jetée et l'on analyse des données vides : le message d'erreur final sera trompeur. On vérifie et on enveloppe : if err != nil { return Config{}, fmt.Errorf(\"lire %s : %w\", chemin, err) }.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "go-fonctions-q5",
+          "prompt": "Complète : ouvrir un fichier et garantir sa fermeture.",
+          "code": "f, err := os.Open(chemin)\nif err ___ nil {\n    return err\n}\n___ f.Close()",
+          "answers": [
+            "!=",
+            "defer"
+          ],
+          "distractors": [
+            "==",
+            "go",
+            "return"
+          ],
+          "explanation": "On vérifie l'erreur, puis on diffère la fermeture juste après l'ouverture réussie : elle aura lieu sur tous les chemins de sortie.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "go-fonctions-q6",
+          "prompt": "Quelles affirmations sur les erreurs Go sont vraies ?",
+          "choices": [
+            "Par convention, l'erreur est la dernière valeur de retour",
+            "fmt.Errorf avec %w ajoute du contexte en gardant l'erreur d'origine",
+            "errors.Is recherche une erreur précise dans la chaîne d'enveloppes",
+            "panic est le moyen normal de signaler un fichier introuvable"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "panic est réservé aux erreurs de programmation ou aux états impossibles.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "go-slices-maps",
       "title": "Slices et maps",
       "summary": "Capacité, append et pièges.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Une slice est une vue",
+          "body": "Une slice est une petite structure : un pointeur vers un tableau sous-jacent, une longueur et une capacité. Découper une slice (s[1:3]) crée une nouvelle vue sur le même tableau : modifier l'une modifie l'autre. append ajoute un élément ; si la capacité est dépassée, il alloue un nouveau tableau plus grand et y copie les éléments.",
+          "code": "s := make([]int, 0, 4)   // longueur 0, capacité 4\ns = append(s, 1, 2, 3)\nt := s[0:2]\nt[0] = 99\nfmt.Println(s)           // [99 2 3]"
+        },
+        {
+          "title": "Toujours réaffecter append",
+          "body": "append renvoie la slice résultante, qui peut pointer vers un nouveau tableau : on écrit toujours s = append(s, x). Deux slices partageant un tableau peuvent s'écraser mutuellement via append quand il reste de la capacité. copy duplique les éléments dans une slice indépendante."
+        },
+        {
+          "title": "Les maps",
+          "body": "Une map associe des clés à des valeurs. Lire une clé absente renvoie la valeur zéro ; la forme v, ok := m[k] distingue absence et valeur zéro. L'ordre d'itération est volontairement aléatoire. Écrire dans une map nil provoque une panique : on la crée avec make. Une map n'est pas sûre pour un accès concurrent en écriture.",
+          "code": "stock := map[string]int{\"stylo\": 3}\nn, ok := stock[\"gomme\"]\nfmt.Println(n, ok)        // 0 false\nstock[\"gomme\"]++         // la valeur zéro s'incrémente"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-slices-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    a := []int{1, 2, 3, 4}\n    b := a[1:3]\n    b[0] = 20\n    fmt.Println(a, len(b), cap(b))\n}",
+          "choices": [
+            "[1 20 3 4] 2 3",
+            "[1 2 3 4] 2 2",
+            "[1 20 3 4] 2 2",
+            "[20 2 3 4] 3 3"
+          ],
+          "answerIndex": 0,
+          "explanation": "b partage le tableau de a : modifier b[0] modifie a[1]. Sa capacité va de l'indice 1 à la fin du tableau : 3.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-slices-q2",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    stock := map[string]int{\"stylo\": 3}\n    n, ok := stock[\"gomme\"]\n    stock[\"gomme\"]++\n    fmt.Println(n, ok, stock[\"gomme\"])\n}",
+          "choices": [
+            "0 false 1",
+            "0 true 1",
+            "nil false 1",
+            "Une panique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une clé absente donne la valeur zéro ; ok vaut false. L'incrément part de 0.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "go-slices-q3",
+          "prompt": "Cette fonction provoque une panique. Touche la ligne fautive.",
+          "code": "func compter(mots []string) map[string]int {\n    var n map[string]int\n    for _, m := range mots {\n        n[m]++\n    }\n    return n\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "La map vaut nil : la lecture est permise, mais l'écriture provoque « assignment to entry in nil map ». Il faut n := make(map[string]int).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-slices-q4",
+          "prompt": "Pourquoi écrire s = append(s, x) et pas seulement append(s, x) ?",
+          "choices": [
+            "append renvoie la slice résultante, qui peut pointer vers un nouveau tableau ; ne pas la récupérer perd l'ajout",
+            "Pour des raisons de style uniquement",
+            "Parce que append ne modifie jamais rien",
+            "Ce n'est pas nécessaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le compilateur refuse d'ailleurs un appel à append dont le résultat est ignoré.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-slices-q5",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    a := make([]int, 3, 10)\n    b := append(a, 1)\n    c := append(a, 2)\n    fmt.Println(b[3], c[3])\n}",
+          "choices": [
+            "2 2",
+            "1 2",
+            "1 1",
+            "Une panique"
+          ],
+          "answerIndex": 0,
+          "explanation": "a a de la capacité disponible : b et c écrivent tous deux à l'indice 3 du même tableau. Le second append écrase le premier. Un piège célèbre.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "go-slices-q6",
+          "prompt": "Quelles affirmations sur les maps Go sont vraies ?",
+          "choices": [
+            "L'ordre d'itération n'est pas garanti",
+            "Écrire dans une map nil provoque une panique",
+            "v, ok := m[k] distingue une clé absente d'une valeur zéro",
+            "Une map est sûre pour des écritures concurrentes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les écritures concurrentes exigent un mutex ou sync.Map ; le runtime détecte et arrête souvent ces accès.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "go-defi-bases",
+    "title": "Défi entretien : bases de Go",
+    "summary": "Compter les mots d'un texte.",
+    "questions": [
+      {
+        "type": "order",
+        "id": "go-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Remets dans l'ordre la fonction qui compte les mots.",
+        "lines": [
+          "func compter(texte string) map[string]int {",
+          "    n := make(map[string]int)",
+          "    for _, m := range strings.Fields(texte) {",
+          "        n[strings.ToLower(m)]++",
+          "    }",
+          "    return n",
+          "}"
+        ],
+        "explanation": "strings.Fields découpe sur les espaces ; la valeur zéro des entiers rend l'incrément direct.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "go-defi1-q2",
+        "prompt": "Cas pratique 2/3 — On veut afficher les mots par ordre alphabétique. Pourquoi ne pas parcourir directement la map ?",
+        "choices": [
+          "L'ordre d'itération d'une map est volontairement aléatoire : il faut trier les clés",
+          "Parce que range ne fonctionne pas sur les maps",
+          "Parce que la map est vide",
+          "On peut, l'ordre est alphabétique"
+        ],
+        "answerIndex": 0,
+        "explanation": "On collecte les clés, on les trie avec slices.Sort, puis on les parcourt.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Qu'affiche ce programme ?",
+        "code": "package main\n\nimport (\n    \"fmt\"\n    \"maps\"\n    \"slices\"\n)\n\nfunc main() {\n    n := map[string]int{\"go\": 2, \"ada\": 1, \"c\": 3}\n    cles := slices.Sorted(maps.Keys(n))\n    fmt.Println(cles)\n}",
+        "choices": [
+          "[ada c go]",
+          "[go ada c]",
+          "[c go ada]",
+          "Un ordre imprévisible"
+        ],
+        "answerIndex": 0,
+        "explanation": "maps.Keys produit un itérateur sur les clés, slices.Sorted les collecte triées (Go 1.23+).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi1-q4",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    var s []int\n    fmt.Println(s == nil, len(s))\n    s = append(s, 1)\n    fmt.Println(s == nil, len(s))\n}",
+        "choices": [
+          "true 0 puis false 1",
+          "false 0 puis false 1",
+          "Une panique",
+          "true 0 puis true 1"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une slice nil est utilisable : longueur 0, et append l'alloue au besoin.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "go-defi1-q5",
+        "prompt": "Quelles pratiques sont idiomatiques en Go ?",
+        "choices": [
+          "Vérifier err immédiatement après chaque appel qui peut échouer",
+          "Différer la fermeture d'une ressource juste après son ouverture",
+          "Envelopper les erreurs avec du contexte (%w)",
+          "Utiliser panic pour les erreurs de validation des entrées"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une entrée invalide est une erreur ordinaire, renvoyée comme valeur.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "go-defi1-q6",
+        "prompt": "En entretien : « Pourquoi Go n'a-t-il pas d'exceptions ? »",
+        "choices": [
+          "Ses concepteurs voulaient des erreurs explicites, visibles dans le flux du code et traitées là où elles surviennent",
+          "Par oubli",
+          "Parce que les exceptions sont lentes, uniquement",
+          "Go a des exceptions"
+        ],
+        "answerIndex": 0,
+        "explanation": "La contrepartie est la répétition de if err != nil ; l'avantage, qu'aucun chemin d'erreur n'est caché.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

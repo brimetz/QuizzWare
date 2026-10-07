@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (124 écrits) | 341 (319 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (128 écrits) | 341 (330 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -678,21 +678,21 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Bases du langage
-   - Types et variables
-   - Fonctions et erreurs
-   - Slices et maps
-2. 🕓 Structs et interfaces
-   - Structs et méthodes
-   - Interfaces
-   - Génériques
-3. 🕓 Concurrence
-   - Goroutines
-   - Channels et select
-   - sync et context
-4. 🕓 Outillage et tests
-   - Modules
-   - Tests et benchmarks
+1. ✅ Bases du langage
+   - ✅ Types et variables
+   - ✅ Fonctions et erreurs
+   - ✅ Slices et maps
+2. ✅ Structs et interfaces
+   - ✅ Structs et méthodes
+   - ✅ Interfaces
+   - ✅ Génériques
+3. ✅ Concurrence
+   - ✅ Goroutines
+   - ✅ Channels et select
+   - ✅ sync et context
+4. ✅ Outillage et tests
+   - ✅ Modules
+   - ✅ Tests et benchmarks
 
 **Spécialisations**
 

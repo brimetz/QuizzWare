@@ -7,19 +7,438 @@
       "id": "go-structs",
       "title": "Structs et méthodes",
       "summary": "Receveurs valeur ou pointeur.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des structs et des méthodes",
+          "body": "Go n'a pas de classes. Une struct regroupe des champs ; une méthode est une fonction avec un receveur. Un champ ou une méthode qui commence par une majuscule est exporté (visible hors du package), sinon il reste privé au package.",
+          "code": "type Compte struct {\n    Titulaire string\n    solde     int\n}\n\nfunc (c *Compte) Deposer(montant int) {\n    c.solde += montant\n}\n\nfunc (c Compte) Solde() int { return c.solde }"
+        },
+        {
+          "title": "Valeur ou pointeur",
+          "body": "Un receveur valeur (c Compte) travaille sur une copie : il ne peut pas modifier l'original. Un receveur pointeur (c *Compte) modifie l'original et évite de copier une grosse struct. Règle pratique : si une méthode modifie l'état, toutes les méthodes du type prennent un pointeur, par cohérence."
+        },
+        {
+          "title": "L'embarquement",
+          "body": "Go remplace l'héritage par la composition : une struct peut en embarquer une autre sans nom de champ, et ses champs et méthodes sont alors directement accessibles. Ce n'est pas un sous-typage : un Employe n'est pas une Personne, il en contient une.",
+          "code": "type Personne struct{ Nom string }\nfunc (p Personne) Saluer() string {\n    return \"Bonjour \" + p.Nom\n}\n\ntype Employe struct {\n    Personne\n    Poste string\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-structs-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "package main\n\nimport \"fmt\"\n\ntype Compteur struct{ n int }\n\nfunc (c Compteur) IncValeur()    { c.n++ }\nfunc (c *Compteur) IncPointeur() { c.n++ }\n\nfunc main() {\n    c := Compteur{}\n    c.IncValeur()\n    c.IncPointeur()\n    fmt.Println(c.n)\n}",
+          "choices": [
+            "1",
+            "2",
+            "0",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "IncValeur modifie une copie. IncPointeur modifie l'original : Go prend automatiquement &c pour l'appel.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-structs-q2",
+          "prompt": "Que signifie la majuscule de Titulaire, et la minuscule de solde, dans la struct Compte ?",
+          "choices": [
+            "Titulaire est exporté hors du package ; solde n'est accessible que dans le package",
+            "C'est une simple convention de style sans effet",
+            "solde est une constante",
+            "Titulaire est obligatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "La visibilité en Go est portée par la casse de la première lettre : pas de mot-clé public ni private.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-structs-q3",
+          "prompt": "Avec la struct Employe de la leçon, qu'affiche ce code ?",
+          "code": "e := Employe{Personne{\"Ada\"}, \"dev\"}\nfmt.Println(e.Saluer(), e.Nom)",
+          "choices": [
+            "Bonjour Ada Ada",
+            "Une erreur : Employe n'a pas de méthode Saluer",
+            "Bonjour  dev",
+            "Bonjour dev Ada"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les champs et méthodes de la struct embarquée sont promus : e.Saluer() appelle e.Personne.Saluer().",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-structs-q4",
+          "prompt": "Quand utiliser un receveur pointeur ?",
+          "choices": [
+            "Quand la méthode modifie l'état, ou que la struct est grosse à copier",
+            "Jamais",
+            "Uniquement pour les types primitifs",
+            "Uniquement pour les méthodes exportées"
+          ],
+          "answerIndex": 0,
+          "explanation": "Par cohérence, si une méthode d'un type prend un pointeur, on fait de même pour toutes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-structs-q5",
+          "prompt": "Un Employe qui embarque une Personne peut-il être passé à une fonction qui attend une Personne ?",
+          "choices": [
+            "Non : l'embarquement est une composition, pas un sous-typage ; il faut passer e.Personne",
+            "Oui, comme en héritage",
+            "Oui, avec un cast",
+            "Seulement si Personne est exportée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour accepter plusieurs types, Go utilise les interfaces.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "go-structs-q6",
+          "prompt": "Quelles affirmations sur les structs Go sont vraies ?",
+          "choices": [
+            "Les méthodes se déclarent hors de la struct, avec un receveur",
+            "L'embarquement promeut les champs et méthodes de la struct embarquée",
+            "Une struct est copiée lors d'une affectation",
+            "Go a un mot-clé class"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Go n'a ni classes ni héritage : des structs, des méthodes, des interfaces et la composition.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "go-interfaces",
       "title": "Interfaces",
       "summary": "Une implémentation implicite.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Implémenter sans le déclarer",
+          "body": "Une interface est un ensemble de méthodes. Un type l'implémente dès qu'il possède ces méthodes, sans aucune déclaration : pas de mot-clé implements. On peut donc définir une interface après coup, du côté de celui qui l'utilise, pour des types qui ne la connaissent pas.",
+          "code": "type Forme interface {\n    Aire() float64\n}\n\ntype Carre struct{ Cote float64 }\nfunc (c Carre) Aire() float64 { return c.Cote * c.Cote }\n\nvar f Forme = Carre{3}   // Carre implémente Forme"
+        },
+        {
+          "title": "De petites interfaces",
+          "body": "La bibliothèque standard privilégie les interfaces d'une ou deux méthodes : io.Reader (Read), io.Writer (Write), fmt.Stringer (String). Elles se combinent et s'adaptent à tout : un fichier, une connexion réseau et un tampon en mémoire sont tous des io.Reader. Le proverbe Go : « accepter des interfaces, renvoyer des structs »."
+        },
+        {
+          "title": "Le piège de l'interface nil",
+          "body": "Une valeur d'interface contient un type et une valeur. Elle n'est nil que si les deux le sont. Un pointeur nil d'un type concret, placé dans une interface, donne une interface non nil : un piège classique avec les erreurs.",
+          "code": "var p *MonErreur = nil\nvar err error = p\nfmt.Println(err == nil)   // false !"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-interfaces-q1",
+          "prompt": "Comment un type Go déclare-t-il qu'il implémente une interface ?",
+          "choices": [
+            "Il n'a rien à déclarer : posséder les méthodes requises suffit",
+            "Avec le mot-clé implements",
+            "En héritant de l'interface",
+            "Avec une annotation"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le typage structurel : on peut même définir une interface pour des types d'une bibliothèque qu'on ne contrôle pas.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-interfaces-q2",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "package main\n\nimport \"fmt\"\n\ntype Point struct{ X, Y int }\n\nfunc (p Point) String() string {\n    return fmt.Sprintf(\"(%d;%d)\", p.X, p.Y)\n}\n\nfunc main() {\n    fmt.Println(Point{1, 2})\n}",
+          "choices": [
+            "(1;2)",
+            "{1 2}",
+            "Point{X:1, Y:2}",
+            "Une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Point implémente fmt.Stringer : fmt utilise automatiquement sa méthode String.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-interfaces-q3",
+          "prompt": "Pourquoi une fonction qui lit des données accepte-t-elle souvent un io.Reader plutôt qu'un *os.File ?",
+          "choices": [
+            "Elle fonctionne alors avec un fichier, une connexion réseau, une chaîne en mémoire ou un tampon, et se teste facilement",
+            "Parce que *os.File n'existe pas",
+            "Pour aller plus vite",
+            "Parce que c'est obligatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "« Accepter des interfaces, renvoyer des structs » : l'appelant garde toute la souplesse.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-interfaces-q4",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "type MonErreur struct{}\n\nfunc (*MonErreur) Error() string { return \"oups\" }\n\nfunc verifier() error {\n    var p *MonErreur = nil\n    return p\n}\n\nfunc main() {\n    fmt.Println(verifier() == nil)\n}",
+          "choices": [
+            "false",
+            "true",
+            "Une panique",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'interface renvoyée contient le type *MonErreur avec une valeur nil : elle n'est pas nil. Il faut renvoyer directement nil.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "go-interfaces-q5",
+          "prompt": "Comment récupérer le type concret derrière une interface ?",
+          "code": "var f Forme = Carre{3}\nif c, ok := f.(Carre); ok {\n    fmt.Println(c.Cote)\n}",
+          "choices": [
+            "Par une assertion de type f.(Carre), avec ok pour éviter une panique",
+            "Par un cast (Carre)f",
+            "Avec instanceof",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans la forme à deux valeurs, une assertion fausse provoque une panique. Le switch de types (switch v := f.(type)) traite plusieurs cas.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "go-interfaces-q6",
+          "prompt": "Quels types implémentent io.Reader dans la bibliothèque standard ?",
+          "choices": [
+            "*os.File",
+            "*strings.Reader",
+            "*bytes.Buffer",
+            "int"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une seule méthode, Read(p []byte) (n int, err error), suffit pour être un io.Reader.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "go-generiques",
       "title": "Génériques",
       "summary": "Paramètres de type.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des paramètres de type",
+          "body": "Depuis Go 1.18, fonctions et types peuvent avoir des paramètres de type, entre crochets. Une contrainte précise ce que le type doit permettre : any accepte tout, comparable autorise == et !=, cmp.Ordered autorise <.",
+          "code": "func Max[T cmp.Ordered](a, b T) T {\n    if a > b {\n        return a\n    }\n    return b\n}\n\nMax(3, 7)          // 7\nMax(\"ada\", \"go\")   // \"go\""
+        },
+        {
+          "title": "Des contraintes sur mesure",
+          "body": "Une contrainte est une interface, qui peut lister des types. Le ~ inclut aussi les types définis à partir d'un type de base : ~int accepte int et type Age int.",
+          "code": "type Nombre interface {\n    ~int | ~int64 | ~float64\n}\n\nfunc Somme[T Nombre](xs []T) T {\n    var s T\n    for _, x := range xs {\n        s += x\n    }\n    return s\n}"
+        },
+        {
+          "title": "Avec mesure",
+          "body": "Les génériques conviennent aux structures de données (piles, ensembles) et aux algorithmes indépendants du type. Les paquets slices et maps de la bibliothèque standard en sont pleins. Quand une interface suffit, elle reste souvent plus simple. Les méthodes ne peuvent pas avoir leurs propres paramètres de type."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-generiques-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "func Max[T cmp.Ordered](a, b T) T {\n    if a > b {\n        return a\n    }\n    return b\n}\n\nfunc main() {\n    fmt.Println(Max(3, 7), Max(\"ada\", \"go\"))\n}",
+          "choices": [
+            "7 go",
+            "7 ada",
+            "3 go",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "T est inféré : int, puis string. Les chaînes se comparent dans l'ordre lexicographique : « go » > « ada ».",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-generiques-q2",
+          "prompt": "Que permet la contrainte comparable ?",
+          "choices": [
+            "D'utiliser == et != sur les valeurs du type, par exemple comme clé de map",
+            "D'utiliser < et >",
+            "N'importe quelle opération",
+            "Aucune opération"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour < et >, il faut cmp.Ordered.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-generiques-q3",
+          "prompt": "Que signifie le ~ dans ~int ?",
+          "choices": [
+            "Tout type dont le type sous-jacent est int, y compris des types définis comme type Age int",
+            "Un entier approximatif",
+            "La négation de int",
+            "Un pointeur vers int"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans ~, seul int lui-même serait accepté.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "go-generiques-q4",
+          "prompt": "Qu'affiche ce programme, avec la fonction Somme de la leçon ?",
+          "code": "type Age int\n\nfunc main() {\n    ages := []Age{20, 30, 40}\n    fmt.Println(Somme(ages))\n}",
+          "choices": [
+            "90",
+            "Une erreur de compilation",
+            "0",
+            "[20 30 40]"
+          ],
+          "answerIndex": 0,
+          "explanation": "Age a pour type sous-jacent int, accepté par ~int. T vaut Age.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "go-generiques-q5",
+          "prompt": "Cette fonction ne compile pas. Touche la ligne en cause.",
+          "code": "func Contient[T any](xs []T, v T) bool {\n    for _, x := range xs {\n        if x == v {\n            return true\n        }\n    }\n    return false\n}",
+          "bugLines": [
+            1
+          ],
+          "explanation": "any ne garantit pas que == soit possible (une slice ne se compare pas). La contrainte doit être comparable. slices.Contains existe déjà.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "go-generiques-q6",
+          "prompt": "Où les génériques sont-ils bien adaptés ?",
+          "choices": [
+            "Une pile ou un ensemble utilisable avec n'importe quel type",
+            "Des fonctions sur les slices et les maps (filtrer, chercher, trier)",
+            "Un cache générique par clé",
+            "Remplacer toutes les interfaces du programme"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Quand on manipule un comportement (Read, Write), les interfaces restent l'outil naturel.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "go-defi-types",
+    "title": "Défi entretien : types en Go",
+    "summary": "Modéliser des formes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "go-defi2-q1",
+        "prompt": "Cas pratique 1/3 — On calcule l'aire totale de cercles, carrés et rectangles. Comment modéliser en Go ?",
+        "choices": [
+          "Une interface Forme avec Aire(), implémentée par chaque struct",
+          "Une classe de base Forme dont on hérite",
+          "Une seule struct avec un champ type et un switch partout",
+          "Des variables globales"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque forme connaît son calcul ; le code qui additionne n'a besoin que de l'interface.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "go-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Qu'affiche ce programme ?",
+        "code": "type Forme interface{ Aire() float64 }\ntype Carre struct{ C float64 }\ntype Rect struct{ L, H float64 }\n\nfunc (c Carre) Aire() float64 { return c.C * c.C }\nfunc (r Rect) Aire() float64  { return r.L * r.H }\n\nfunc main() {\n    total := 0.0\n    for _, f := range []Forme{Carre{2}, Rect{2, 3}} {\n        total += f.Aire()\n    }\n    fmt.Println(total)\n}",
+        "choices": [
+          "10",
+          "7",
+          "12",
+          "Une erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "4 + 6 = 10. La slice d'interfaces contient des types concrets différents.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi2-q3",
+        "prompt": "Cas pratique 3/3 — On veut afficher joliment chaque forme avec fmt.Println. Que faire ?",
+        "choices": [
+          "Implémenter String() string sur chaque type : il satisfait alors fmt.Stringer",
+          "Redéfinir fmt.Println",
+          "Hériter de fmt.Stringer",
+          "Ajouter un champ Nom affiché par réflexion"
+        ],
+        "answerIndex": 0,
+        "explanation": "fmt détecte l'interface Stringer et l'utilise automatiquement.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi2-q4",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "func decrire(v any) string {\n    switch x := v.(type) {\n    case int:\n        return fmt.Sprint(\"entier \", x)\n    case string:\n        return \"texte \" + x\n    default:\n        return \"autre\"\n    }\n}\n\nfunc main() {\n    fmt.Println(decrire(4), decrire(\"go\"), decrire(1.5))\n}",
+        "choices": [
+          "entier 4 texte go autre",
+          "entier 4 texte go entier 1",
+          "autre autre autre",
+          "Une erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le switch de types branche sur le type concret ; 1.5 est un float64, traité par default.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "go-defi2-q5",
+        "prompt": "Quels principes guident les interfaces en Go ?",
+        "choices": [
+          "Des interfaces petites, souvent d'une seule méthode",
+          "Déclarées du côté de celui qui les utilise",
+          "Accepter des interfaces, renvoyer des structs",
+          "Une grande interface par type, déclarée à côté de lui"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les grandes interfaces déclarées « au cas où » sont un réflexe venu d'autres langages, peu idiomatique en Go.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi2-q6",
+        "prompt": "En entretien : « Comment Go fait-il sans héritage ? »",
+        "choices": [
+          "Avec des interfaces implicites pour le polymorphisme, et l'embarquement de structs pour réutiliser du code",
+          "Il ne permet aucun polymorphisme",
+          "Avec des macros",
+          "Il a un héritage caché"
+        ],
+        "answerIndex": 0,
+        "explanation": "Composition et interfaces couvrent les besoins de l'héritage, sans ses hiérarchies rigides.",
+        "difficulty": 1
+      }
+    ]
+  }
 }
