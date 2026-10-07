@@ -7,19 +7,439 @@
       "id": "fe-cascade",
       "title": "Cascade et spécificité",
       "summary": "Quelle règle l'emporte ?",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La spécificité",
+          "body": "Quand plusieurs règles s'appliquent au même élément, la plus spécifique gagne. On compte les identifiants (#id), puis les classes, attributs et pseudo-classes (.c, [type], :hover), puis les éléments (p, div). Un identifiant l'emporte sur n'importe quel nombre de classes. À spécificité égale, la dernière règle déclarée gagne.",
+          "code": "p { color: black; }              /* 0-0-1 */\n.intro { color: blue; }          /* 0-1-0 */\n#accueil p { color: green; }     /* 1-0-1 */\np.intro.important { color: red; }/* 0-2-1 */",
+          "language": "text"
+        },
+        {
+          "title": "L'héritage",
+          "body": "Certaines propriétés se transmettent aux enfants (color, font-family, line-height) ; d'autres non (margin, border, background). Une valeur héritée a toujours moins de poids qu'une règle qui cible directement l'élément, même peu spécifique."
+        },
+        {
+          "title": "Garder le contrôle",
+          "body": "!important écrase la spécificité normale, mais déclenche une escalade difficile à maîtriser : à réserver aux cas exceptionnels. On préfère des sélecteurs à faible spécificité, une seule classe par composant (conventions comme BEM), et les couches @layer pour ordonner explicitement les feuilles de style."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-cascade-q1",
+          "prompt": "Avec les règles de la leçon, quelle est la couleur de <p class=\"intro\"> placé dans <div id=\"accueil\"> ?",
+          "choices": [
+            "green",
+            "blue",
+            "red",
+            "black"
+          ],
+          "answerIndex": 0,
+          "explanation": "#accueil p (un identifiant) l'emporte sur .intro (une classe). p.intro.important ne s'applique pas : l'élément n'a pas la classe important.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-cascade-q2",
+          "prompt": "Deux règles de même spécificité ciblent le même élément. Laquelle s'applique ?",
+          "choices": [
+            "La dernière déclarée",
+            "La première déclarée",
+            "Celle dont le sélecteur est le plus long",
+            "Aucune des deux"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'ordre d'apparition départage les égalités, d'où l'importance de l'ordre d'import des feuilles de style.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-cascade-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "document.head.insertAdjacentHTML(\"beforeend\",\n  `<style>.a.b { color: red }\n   #x { color: blue }</style>`);\ndocument.body.innerHTML =\n  '<p id=\"x\" class=\"a b\">T</p>';\nconst p = document.getElementById(\"x\");\nconsole.log(getComputedStyle(p).color);",
+          "choices": [
+            "rgb(0, 0, 255)",
+            "rgb(255, 0, 0)",
+            "rgb(0, 0, 0)",
+            "Une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un identifiant (1-0-0) l'emporte sur deux classes (0-2-0). getComputedStyle renvoie la couleur au format rgb.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-cascade-q4",
+          "prompt": "La propriété color est définie sur body. Que se passe-t-il pour un paragraphe sans règle propre ?",
+          "choices": [
+            "Il hérite de la couleur de body",
+            "Il reste noir",
+            "Il devient transparent",
+            "Il prend la couleur de bordure"
+          ],
+          "answerIndex": 0,
+          "explanation": "color fait partie des propriétés héritées. margin ou border, elles, ne le sont pas.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-cascade-q5",
+          "prompt": "Pourquoi l'usage fréquent de !important est-il un mauvais signe ?",
+          "choices": [
+            "Pour le surcharger, il faut un autre !important plus spécifique : la feuille de style devient une guerre d'escalade",
+            "Il ralentit le navigateur",
+            "Il est interdit par les navigateurs",
+            "Il désactive le CSS"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est souvent le symptôme de sélecteurs trop spécifiques ailleurs. Les @layer offrent une alternative propre.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fe-cascade-q6",
+          "prompt": "Lesquelles de ces propriétés sont héritées par défaut ?",
+          "choices": [
+            "color",
+            "font-family",
+            "line-height",
+            "margin"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les propriétés de texte se transmettent ; celles de boîte (margin, padding, border) non.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "fe-flexbox-grid",
       "title": "Flexbox et Grid",
       "summary": "Les mises en page modernes.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Flexbox : une dimension",
+          "body": "display: flex aligne les enfants sur un axe, en ligne ou en colonne. justify-content répartit sur l'axe principal, align-items aligne sur l'axe secondaire, gap espace les éléments, et flex: 1 fait grandir un élément pour occuper la place restante. Idéal pour les barres de navigation, les boutons, les cartes en ligne.",
+          "code": ".barre {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  gap: 1rem;\n}",
+          "language": "text"
+        },
+        {
+          "title": "Grid : deux dimensions",
+          "body": "display: grid définit des lignes et des colonnes. L'unité fr partage l'espace restant. repeat(auto-fill, minmax(200px, 1fr)) crée autant de colonnes de 200 px minimum que la largeur le permet : une grille responsive sans media query.",
+          "code": ".galerie {\n  display: grid;\n  grid-template-columns:\n    repeat(auto-fill, minmax(200px, 1fr));\n  gap: 16px;\n}",
+          "language": "text"
+        },
+        {
+          "title": "Lequel choisir",
+          "body": "Flexbox quand le contenu dicte la mise en page sur un axe ; Grid quand on dessine une structure en lignes et colonnes, comme une page entière ou une galerie. Les deux se combinent : une grille de cartes, dont chaque carte organise son contenu en flexbox."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-flex-q1",
+          "prompt": "Comment centrer un élément horizontalement et verticalement dans son parent avec Flexbox ?",
+          "choices": [
+            "display: flex; justify-content: center; align-items: center;",
+            "text-align: center;",
+            "margin: center;",
+            "position: center;"
+          ],
+          "answerIndex": 0,
+          "explanation": "justify-content agit sur l'axe principal, align-items sur l'axe secondaire. Avec Grid, place-items: center fait de même.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-flex-q2",
+          "prompt": "Que fait grid-template-columns: 1fr 2fr ?",
+          "choices": [
+            "Deux colonnes, la seconde deux fois plus large que la première",
+            "Deux colonnes de 1 et 2 pixels",
+            "Une seule colonne",
+            "Trois colonnes égales"
+          ],
+          "answerIndex": 0,
+          "explanation": "fr partage l'espace disponible : un tiers et deux tiers.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-flex-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "document.body.innerHTML = `\n  <div style=\"display:flex;width:300px\">\n    <div id=\"a\" style=\"width:100px\"></div>\n    <div id=\"b\" style=\"flex:1\"></div>\n  </div>`;\nconst b = document.getElementById(\"b\");\nconsole.log(b.getBoundingClientRect().width);",
+          "choices": [
+            "200",
+            "100",
+            "300",
+            "150"
+          ],
+          "answerIndex": 0,
+          "explanation": "flex: 1 fait grandir b dans l'espace restant : 300 - 100 = 200 px.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-flex-q4",
+          "prompt": "Quelle propriété espace les éléments d'un conteneur flex ou grid, sans marge sur les bords ?",
+          "choices": [
+            "gap",
+            "margin",
+            "padding",
+            "spacing"
+          ],
+          "answerIndex": 0,
+          "explanation": "gap évite les astuces de marges négatives qu'on utilisait autrefois.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-flex-q5",
+          "prompt": "Pour une galerie qui affiche autant de colonnes de 200 px minimum que l'écran le permet, que choisir ?",
+          "choices": [
+            "Grid avec repeat(auto-fill, minmax(200px, 1fr))",
+            "Un tableau HTML",
+            "Des float",
+            "Une media query par taille d'écran possible"
+          ],
+          "answerIndex": 0,
+          "explanation": "La grille s'adapte à toutes les largeurs sans aucun point de rupture.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fe-flex-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Flexbox organise sur un axe, Grid sur deux",
+            "flex-direction: column empile les éléments verticalement",
+            "On peut placer une grille dans un élément flex, et inversement",
+            "Grid remplace entièrement le HTML"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Grid organise la présentation ; la structure et le sens restent dans le HTML.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "fe-responsive",
       "title": "Responsive design",
       "summary": "Media queries et unités relatives.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Mobile d'abord",
+          "body": "On écrit d'abord le style pour les petits écrans, puis on l'enrichit pour les grands avec des media queries min-width. La balise viewport est indispensable : sans elle, le mobile affiche la page comme sur un écran de bureau, en tout petit.",
+          "code": "<meta name=\"viewport\"\n      content=\"width=device-width, initial-scale=1\">\n\n.grille { display: grid; }\n@media (min-width: 768px) {\n  .grille { grid-template-columns: 1fr 1fr; }\n}",
+          "language": "text"
+        },
+        {
+          "title": "Des unités relatives",
+          "body": "rem est relatif à la taille de police racine : si l'utilisateur agrandit le texte dans ses réglages, toute l'interface suit. % et vw s'adaptent à la largeur. max-width: 100% empêche une image de déborder de son conteneur. Les pixels fixes partout produisent des interfaces rigides."
+        },
+        {
+          "title": "Au-delà de la largeur",
+          "body": "Les container queries adaptent un composant à la taille de son conteneur plutôt qu'à celle de l'écran : une carte peut changer de mise en page dans une barre latérale étroite. prefers-color-scheme et prefers-reduced-motion respectent les préférences de l'utilisateur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-responsive-q1",
+          "prompt": "Sans la balise meta viewport, comment un mobile affiche-t-il la page ?",
+          "choices": [
+            "Comme sur un écran large d'environ 980 px, réduit : le texte est minuscule",
+            "Parfaitement adaptée",
+            "Il refuse de l'afficher",
+            "En mode texte uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "width=device-width demande d'utiliser la largeur réelle de l'appareil.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-responsive-q2",
+          "prompt": "Dans une approche mobile d'abord, quelles media queries écrit-on ?",
+          "choices": [
+            "Des min-width, qui ajoutent des règles pour les écrans plus larges",
+            "Des max-width uniquement",
+            "Aucune",
+            "Une par modèle de téléphone"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le style de base sert aux petits écrans ; les grands reçoivent des compléments.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-responsive-q3",
+          "prompt": "Pourquoi préférer rem à px pour les tailles de texte ?",
+          "choices": [
+            "rem suit la taille de police choisie par l'utilisateur dans son navigateur ou son système",
+            "rem est plus rapide à calculer",
+            "px n'existe plus",
+            "rem donne toujours un texte plus grand"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les personnes malvoyantes agrandissent souvent la police par défaut : le texte en px fixes ignore ce réglage.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-responsive-q4",
+          "prompt": "Qu'affiche ce code, si la taille de police racine vaut 16 px ?",
+          "code": "document.body.innerHTML =\n  '<div id=\"d\" style=\"width:2.5rem\"></div>';\nconst d = document.getElementById(\"d\");\nconsole.log(getComputedStyle(d).width);",
+          "choices": [
+            "40px",
+            "2.5px",
+            "16px",
+            "25px"
+          ],
+          "answerIndex": 0,
+          "explanation": "2,5 × 16 = 40 px. getComputedStyle renvoie la valeur calculée, en pixels.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-responsive-q5",
+          "prompt": "Une carte doit changer de mise en page selon la place dont elle dispose, qu'elle soit dans la colonne principale ou une barre latérale. Que choisir ?",
+          "choices": [
+            "Une container query",
+            "Une media query sur la largeur de l'écran",
+            "Une détection du navigateur en JavaScript",
+            "Deux composants différents"
+          ],
+          "answerIndex": 0,
+          "explanation": "La taille de l'écran ne dit rien de la place réelle du composant.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fe-responsive-q6",
+          "prompt": "Quelles pratiques rendent une page responsive ?",
+          "choices": [
+            "La balise meta viewport",
+            "Des images avec max-width: 100%",
+            "Des grilles flexibles (fr, minmax)",
+            "Une largeur fixe de 1200 px pour le contenu"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une largeur fixe force le défilement horizontal sur les petits écrans.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "fe-defi-css",
+    "title": "Défi entretien : CSS",
+    "summary": "Une mise en page de tableau de bord.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "fe-defi2-q1",
+        "prompt": "Cas pratique 1/3 — Un tableau de bord : en-tête, menu latéral, contenu principal. Quelle technique pour la structure de la page ?",
+        "choices": [
+          "CSS Grid, avec des zones nommées (grid-template-areas)",
+          "Des tableaux HTML",
+          "Des float",
+          "position: absolute partout"
+        ],
+        "answerIndex": 0,
+        "explanation": "Grid décrit directement une structure en lignes et colonnes, lisible et facile à réorganiser.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Sur mobile, le menu latéral doit passer sous l'en-tête. Comment ?",
+        "choices": [
+          "Redéfinir grid-template-areas dans une media query, sans toucher au HTML",
+          "Dupliquer le menu dans le HTML",
+          "Utiliser JavaScript pour déplacer le menu",
+          "Masquer le contenu principal"
+        ],
+        "answerIndex": 0,
+        "explanation": "La mise en page change, l'ordre du HTML (et donc la lecture au clavier) reste logique.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi2-q3",
+        "prompt": "Cas pratique 3/3 — Les boutons du menu doivent avoir leur icône et leur texte alignés verticalement. Quelle technique ?",
+        "choices": [
+          "display: inline-flex; align-items: center; gap: 0.5rem;",
+          "vertical-align: middle sur tout",
+          "Des marges négatives ajustées au pixel",
+          "Une image contenant le texte"
+        ],
+        "answerIndex": 0,
+        "explanation": "Flexbox pour l'alignement sur un axe à l'intérieur d'un composant.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi2-q4",
+        "prompt": "Quelle règle l'emporte sur l'élément <a class=\"lien actif\" id=\"m\"> ?",
+        "code": "a.lien.actif { color: red; }\n#m { color: blue; }\nnav a { color: green; }",
+        "language": "text",
+        "choices": [
+          "#m : blue",
+          "a.lien.actif : red",
+          "nav a : green",
+          "La dernière déclarée"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un identifiant (1-0-0) l'emporte sur 0-2-1 et 0-0-2. Les styles de composants évitent donc les identifiants, trop forts.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "fe-defi2-q5",
+        "prompt": "Quelles préférences utilisateur le CSS permet-il de respecter ?",
+        "choices": [
+          "Le thème sombre (prefers-color-scheme)",
+          "La réduction des animations (prefers-reduced-motion)",
+          "Le contraste renforcé (prefers-contrast)",
+          "Le nom de l'utilisateur"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Réduire les animations est important pour les personnes sujettes aux vertiges ou aux troubles vestibulaires.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi2-q6",
+        "prompt": "En entretien : « Flexbox ou Grid ? »",
+        "choices": [
+          "Flexbox pour aligner sur un axe (barres, composants), Grid pour des structures en deux dimensions (pages, galeries) ; on les combine souvent",
+          "Toujours Flexbox",
+          "Toujours Grid",
+          "Aucun des deux, les float suffisent"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ce ne sont pas des concurrents, mais deux outils complémentaires.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

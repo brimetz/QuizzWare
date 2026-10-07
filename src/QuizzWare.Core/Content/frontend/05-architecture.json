@@ -7,13 +7,316 @@
       "id": "fe-modes-rendu",
       "title": "CSR, SSR et SSG",
       "summary": "Où la page est-elle rendue ?",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Rendu côté client (CSR)",
+          "body": "Le serveur envoie une page presque vide et un gros bundle JavaScript, qui construit l'interface dans le navigateur. Très interactif une fois chargé, idéal pour une application derrière une connexion (tableau de bord). Mais le premier affichage attend le téléchargement et l'exécution du JavaScript, et le référencement en souffre."
+        },
+        {
+          "title": "Rendu côté serveur (SSR) et génération statique (SSG)",
+          "body": "En SSR, le serveur produit le HTML complet à chaque requête : affichage rapide et bon référencement, puis le JavaScript « hydrate » la page pour la rendre interactive. En SSG, les pages sont générées une fois au build et servies depuis un CDN : imbattable pour du contenu qui change peu (documentation, blog). L'ISR régénère une page statique périodiquement."
+        },
+        {
+          "title": "Les approches hybrides",
+          "body": "Les frameworks modernes (Next.js, Nuxt, SvelteKit, Astro, Blazor) choisissent le mode page par page. Les îlots d'interactivité et les composants serveur réduisent le JavaScript envoyé : seules les zones interactives sont hydratées. Le bon choix dépend du contenu : public ou privé, statique ou personnalisé."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-rendu-modes-q1",
+          "prompt": "Quel mode convient le mieux à un blog technique dont les articles changent rarement ?",
+          "choices": [
+            "La génération statique (SSG), servie par un CDN",
+            "Le rendu côté client uniquement",
+            "Le SSR à chaque requête sans cache",
+            "Une application de bureau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des fichiers HTML prêts à l'emploi, servis au plus près des lecteurs : rapide, peu coûteux et bien référencé.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-rendu-modes-q2",
+          "prompt": "Qu'est-ce que l'hydratation ?",
+          "choices": [
+            "Le JavaScript qui s'attache au HTML rendu par le serveur pour le rendre interactif",
+            "La compression des images",
+            "Le chargement des polices",
+            "Le remplissage d'un formulaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Entre l'affichage et la fin de l'hydratation, la page est visible mais ses boutons ne répondent pas encore.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-rendu-modes-q3",
+          "prompt": "Pourquoi une application en CSR pur peut-elle être mal référencée ?",
+          "choices": [
+            "Le HTML initial est quasiment vide : le contenu n'existe qu'après l'exécution du JavaScript",
+            "Parce que les moteurs de recherche détestent JavaScript",
+            "Parce que le CSR est interdit",
+            "Elle est toujours bien référencée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les moteurs exécutent parfois le JavaScript, mais plus tard et moins fiablement que la lecture du HTML.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-rendu-modes-q4",
+          "prompt": "Une page affiche le panier personnalisé de l'utilisateur, toujours à jour. Peut-on la générer statiquement au build ?",
+          "choices": [
+            "Non : son contenu dépend de l'utilisateur et change en permanence ; SSR ou rendu client conviennent",
+            "Oui, sans problème",
+            "Oui, en générant une page par utilisateur au build",
+            "Oui, si le CDN est rapide"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut mélanger : une coquille statique, et la partie personnalisée chargée côté client.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-rendu-modes-q5",
+          "prompt": "Quel est l'intérêt de l'architecture en îlots (Astro, par exemple) ?",
+          "choices": [
+            "Seuls les composants interactifs sont hydratés, le reste de la page reste du HTML statique, sans JavaScript",
+            "Toute la page est hydratée deux fois",
+            "Le CSS est supprimé",
+            "Les images sont générées à la volée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Moins de JavaScript envoyé, c'est un chargement et une interactivité plus rapides, surtout sur mobile.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "fe-rendu-modes-q6",
+          "prompt": "Quels sont les atouts du SSR ?",
+          "choices": [
+            "Un premier affichage rapide",
+            "Un bon référencement",
+            "Un contenu personnalisé et à jour à chaque requête",
+            "Aucun coût côté serveur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le SSR demande au contraire des serveurs pour rendre chaque page, à dimensionner et à mettre en cache.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "fe-etat",
       "title": "Gestion de l'état",
       "summary": "Local, global et serveur.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Trois sortes d'état",
+          "body": "L'état local appartient à un composant : un menu ouvert, un champ en cours de saisie. L'état global partagé concerne toute l'application : l'utilisateur connecté, le thème. L'état serveur est une copie de données qui vivent sur le serveur : la liste des commandes. Les confondre mène à des architectures trop complexes."
+        },
+        {
+          "title": "L'état serveur est un cache",
+          "body": "Des données récupérées par une API peuvent être périmées, chargées deux fois, ou mises à jour ailleurs. Des bibliothèques comme TanStack Query ou SWR les traitent comme un cache : déduplication des requêtes, revalidation, états de chargement et d'erreur. Les stocker à la main dans un store global oblige à réinventer tout cela."
+        },
+        {
+          "title": "Dériver plutôt que dupliquer",
+          "body": "Une valeur calculable à partir d'un autre état ne doit pas être stockée séparément : on la recalcule. Deux copies d'une même information finissent toujours par diverger. L'état immuable (on remplace au lieu de modifier) permet aux frameworks de détecter les changements simplement.",
+          "code": "const [articles, setArticles] = useState([]);\n// À éviter : un second état « total » à synchroniser\nconst total = articles.reduce(\n  (s, a) => s + a.prix * a.quantite, 0);"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-etat-q1",
+          "prompt": "Où ranger l'état « le menu déroulant est ouvert » ?",
+          "choices": [
+            "Dans l'état local du composant menu",
+            "Dans un store global",
+            "Dans la base de données",
+            "Dans un cookie"
+          ],
+          "answerIndex": 0,
+          "explanation": "Personne d'autre n'en a besoin : le garder local évite des dépendances inutiles.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-etat-q2",
+          "prompt": "Le total du panier est stocké dans un état séparé, mis à jour à chaque ajout. Parfois il est faux. Que faire ?",
+          "choices": [
+            "Le calculer à partir des articles au lieu de le stocker",
+            "Le mettre à jour deux fois",
+            "Ajouter un troisième état de vérification",
+            "Recharger la page"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une valeur dérivée n'a pas besoin d'être synchronisée : elle est toujours juste par construction.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-etat-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const articles = [\n  { prix: 10, quantite: 2 },\n  { prix: 5, quantite: 3 },\n];\nconst total = articles.reduce(\n  (s, a) => s + a.prix * a.quantite, 0);\nconsole.log(total);",
+          "choices": [
+            "35",
+            "20",
+            "15",
+            "NaN"
+          ],
+          "answerIndex": 0,
+          "explanation": "10 × 2 + 5 × 3 = 35. Sans la valeur initiale 0, reduce partirait du premier objet et donnerait un résultat absurde.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-etat-q4",
+          "prompt": "Pourquoi utiliser TanStack Query plutôt qu'un store global pour la liste des commandes venant de l'API ?",
+          "choices": [
+            "Il gère le cache, la revalidation, la déduplication et les états de chargement et d'erreur de ces données serveur",
+            "Il remplace le serveur",
+            "Il rend l'API plus rapide",
+            "Il est obligatoire avec React"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'état serveur a des problèmes propres (fraîcheur, synchronisation) qu'un store générique ne traite pas.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "fe-etat-q5",
+          "prompt": "Cet ajout au panier ne déclenche pas de nouveau rendu en React. Touche la ligne fautive.",
+          "code": "function ajouter(article) {\n  articles.push(article);\n  setArticles(articles);\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le tableau est modifié en place : React reçoit la même référence et conclut que rien n'a changé. On crée un nouveau tableau : setArticles([...articles, article]).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fe-etat-q6",
+          "prompt": "Quelles données relèvent de l'état serveur ?",
+          "choices": [
+            "La liste des produits du catalogue",
+            "Le profil de l'utilisateur stocké en base",
+            "L'historique des commandes",
+            "La position de défilement de la page"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La position de défilement est un état purement local à l'interface.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "fe-defi-architecture",
+    "title": "Défi entretien : architecture frontend",
+    "summary": "Un site marchand.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "fe-defi5-q1",
+        "prompt": "Cas pratique 1/3 — Un site marchand : pages produits publiques, et un espace client. Quel rendu pour les pages produits ?",
+        "choices": [
+          "SSR ou génération statique avec revalidation : affichage rapide et bon référencement",
+          "Rendu client uniquement",
+          "Une image de la page",
+          "Une application à télécharger"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les pages produits sont la porte d'entrée depuis les moteurs de recherche : elles doivent s'afficher vite et être lisibles par eux.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi5-q2",
+        "prompt": "Cas pratique 2/3 — Et pour l'espace client, derrière une connexion ?",
+        "choices": [
+          "Le rendu client convient bien : pas de référencement nécessaire, beaucoup d'interactions",
+          "La génération statique au build",
+          "Uniquement du HTML sans JavaScript",
+          "Un PDF"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les contraintes diffèrent d'une partie du site à l'autre : les frameworks hybrides permettent de choisir par page.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Le stock affiché d'un produit doit être à jour, mais la page est générée statiquement. Comment faire ?",
+        "choices": [
+          "Garder la page statique et charger le stock côté client depuis une API, ou revalider la page fréquemment",
+          "Régénérer tout le site à chaque vente",
+          "Ne jamais afficher le stock",
+          "Afficher un stock fixe"
+        ],
+        "answerIndex": 0,
+        "explanation": "On sépare ce qui change rarement (description, photos) de ce qui change souvent (stock, prix promotionnel).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi5-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "const etat = { panier: [\"stylo\"] };\nconst nouveau = { ...etat,\n                  panier: [...etat.panier, \"cahier\"] };\nconsole.log(etat.panier.length, nouveau.panier.length,\n            etat === nouveau);",
+        "choices": [
+          "1 2 false",
+          "2 2 true",
+          "1 1 false",
+          "2 2 false"
+        ],
+        "answerIndex": 0,
+        "explanation": "La mise à jour immuable crée de nouveaux objets et laisse l'ancien intact : une simple comparaison de références suffit à détecter le changement.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "fe-defi5-q5",
+        "prompt": "Quels signes indiquent un état global surdimensionné ?",
+        "choices": [
+          "Des états de formulaires ou de menus locaux stockés dans le store global",
+          "Des données serveur recopiées à la main et souvent périmées",
+          "Des valeurs dérivées stockées et synchronisées manuellement",
+          "L'utilisateur connecté accessible partout"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'utilisateur connecté est justement un bon candidat à l'état global.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi5-q6",
+        "prompt": "En entretien : « Quel framework frontend choisir ? »",
+        "choices": [
+          "Celui qui répond aux contraintes du projet (rendu, référencement, interactivité) et que l'équipe maîtrise ou peut maintenir",
+          "Toujours le plus récent",
+          "Toujours le plus populaire",
+          "Aucun, il faut tout écrire à la main"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'intervieweur attend des critères de décision, pas une préférence personnelle.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (115 écrits) | 341 (300 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (120 écrits) | 341 (311 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -898,22 +898,22 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 HTML
-   - HTML sémantique
-   - Formulaires
-2. 🕓 CSS
-   - Cascade et spécificité
-   - Flexbox et Grid
-   - Responsive design
-3. 🕓 Accessibilité
-   - Principes WCAG
-   - ARIA et navigation au clavier
-4. 🕓 Performance web
-   - Le rendu du navigateur
-   - Core Web Vitals
-5. 🕓 Architecture frontend
-   - CSR, SSR et SSG
-   - Gestion de l'état
+1. ✅ HTML
+   - ✅ HTML sémantique
+   - ✅ Formulaires
+2. ✅ CSS
+   - ✅ Cascade et spécificité
+   - ✅ Flexbox et Grid
+   - ✅ Responsive design
+3. ✅ Accessibilité
+   - ✅ Principes WCAG
+   - ✅ ARIA et navigation au clavier
+4. ✅ Performance web
+   - ✅ Le rendu du navigateur
+   - ✅ Core Web Vitals
+5. ✅ Architecture frontend
+   - ✅ CSR, SSR et SSG
+   - ✅ Gestion de l'état
 
 **Spécialisations**
 

@@ -7,13 +7,317 @@
       "id": "fe-wcag",
       "title": "Principes WCAG",
       "summary": "Perceptible, utilisable, compréhensible, robuste.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Pour qui",
+          "body": "Personnes aveugles qui utilisent un lecteur d'écran, malvoyantes qui agrandissent, daltoniennes, sourdes, à mobilité réduite qui naviguent au clavier ou à la voix, ayant des troubles cognitifs, mais aussi quiconque utilise son téléphone en plein soleil ou d'une seule main. Une part importante de la population est concernée."
+        },
+        {
+          "title": "Les quatre principes",
+          "body": "Les WCAG (Web Content Accessibility Guidelines) s'organisent en quatre principes. Perceptible : texte alternatif des images, sous-titres, contrastes suffisants. Utilisable : tout fonctionne au clavier, sans piège, avec assez de temps. Compréhensible : langage clair, comportement prévisible, erreurs expliquées. Robuste : un code standard, lisible par les technologies d'assistance."
+        },
+        {
+          "title": "Le contraste et la couleur",
+          "body": "Le niveau AA exige un contraste d'au moins 4,5:1 pour le texte courant, 3:1 pour le grand texte. L'information ne doit jamais reposer sur la couleur seule : un champ en erreur affiche aussi une icône et un message, pas seulement une bordure rouge, invisible pour certains daltoniens."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-wcag-q1",
+          "prompt": "Quel contraste minimal le niveau AA exige-t-il pour du texte courant ?",
+          "choices": [
+            "4,5:1",
+            "1,5:1",
+            "10:1",
+            "2:1"
+          ],
+          "answerIndex": 0,
+          "explanation": "3:1 suffit pour le grand texte. Le niveau AAA demande 7:1.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-wcag-q2",
+          "prompt": "Un formulaire signale les champs invalides uniquement par une bordure rouge. Quel problème ?",
+          "choices": [
+            "L'information repose sur la couleur seule : certains daltoniens et les lecteurs d'écran ne la perçoivent pas",
+            "Le rouge est interdit",
+            "Il n'y a aucun problème",
+            "La bordure ralentit la page"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ajoute un message texte explicite, relié au champ, et éventuellement une icône.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-wcag-q3",
+          "prompt": "Quel principe WCAG demande que tout soit utilisable au clavier ?",
+          "choices": [
+            "Utilisable",
+            "Perceptible",
+            "Compréhensible",
+            "Robuste"
+          ],
+          "answerIndex": 0,
+          "explanation": "De nombreuses personnes ne peuvent pas utiliser de souris, et les technologies d'assistance s'appuient sur le clavier.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-wcag-q4",
+          "prompt": "Quelle est la meilleure façon de tester l'accessibilité d'une page ?",
+          "choices": [
+            "Combiner un outil automatique (axe, Lighthouse), la navigation au clavier, un lecteur d'écran, et idéalement des tests avec des utilisateurs concernés",
+            "Un outil automatique suffit",
+            "Regarder la page à l'œil",
+            "Demander à l'équipe de design"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les outils automatiques ne détectent qu'une partie des problèmes (souvent estimée autour d'un tiers).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-wcag-q5",
+          "prompt": "Une vidéo de formation n'a ni sous-titres ni transcription. Quel principe n'est pas respecté ?",
+          "choices": [
+            "Perceptible : les personnes sourdes ou malentendantes n'ont pas accès au contenu",
+            "Robuste",
+            "Utilisable",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les sous-titres servent aussi à tous ceux qui regardent sans le son.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "fe-wcag-q6",
+          "prompt": "Qui bénéficie de l'accessibilité ?",
+          "choices": [
+            "Les personnes en situation de handicap permanent",
+            "Une personne avec un bras dans le plâtre (handicap temporaire)",
+            "Un utilisateur en plein soleil ou dans un environnement bruyant (handicap situationnel)",
+            "Personne d'autre que les développeurs"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Ce qui est indispensable pour certains est utile pour tous : c'est l'« effet trottoir abaissé ».",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "fe-aria",
       "title": "ARIA et navigation au clavier",
       "summary": "Quand et comment.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La première règle d'ARIA",
+          "body": "ARIA ajoute des informations pour les technologies d'assistance : rôles (role=\"dialog\"), états (aria-expanded), propriétés (aria-label). Première règle : ne pas utiliser ARIA quand un élément HTML natif fait l'affaire. Un <button> vaut mieux qu'un <div role=\"button\">, car ARIA décrit sans ajouter le comportement."
+        },
+        {
+          "title": "Le clavier",
+          "body": "Tab et Maj+Tab parcourent les éléments interactifs dans l'ordre du HTML. Le focus doit rester visible : supprimer outline sans le remplacer rend le clavier inutilisable. tabindex=\"0\" rend un élément focalisable ; un tabindex positif bouleverse l'ordre naturel et est à éviter.",
+          "code": "button:focus-visible {\n  outline: 3px solid #1a73e8;\n  outline-offset: 2px;\n}",
+          "language": "text"
+        },
+        {
+          "title": "Les composants dynamiques",
+          "body": "Un menu déroulant indique son état avec aria-expanded. Une fenêtre modale déplace le focus à l'intérieur, l'y garde, se ferme avec Échap et rend le focus au bouton d'origine. Une zone qui se met à jour (« 3 résultats trouvés ») utilise aria-live pour être annoncée. L'élément natif <dialog> gère une bonne partie de ce travail.",
+          "code": "<button aria-expanded=\"false\"\n        aria-controls=\"menu\">Menu</button>\n<ul id=\"menu\" hidden>...</ul>\n<p aria-live=\"polite\" id=\"statut\"></p>",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-aria-q1",
+          "prompt": "Quelle est la première règle d'ARIA ?",
+          "choices": [
+            "Ne pas utiliser ARIA si un élément HTML natif convient",
+            "Ajouter role à chaque élément",
+            "Toujours mettre aria-label",
+            "Utiliser ARIA à la place du HTML"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un mauvais usage d'ARIA est souvent pire que pas d'ARIA du tout : il annonce des choses fausses.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "fe-aria-q2",
+          "prompt": "Cette règle CSS rend le site inutilisable au clavier. Touche la ligne fautive.",
+          "code": "* {\n  box-sizing: border-box;\n  outline: none;\n}",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Sans indicateur de focus, l'utilisateur au clavier ne sait plus où il se trouve. On peut styliser le focus (:focus-visible), jamais le supprimer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-aria-q3",
+          "prompt": "Un bouton icône (une loupe) n'a pas de texte. Comment le rendre compréhensible pour un lecteur d'écran ?",
+          "choices": [
+            "aria-label=\"Rechercher\" sur le bouton",
+            "title=\"loupe\" sur l'icône",
+            "Rien, l'icône suffit",
+            "role=\"icon\""
+          ],
+          "answerIndex": 0,
+          "explanation": "Le lecteur annonce alors « Rechercher, bouton ». Un texte visuellement masqué fonctionne aussi.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-aria-q4",
+          "prompt": "À quoi sert aria-live=\"polite\" sur une zone de statut ?",
+          "choices": [
+            "Les changements de son contenu sont annoncés par le lecteur d'écran, sans interrompre ce qu'il lit",
+            "Il rend la zone plus rapide",
+            "Il cache la zone",
+            "Il ajoute une animation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans lui, un message « Article ajouté au panier » apparaîtrait sans être annoncé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-aria-q5",
+          "prompt": "Que doit faire une fenêtre modale accessible à sa fermeture ?",
+          "choices": [
+            "Rendre le focus à l'élément qui l'a ouverte",
+            "Mettre le focus en haut de la page",
+            "Retirer le focus de la page",
+            "Recharger la page"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'utilisateur reprend là où il était, sans devoir tout reparcourir au clavier.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fe-aria-q6",
+          "prompt": "Quels attributs ARIA sont correctement décrits ?",
+          "choices": [
+            "aria-expanded : indique si un élément contrôlé est déplié",
+            "aria-label : fournit un nom accessible",
+            "aria-describedby : relie un élément à un texte qui le décrit (un message d'erreur)",
+            "aria-color : change la couleur du texte"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "aria-color n'existe pas : ARIA ne modifie jamais l'apparence.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "fe-defi-accessibilite",
+    "title": "Défi entretien : accessibilité",
+    "summary": "Auditer un menu déroulant.",
+    "questions": [
+      {
+        "type": "bug",
+        "id": "fe-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Ce menu ne s'ouvre pas au clavier. Touche la ligne en cause.",
+        "code": "<div class=\"menu\">\n  <div class=\"declencheur\" onclick=\"ouvrir()\">\n    Compte ▾\n  </div>\n  <ul id=\"options\" hidden>...</ul>\n</div>",
+        "language": "text",
+        "bugLines": [
+          2
+        ],
+        "explanation": "Un div n'est ni focalisable ni activable au clavier. Un <button> réglerait les deux, en plus d'être annoncé comme bouton.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi3-q2",
+        "prompt": "Cas pratique 2/3 — Une fois remplacé par un bouton, que manque-t-il pour indiquer l'état du menu ?",
+        "choices": [
+          "aria-expanded, mis à jour à l'ouverture et à la fermeture, et aria-controls vers la liste",
+          "Une couleur différente",
+          "Un tabindex positif",
+          "Rien"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le lecteur d'écran annonce alors « Compte, bouton, replié » puis « déplié ».",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Qu'affiche ce code ?",
+        "code": "document.body.innerHTML =\n  '<button aria-expanded=\"false\">Compte</button>';\nconst b = document.querySelector(\"button\");\nb.addEventListener(\"click\", () => {\n  const etat = b.getAttribute(\"aria-expanded\");\n  b.setAttribute(\"aria-expanded\",\n                 String(etat !== \"true\"));\n});\nb.click(); b.click(); b.click();\nconsole.log(b.getAttribute(\"aria-expanded\"));",
+        "choices": [
+          "true",
+          "false",
+          "null",
+          "Une erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Trois bascules depuis false : true, false, true. Les attributs ARIA sont des chaînes, d'où la comparaison avec \"true\".",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi3-q4",
+        "prompt": "Que signifie un score Lighthouse d'accessibilité de 100 ?",
+        "choices": [
+          "Que les contrôles automatiques passent, pas que le site est réellement accessible",
+          "Que le site est parfaitement accessible",
+          "Que le site est conforme à la loi",
+          "Que le site est rapide"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un outil ne peut pas juger si un texte alternatif est pertinent ou si un parcours est compréhensible.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "fe-defi3-q5",
+        "prompt": "Que vérifier en naviguant uniquement au clavier ?",
+        "choices": [
+          "Tous les éléments interactifs sont atteignables avec Tab",
+          "Le focus est toujours visible",
+          "L'ordre de parcours est logique, et aucun élément ne piège le focus",
+          "La couleur du logo"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "C'est le test manuel le plus simple et le plus révélateur.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi3-q6",
+        "prompt": "En entretien : « Comment intégrer l'accessibilité dans un projet ? »",
+        "choices": [
+          "Dès la conception : HTML sémantique, composants accessibles réutilisables, contrôles automatiques en CI et tests manuels réguliers",
+          "Par un audit juste avant la mise en ligne",
+          "En ajoutant un widget d'accessibilité",
+          "Ce n'est pas nécessaire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les widgets de « surcouche » ne corrigent pas les problèmes de fond et sont critiqués par les utilisateurs concernés.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

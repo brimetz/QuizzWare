@@ -7,13 +7,316 @@
       "id": "fe-semantique",
       "title": "HTML sémantique",
       "summary": "Les bonnes balises au bon endroit.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des balises qui ont du sens",
+          "body": "Le HTML décrit la structure et le sens du contenu, pas son apparence. header, nav, main, article, section, aside et footer délimitent les zones de la page. Un titre est un h1 à h6, un bouton un button, un lien un a. Les lecteurs d'écran, les moteurs de recherche et les navigateurs s'appuient sur ce sens.",
+          "code": "<header>\n  <nav><a href=\"/\">Accueil</a></nav>\n</header>\n<main>\n  <article>\n    <h1>Bien choisir ses balises</h1>\n    <p>Le HTML décrit le sens.</p>\n  </article>\n</main>\n<footer>© 2026</footer>",
+          "language": "text"
+        },
+        {
+          "title": "La soupe de div",
+          "body": "Une page faite uniquement de div et de span stylés fonctionne visuellement, mais perd toute information pour les technologies d'assistance. Un div cliquable n'est ni focalisable au clavier, ni annoncé comme bouton : il faut tout réimplémenter, alors que button le fait gratuitement."
+        },
+        {
+          "title": "Bouton ou lien ?",
+          "body": "Un lien (a href) mène quelque part : une autre page, une ancre. Un bouton déclenche une action : envoyer, ouvrir une fenêtre, ajouter au panier. Les titres forment une hiérarchie sans sauter de niveau, avec un seul h1 décrivant le sujet principal."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-semantique-q1",
+          "prompt": "Quelle balise utiliser pour « Ajouter au panier » ?",
+          "choices": [
+            "<button>",
+            "<a href=\"#\">",
+            "<div onclick=\"...\">",
+            "<span>"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une action, pas une navigation. button est focalisable, activable au clavier et annoncé comme bouton.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-semantique-q2",
+          "prompt": "Que perd-on en remplaçant un <button> par un <div> cliquable ?",
+          "choices": [
+            "Le focus au clavier, l'activation par Entrée et Espace, et l'annonce « bouton » aux lecteurs d'écran",
+            "Rien du tout",
+            "Uniquement le style par défaut",
+            "La possibilité d'ajouter du texte"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il faudrait ajouter tabindex, role et la gestion des touches pour approcher ce que button offre nativement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-semantique-q3",
+          "prompt": "Quelle balise contient le contenu principal et unique de la page ?",
+          "choices": [
+            "<main>",
+            "<section>",
+            "<div id=\"principal\">",
+            "<aside>"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les lecteurs d'écran proposent d'y sauter directement, en évitant l'en-tête et la navigation.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "fe-semantique-q4",
+          "prompt": "Cette structure de titres pose problème. Touche la ligne fautive.",
+          "code": "<h1>Recettes</h1>\n<h2>Desserts</h2>\n<h4>Tarte aux pommes</h4>\n<h2>Plats</h2>",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "On saute du h2 au h4 : la hiérarchie est cassée pour les utilisateurs qui naviguent par titres. On choisit le niveau selon la structure, et la taille avec le CSS.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-semantique-q5",
+          "prompt": "Que doit contenir l'attribut alt d'une image purement décorative ?",
+          "choices": [
+            "Une chaîne vide (alt=\"\"), pour que les lecteurs d'écran l'ignorent",
+            "Le nom du fichier",
+            "« image »",
+            "Rien : il faut supprimer l'attribut"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans attribut alt, certains lecteurs d'écran lisent le nom du fichier. Une image informative, elle, reçoit une description utile.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fe-semantique-q6",
+          "prompt": "Qui profite d'un HTML sémantique ?",
+          "choices": [
+            "Les utilisateurs de lecteurs d'écran",
+            "Les moteurs de recherche",
+            "Les utilisateurs qui naviguent au clavier",
+            "Personne, seul le CSS compte"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le sens du contenu sert à tous les programmes qui lisent la page, au-delà de l'affichage.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "fe-formulaires",
       "title": "Formulaires",
       "summary": "Saisie et validation.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des champs bien étiquetés",
+          "body": "Chaque champ a un label associé (for et id, ou label englobant) : cliquer sur le libellé active le champ, et les lecteurs d'écran l'annoncent. Un placeholder n'est pas un label : il disparaît dès la saisie.",
+          "code": "<label for=\"email\">Adresse e-mail</label>\n<input id=\"email\" name=\"email\" type=\"email\"\n       autocomplete=\"email\" required>",
+          "language": "text"
+        },
+        {
+          "title": "Les bons types",
+          "body": "type=\"email\", \"tel\", \"number\", \"date\" adaptent le clavier sur mobile et activent une validation de base. autocomplete permet au navigateur de remplir les champs connus (adresse, carte, mot de passe). Les attributs required, minlength, pattern ou max ajoutent des contraintes vérifiées par le navigateur."
+        },
+        {
+          "title": "Valider des deux côtés",
+          "body": "La validation dans le navigateur améliore l'expérience : retour immédiat, messages clairs près du champ. Mais elle se contourne trivialement : le serveur doit toujours revalider. Les messages d'erreur expliquent comment corriger, et sont reliés au champ (aria-describedby)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-form-q1",
+          "prompt": "Pourquoi un placeholder ne remplace-t-il pas un label ?",
+          "choices": [
+            "Il disparaît dès qu'on tape, n'est pas toujours annoncé, et il est souvent peu contrasté",
+            "Il est plus lent à afficher",
+            "Il n'existe pas en HTML5",
+            "Il le remplace parfaitement"
+          ],
+          "answerIndex": 0,
+          "explanation": "En cours de saisie, l'utilisateur ne sait plus ce que le champ attendait.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-form-q2",
+          "prompt": "Quel type de champ affiche un clavier numérique adapté sur mobile pour un numéro de téléphone ?",
+          "choices": [
+            "type=\"tel\"",
+            "type=\"text\"",
+            "type=\"number\"",
+            "type=\"phone\""
+          ],
+          "answerIndex": 0,
+          "explanation": "type=\"number\" est fait pour des quantités : il ajoute des flèches et refuse les « + » ou les espaces d'un numéro.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-form-q3",
+          "prompt": "Le champ « âge » a min=\"18\" dans le HTML. Le serveur doit-il vérifier l'âge ?",
+          "choices": [
+            "Oui : n'importe qui peut envoyer une requête sans passer par le formulaire",
+            "Non, le navigateur s'en charge",
+            "Seulement sur mobile",
+            "Seulement si JavaScript est désactivé"
+          ],
+          "answerIndex": 0,
+          "explanation": "La validation côté client est une aide ergonomique, pas une protection.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "fe-form-q4",
+          "prompt": "Ce champ n'est pas correctement associé à son libellé. Touche la ligne fautive.",
+          "code": "<label for=\"ville\">Ville</label>\n<input id=\"city\" name=\"ville\" type=\"text\">",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "for doit correspondre à l'id du champ : for=\"ville\" ne désigne aucun élément. Cliquer sur le libellé ne fait rien, et le lecteur d'écran n'annonce pas « Ville ».",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-form-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "document.body.innerHTML =\n  '<input id=\"m\" type=\"email\" required>';\nconst m = document.getElementById(\"m\");\nconst avant = m.checkValidity();\nm.value = \"ana@exemple.fr\";\nconsole.log(avant, m.checkValidity());",
+          "choices": [
+            "false true",
+            "true true",
+            "false false",
+            "true false"
+          ],
+          "answerIndex": 0,
+          "explanation": "Vide et required : invalide. Une adresse bien formée satisfait type=\"email\". L'API de validation du navigateur est utilisable en JavaScript.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fe-form-q6",
+          "prompt": "Quelles pratiques améliorent un formulaire ?",
+          "choices": [
+            "Un label visible pour chaque champ",
+            "Des messages d'erreur qui expliquent comment corriger",
+            "L'attribut autocomplete sur les champs courants",
+            "Effacer tout le formulaire en cas d'erreur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Effacer les saisies en cas d'erreur est l'une des pires expériences possibles.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "fe-defi-html",
+    "title": "Défi entretien : HTML",
+    "summary": "Une page de connexion.",
+    "questions": [
+      {
+        "type": "bug",
+        "id": "fe-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Ce formulaire de connexion a un défaut d'accessibilité majeur. Touche la ligne en cause.",
+        "code": "<form action=\"/connexion\" method=\"post\">\n  <input name=\"email\" placeholder=\"E-mail\">\n  <label for=\"mdp\">Mot de passe</label>\n  <input id=\"mdp\" name=\"mdp\" type=\"password\">\n  <button>Se connecter</button>\n</form>",
+        "language": "text",
+        "bugLines": [
+          2
+        ],
+        "explanation": "Le champ e-mail n'a pas de label, seulement un placeholder. Il manque aussi type=\"email\" et autocomplete=\"username\".",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Quel attribut autocomplete mettre sur le champ mot de passe d'une page de connexion ?",
+        "choices": [
+          "autocomplete=\"current-password\"",
+          "autocomplete=\"off\"",
+          "autocomplete=\"new-password\"",
+          "Aucun"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les gestionnaires de mots de passe proposent alors le bon identifiant. new-password sert à l'inscription.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Pourquoi method=\"post\" et pas get pour ce formulaire ?",
+        "choices": [
+          "Avec get, le mot de passe apparaîtrait dans l'URL, donc dans l'historique et les journaux des serveurs",
+          "post est plus rapide",
+          "get ne fonctionne pas avec les formulaires",
+          "Aucune raison"
+        ],
+        "answerIndex": 0,
+        "explanation": "get convient aux recherches et filtres, qui ne modifient rien et peuvent être partagés.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi1-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "document.body.innerHTML =\n  '<h1>A</h1><h2>B</h2><h2>C</h2>';\nconst t = [...document.querySelectorAll(\"h1, h2\")];\nconst noms = t.map(h => h.tagName + h.textContent);\nconsole.log(noms.join(\",\"));",
+        "choices": [
+          "H1A,H2B,H2C",
+          "h1A,h2B,h2C",
+          "A,B,C",
+          "H1A"
+        ],
+        "answerIndex": 0,
+        "explanation": "tagName est en majuscules pour les éléments HTML. Les outils d'accessibilité construisent ainsi le plan de la page à partir des titres.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "fe-defi1-q5",
+        "prompt": "Quelles balises sont des repères (landmarks) pour les lecteurs d'écran ?",
+        "choices": [
+          "<nav>",
+          "<main>",
+          "<footer>",
+          "<b>"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "<b> met en gras sans aucun sens structurel.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi1-q6",
+        "prompt": "En entretien : « Pourquoi le HTML sémantique compte-t-il, si la page s'affiche bien ? »",
+        "choices": [
+          "Parce que la page est aussi lue par des programmes : lecteurs d'écran, moteurs de recherche, navigation au clavier, outils de traduction",
+          "Il ne compte pas",
+          "Pour réduire la taille des fichiers",
+          "Pour accélérer le JavaScript"
+        ],
+        "answerIndex": 0,
+        "explanation": "En Europe, l'accessibilité est aussi une obligation légale pour de nombreux services (European Accessibility Act, depuis 2025).",
+        "difficulty": 1
+      }
+    ]
+  }
 }

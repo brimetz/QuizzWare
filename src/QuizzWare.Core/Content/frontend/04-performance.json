@@ -7,13 +7,317 @@
       "id": "fe-rendu",
       "title": "Le rendu du navigateur",
       "summary": "Chemin critique et reflow.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Du HTML aux pixels",
+          "body": "Le navigateur analyse le HTML pour construire le DOM, le CSS pour construire le CSSOM, les combine, calcule la position et la taille de chaque élément (layout), dessine (paint) et assemble les calques (composite). Tant que le CSS n'est pas chargé, rien ne s'affiche : il bloque le rendu."
+        },
+        {
+          "title": "Le chemin critique",
+          "body": "Un script classique dans le head bloque l'analyse du HTML pendant son téléchargement et son exécution. defer télécharge en parallèle et exécute après l'analyse, dans l'ordre ; async exécute dès que possible, sans ordre garanti. On charge en priorité ce qui sert au premier affichage, et le reste plus tard.",
+          "code": "<link rel=\"stylesheet\" href=\"app.css\">\n<script src=\"app.js\" defer></script>\n<script src=\"stats.js\" async></script>\n<img src=\"photo.jpg\" loading=\"lazy\"\n     width=\"800\" height=\"600\" alt=\"...\">",
+          "language": "text"
+        },
+        {
+          "title": "Le reflow",
+          "body": "Modifier une propriété géométrique (largeur, position) oblige à recalculer la mise en page. Lire une mesure (offsetHeight) juste après une modification force ce calcul immédiatement. Alterner lectures et écritures dans une boucle provoque un « layout thrashing » : on lit d'abord tout, puis on écrit tout. Animer transform et opacity évite le layout et le paint."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-rendu-q1",
+          "prompt": "Que fait l'attribut defer sur une balise script ?",
+          "choices": [
+            "Le script est téléchargé en parallèle et exécuté après l'analyse du HTML, dans l'ordre des balises",
+            "Le script n'est jamais exécuté",
+            "Le script est exécuté immédiatement, en bloquant la page",
+            "Le script est exécuté au hasard"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le bon choix par défaut pour les scripts de l'application, qui dépendent souvent du DOM et les uns des autres.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-rendu-q2",
+          "prompt": "Quand utiliser async plutôt que defer ?",
+          "choices": [
+            "Pour un script indépendant, dont l'ordre d'exécution n'importe pas (statistiques, publicité)",
+            "Pour le script principal de l'application",
+            "Pour tous les scripts",
+            "Jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "async exécute dès la fin du téléchargement, sans attendre le HTML ni les autres scripts.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "fe-rendu-q3",
+          "prompt": "Cette boucle provoque un recalcul de la mise en page à chaque tour. Touche la ligne en cause.",
+          "code": "const cartes = document.querySelectorAll(\".carte\");\nfor (const c of cartes) {\n  const h = c.offsetHeight;\n  c.style.height = (h * 2) + \"px\";\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Chaque lecture d'offsetHeight après une écriture force un layout complet : c'est le layout thrashing. On lit toutes les hauteurs dans une première boucle, puis on écrit dans une seconde.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "fe-rendu-q4",
+          "prompt": "Pour animer le déplacement d'un élément de façon fluide, quelle propriété utiliser ?",
+          "choices": [
+            "transform: translateX(...)",
+            "left",
+            "margin-left",
+            "width"
+          ],
+          "answerIndex": 0,
+          "explanation": "transform est traité à l'étape de composition, souvent par la carte graphique, sans recalcul de mise en page.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-rendu-q5",
+          "prompt": "Pourquoi indiquer width et height sur une image ?",
+          "choices": [
+            "Le navigateur réserve sa place avant le chargement : le contenu ne saute pas quand elle arrive",
+            "Pour que l'image se charge plus vite",
+            "Pour compresser l'image",
+            "C'est obligatoire en HTML"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le CSS peut ensuite la redimensionner ; le rapport largeur / hauteur suffit à réserver l'espace.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fe-rendu-q6",
+          "prompt": "Qu'est-ce qui retarde le premier affichage d'une page ?",
+          "choices": [
+            "Des feuilles de style volumineuses dans le head",
+            "Des scripts sans defer ni async dans le head",
+            "Des polices web qui bloquent l'affichage du texte",
+            "Des images en loading=\"lazy\" en bas de page"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les images différées en bas de page ne gênent pas le premier affichage : c'est justement leur intérêt.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "fe-web-vitals",
       "title": "Core Web Vitals",
       "summary": "LCP, INP et CLS.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Trois mesures centrées sur l'utilisateur",
+          "body": "LCP (Largest Contentful Paint) : le temps d'affichage du plus grand élément visible, souvent l'image principale ou le titre ; bon sous 2,5 s. INP (Interaction to Next Paint) : la réactivité aux interactions ; bon sous 200 ms. CLS (Cumulative Layout Shift) : la stabilité visuelle, les sauts de mise en page ; bon sous 0,1."
+        },
+        {
+          "title": "Améliorer chaque mesure",
+          "body": "LCP : servir vite le HTML (CDN, cache), précharger l'image principale, l'optimiser (formats AVIF, WebP, bonnes dimensions). INP : éviter les longues tâches JavaScript, découper le travail, alléger les gestionnaires d'événements. CLS : réserver l'espace des images, publicités et contenus insérés."
+        },
+        {
+          "title": "Mesurer sur le terrain",
+          "body": "Les tests en laboratoire (Lighthouse) aident à diagnostiquer, mais les vrais utilisateurs ont des téléphones et réseaux variés. On mesure aussi sur le terrain (RUM, Real User Monitoring) et on suit le 75e percentile : c'est ce que retient Google pour évaluer une page.",
+          "code": "new PerformanceObserver(liste => {\n  for (const e of liste.getEntries())\n    console.log(\"LCP\", e.startTime);\n}).observe({\n  type: \"largest-contentful-paint\",\n  buffered: true,\n});"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-vitals-q1",
+          "prompt": "Le contenu de la page saute quand une bannière publicitaire se charge. Quelle mesure est dégradée ?",
+          "choices": [
+            "CLS",
+            "LCP",
+            "INP",
+            "TTFB"
+          ],
+          "answerIndex": 0,
+          "explanation": "On réserve l'espace de la bannière à l'avance (min-height), même si elle arrive plus tard.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-vitals-q2",
+          "prompt": "Un clic sur « Filtrer » met 600 ms à produire un retour visible. Quelle mesure est concernée ?",
+          "choices": [
+            "INP",
+            "CLS",
+            "LCP",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une longue tâche JavaScript bloque le fil principal : il faut la découper ou la déporter (Web Worker).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-vitals-q3",
+          "prompt": "L'image principale d'une page produit s'affiche en 4,5 s. Quelle action a le plus d'effet ?",
+          "choices": [
+            "L'optimiser (dimensions, format moderne) et la précharger avec une priorité haute, sans lazy loading",
+            "Lui ajouter loading=\"lazy\"",
+            "Ajouter plus de JavaScript",
+            "Agrandir la police"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le lazy loading de l'image principale retarde justement le LCP : il est réservé aux images hors écran.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-vitals-q4",
+          "prompt": "Pourquoi Lighthouse sur votre ordinateur ne suffit-il pas ?",
+          "choices": [
+            "Les vrais utilisateurs ont des appareils et des réseaux plus lents et plus variés : il faut aussi mesurer sur le terrain",
+            "Lighthouse est toujours faux",
+            "Lighthouse ne mesure pas le LCP",
+            "Il suffit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un ordinateur de développeur avec la fibre est très loin d'un téléphone d'entrée de gamme en 4G.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-vitals-q5",
+          "prompt": "Quel seuil définit un bon LCP ?",
+          "choices": [
+            "Moins de 2,5 secondes",
+            "Moins de 10 secondes",
+            "Moins de 100 millisecondes",
+            "Moins de 30 secondes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Mesuré au 75e percentile des visites.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "fe-vitals-q6",
+          "prompt": "Quelles actions réduisent le CLS ?",
+          "choices": [
+            "Indiquer les dimensions des images et vidéos",
+            "Réserver l'espace des contenus insérés après coup",
+            "Éviter d'insérer du contenu au-dessus de ce que l'utilisateur lit",
+            "Ajouter des animations sur la largeur des éléments"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Animer la largeur provoque au contraire des décalages et des recalculs de mise en page.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "fe-defi-performance",
+    "title": "Défi entretien : performance web",
+    "summary": "Une page produit trop lente.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "fe-defi4-q1",
+        "prompt": "Cas pratique 1/3 — Une page produit a un LCP de 5 s sur mobile. Le HTML arrive en 1,8 s. Par où commencer ?",
+        "choices": [
+          "Réduire le temps de réponse du serveur (cache, CDN), car tout le reste attend le HTML",
+          "Changer de framework",
+          "Ajouter un écran de chargement",
+          "Supprimer les images"
+        ],
+        "answerIndex": 0,
+        "explanation": "1,8 s avant le premier octet utile, c'est déjà presque tout le budget. Le TTFB est la base du LCP.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi4-q2",
+        "prompt": "Cas pratique 2/3 — L'image principale fait 2,4 Mo en JPEG de 4 000 px de large. Que faire ?",
+        "choices": [
+          "Servir des tailles adaptées (srcset) dans un format moderne (AVIF, WebP), quelques dizaines de Ko",
+          "La garder telle quelle",
+          "La convertir en PNG",
+          "La charger en JavaScript après la page"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un téléphone n'a pas besoin de 4 000 pixels de large : srcset laisse le navigateur choisir.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi4-q3",
+        "prompt": "Cas pratique 3/3 — 1,2 Mo de JavaScript bloque le fil principal au chargement. Quelle piste ?",
+        "choices": [
+          "Découper le code (code splitting), charger à la demande ce qui n'est pas nécessaire au premier affichage, et supprimer les dépendances inutiles",
+          "Le minifier une seconde fois",
+          "Le placer dans le head sans defer",
+          "Ajouter un second fichier de 1,2 Mo"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le coût du JavaScript ne se limite pas au téléchargement : son analyse et son exécution pèsent lourd sur mobile.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi4-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "const t0 = performance.now();\nlet x = 0;\nfor (let i = 0; i < 1e6; i++) x += i;\nconst duree = performance.now() - t0;\nconsole.log(typeof duree, duree >= 0);",
+        "choices": [
+          "number true",
+          "string true",
+          "number false",
+          "undefined false"
+        ],
+        "answerIndex": 0,
+        "explanation": "performance.now() renvoie un horodatage haute résolution en millisecondes, idéal pour mesurer une durée.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "fe-defi4-q5",
+        "prompt": "Quelles techniques accélèrent le chargement d'une page ?",
+        "choices": [
+          "Mettre en cache les ressources statiques versionnées",
+          "Compresser les réponses texte (Brotli, gzip)",
+          "Différer les scripts non critiques",
+          "Charger toutes les polices en dix variantes"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Chaque variante de police est un fichier de plus à télécharger : on se limite au nécessaire.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi4-q6",
+        "prompt": "En entretien : « Comment aborder un problème de performance web ? »",
+        "choices": [
+          "Mesurer d'abord (terrain et laboratoire), identifier le goulot sur la mesure dégradée, corriger, puis remesurer",
+          "Optimiser tout ce qui semble lent",
+          "Réécrire l'application",
+          "Acheter un serveur plus puissant"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans mesure, on optimise souvent ce qui ne compte pas.",
+        "difficulty": 1
+      }
+    ]
+  }
 }
