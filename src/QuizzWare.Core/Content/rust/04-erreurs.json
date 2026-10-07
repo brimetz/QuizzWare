@@ -58,7 +58,7 @@
           "type": "choice",
           "id": "rust-result-q3",
           "prompt": "Qu'affiche ce programme ?",
-          "code": "use std::num::ParseIntError;\n\nfn somme(a: &str, b: &str) -> Result<i32, ParseIntError> {\n    Ok(a.parse::<i32>()? + b.parse::<i32>()?)\n}\n\nprintln!(\"{:?}\", somme(\"2\", \"3\"));\nprintln!(\"{}\", somme(\"2\", \"x\").is_err());",
+          "code": "use std::num::ParseIntError;\n\nfn somme(a: &str, b: &str)\n    -> Result<i32, ParseIntError> {\n    Ok(a.parse::<i32>()? + b.parse::<i32>()?)\n}\n\nprintln!(\"{:?}\", somme(\"2\", \"3\"));\nprintln!(\"{}\", somme(\"2\", \"x\").is_err());",
           "choices": [
             "Ok(5) puis true",
             "5 puis false",
