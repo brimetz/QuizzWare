@@ -7,13 +7,319 @@
       "id": "os-appels-systeme",
       "title": "Interruptions et appels système",
       "summary": "Passer en mode noyau.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Mode utilisateur et mode noyau",
+          "body": "Le processeur distingue deux niveaux de privilège. Les programmes tournent en mode utilisateur : ils ne peuvent ni accéder directement au matériel, ni toucher la mémoire des autres. Pour lire un fichier ou envoyer un paquet, ils demandent au noyau, qui s'exécute en mode privilégié."
+        },
+        {
+          "title": "Les appels système",
+          "body": "Un appel système (read, write, open, fork, mmap...) est une entrée contrôlée dans le noyau : le processeur bascule en mode noyau, le noyau vérifie la demande, l'exécute et rend la main. Cette bascule coûte bien plus cher qu'un appel de fonction ordinaire : on évite d'en faire un par octet, d'où les tampons de stdio.",
+          "code": "$ strace -c ls > /dev/null\n% time  calls  syscall\n 28.6     12   mmap\n 14.3      8   openat\n ...",
+          "language": "shell"
+        },
+        {
+          "title": "Les interruptions",
+          "body": "Les périphériques signalent un événement (paquet reçu, disque prêt, touche frappée) par une interruption : le processeur suspend ce qu'il fait et exécute le gestionnaire du noyau. Le minuteur matériel déclenche aussi des interruptions régulières, qui permettent la préemption des threads."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-syscall-q1",
+          "prompt": "Pourquoi un programme ne peut-il pas écrire directement sur le disque ?",
+          "choices": [
+            "En mode utilisateur, le processeur interdit l'accès direct au matériel : il faut passer par le noyau via un appel système",
+            "Parce que le disque est trop lent",
+            "Parce que le compilateur l'interdit",
+            "Il le peut toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui permet au noyau de faire respecter les droits d'accès et l'isolation.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-syscall-q2",
+          "prompt": "Un programme écrit un fichier octet par octet avec write(), et c'est très lent. Pourquoi ?",
+          "choices": [
+            "Chaque write est un appel système, avec son coût de passage en mode noyau : il faut écrire par blocs (ou utiliser fwrite, qui met en tampon)",
+            "Le disque n'accepte qu'un octet par seconde",
+            "write est toujours lent",
+            "Parce que le fichier est trop petit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un million d'appels système d'un octet contre quelques centaines de blocs de 4 Kio : l'écart est énorme.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-syscall-q3",
+          "prompt": "Quel outil Linux trace les appels système d'un programme ?",
+          "choices": [
+            "strace",
+            "grep",
+            "top",
+            "make"
+          ],
+          "answerIndex": 0,
+          "explanation": "strace montre chaque appel, ses arguments et son résultat : parfait pour voir quel fichier un programme cherche en vain.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-syscall-q4",
+          "prompt": "Qu'est-ce qu'une interruption matérielle ?",
+          "choices": [
+            "Un signal d'un périphérique qui fait suspendre au processeur son travail pour exécuter un gestionnaire du noyau",
+            "Une panne du matériel",
+            "Un appel de fonction ordinaire",
+            "Un redémarrage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans interruptions, le processeur devrait interroger sans cesse chaque périphérique (scrutation).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-syscall-q5",
+          "prompt": "Quel rôle jouent les interruptions du minuteur dans l'ordonnancement ?",
+          "choices": [
+            "Elles rendent régulièrement la main au noyau, qui peut alors préempter le thread en cours",
+            "Elles accélèrent l'horloge",
+            "Elles synchronisent l'heure avec Internet",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans elles, un thread qui ne fait jamais d'appel système garderait le processeur indéfiniment.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "os-syscall-q6",
+          "prompt": "Lesquelles de ces fonctions déclenchent un appel système ?",
+          "choices": [
+            "read sur un descripteur de fichier",
+            "fork",
+            "open",
+            "strlen"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "strlen parcourt la mémoire du processus, sans aucune aide du noyau.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "os-io-async",
       "title": "E/S asynchrones",
       "summary": "epoll et io_uring.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le problème des 10 000 connexions",
+          "body": "Avec des E/S bloquantes, un thread attend chaque connexion : 10 000 clients, 10 000 threads, chacun avec sa pile et ses changements de contexte. La plupart passent leur temps à attendre le réseau."
+        },
+        {
+          "title": "Le multiplexage avec epoll",
+          "body": "On met les sockets en mode non bloquant, et on demande au noyau de nous prévenir quand l'une d'elles est prête. Un seul thread surveille ainsi des milliers de connexions : c'est la boucle d'événements de nginx, de Node.js ou de Redis. epoll (Linux), kqueue (BSD, macOS) et IOCP (Windows) en sont les mécanismes.",
+          "code": "int ep = epoll_create1(0);\n/* ... enregistrer chaque socket ... */\nfor (;;) {\n    int n = epoll_wait(ep, evts, 64, -1);\n    for (int i = 0; i < n; i++)\n        traiter(evts[i].data.fd);\n}"
+        },
+        {
+          "title": "io_uring et async/await",
+          "body": "io_uring (Linux 5.1+) va plus loin : l'application dépose ses demandes dans une file partagée avec le noyau et récupère les résultats dans une autre, en limitant les appels système. Dans les langages, async/await (C#, JavaScript, Rust, Python) bâtit sur ces mécanismes : le code paraît séquentiel, mais le thread est libéré pendant l'attente."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-async-q1",
+          "prompt": "Pourquoi un thread par connexion ne tient-il pas pour 50 000 connexions simultanées ?",
+          "choices": [
+            "Chaque thread coûte une pile et des changements de contexte, alors qu'il passe l'essentiel de son temps à attendre",
+            "Le noyau limite à 100 threads",
+            "Les threads ne savent pas lire le réseau",
+            "Il tient sans problème"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les threads virtuels (Java 21) ou les goroutines rendent ce modèle de nouveau viable, en multiplexant eux-mêmes sur peu de threads système.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-async-q2",
+          "prompt": "Que fait epoll_wait ?",
+          "choices": [
+            "Il bloque jusqu'à ce qu'au moins un des descripteurs surveillés soit prêt, et renvoie lesquels",
+            "Il lit les données de toutes les sockets",
+            "Il crée une socket",
+            "Il ferme les connexions inactives"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un seul thread gère ainsi des milliers de connexions, en ne traitant que celles qui ont quelque chose à faire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-async-q3",
+          "prompt": "Dans une boucle d'événements (Node.js), que se passe-t-il si un gestionnaire fait un calcul de 2 secondes ?",
+          "choices": [
+            "Toutes les autres connexions attendent : la boucle est bloquée pendant 2 secondes",
+            "Le calcul est automatiquement déplacé sur un autre cœur",
+            "Rien, les autres connexions continuent",
+            "Node.js redémarre"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une boucle d'événements suppose des traitements courts. Les calculs lourds partent dans des threads de travail.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-async-q4",
+          "prompt": "En C#, que devient le thread pendant un await sur une requête HTTP ?",
+          "choices": [
+            "Il est libéré pour traiter autre chose ; la suite de la méthode reprendra quand la réponse arrivera",
+            "Il reste bloqué à attendre",
+            "Il est détruit définitivement",
+            "Il passe en mode noyau"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui permet à un serveur ASP.NET Core de traiter des milliers de requêtes avec peu de threads.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-async-q5",
+          "prompt": "Quel est l'intérêt principal d'io_uring par rapport à epoll ?",
+          "choices": [
+            "Des files partagées avec le noyau qui réduisent le nombre d'appels système, pour le réseau comme pour les fichiers",
+            "Il est plus simple à utiliser",
+            "Il fonctionne sous Windows",
+            "Il supprime le besoin d'un noyau"
+          ],
+          "answerIndex": 0,
+          "explanation": "epoll signale qu'une socket est prête ; io_uring exécute directement les opérations demandées, y compris sur des fichiers.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "os-async-q6",
+          "prompt": "Quels logiciels reposent sur une boucle d'événements ?",
+          "choices": [
+            "nginx",
+            "Node.js",
+            "Redis",
+            "Un programme de calcul matriciel pur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un calcul matriciel n'attend pas d'E/S : il utilise plutôt plusieurs threads, un par cœur.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "os-defi-es",
+    "title": "Défi entretien : E/S",
+    "summary": "Un serveur qui ne tient pas la charge.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "os-defi5-q1",
+        "prompt": "Cas pratique 1/3 — Un serveur crée un thread par connexion. À 8 000 connexions, il s'effondre, alors que le processeur est peu utilisé. Pourquoi ?",
+        "choices": [
+          "La mémoire des piles et les changements de contexte de milliers de threads, presque tous en attente",
+          "Le processeur est trop lent",
+          "Le disque est plein",
+          "Les clients sont trop nombreux pour le réseau"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le serveur ne calcule presque rien : il attend. Ce modèle gaspille des ressources pour attendre.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi5-q2",
+        "prompt": "Cas pratique 2/3 — Quelle architecture proposer ?",
+        "choices": [
+          "Des E/S non bloquantes avec une boucle d'événements par cœur (epoll), ou un framework async/await",
+          "Encore plus de threads",
+          "Un serveur plus puissant uniquement",
+          "Refuser les connexions au-delà de 100"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est le modèle de nginx : quelques processus de travail, chacun gérant des milliers de connexions.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Après migration, certaines requêtes font un calcul de rapport de 3 secondes. Que faire ?",
+        "choices": [
+          "Déporter ce calcul dans un pool de threads de travail, pour ne pas bloquer la boucle d'événements",
+          "Le faire dans la boucle, ce n'est que 3 secondes",
+          "Supprimer la fonctionnalité",
+          "Augmenter le timeout des clients"
+        ],
+        "answerIndex": 0,
+        "explanation": "La boucle d'événements doit rester réactive ; les tâches longues partent ailleurs.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi5-q4",
+        "prompt": "strace montre des milliers d'appels read() de 1 octet. Quelle correction ?",
+        "choices": [
+          "Lire par blocs (un tampon de quelques Kio) ou utiliser les fonctions avec tampon (fread, BufferedReader)",
+          "Ajouter des threads",
+          "Utiliser un disque plus rapide",
+          "Ne rien faire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le coût est dans les passages en mode noyau, pas dans le disque.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "os-defi5-q5",
+        "prompt": "Quels outils aident à comprendre ce que fait un processus Linux ?",
+        "choices": [
+          "strace, pour ses appels système",
+          "perf, pour où passe le temps processeur",
+          "lsof, pour ses fichiers et sockets ouverts",
+          "ping"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "ping teste la joignabilité réseau d'une machine, pas l'activité d'un processus.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi5-q6",
+        "prompt": "En entretien : « Que se passe-t-il quand un programme appelle read() sur une socket sans données ? »",
+        "choices": [
+          "En mode bloquant, le noyau endort le thread jusqu'à l'arrivée de données ; en mode non bloquant, read renvoie immédiatement EAGAIN",
+          "Le programme plante",
+          "read renvoie des données aléatoires",
+          "Le noyau ferme la socket"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le mode non bloquant, combiné à epoll, est la base des serveurs à haute concurrence.",
+        "difficulty": 3
+      }
+    ]
+  }
 }

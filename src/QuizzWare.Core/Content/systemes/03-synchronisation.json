@@ -7,19 +7,428 @@
       "id": "os-sections-critiques",
       "title": "Sections critiques",
       "summary": "Les conditions de course.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "compteur++ n'est pas atomique",
+          "body": "compteur++ se décompose en trois étapes : lire la valeur, l'incrémenter, l'écrire. Si deux threads lisent la même valeur avant que l'un n'écrive, une incrémentation est perdue. C'est une condition de course (race condition) : le résultat dépend de l'ordre d'exécution, imprévisible.",
+          "code": "int compteur = 0;\n\nvoid *incrementer(void *arg)\n{\n    for (int i = 0; i < 1000000; i++)\n        compteur++;\n    return NULL;\n}\n/* 2 threads : rarement 2 000 000 à la fin */"
+        },
+        {
+          "title": "La section critique",
+          "body": "Une section critique est une portion de code qui accède à une ressource partagée et ne doit être exécutée que par un thread à la fois. On la protège par un verrou (mutex) : un thread le prend en entrant, le rend en sortant ; les autres attendent.",
+          "code": "pthread_mutex_lock(&verrou);\ncompteur++;\npthread_mutex_unlock(&verrou);"
+        },
+        {
+          "title": "Les opérations atomiques",
+          "body": "Pour un simple compteur, une opération atomique (atomic_fetch_add en C11, Interlocked en .NET, AtomicInteger en Java) est plus légère qu'un verrou : le processeur garantit qu'elle s'exécute d'un bloc. Elle ne suffit plus dès qu'il faut modifier plusieurs données de façon cohérente."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-sc-q1",
+          "prompt": "Deux threads incrémentent chacun un million de fois un compteur partagé, sans protection. Que vaut-il à la fin ?",
+          "choices": [
+            "Une valeur imprévisible, souvent inférieure à 2 000 000",
+            "Toujours 2 000 000",
+            "Toujours 1 000 000",
+            "0"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des incrémentations se perdent quand deux threads lisent la même valeur avant d'écrire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-sc-q2",
+          "prompt": "Pourquoi compteur++ n'est-il pas atomique ?",
+          "choices": [
+            "Il se décompose en lecture, calcul et écriture, entre lesquelles un autre thread peut s'intercaler",
+            "Parce que le compilateur le supprime",
+            "Parce que les entiers sont trop grands",
+            "Il l'est toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "Même une instruction unique d'incrémentation en mémoire n'est pas atomique sur plusieurs cœurs sans préfixe spécial (lock).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "os-sc-q3",
+          "prompt": "Ce retrait bancaire peut rendre le solde négatif avec deux threads. Touche la ligne qui ouvre la fenêtre de course.",
+          "code": "void retirer(Compte *c, int montant)\n{\n    if (c->solde >= montant) {\n        attendre_validation();\n        c->solde -= montant;\n    }\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Deux threads peuvent passer le test avant que l'un ne débite : c'est le schéma « vérifier puis agir » (check-then-act). Le test et le débit doivent être dans la même section critique.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "os-sc-q4",
+          "prompt": "Complète la protection du compteur par un mutex.",
+          "code": "pthread_mutex_t verrou = PTHREAD_MUTEX_INITIALIZER;\n\npthread_mutex____(&verrou);\ncompteur++;\npthread_mutex____(&verrou);",
+          "answers": [
+            "lock",
+            "unlock"
+          ],
+          "distractors": [
+            "wait",
+            "signal",
+            "join"
+          ],
+          "explanation": "Chaque lock doit avoir son unlock, sur tous les chemins, y compris en cas d'erreur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-sc-q5",
+          "prompt": "Pour un simple compteur de requêtes partagé, quelle solution est la plus légère ?",
+          "choices": [
+            "Une opération atomique, comme atomic_fetch_add",
+            "Un mutex",
+            "Un processus séparé",
+            "Une base de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle évite le coût d'un verrou. Pour mettre à jour plusieurs champs ensemble, il faut revenir à un verrou.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "os-sc-q6",
+          "prompt": "Quelles situations demandent une synchronisation ?",
+          "choices": [
+            "Plusieurs threads qui modifient la même liste",
+            "Un thread qui écrit une variable pendant qu'un autre la lit",
+            "Plusieurs threads qui incrémentent un compteur partagé",
+            "Plusieurs threads qui lisent une donnée immuable"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Des lectures seules d'une donnée qui ne change jamais ne posent aucun problème : d'où l'intérêt de l'immuabilité.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "os-primitives",
       "title": "Primitives de synchronisation",
       "summary": "Mutex, sémaphores et variables de condition.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Mutex et verrous lecteurs-rédacteurs",
+          "body": "Un mutex garantit l'exclusion mutuelle : un seul détenteur à la fois. Un verrou lecteurs-rédacteurs autorise plusieurs lecteurs simultanés, mais un seul rédacteur, seul : utile pour une donnée très lue et rarement modifiée."
+        },
+        {
+          "title": "Les sémaphores",
+          "body": "Un sémaphore est un compteur : wait le décrémente (et bloque s'il vaut 0), post l'incrémente. Initialisé à N, il limite à N le nombre de threads dans une zone : par exemple, au plus 10 connexions simultanées à la base."
+        },
+        {
+          "title": "Les variables de condition",
+          "body": "Une variable de condition permet d'attendre qu'une condition devienne vraie sans boucler activement. On attend toujours dans une boucle while, car le réveil peut être intempestif ou la condition déjà reprise par un autre thread. C'est la base du producteur-consommateur.",
+          "code": "pthread_mutex_lock(&m);\nwhile (file_vide(&f))\n    pthread_cond_wait(&non_vide, &m);\nint x = retirer(&f);\npthread_mutex_unlock(&m);"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-primitives-q1",
+          "prompt": "Comment limiter à 10 le nombre de threads qui utilisent simultanément une ressource ?",
+          "choices": [
+            "Un sémaphore initialisé à 10",
+            "Un mutex",
+            "Une variable globale",
+            "Dix processus"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le onzième thread bloque sur wait jusqu'à ce qu'un autre fasse post.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-primitives-q2",
+          "prompt": "Pourquoi attend-on une variable de condition dans une boucle while plutôt qu'un if ?",
+          "choices": [
+            "Le réveil peut être intempestif, ou un autre thread a pu reprendre la condition entre le signal et le réveil",
+            "Pour consommer moins de mémoire",
+            "Parce que if est interdit en C",
+            "Par convention, sans raison technique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Au réveil, on revérifie toujours la condition avant d'agir.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "os-primitives-q3",
+          "prompt": "Un cache est lu des milliers de fois par seconde et mis à jour une fois par minute. Quel verrou choisir ?",
+          "choices": [
+            "Un verrou lecteurs-rédacteurs",
+            "Un sémaphore initialisé à 1",
+            "Aucun verrou",
+            "Un verrou par lecture, exclusif"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les lecteurs ne se bloquent pas entre eux ; seul le rédacteur demande l'exclusivité.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-primitives-q4",
+          "prompt": "Que fait pthread_cond_wait(&c, &m) ?",
+          "choices": [
+            "Il relâche le mutex m, endort le thread, puis reprend le mutex au réveil",
+            "Il attend sans relâcher le mutex",
+            "Il détruit la variable de condition",
+            "Il réveille tous les threads"
+          ],
+          "answerIndex": 0,
+          "explanation": "Relâcher le mutex de façon atomique avec l'endormissement évite de manquer un signal.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "os-primitives-q5",
+          "prompt": "Qu'est-ce que l'attente active (busy waiting) ?",
+          "choices": [
+            "Une boucle qui teste une condition en permanence, en consommant du processeur pour rien",
+            "Un thread endormi",
+            "Un thread qui attend une E/S",
+            "Un sémaphore à zéro"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les verrous tournants (spinlocks) l'utilisent volontairement pour des attentes très courtes, surtout dans le noyau ; ailleurs, on préfère bloquer.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "os-primitives-q6",
+          "prompt": "Quels mécanismes permettent d'attendre sans consommer de processeur ?",
+          "choices": [
+            "pthread_cond_wait",
+            "sem_wait sur un sémaphore à zéro",
+            "pthread_mutex_lock sur un mutex occupé",
+            "while (!pret) {}"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La boucle vide est de l'attente active, et sans atomique ni barrière, le compilateur peut même en faire une boucle infinie.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "os-deadlocks",
       "title": "Interblocages",
       "summary": "Conditions et prévention.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "L'étreinte fatale",
+          "body": "Le thread A tient le verrou 1 et attend le verrou 2 ; le thread B tient le verrou 2 et attend le verrou 1. Aucun ne peut avancer : c'est un interblocage (deadlock).",
+          "code": "/* thread A */           /* thread B */\nlock(&comptes[1]);      lock(&comptes[2]);\nlock(&comptes[2]);      lock(&comptes[1]);",
+          "language": "text"
+        },
+        {
+          "title": "Quatre conditions nécessaires",
+          "body": "Exclusion mutuelle (une ressource n'a qu'un détenteur), détention et attente (on garde ce qu'on a en attendant le reste), pas de préemption (on ne peut pas retirer un verrou à son détenteur), attente circulaire. Supprimer une seule de ces conditions empêche l'interblocage."
+        },
+        {
+          "title": "En pratique",
+          "body": "La règle la plus simple : toujours prendre les verrous dans le même ordre global (par exemple par identifiant croissant), ce qui supprime l'attente circulaire. Sinon : ne tenir qu'un verrou à la fois, essayer avec délai (trylock) et tout relâcher en cas d'échec, garder les sections critiques courtes et sans appel externe."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-deadlocks-q1",
+          "prompt": "Un virement de A vers B verrouille A puis B ; un virement de B vers A verrouille B puis A. Que risque-t-on ?",
+          "choices": [
+            "Un interblocage, si les deux virements s'exécutent en même temps",
+            "Une perte d'argent",
+            "Rien du tout",
+            "Un débordement de pile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chacun tient le compte que l'autre attend.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-deadlocks-q2",
+          "prompt": "Comment corriger simplement ce problème ?",
+          "choices": [
+            "Toujours verrouiller les deux comptes dans le même ordre, par exemple par identifiant croissant",
+            "Supprimer les verrous",
+            "Ajouter un troisième verrou à prendre en dernier",
+            "Exécuter les virements plus vite"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un ordre global, l'attente circulaire devient impossible.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "os-deadlocks-q3",
+          "prompt": "Quelles sont les conditions nécessaires d'un interblocage ?",
+          "choices": [
+            "L'exclusion mutuelle",
+            "La détention et l'attente",
+            "L'attente circulaire",
+            "Un processeur à un seul cœur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La quatrième est l'absence de préemption. Le nombre de cœurs n'y change rien.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "os-deadlocks-q4",
+          "prompt": "Cette fonction peut bloquer tous les autres threads indéfiniment. Touche la ligne fautive.",
+          "code": "int mettre_a_jour(Cache *c, int cle)\n{\n    pthread_mutex_lock(&c->verrou);\n    if (!valide(cle))\n        return -1;\n    c->donnees[cle]++;\n    pthread_mutex_unlock(&c->verrou);\n    return 0;\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Ce chemin de sortie oublie de relâcher le verrou : tous les threads suivants attendront pour toujours. En C++ ou en Rust, un verrou lié à la portée évite ce piège.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-deadlocks-q5",
+          "prompt": "Pourquoi éviter d'appeler un service réseau à l'intérieur d'une section critique ?",
+          "choices": [
+            "Le verrou reste tenu pendant toute la durée de l'appel, qui peut être longue ou ne jamais revenir",
+            "Parce que le réseau est interdit dans les threads",
+            "Parce que le verrou chiffre les données",
+            "Il n'y a aucune raison"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les sections critiques doivent rester courtes : préparer les données, prendre le verrou, mettre à jour, relâcher.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-deadlocks-q6",
+          "prompt": "Le problème du dîner des philosophes illustre...",
+          "choices": [
+            "L'interblocage : chaque philosophe tient une fourchette et attend celle de son voisin",
+            "La pagination",
+            "La compression de données",
+            "Le routage réseau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une solution : numéroter les fourchettes et toujours prendre la plus petite d'abord.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "os-defi-synchronisation",
+    "title": "Défi entretien : concurrence",
+    "summary": "Une file producteur-consommateur.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "os-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Des producteurs ajoutent des tâches dans une file bornée, des consommateurs les retirent. Que faut-il protéger ?",
+        "choices": [
+          "Toutes les opérations sur la file, par un même mutex",
+          "Seulement les ajouts",
+          "Rien, une file est naturellement thread-safe",
+          "Seulement les retraits"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un ajout et un retrait simultanés corrompraient les indices de la file.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi3-q2",
+        "prompt": "Cas pratique 2/3 — Comment un consommateur attend-il qu'une tâche arrive, sans consommer de processeur ?",
+        "choices": [
+          "Avec une variable de condition « non vide », attendue dans une boucle while sous le mutex",
+          "Avec une boucle qui teste la file en permanence",
+          "Avec sleep(1) entre deux tests",
+          "En redémarrant le thread"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le producteur signale la condition après chaque ajout. Une seconde condition « non pleine » fait attendre les producteurs.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Que fait le producteur quand la file est pleine ?",
+        "choices": [
+          "Il attend la condition « non pleine », signalée par les consommateurs après chaque retrait",
+          "Il écrase la tâche la plus ancienne",
+          "Il agrandit la mémoire indéfiniment",
+          "Il plante"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une file bornée crée une contre-pression naturelle : les producteurs ralentissent au rythme des consommateurs.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi3-q4",
+        "prompt": "Que vaut le compteur à la fin, avec un mutex autour de compteur++ et 4 threads faisant chacun 100 000 incrémentations ?",
+        "choices": [
+          "400 000, à chaque exécution",
+          "Une valeur imprévisible",
+          "100 000",
+          "0"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le mutex rend chaque incrémentation exclusive : aucune n'est perdue.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "os-defi3-q5",
+        "prompt": "Quels outils aident à trouver les bugs de concurrence ?",
+        "choices": [
+          "ThreadSanitizer (-fsanitize=thread)",
+          "Les tests de charge répétés",
+          "L'analyse des vidages de threads bloqués",
+          "Un seul test exécuté une fois"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les bugs de concurrence sont intermittents : un test qui passe une fois ne prouve presque rien.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi3-q6",
+        "prompt": "En entretien : « Comment éviter les bugs de concurrence dès la conception ? »",
+        "choices": [
+          "Partager le moins possible : données immuables, messages entre threads, et verrous bien délimités pour le reste",
+          "Ajouter un verrou global autour de tout le programme",
+          "Utiliser plus de threads",
+          "Ignorer le problème, il est rare"
+        ],
+        "answerIndex": 0,
+        "explanation": "« Ne communiquez pas en partageant la mémoire ; partagez la mémoire en communiquant » : c'est la philosophie des canaux de Go.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

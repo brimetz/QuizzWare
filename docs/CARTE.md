@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (105 écrits) | 341 (274 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (110 écrits) | 341 (287 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -788,24 +788,24 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Processus et threads
-   - Processus
-   - Threads
-   - Ordonnancement
-2. 🕓 Mémoire
-   - Mémoire virtuelle
-   - Pagination et TLB
-   - Allocation mémoire
-3. 🕓 Synchronisation
-   - Sections critiques
-   - Primitives de synchronisation
-   - Interblocages
-4. 🕓 Systèmes de fichiers
-   - Fichiers et inodes
-   - Journalisation
-5. 🕓 Entrées / sorties
-   - Interruptions et appels système
-   - E/S asynchrones
+1. ✅ Processus et threads
+   - ✅ Processus
+   - ✅ Threads
+   - ✅ Ordonnancement
+2. ✅ Mémoire
+   - ✅ Mémoire virtuelle
+   - ✅ Pagination et TLB
+   - ✅ Allocation mémoire
+3. ✅ Synchronisation
+   - ✅ Sections critiques
+   - ✅ Primitives de synchronisation
+   - ✅ Interblocages
+4. ✅ Systèmes de fichiers
+   - ✅ Fichiers et inodes
+   - ✅ Journalisation
+5. ✅ Entrées / sorties
+   - ✅ Interruptions et appels système
+   - ✅ E/S asynchrones
 
 **Spécialisations**
 

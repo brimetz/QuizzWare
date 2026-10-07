@@ -7,19 +7,429 @@
       "id": "os-processus",
       "title": "Processus",
       "summary": "Création, états et contexte.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un programme en cours d'exécution",
+          "body": "Un processus est une instance d'un programme en exécution : son propre espace mémoire, ses fichiers ouverts, ses registres, un identifiant (PID) et un processus parent. Le noyau isole les processus : l'un ne peut pas lire la mémoire d'un autre."
+        },
+        {
+          "title": "fork et exec",
+          "body": "Sous Unix, fork() duplique le processus courant : il renvoie 0 dans l'enfant et le PID de l'enfant dans le parent. L'enfant appelle ensuite souvent exec() pour remplacer son programme par un autre. Le parent attend sa fin avec wait() et récupère son code de sortie. C'est ainsi qu'un shell lance chaque commande.",
+          "code": "pid_t pid = fork();\nif (pid == 0) {\n    execlp(\"ls\", \"ls\", \"-l\", NULL);\n    _exit(127);            /* exec a échoué */\n}\nint statut;\nwaitpid(pid, &statut, 0);\nprintf(\"code %d\\n\", WEXITSTATUS(statut));"
+        },
+        {
+          "title": "Les états",
+          "body": "Un processus est prêt (en attente du processeur), en exécution, ou bloqué (en attente d'une entrée-sortie, d'un verrou). Un processus terminé dont le parent n'a pas encore récupéré le statut est un zombie ; un processus dont le parent est mort est adopté par init (PID 1)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-processus-q1",
+          "prompt": "Que renvoie fork() dans le processus enfant ?",
+          "choices": [
+            "0",
+            "Le PID de l'enfant",
+            "Le PID du parent",
+            "-1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le parent reçoit le PID de l'enfant ; -1 signale un échec. C'est la valeur de retour qui permet aux deux copies de savoir qui elles sont.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-processus-q2",
+          "prompt": "Combien de fois « x » est-il affiché ?",
+          "code": "int main(void)\n{\n    fork();\n    fork();\n    printf(\"x\\n\");\n    return 0;\n}",
+          "choices": [
+            "4",
+            "2",
+            "3",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le premier fork donne 2 processus, chacun refait un fork : 4 processus, qui affichent chacun « x ».",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-processus-q3",
+          "prompt": "Que fait exec() ?",
+          "choices": [
+            "Il remplace le programme du processus courant par un autre, en gardant le même PID",
+            "Il crée un nouveau processus",
+            "Il termine le processus",
+            "Il attend la fin d'un enfant"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si exec réussit, il ne revient jamais : le code qui suit ne s'exécute qu'en cas d'échec.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-processus-q4",
+          "prompt": "ps affiche de nombreux processus à l'état « Z » (defunct). Que se passe-t-il ?",
+          "choices": [
+            "Des enfants terminés dont le parent n'appelle pas wait() : ce sont des zombies",
+            "Des processus en pleine exécution",
+            "Des processus en mémoire virtuelle",
+            "Des virus"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un zombie n'occupe presque rien, mais garde son PID. Le parent doit récupérer le statut de ses enfants.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-processus-q5",
+          "prompt": "Pourquoi un processus ne peut-il pas lire la mémoire d'un autre ?",
+          "choices": [
+            "Chaque processus a son propre espace d'adressage virtuel, isolé par le noyau et le processeur",
+            "Parce que les adresses sont chiffrées",
+            "Parce qu'ils n'utilisent pas la RAM",
+            "Il le peut toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le partage de mémoire entre processus est possible, mais seulement explicitement (mémoire partagée, mmap).",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "os-processus-q6",
+          "prompt": "Que possède chaque processus en propre ?",
+          "choices": [
+            "Un espace mémoire virtuel",
+            "Une table de descripteurs de fichiers",
+            "Un identifiant (PID)",
+            "Le noyau du système"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le noyau est partagé par tous les processus : chacun y accède via les appels système.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "os-threads",
       "title": "Threads",
       "summary": "Partager un espace mémoire.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Plusieurs fils d'exécution",
+          "body": "Les threads d'un même processus partagent sa mémoire (variables globales, tas) et ses fichiers ouverts, mais chacun a sa propre pile et ses propres registres. Créer un thread et communiquer entre threads coûte bien moins cher qu'avec des processus, puisque tout est déjà partagé.",
+          "code": "void *travail(void *arg)\n{\n    int id = *(int *)arg;\n    printf(\"thread %d\\n\", id);\n    return NULL;\n}\n\npthread_t t;\nint id = 1;\npthread_create(&t, NULL, travail, &id);\npthread_join(t, NULL);"
+        },
+        {
+          "title": "Le revers du partage",
+          "body": "Puisque la mémoire est partagée, deux threads qui modifient la même donnée sans synchronisation produisent des résultats imprévisibles (conditions de course). Et un thread qui plante (accès mémoire invalide) fait tomber tout le processus."
+        },
+        {
+          "title": "Processus ou threads ?",
+          "body": "Les processus isolent : un plantage reste local, ce que les navigateurs exploitent (un processus par onglet). Les threads partagent efficacement les données. Beaucoup de serveurs combinent les deux, ou utilisent des E/S asynchrones pour gérer des milliers de connexions avec peu de threads."
+        }
+      ],
+      "questions": [
+        {
+          "type": "multi",
+          "id": "os-threads-q1",
+          "prompt": "Que partagent les threads d'un même processus ?",
+          "choices": [
+            "Les variables globales",
+            "Le tas (mémoire allouée par malloc)",
+            "Les fichiers ouverts",
+            "Leur pile d'exécution"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Chaque thread a sa propre pile, donc ses propres variables locales.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-threads-q2",
+          "prompt": "Pourquoi Chrome utilise-t-il un processus par onglet plutôt qu'un thread ?",
+          "choices": [
+            "Pour l'isolation : un onglet qui plante ou est compromis n'affecte pas les autres",
+            "Parce que les threads n'existent pas sous Windows",
+            "Pour consommer moins de mémoire",
+            "Pour que les onglets partagent leurs données"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est plus coûteux en mémoire, mais bien plus robuste et plus sûr.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "os-threads-q3",
+          "prompt": "Chaque thread devrait recevoir un identifiant différent, mais ils lisent souvent la même valeur. Touche la ligne en cause.",
+          "code": "pthread_t t[4];\nfor (int i = 0; i < 4; i++)\n    pthread_create(&t[i], NULL, travail, &i);\nfor (int i = 0; i < 4; i++)\n    pthread_join(t[i], NULL);",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Tous les threads reçoivent l'adresse de la même variable i, qui continue de changer. Il faut un tableau d'identifiants distincts, ou passer la valeur elle-même.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "os-threads-q4",
+          "prompt": "Un thread fait un accès mémoire invalide (segmentation fault). Que se passe-t-il ?",
+          "choices": [
+            "Tout le processus est tué, avec tous ses threads",
+            "Seul ce thread s'arrête",
+            "Le thread redémarre",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les threads partagent l'espace mémoire : le noyau ne peut pas isoler l'erreur d'un seul.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-threads-q5",
+          "prompt": "Que fait pthread_join(t, NULL) ?",
+          "choices": [
+            "Il attend la fin du thread t",
+            "Il crée le thread t",
+            "Il tue le thread t",
+            "Il fusionne deux threads"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'équivalent de wait() pour les threads. Sans join (ni detach), les ressources du thread ne sont pas libérées.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-threads-q6",
+          "prompt": "Pourquoi créer un thread coûte-t-il moins cher que créer un processus ?",
+          "choices": [
+            "Il n'y a pas de nouvel espace mémoire à créer : le thread partage celui du processus",
+            "Les threads n'utilisent pas le processeur",
+            "Les threads n'ont pas de pile",
+            "Ce n'est pas le cas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sous Linux, threads et processus sont créés par le même appel (clone), avec plus ou moins de ressources partagées.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "os-ordonnancement",
       "title": "Ordonnancement",
       "summary": "Comment le processeur est partagé.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Partager le temps",
+          "body": "Il y a bien plus de threads prêts que de cœurs. L'ordonnanceur du noyau décide qui s'exécute, et pour combien de temps. Avec la préemption, il interrompt un thread au bout de sa tranche de temps (quelques millisecondes) pour en exécuter un autre : chacun a l'impression de tourner en continu."
+        },
+        {
+          "title": "Le changement de contexte",
+          "body": "Passer d'un thread à l'autre impose de sauvegarder ses registres et de restaurer ceux du suivant. Entre deux processus, il faut aussi changer d'espace d'adressage, ce qui invalide une partie des caches. Quelques microsecondes à chaque fois : trop de threads actifs passent leur temps à se relayer."
+        },
+        {
+          "title": "Les politiques",
+          "body": "Le tourniquet (round robin) donne la main à chacun son tour. Les priorités favorisent certains threads ; mal réglées, elles peuvent affamer les autres. Linux utilise un ordonnanceur équitable qui répartit le temps processeur proportionnellement aux poids (la valeur nice). Les threads bloqués sur une E/S ne consomment rien."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-ordo-q1",
+          "prompt": "Qu'est-ce que la préemption ?",
+          "choices": [
+            "Le noyau peut interrompre un thread en cours d'exécution pour donner le processeur à un autre",
+            "Un thread rend volontairement la main",
+            "Un thread est supprimé",
+            "Un thread est mis en cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans préemption, un programme qui boucle à l'infini bloquerait tout le système.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-ordo-q2",
+          "prompt": "Que coûte un changement de contexte ?",
+          "choices": [
+            "La sauvegarde et la restauration des registres, et une perte d'efficacité des caches",
+            "Rien du tout",
+            "La recopie de toute la mémoire du processus",
+            "Un redémarrage du processeur"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est pourquoi un serveur avec 10 000 threads actifs est moins efficace qu'un serveur à E/S asynchrones.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-ordo-q3",
+          "prompt": "Un serveur à 8 cœurs lance 2 000 threads de calcul intensif. Que se passe-t-il ?",
+          "choices": [
+            "Ils ne vont pas plus vite qu'avec 8 threads, et les changements de contexte font perdre du temps",
+            "Le calcul est 250 fois plus rapide",
+            "Le serveur plante immédiatement",
+            "Chaque thread obtient son propre cœur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour du calcul, on vise environ un thread par cœur. Pour des E/S bloquantes, plus de threads peuvent se justifier.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-ordo-q4",
+          "prompt": "Un thread attend la réponse d'une base de données. Consomme-t-il du temps processeur ?",
+          "choices": [
+            "Non : il est bloqué, l'ordonnanceur ne le choisit pas tant que la réponse n'est pas arrivée",
+            "Oui, il tourne en boucle",
+            "Oui, la moitié du temps",
+            "Cela dépend de la couleur du terminal"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sauf attente active (boucle qui teste une condition), à éviter.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-ordo-q5",
+          "prompt": "Qu'est-ce que la famine (starvation) ?",
+          "choices": [
+            "Un thread prêt n'obtient jamais le processeur, car d'autres plus prioritaires passent toujours avant",
+            "Un manque de mémoire",
+            "Un processus sans enfant",
+            "Un thread terminé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les ordonnanceurs modernes augmentent progressivement la priorité de ceux qui attendent (vieillissement) ou garantissent une part équitable.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "os-ordo-q6",
+          "prompt": "Quelles affirmations sur l'ordonnancement sont vraies ?",
+          "choices": [
+            "Sur un cœur, un seul thread s'exécute à un instant donné",
+            "nice permet de baisser la priorité d'un processus",
+            "Un thread bloqué sur une E/S ne consomme pas de processeur",
+            "Ajouter des threads accélère toujours un calcul"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Au-delà du nombre de cœurs, ajouter des threads de calcul n'apporte rien, et finit par ralentir.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "os-defi-processus",
+    "title": "Défi entretien : processus et threads",
+    "summary": "Écrire un mini-shell.",
+    "questions": [
+      {
+        "type": "order",
+        "id": "os-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Remets dans l'ordre l'exécution d'une commande par un shell.",
+        "lines": [
+          "pid_t pid = fork();",
+          "if (pid == 0) {",
+          "    execvp(args[0], args);",
+          "    perror(args[0]);",
+          "    _exit(127);",
+          "}",
+          "waitpid(pid, &statut, 0);"
+        ],
+        "explanation": "L'enfant se remplace par la commande ; s'il échoue, il affiche l'erreur et sort avec 127, le code « commande introuvable » des shells.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Pourquoi l'enfant appelle-t-il _exit et non exit après un exec raté ?",
+        "choices": [
+          "exit viderait aussi les tampons stdio hérités du parent, et des sorties pourraient être écrites deux fois",
+          "_exit est plus rapide à taper",
+          "exit n'existe pas dans un enfant",
+          "Il n'y a aucune différence"
+        ],
+        "answerIndex": 0,
+        "explanation": "Après fork, l'enfant a une copie des tampons non vidés du parent. _exit sort sans les vider.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Comment exécuter une commande en arrière-plan (cmd &) ?",
+        "choices": [
+          "Ne pas attendre l'enfant immédiatement, et récupérer son statut plus tard (par exemple sur le signal SIGCHLD) pour éviter un zombie",
+          "Ne jamais appeler wait",
+          "Appeler exec dans le parent",
+          "Créer un thread"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans wait, chaque commande d'arrière-plan terminée laisserait un zombie.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi1-q4",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "int x = 1;\n\nint main(void)\n{\n    if (fork() == 0) {\n        x = 2;\n        return 0;\n    }\n    wait(NULL);\n    printf(\"%d\\n\", x);\n}",
+        "choices": [
+          "1",
+          "2",
+          "1 puis 2",
+          "Comportement indéfini"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'enfant modifie sa propre copie de la mémoire : le parent ne voit pas le changement. Avec des threads, il le verrait.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "os-defi1-q5",
+        "prompt": "Quand préférer des processus à des threads ?",
+        "choices": [
+          "Pour isoler du code peu fiable ou susceptible de planter",
+          "Pour des composants avec des droits différents (séparation des privilèges)",
+          "Pour profiter de plusieurs cœurs dans un langage dont l'interpréteur a un verrou global",
+          "Pour partager le plus efficacement de grosses structures en mémoire"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le partage efficace de données est justement l'atout des threads. En Python, le GIL a longtemps poussé vers multiprocessing.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi1-q6",
+        "prompt": "En entretien : « Quelle différence entre un processus et un thread ? »",
+        "choices": [
+          "Un processus a son propre espace mémoire et ses ressources ; les threads d'un processus partagent cette mémoire, avec chacun sa pile et ses registres",
+          "Ce sont des synonymes",
+          "Un thread contient plusieurs processus",
+          "Un processus n'a pas de mémoire"
+        ],
+        "answerIndex": 0,
+        "explanation": "On enchaîne souvent sur les conséquences : isolation contre efficacité, et le besoin de synchronisation avec les threads.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

@@ -7,19 +7,431 @@
       "id": "os-memoire-virtuelle",
       "title": "Mémoire virtuelle",
       "summary": "Les espaces d'adressage.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Chaque processus a sa propre vue",
+          "body": "Les adresses manipulées par un programme sont virtuelles. Le processeur, aidé par le noyau, les traduit en adresses physiques de la RAM. Deux processus peuvent utiliser la même adresse virtuelle pour des données différentes, sans jamais se voir."
+        },
+        {
+          "title": "Ce que cela permet",
+          "body": "L'isolation entre processus. La protection : du code en lecture seule, une pile non exécutable. Le partage : les bibliothèques sont chargées une fois en RAM et projetées dans tous les processus. Le chargement paresseux : une page n'est réellement chargée qu'au premier accès. Et le copy-on-write : après fork, parent et enfant partagent leurs pages jusqu'à ce que l'un d'eux écrive."
+        },
+        {
+          "title": "Le swap et ses limites",
+          "body": "Quand la RAM manque, le noyau déplace des pages peu utilisées sur le disque (swap) et les recharge au besoin. Un disque est des milliers de fois plus lent que la RAM : un système qui swappe en permanence s'effondre. Sous Linux, quand il n'y a vraiment plus rien, l'OOM killer tue un processus pour libérer de la mémoire."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-mv-q1",
+          "prompt": "Deux processus affichent la même adresse pour leur variable x, avec des valeurs différentes. Comment est-ce possible ?",
+          "choices": [
+            "Ce sont des adresses virtuelles, traduites vers des emplacements physiques différents",
+            "C'est impossible",
+            "La variable est partagée",
+            "Le processeur alterne les valeurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque processus a sa propre table de traduction.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-mv-q2",
+          "prompt": "Que fait le copy-on-write après un fork ?",
+          "choices": [
+            "Parent et enfant partagent les mêmes pages physiques ; une page n'est copiée que lorsque l'un des deux y écrit",
+            "Toute la mémoire est copiée immédiatement",
+            "L'enfant n'a pas de mémoire",
+            "Les écritures sont interdites"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui rend fork rapide, même pour un gros processus, surtout s'il appelle exec juste après.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-mv-q3",
+          "prompt": "Un serveur devient extrêmement lent, le disque est saturé et la RAM pleine. Que se passe-t-il probablement ?",
+          "choices": [
+            "Il swappe en permanence : les pages font des allers-retours entre RAM et disque",
+            "Le processeur est trop rapide",
+            "Le réseau est coupé",
+            "Le disque est plein de fichiers"
+          ],
+          "answerIndex": 0,
+          "explanation": "On parle d'écroulement (thrashing). Il faut réduire la consommation ou ajouter de la RAM.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-mv-q4",
+          "prompt": "Pourquoi une bibliothèque comme la libc n'est-elle chargée qu'une fois en RAM pour tous les processus ?",
+          "choices": [
+            "Ses pages de code, en lecture seule, sont projetées dans l'espace virtuel de chaque processus",
+            "Elle n'est jamais chargée",
+            "Chaque processus en a une copie complète",
+            "Elle est stockée sur le disque uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Comme ces pages ne sont jamais modifiées, elles peuvent être partagées sans risque.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-mv-q5",
+          "prompt": "Un conteneur est tué avec le message « OOMKilled ». Que s'est-il passé ?",
+          "choices": [
+            "Il a dépassé la mémoire autorisée, et le noyau l'a tué pour en libérer",
+            "Le disque était plein",
+            "Le réseau a coupé la connexion",
+            "Il a été arrêté manuellement"
+          ],
+          "answerIndex": 0,
+          "explanation": "OOM signifie Out Of Memory. La limite peut être celle du conteneur (cgroup) ou celle de la machine.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "os-mv-q6",
+          "prompt": "Que permet la mémoire virtuelle ?",
+          "choices": [
+            "L'isolation entre processus",
+            "La protection des pages (lecture seule, non exécutable)",
+            "Le partage du code des bibliothèques",
+            "Un accès plus rapide que la RAM physique"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La traduction ajoute au contraire un léger coût, compensé par un cache dédié : le TLB.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "os-pagination",
       "title": "Pagination et TLB",
       "summary": "Traduire les adresses.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des pages",
+          "body": "La mémoire est découpée en pages, de 4 Kio en général. Une adresse virtuelle se décompose en un numéro de page et un décalage dans la page. La table des pages associe chaque page virtuelle à un cadre physique, avec des droits (lecture, écriture, exécution) et un bit « présente ».",
+          "code": "adresse virtuelle 0x00403a10, pages de 4 Kio\n  numéro de page : 0x00403\n  décalage       : 0xa10",
+          "language": "text"
+        },
+        {
+          "title": "Le défaut de page",
+          "body": "Si la page n'est pas présente en RAM, le processeur déclenche un défaut de page : le noyau la charge (depuis le fichier, le swap, ou alloue une page vide), met à jour la table et reprend l'instruction. Si l'accès est interdit, le processus reçoit SIGSEGV : la fameuse segmentation fault."
+        },
+        {
+          "title": "Le TLB",
+          "body": "Consulter la table des pages en mémoire à chaque accès serait trop lent. Le TLB est un petit cache du processeur qui garde les traductions récentes. Un programme qui accède à la mémoire de façon dispersée multiplie les échecs de TLB. Les pages larges (huge pages de 2 Mio) réduisent ce coût pour les grosses bases de données."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-pagination-q1",
+          "prompt": "Avec des pages de 4 Kio, combien de bits d'une adresse forment le décalage dans la page ?",
+          "choices": [
+            "12",
+            "4",
+            "10",
+            "32"
+          ],
+          "answerIndex": 0,
+          "explanation": "4 096 = 2¹² : les 12 bits de poids faible désignent l'octet dans la page, soit 3 chiffres hexadécimaux.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-pagination-q2",
+          "prompt": "Qu'est-ce qu'un défaut de page ?",
+          "choices": [
+            "Une interruption déclenchée quand la page accédée n'est pas présente en RAM ou que l'accès est interdit",
+            "Une page de RAM endommagée",
+            "Un bug du compilateur",
+            "Une erreur d'affichage"
+          ],
+          "answerIndex": 0,
+          "explanation": "La plupart sont normaux (chargement paresseux, copy-on-write). Seul un accès vraiment interdit aboutit à SIGSEGV.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-pagination-q3",
+          "prompt": "À quoi sert le TLB ?",
+          "choices": [
+            "À mettre en cache les traductions récentes d'adresses virtuelles en adresses physiques",
+            "À stocker les fichiers",
+            "À chiffrer la mémoire",
+            "À compter les processus"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans lui, chaque accès mémoire en nécessiterait plusieurs autres pour parcourir la table des pages.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-pagination-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "unsigned long a = 0x00403a10;\nprintf(\"%lx %lx\\n\", a >> 12, a & 0xfff);",
+          "choices": [
+            "403 a10",
+            "403a a10",
+            "4 3a10",
+            "a10 403"
+          ],
+          "answerIndex": 0,
+          "explanation": "Décaler de 12 bits donne le numéro de page ; masquer les 12 bits de poids faible donne le décalage.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-pagination-q5",
+          "prompt": "Pourquoi parcourir une matrice ligne par ligne est-il plus rapide que colonne par colonne en C ?",
+          "choices": [
+            "Les éléments d'une ligne sont contigus : on profite des caches et du TLB, au lieu de sauter d'une zone à l'autre",
+            "Les colonnes sont en lecture seule",
+            "Le compilateur interdit le parcours par colonne",
+            "Il n'y a aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sur une grande matrice, l'écart peut atteindre un facteur 10 : la localité des accès compte énormément.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "os-pagination-q6",
+          "prompt": "Que contient une entrée de table des pages ?",
+          "choices": [
+            "Le numéro du cadre physique",
+            "Les droits d'accès (lecture, écriture, exécution)",
+            "Un bit indiquant si la page est présente en RAM",
+            "Le nom du fichier source du programme"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On y trouve aussi des bits « accédée » et « modifiée », utiles au noyau pour choisir quelles pages évincer.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "os-allocation",
       "title": "Allocation mémoire",
       "summary": "Pile, tas et mmap.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "L'espace d'un processus",
+          "body": "De bas en haut : le code, les données globales, le tas qui grandit vers le haut, les bibliothèques et projections de fichiers, puis la pile qui grandit vers le bas. Chaque thread a sa propre pile, de taille limitée (8 Mio par défaut pour le thread principal sous Linux)."
+        },
+        {
+          "title": "D'où vient la mémoire de malloc",
+          "body": "malloc est une fonction de la bibliothèque C, pas un appel système. Elle découpe de grandes zones obtenues auprès du noyau (via brk ou mmap) et recycle les blocs libérés. Pour les grosses allocations, elle demande directement une projection mmap, rendue au système dès le free."
+        },
+        {
+          "title": "mmap",
+          "body": "mmap projette un fichier ou une zone anonyme dans l'espace d'adressage. Lire la zone revient à lire le fichier, chargé page par page à la demande. Les bases de données et les chargeurs d'exécutables l'utilisent abondamment.",
+          "code": "int fd = open(\"donnees.bin\", O_RDONLY);\nstruct stat st;\nfstat(fd, &st);\nchar *p = mmap(NULL, st.st_size, PROT_READ,\n               MAP_PRIVATE, fd, 0);\nprintf(\"%c\\n\", p[1000]);   /* charge la page */\nmunmap(p, st.st_size);"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-alloc-q1",
+          "prompt": "Une fonction récursive sans condition d'arrêt finit par planter. Pourquoi ?",
+          "choices": [
+            "Chaque appel ajoute un cadre sur la pile, qui finit par dépasser sa taille limite (stack overflow)",
+            "Le tas est plein",
+            "Le disque est plein",
+            "Le processeur surchauffe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une page de garde non accessible sous la pile provoque une erreur de segmentation au lieu d'écraser d'autres données.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-alloc-q2",
+          "prompt": "malloc est-il un appel système ?",
+          "choices": [
+            "Non : c'est une fonction de la bibliothèque C, qui ne demande de la mémoire au noyau (brk, mmap) que de temps en temps",
+            "Oui, chaque malloc entre dans le noyau",
+            "Oui, mais seulement sous Windows",
+            "malloc n'utilise pas de mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui rend malloc rapide : la plupart des appels sont servis depuis des zones déjà obtenues.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-alloc-q3",
+          "prompt": "On déclare un tableau local de 50 Mio dans une fonction. Que se passe-t-il, avec la configuration par défaut de Linux ?",
+          "choices": [
+            "Un dépassement de pile (erreur de segmentation) : la pile est limitée à 8 Mio",
+            "Le tableau est automatiquement placé sur le tas",
+            "Tout fonctionne",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les grosses données vont sur le tas (malloc) ; ulimit -s affiche la taille de pile autorisée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-alloc-q4",
+          "prompt": "Dans l'exemple mmap de la leçon, quand la page contenant p[1000] est-elle lue depuis le disque ?",
+          "choices": [
+            "Au premier accès à p[1000], par un défaut de page",
+            "Lors de l'appel à mmap, avec tout le fichier",
+            "Lors de l'appel à open",
+            "Jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le chargement paresseux : projeter un fichier de 10 Go est instantané, seules les pages touchées sont lues.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-alloc-q5",
+          "prompt": "Un serveur libère beaucoup de mémoire avec free, mais son occupation vue par le système ne baisse pas. Pourquoi ?",
+          "choices": [
+            "L'allocateur garde souvent les petits blocs libérés pour les réutiliser, et la fragmentation empêche de rendre les pages au noyau",
+            "free ne fait rien",
+            "Le système est bogué",
+            "La mémoire est passée sur le disque"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des allocateurs comme jemalloc ou mimalloc gèrent mieux certains cas de fragmentation.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "os-alloc-q6",
+          "prompt": "Quelles affirmations sur la pile sont vraies ?",
+          "choices": [
+            "Chaque thread a sa propre pile",
+            "Les variables locales y sont libérées automatiquement à la sortie de la fonction",
+            "Sa taille est limitée",
+            "Elle est partagée entre tous les processus"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les piles sont propres à chaque thread de chaque processus.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "os-defi-memoire",
+    "title": "Défi entretien : mémoire",
+    "summary": "Un service qui consomme trop.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "os-defi2-q1",
+        "prompt": "Cas pratique 1/3 — top indique 30 Go de mémoire virtuelle (VIRT) pour un service, mais 400 Mo de mémoire résidente (RES). Faut-il s'inquiéter ?",
+        "choices": [
+          "Pas forcément : VIRT compte tout l'espace réservé ou projeté, RES ce qui occupe réellement la RAM",
+          "Oui, le service utilise 30 Go de RAM",
+          "Oui, il faut le redémarrer immédiatement",
+          "Non, top affiche toujours des valeurs fausses"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les projections de fichiers, les réservations de piles de threads ou de tas gonflent VIRT sans consommer de RAM.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi2-q2",
+        "prompt": "Cas pratique 2/3 — RES augmente de 50 Mo par heure sans jamais redescendre. Quelle hypothèse ?",
+        "choices": [
+          "Une fuite mémoire : de la mémoire allouée n'est jamais libérée, ou un cache grossit sans limite",
+          "Un comportement normal",
+          "Une panne de disque",
+          "Une attaque réseau"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un cache sans limite de taille ni expiration est une fuite comme une autre.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi2-q3",
+        "prompt": "Cas pratique 3/3 — Comment localiser la fuite ?",
+        "choices": [
+          "Avec un profileur mémoire (heaptrack, Valgrind massif, ou l'outil du langage) en comparant deux instantanés",
+          "En redémarrant le service toutes les heures",
+          "En ajoutant de la RAM",
+          "En désactivant les logs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Redémarrer masque le symptôme ; seul un profil montre quelles allocations s'accumulent.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi2-q4",
+        "prompt": "Qu'affiche ce code, avec des pages de 4 Kio ?",
+        "code": "unsigned long a = 0x7ffd1234;\nprintf(\"%lu\\n\", (a & 0xfff) / 4);",
+        "choices": [
+          "141",
+          "564",
+          "1234",
+          "0"
+        ],
+        "answerIndex": 0,
+        "explanation": "a & 0xfff vaut 0x234, soit 564 : le décalage dans la page. Divisé par 4, 141.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "os-defi2-q5",
+        "prompt": "Quels événements provoquent normalement un défaut de page ?",
+        "choices": [
+          "Le premier accès à une zone fraîchement allouée",
+          "Une écriture dans une page partagée en copy-on-write après un fork",
+          "La lecture d'une page de fichier projeté pas encore chargée",
+          "Chaque accès à une page déjà présente en RAM"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une page présente et accessible se lit directement, via le TLB si la traduction y est.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi2-q6",
+        "prompt": "En entretien : « Qu'est-ce qu'une segmentation fault ? »",
+        "choices": [
+          "Le noyau envoie SIGSEGV au processus qui accède à une adresse non projetée ou de façon interdite (écrire en lecture seule)",
+          "Une panne de la RAM",
+          "Une erreur de compilation",
+          "Un problème réseau"
+        ],
+        "answerIndex": 0,
+        "explanation": "Causes typiques : pointeur nul, pointeur pendant, débordement de pile ou de tableau.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

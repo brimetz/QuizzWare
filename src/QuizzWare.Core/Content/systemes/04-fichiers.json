@@ -7,13 +7,325 @@
       "id": "os-inodes",
       "title": "Fichiers et inodes",
       "summary": "L'organisation sur disque.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "L'inode",
+          "body": "Sous Unix, un fichier est décrit par un inode : taille, propriétaire, droits, dates, et l'emplacement de ses blocs de données sur le disque. L'inode ne contient pas le nom ! Un dossier n'est qu'une table qui associe des noms à des numéros d'inode.",
+          "code": "$ ls -i rapport.txt\n1835012 rapport.txt\n$ stat -c '%i %h %s' rapport.txt\n1835012 1 2048",
+          "language": "shell"
+        },
+        {
+          "title": "Liens physiques et symboliques",
+          "body": "Un lien physique (ln) est un second nom pour le même inode : les deux noms sont parfaitement équivalents, et les données ne disparaissent que quand le dernier nom est supprimé. Un lien symbolique (ln -s) est un petit fichier qui contient un chemin : si la cible est supprimée, il pointe dans le vide."
+        },
+        {
+          "title": "Les descripteurs de fichiers",
+          "body": "open() renvoie un descripteur, un petit entier qui désigne le fichier ouvert pour le processus : 0, 1 et 2 sont l'entrée, la sortie et l'erreur standard. Un fichier supprimé mais encore ouvert continue d'exister jusqu'à sa fermeture : son espace n'est pas libéré. Le nombre de descripteurs par processus est limité (ulimit -n)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-inodes-q1",
+          "prompt": "Où est stocké le nom d'un fichier ?",
+          "choices": [
+            "Dans le dossier qui le contient, qui associe ce nom à un numéro d'inode",
+            "Dans l'inode",
+            "Dans les blocs de données du fichier",
+            "Dans le noyau"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui permet à un même inode d'avoir plusieurs noms (liens physiques).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-inodes-q2",
+          "language": "shell",
+          "prompt": "Qu'affiche ce script ?",
+          "code": "echo bonjour > a\nln a b\nrm a\ncat b",
+          "choices": [
+            "bonjour",
+            "Une erreur : fichier introuvable",
+            "Rien",
+            "a"
+          ],
+          "answerIndex": 0,
+          "explanation": "b est un autre nom pour le même inode. Supprimer a retire seulement un nom ; les données restent tant qu'un nom (ou un descripteur ouvert) existe.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-inodes-q3",
+          "language": "shell",
+          "prompt": "Et avec un lien symbolique ?",
+          "code": "echo bonjour > a\nln -s a b\nrm a\ncat b",
+          "choices": [
+            "Une erreur : No such file or directory",
+            "bonjour",
+            "a",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le lien symbolique contient le chemin « a », qui n'existe plus : c'est un lien cassé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-inodes-q4",
+          "prompt": "df indique un disque plein, mais du ne trouve pas les fichiers qui occupent la place. Pourquoi ?",
+          "choices": [
+            "Des fichiers supprimés sont encore ouverts par un processus : leur espace n'est libéré qu'à la fermeture",
+            "df est bogué",
+            "Les fichiers sont cachés par un virus",
+            "Le disque est mal branché"
+          ],
+          "answerIndex": 0,
+          "explanation": "lsof +L1 liste ces fichiers. Redémarrer le processus (ou tronquer le fichier ouvert) libère l'espace.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "os-inodes-q5",
+          "prompt": "Un serveur refuse de nouvelles connexions avec « Too many open files ». Que se passe-t-il ?",
+          "choices": [
+            "Le processus a atteint sa limite de descripteurs : fuite de descripteurs, ou limite trop basse pour la charge",
+            "Le disque est plein",
+            "La RAM est pleine",
+            "Le réseau est coupé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque connexion réseau consomme un descripteur. On vérifie qu'ils sont bien fermés, puis on ajuste la limite.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "os-inodes-q6",
+          "prompt": "Que contient un inode ?",
+          "choices": [
+            "La taille du fichier",
+            "Le propriétaire et les droits",
+            "L'emplacement des blocs de données",
+            "Le nom du fichier"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le nom est dans le dossier. Le nombre d'inodes d'un système de fichiers est aussi limité : des millions de petits fichiers peuvent l'épuiser avant l'espace disque.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "os-journalisation",
       "title": "Journalisation",
       "summary": "Survivre aux crashs.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le problème des écritures partielles",
+          "body": "Créer un fichier modifie plusieurs structures : l'inode, le dossier, la carte des blocs libres. Une coupure de courant au milieu laisse le système de fichiers incohérent. Autrefois, fsck devait alors parcourir tout le disque au redémarrage, ce qui pouvait prendre des heures."
+        },
+        {
+          "title": "Le journal",
+          "body": "Un système de fichiers journalisé (ext4, NTFS, XFS) écrit d'abord la description des modifications dans un journal, puis les applique. Après un crash, il rejoue ou annule les opérations inachevées en quelques secondes. Par défaut, ext4 journalise les métadonnées ; les données elles-mêmes peuvent encore être perdues."
+        },
+        {
+          "title": "Les caches et fsync",
+          "body": "write() ne garantit pas que les données sont sur le disque : elles sont d'abord dans le cache du noyau, écrites plus tard. fsync() force l'écriture physique. Les bases de données l'appellent pour garantir qu'une transaction confirmée survit à une coupure. Pour remplacer un fichier de façon sûre : écrire un fichier temporaire, fsync, puis rename.",
+          "code": "int fd = open(\"config.tmp\", O_WRONLY | O_CREAT\n                            | O_TRUNC, 0644);\nwrite(fd, donnees, taille);\nfsync(fd);\nclose(fd);\nrename(\"config.tmp\", \"config.json\");"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-journal-q1",
+          "prompt": "À quoi sert le journal d'un système de fichiers ?",
+          "choices": [
+            "À retrouver rapidement un état cohérent après un crash, en rejouant ou annulant les opérations inachevées",
+            "À enregistrer qui a lu quel fichier",
+            "À compresser les fichiers",
+            "À accélérer les lectures"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le même principe que le journal d'écriture anticipée (WAL) des bases de données.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-journal-q2",
+          "prompt": "write() a renvoyé le nombre d'octets demandé. Les données sont-elles sur le disque ?",
+          "choices": [
+            "Pas forcément : elles peuvent être dans le cache du noyau ; seul fsync() garantit l'écriture physique",
+            "Oui, toujours",
+            "Non, jamais avant close()",
+            "Oui, si le fichier est petit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une coupure de courant peut perdre des données « écrites » il y a quelques secondes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-journal-q3",
+          "prompt": "Pourquoi écrire dans un fichier temporaire puis le renommer, plutôt que d'écraser directement le fichier ?",
+          "choices": [
+            "rename est atomique : après un crash, on a soit l'ancien fichier complet, soit le nouveau complet",
+            "C'est plus rapide",
+            "Pour économiser de la place",
+            "Pour changer les droits"
+          ],
+          "answerIndex": 0,
+          "explanation": "Écraser en place peut laisser un fichier à moitié écrit, donc corrompu.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-journal-q4",
+          "prompt": "Pourquoi une base de données appelle-t-elle fsync avant de confirmer une transaction ?",
+          "choices": [
+            "Pour garantir la durabilité : une transaction confirmée doit survivre à une coupure de courant",
+            "Pour accélérer la transaction",
+            "Pour libérer la mémoire",
+            "Pour compresser le journal"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le D d'ACID. Désactiver fsync accélère beaucoup, au risque de perdre des transactions confirmées.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-journal-q5",
+          "prompt": "Par défaut, que journalise ext4 ?",
+          "choices": [
+            "Les métadonnées (inodes, dossiers, blocs alloués), pas le contenu des fichiers",
+            "Tout le contenu de chaque fichier",
+            "Rien du tout",
+            "Uniquement les noms de fichiers"
+          ],
+          "answerIndex": 0,
+          "explanation": "Journaliser aussi les données (mode data=journal) double les écritures. Les applications critiques utilisent fsync.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "os-journal-q6",
+          "prompt": "Quelles pratiques protègent les données d'une application contre une coupure de courant ?",
+          "choices": [
+            "Appeler fsync sur les données importantes",
+            "Remplacer les fichiers par écriture temporaire puis rename",
+            "Utiliser une base de données qui gère elle-même la durabilité",
+            "Compter sur le cache du noyau"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le cache améliore les performances, pas la durabilité.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "os-defi-fichiers",
+    "title": "Défi entretien : fichiers",
+    "summary": "Un disque plein qui ne l'est pas.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "os-defi4-q1",
+        "prompt": "Cas pratique 1/3 — L'alerte indique un disque plein à 100 %. Vous supprimez un fichier de log de 30 Go, mais df affiche toujours 100 %. Pourquoi ?",
+        "choices": [
+          "Le service a toujours ce fichier ouvert : son espace ne sera libéré qu'à la fermeture du descripteur",
+          "La suppression a échoué",
+          "df ne se met à jour qu'une fois par jour",
+          "Le fichier est dans la corbeille"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un fichier supprimé n'est effacé qu'une fois son dernier nom et son dernier descripteur disparus.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi4-q2",
+        "prompt": "Cas pratique 2/3 — Comment libérer l'espace sans redémarrer le service ?",
+        "choices": [
+          "Tronquer le fichier encore ouvert via /proc/<pid>/fd/<n>, ou demander au service de rouvrir ses logs",
+          "Supprimer à nouveau le fichier",
+          "Formater le disque",
+          "Débrancher le disque"
+        ],
+        "answerIndex": 0,
+        "explanation": "logrotate envoie souvent un signal (SIGHUP) au service pour qu'il rouvre ses fichiers de log.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi4-q3",
+        "prompt": "Cas pratique 3/3 — df indique 40 % d'espace utilisé, mais la création de fichiers échoue avec « No space left on device ». Que vérifier ?",
+        "choices": [
+          "Les inodes avec df -i : des millions de petits fichiers peuvent les épuiser",
+          "La RAM",
+          "Le processeur",
+          "La connexion réseau"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un cache de sessions qui crée un fichier par session est un coupable classique.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi4-q4",
+          "language": "shell",
+        "prompt": "Qu'affiche ce script ?",
+        "code": "echo x > f\nln f g\nstat -c %h f",
+        "choices": [
+          "2",
+          "1",
+          "0",
+          "g"
+        ],
+        "answerIndex": 0,
+        "explanation": "%h affiche le nombre de liens physiques vers l'inode : f et g.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "os-defi4-q5",
+        "prompt": "Quelles différences entre lien physique et lien symbolique sont correctes ?",
+        "choices": [
+          "Un lien physique partage l'inode de la cible ; un lien symbolique est un fichier contenant un chemin",
+          "Un lien symbolique peut pointer vers un autre système de fichiers",
+          "Un lien symbolique peut être cassé si sa cible disparaît",
+          "Un lien physique occupe autant de place qu'une copie complète"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un lien physique n'ajoute qu'une entrée de dossier : les données ne sont pas dupliquées.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi4-q6",
+        "prompt": "En entretien : « Que garantit la réussite de write() ? »",
+        "choices": [
+          "Que les données ont été copiées dans le noyau, pas qu'elles sont sur le disque ; il faut fsync pour la durabilité",
+          "Que les données sont sur le disque",
+          "Que le fichier est fermé",
+          "Rien du tout"
+        ],
+        "answerIndex": 0,
+        "explanation": "Même fsync dépend du matériel : certains disques mentent sur leur cache d'écriture.",
+        "difficulty": 2
+      }
+    ]
+  }
 }
