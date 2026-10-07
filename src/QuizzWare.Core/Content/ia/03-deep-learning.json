@@ -7,19 +7,430 @@
       "id": "ia-neurones",
       "title": "Réseaux de neurones",
       "summary": "Couches, activation et rétropropagation.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le neurone artificiel",
+          "body": "Un neurone calcule une somme pondérée de ses entrées plus un biais, puis applique une fonction d'activation non linéaire. Une couche contient de nombreux neurones ; un réseau empile des couches. Sans activation non linéaire, empiler des couches ne servirait à rien : la composition de fonctions linéaires reste linéaire.",
+          "code": "import numpy as np\n\ndef relu(z):\n    return np.maximum(0, z)\n\nx = np.array([1.0, 2.0])\nW = np.array([[0.5, -1.0],\n              [1.0,  1.0]])\nb = np.array([0.0, -1.0])\nprint(relu(W @ x + b))   # [0. 2.]"
+        },
+        {
+          "title": "Apprendre par descente de gradient",
+          "body": "Une fonction de perte mesure l'écart entre prédictions et réponses attendues. La rétropropagation calcule, pour chaque poids, dans quel sens le modifier pour réduire la perte (le gradient). On ajuste les poids d'un petit pas, le taux d'apprentissage, et on recommence sur des millions d'exemples, par petits lots."
+        },
+        {
+          "title": "Les réglages",
+          "body": "Un taux d'apprentissage trop grand fait diverger l'entraînement ; trop petit, il n'avance pas. Une époque est un passage complet sur les données. Le dropout (désactiver des neurones au hasard pendant l'entraînement) et l'arrêt anticipé limitent le surapprentissage."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-neurones-q1",
+          "prompt": "Pourquoi les fonctions d'activation doivent-elles être non linéaires ?",
+          "choices": [
+            "Sinon, un réseau de plusieurs couches équivaut à une seule transformation linéaire",
+            "Pour accélérer le calcul",
+            "Pour réduire la mémoire",
+            "Elles peuvent être linéaires sans problème"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la non-linéarité qui permet au réseau d'approcher des fonctions complexes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-neurones-q2",
+          "prompt": "Que vaut relu(np.array([-3, 0, 2])) ?",
+          "choices": [
+            "[0 0 2]",
+            "[-3 0 2]",
+            "[3 0 2]",
+            "[0 0 1]"
+          ],
+          "answerIndex": 0,
+          "explanation": "ReLU remplace les valeurs négatives par 0 et laisse passer les positives. Simple et efficace, c'est l'activation la plus utilisée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-neurones-q3",
+          "prompt": "La perte augmente et oscille de plus en plus fort au fil de l'entraînement. Quelle est la cause la plus probable ?",
+          "choices": [
+            "Un taux d'apprentissage trop élevé",
+            "Trop de données",
+            "Un réseau trop petit",
+            "Un jeu de test trop grand"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque pas est si grand qu'il dépasse le minimum, de plus en plus loin. On divise le taux par 10 et on réessaie.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-neurones-q4",
+          "prompt": "Que calcule la rétropropagation ?",
+          "choices": [
+            "Le gradient de la perte par rapport à chaque poids, de la sortie vers l'entrée",
+            "La prédiction finale",
+            "Le nombre de couches nécessaires",
+            "Les données d'entraînement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle applique la règle de dérivation en chaîne couche par couche. Les bibliothèques (PyTorch, JAX) le font automatiquement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-neurones-q5",
+          "prompt": "Un réseau a une couche de 3 entrées vers 4 neurones. Combien de paramètres compte-t-elle, biais compris ?",
+          "choices": [
+            "16",
+            "12",
+            "7",
+            "4"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une matrice de 4 × 3 = 12 poids, plus un biais par neurone : 12 + 4 = 16.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ia-neurones-q6",
+          "prompt": "Quelles techniques limitent le surapprentissage d'un réseau de neurones ?",
+          "choices": [
+            "Le dropout",
+            "L'arrêt anticipé sur la perte de validation",
+            "L'augmentation de données (images retournées, recadrées...)",
+            "Augmenter le nombre d'époques sans surveillance"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Entraîner indéfiniment finit par mémoriser les exemples : la perte de validation remonte.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "ia-architectures",
       "title": "Architectures classiques",
       "summary": "CNN et RNN.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les réseaux convolutifs (CNN)",
+          "body": "Une convolution fait glisser un petit filtre (3 × 3 pixels par exemple) sur toute l'image. Les mêmes poids servent partout : un détecteur de bord fonctionne en haut comme en bas de l'image. Les premières couches détectent des bords, les suivantes des formes, puis des objets. Bien moins de paramètres qu'une couche dense sur des millions de pixels."
+        },
+        {
+          "title": "Les réseaux récurrents (RNN)",
+          "body": "Un RNN traite une séquence élément par élément, en gardant un état interne qui résume ce qu'il a vu. Les LSTM et GRU améliorent la mémoire à long terme. Mais le traitement est séquentiel, donc difficile à paralléliser, et l'information des débuts de séquence s'estompe."
+        },
+        {
+          "title": "L'apprentissage par transfert",
+          "body": "Entraîner un grand réseau depuis zéro demande d'énormes quantités de données. On part plutôt d'un modèle pré-entraîné sur un vaste corpus, et on l'adapte (fine-tuning) à sa tâche avec quelques milliers d'exemples. Les représentations générales apprises se transfèrent."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-archi-q1",
+          "prompt": "Pourquoi un CNN a-t-il beaucoup moins de paramètres qu'un réseau dense sur une image ?",
+          "choices": [
+            "Les mêmes petits filtres sont réutilisés à toutes les positions de l'image",
+            "Il ignore la moitié des pixels",
+            "Il ne travaille qu'en noir et blanc",
+            "Il n'a qu'une seule couche"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un filtre 3 × 3 a 9 poids, quelle que soit la taille de l'image. Une couche dense sur 1 million de pixels aurait 1 million de poids par neurone.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-archi-q2",
+          "prompt": "Quelle architecture était historiquement utilisée pour la traduction et la reconnaissance vocale, avant les transformers ?",
+          "choices": [
+            "Les réseaux récurrents (LSTM)",
+            "Les CNN uniquement",
+            "Les forêts aléatoires",
+            "k-means"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les transformers les ont largement remplacés à partir de 2017, grâce à l'attention et au calcul parallèle.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-archi-q3",
+          "prompt": "Une start-up a 2 000 photos annotées de défauts industriels. Quelle approche ?",
+          "choices": [
+            "Partir d'un modèle de vision pré-entraîné et l'affiner sur ces photos",
+            "Entraîner un grand CNN depuis zéro",
+            "Une régression linéaire sur les pixels",
+            "Abandonner, 2 000 photos ne suffisent jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le transfert permet d'obtenir de bons résultats avec peu de données, en réutilisant ce que le modèle sait déjà des images.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-archi-q4",
+          "prompt": "Quel est le principal défaut des RNN ?",
+          "choices": [
+            "Le traitement séquentiel empêche la parallélisation, et ils oublient les débuts de longues séquences",
+            "Ils ne traitent que des images",
+            "Ils n'ont pas de paramètres",
+            "Ils sont toujours plus précis que tout"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour calculer l'état au mot 100, il faut avoir calculé les 99 précédents, un par un.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ia-archi-q5",
+          "prompt": "Dans un CNN entraîné sur des photos, que détectent typiquement les premières couches ?",
+          "choices": [
+            "Des motifs simples : bords, coins, textures",
+            "Des visages complets",
+            "Des objets entiers",
+            "Le texte des images"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les couches profondes combinent ces motifs en formes, puis en parties d'objets, puis en objets.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ia-archi-q6",
+          "prompt": "Quelles affirmations sur l'apprentissage par transfert sont vraies ?",
+          "choices": [
+            "Il réduit fortement la quantité de données nécessaire",
+            "Il réduit le temps et le coût d'entraînement",
+            "On peut geler les premières couches et n'entraîner que les dernières",
+            "Il exige de réentraîner tous les poids depuis zéro"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Tout l'intérêt est justement de ne pas repartir de zéro.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "ia-transformers",
       "title": "Transformers",
       "summary": "L'attention et les modèles de langage.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des jetons et des vecteurs",
+          "body": "Le texte est découpé en jetons (tokens) : des mots ou morceaux de mots. Chaque jeton devient un vecteur (embedding), auquel on ajoute une information de position. Un jeton vaut en moyenne trois quarts de mot en anglais, souvent moins en français."
+        },
+        {
+          "title": "L'attention",
+          "body": "Pour chaque jeton, l'attention calcule à quel point chacun des autres jetons est pertinent, puis combine leurs informations selon ces poids. Dans « Le chat ne monte pas sur l'arbre car il est fatigué », « il » peut ainsi s'appuyer fortement sur « chat ». Tous les jetons sont traités en parallèle.",
+          "code": "def attention(Q, K, V):\n    scores = Q @ K.T / np.sqrt(K.shape[1])\n    poids = softmax(scores)\n    return poids @ V"
+        },
+        {
+          "title": "Les modèles de langage",
+          "body": "Un LLM est un transformer entraîné à prédire le jeton suivant sur une immense quantité de texte, puis affiné pour suivre des instructions. Il génère une réponse jeton par jeton. Son contexte (le nombre de jetons qu'il voit à la fois) est limité, et le coût de l'attention croît avec le carré de sa longueur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-transformers-q1",
+          "prompt": "Quel avantage décisif les transformers ont-ils sur les RNN ?",
+          "choices": [
+            "Ils traitent tous les jetons d'une séquence en parallèle, et chaque jeton accède directement à tous les autres",
+            "Ils n'ont pas besoin de données",
+            "Ils sont plus petits",
+            "Ils ne nécessitent pas de GPU"
+          ],
+          "answerIndex": 0,
+          "explanation": "Cette parallélisation a permis d'entraîner des modèles bien plus grands sur bien plus de données.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-transformers-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "import numpy as np\n\ndef softmax(z):\n    e = np.exp(z - z.max())\n    return e / e.sum()\n\np = softmax(np.array([1.0, 1.0, 1.0, 1.0]))\nprint(p)",
+          "choices": [
+            "[0.25 0.25 0.25 0.25]",
+            "[1. 1. 1. 1.]",
+            "[0. 0. 0. 1.]",
+            "[0.1 0.2 0.3 0.4]"
+          ],
+          "answerIndex": 0,
+          "explanation": "softmax transforme des scores en probabilités qui somment à 1. Des scores égaux donnent des poids égaux. Soustraire le maximum évite les débordements numériques.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-transformers-q3",
+          "prompt": "Sur quelle tâche un LLM est-il principalement pré-entraîné ?",
+          "choices": [
+            "Prédire le jeton suivant d'un texte",
+            "Classer des images",
+            "Traduire uniquement",
+            "Répondre à des questions vérifiées par des humains"
+          ],
+          "answerIndex": 0,
+          "explanation": "Cette tâche simple, appliquée à des milliers de milliards de jetons, force le modèle à apprendre grammaire, faits et raisonnements. L'affinage vient ensuite.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-transformers-q4",
+          "prompt": "Pourquoi doubler la longueur du contexte coûte-t-il environ quatre fois plus de calcul d'attention ?",
+          "choices": [
+            "Chaque jeton calcule un score avec chacun des autres : le nombre de paires croît avec le carré de la longueur",
+            "Parce que les jetons sont plus longs",
+            "Parce que le modèle double de taille",
+            "Ce n'est pas le cas"
+          ],
+          "answerIndex": 0,
+          "explanation": "n jetons donnent n² scores. Beaucoup de recherches visent à réduire ce coût pour les très longs contextes.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ia-transformers-q5",
+          "prompt": "Que sont les embeddings ?",
+          "choices": [
+            "Des vecteurs de nombres qui représentent des jetons ou des textes, proches pour des sens proches",
+            "Des images intégrées au texte",
+            "Des balises HTML",
+            "Des mots de passe chiffrés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ils servent aussi hors des LLM : recherche sémantique, recommandation, détection de doublons.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ia-transformers-q6",
+          "prompt": "Quelles affirmations sur les LLM sont vraies ?",
+          "choices": [
+            "Ils génèrent leur réponse jeton par jeton",
+            "Leur contexte a une taille maximale",
+            "Ils peuvent produire des affirmations fausses avec assurance",
+            "Ils consultent Internet à chaque réponse par défaut"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un modèle seul ne connaît que ses données d'entraînement et son contexte. L'accès au web passe par des outils fournis par l'application.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "ia-defi-deep-learning",
+    "title": "Défi entretien : deep learning",
+    "summary": "Un entraînement qui tourne mal.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "ia-defi3-q1",
+        "prompt": "Cas pratique 1/3 — La perte d'entraînement baisse régulièrement, mais la perte de validation remonte à partir de l'époque 8. Que se passe-t-il ?",
+        "choices": [
+          "Le modèle commence à surapprendre : on garde les poids de l'époque 8 (arrêt anticipé)",
+          "Tout va bien, il faut continuer",
+          "Le taux d'apprentissage est trop faible",
+          "Les données de validation sont fausses"
+        ],
+        "answerIndex": 0,
+        "explanation": "Au-delà, le modèle mémorise les exemples d'entraînement au détriment de la généralisation.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi3-q2",
+        "prompt": "Cas pratique 2/3 — La perte d'entraînement reste plate dès la première époque. Que vérifier en premier ?",
+        "choices": [
+          "Que le modèle peut surapprendre un tout petit lot : sinon, il y a un bug (étiquettes, taux d'apprentissage, données)",
+          "Ajouter des couches",
+          "Doubler le jeu de validation",
+          "Changer de GPU"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un réseau doit pouvoir mémoriser 10 exemples. S'il n'y arrive pas, le problème n'est pas la capacité, c'est un bug.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Le modèle atteint 97 % sur la validation, mais 70 % sur les photos prises en usine. Pourquoi ?",
+        "choices": [
+          "Les données de production diffèrent de celles d'entraînement (éclairage, appareil, angle) : un décalage de distribution",
+          "Le modèle est trop petit",
+          "La validation était trop facile par hasard",
+          "Les GPU de production sont plus lents"
+        ],
+        "answerIndex": 0,
+        "explanation": "On collecte des exemples des conditions réelles, et on augmente les données pour couvrir ces variations.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi3-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "import numpy as np\n\nx = np.array([1.0, 2.0])\nW = np.array([[0.5, -1.0],\n              [1.0,  1.0]])\nb = np.array([0.0, -1.0])\nprint(np.maximum(0, W @ x + b))",
+        "choices": [
+          "[0. 2.]",
+          "[-1.5 2.]",
+          "[0.5 3.]",
+          "[1. 2.]"
+        ],
+        "answerIndex": 0,
+        "explanation": "W @ x = [0.5 - 2, 1 + 2] = [-1.5, 3] ; plus b : [-1.5, 2] ; ReLU : [0, 2].",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "ia-defi3-q5",
+        "prompt": "Que faut-il surveiller pendant un entraînement ?",
+        "choices": [
+          "Les pertes d'entraînement et de validation",
+          "Les métriques métier sur la validation",
+          "Les valeurs aberrantes (NaN) dans la perte",
+          "Le nombre de fichiers du projet"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une perte qui devient NaN signale souvent un taux d'apprentissage trop élevé ou des données invalides.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi3-q6",
+        "prompt": "En entretien : « Pourquoi le deep learning a-t-il explosé à partir de 2012 ? »",
+        "choices": [
+          "La conjonction de grands jeux de données, de GPU puissants et d'améliorations techniques (ReLU, dropout)",
+          "L'invention du neurone artificiel en 2012",
+          "La disparition des autres méthodes",
+          "Une loi l'imposant"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les réseaux de neurones existaient depuis des décennies ; AlexNet (2012) a montré ce qu'ils pouvaient faire avec ImageNet et des GPU.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

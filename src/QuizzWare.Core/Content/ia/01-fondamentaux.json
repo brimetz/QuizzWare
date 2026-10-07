@@ -7,19 +7,430 @@
       "id": "ia-types-apprentissage",
       "title": "Types d'apprentissage",
       "summary": "Supervisé, non supervisé et par renforcement.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Apprendre plutôt que programmer",
+          "body": "En programmation classique, on écrit les règles. En machine learning, on fournit des exemples et l'algorithme ajuste les paramètres d'un modèle pour reproduire la relation entre les entrées et les sorties. C'est utile quand les règles sont trop nombreuses ou inconnues : reconnaître un chat, détecter une fraude."
+        },
+        {
+          "title": "Supervisé",
+          "body": "Les exemples sont étiquetés : on connaît la bonne réponse. Classification si la réponse est une catégorie (spam ou non), régression si c'est un nombre (le prix d'un appartement). C'est le cas le plus courant en entreprise, et le plus coûteux : il faut des étiquettes."
+        },
+        {
+          "title": "Non supervisé et renforcement",
+          "body": "Non supervisé : pas d'étiquettes, on cherche une structure (regrouper des clients semblables, détecter des anomalies, réduire des dimensions). Par renforcement : un agent agit dans un environnement et reçoit des récompenses ; il apprend une stratégie par essais et erreurs (jeux, robotique, et l'affinage des LLM par retours humains)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-types-q1",
+          "prompt": "On veut prédire le prix de vente d'une maison à partir de sa surface et de sa ville. De quel type de problème s'agit-il ?",
+          "choices": [
+            "Régression supervisée",
+            "Classification supervisée",
+            "Clustering",
+            "Apprentissage par renforcement"
+          ],
+          "answerIndex": 0,
+          "explanation": "La sortie est un nombre continu, et on dispose d'exemples de ventes passées avec leur prix.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-types-q2",
+          "prompt": "Une banque veut regrouper ses clients en profils, sans catégories définies à l'avance. Quel type d'apprentissage ?",
+          "choices": [
+            "Non supervisé (clustering)",
+            "Supervisé",
+            "Par renforcement",
+            "Aucun, c'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans étiquettes, l'algorithme cherche des groupes de clients qui se ressemblent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-types-q3",
+          "prompt": "Un programme apprend à jouer aux échecs en jouant des millions de parties contre lui-même. Quel type d'apprentissage ?",
+          "choices": [
+            "Par renforcement",
+            "Supervisé",
+            "Non supervisé",
+            "Par règles"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il n'a pas d'exemples étiquetés coup par coup : seule l'issue de la partie (récompense) guide l'apprentissage. C'est l'approche d'AlphaZero.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-types-q4",
+          "prompt": "Détecter si un e-mail est un spam : classification ou régression ?",
+          "choices": [
+            "Classification : la sortie est une catégorie",
+            "Régression : la sortie est un nombre",
+            "Clustering",
+            "Aucune des deux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le modèle produit souvent une probabilité, mais la décision finale est une classe : spam ou non.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-types-q5",
+          "prompt": "Quand ne pas utiliser le machine learning ?",
+          "choices": [
+            "Quand des règles simples et connues suffisent, comme calculer une TVA",
+            "Quand on a beaucoup de données",
+            "Pour reconnaître des images",
+            "Pour traduire des textes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un modèle se trompe parfois, coûte à entraîner et à maintenir. Une règle exacte et explicable est toujours préférable quand elle existe.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "ia-types-q6",
+          "prompt": "Lesquels sont des problèmes d'apprentissage supervisé ?",
+          "choices": [
+            "Prédire si un client va résilier son abonnement, à partir de l'historique des résiliations",
+            "Estimer la durée d'un trajet à partir de trajets passés",
+            "Reconnaître des chiffres manuscrits à partir d'images annotées",
+            "Découvrir des groupes de documents similaires sans étiquettes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le dernier cas, sans étiquettes, relève de l'apprentissage non supervisé.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "ia-donnees",
       "title": "Préparer les données",
       "summary": "Nettoyage, variables, jeux d'entraînement et de test.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des données avant tout",
+          "body": "La qualité d'un modèle dépend d'abord de ses données : valeurs manquantes, doublons, erreurs de saisie, étiquettes fausses. « Garbage in, garbage out. » La préparation représente souvent l'essentiel du travail d'un projet de machine learning."
+        },
+        {
+          "title": "Transformer les variables",
+          "body": "Les modèles travaillent sur des nombres. On encode les catégories (one-hot : une colonne par valeur), on met les variables numériques à la même échelle quand l'algorithme y est sensible, et on crée des variables utiles (le jour de la semaine à partir d'une date)."
+        },
+        {
+          "title": "Séparer entraînement et test",
+          "body": "On met de côté un jeu de test que le modèle ne voit jamais pendant l'entraînement. Sans cela, on mesure sa capacité à mémoriser, pas à généraliser. Toute transformation (moyenne, échelle) est calculée sur l'entraînement seulement, puis appliquée au test.",
+          "code": "from sklearn.model_selection import train_test_split\n\nX_train, X_test, y_train, y_test = train_test_split(\n    X, y, test_size=0.2, random_state=42)"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-donnees-q1",
+          "prompt": "Avec test_size=0.2 et 1 000 exemples, combien d'exemples servent à l'entraînement ?",
+          "choices": [
+            "800",
+            "200",
+            "1 000",
+            "20"
+          ],
+          "answerIndex": 0,
+          "explanation": "20 % partent dans le jeu de test, les 80 % restants servent à l'entraînement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-donnees-q2",
+          "prompt": "Pourquoi ne jamais évaluer un modèle sur ses données d'entraînement ?",
+          "choices": [
+            "Il les a vues : le score mesure sa mémoire, pas sa capacité à prédire de nouveaux cas",
+            "Parce que c'est trop lent",
+            "Parce que les données d'entraînement sont fausses",
+            "C'est au contraire recommandé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un modèle peut obtenir 100 % sur ses données d'entraînement et échouer complètement en production.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-donnees-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "import pandas as pd\n\ndf = pd.DataFrame({\"ville\": [\"Lyon\", \"Paris\", \"Lyon\"]})\nprint(pd.get_dummies(df).shape)",
+          "choices": [
+            "(3, 2)",
+            "(3, 1)",
+            "(2, 3)",
+            "(3, 3)"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'encodage one-hot crée une colonne par valeur distincte : ville_Lyon et ville_Paris, pour 3 lignes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-donnees-q4",
+          "prompt": "On normalise les données avec la moyenne calculée sur tout le jeu de données, avant de séparer le test. Quel est le problème ?",
+          "choices": [
+            "Une fuite de données : des informations du test influencent l'entraînement, et le score est trop optimiste",
+            "Aucun problème",
+            "Le calcul est trop lent",
+            "La normalisation devient impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les pipelines de scikit-learn évitent ce piège : chaque transformation est ajustée sur l'entraînement uniquement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-donnees-q5",
+          "prompt": "Pour prédire les ventes de demain, comment séparer entraînement et test ?",
+          "choices": [
+            "Par date : entraîner sur le passé, tester sur la période la plus récente",
+            "Au hasard, comme toujours",
+            "En mettant les week-ends dans le test",
+            "En utilisant les mêmes données pour les deux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un découpage aléatoire laisserait le modèle « voir le futur ». En production, il ne connaîtra que le passé.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ia-donnees-q6",
+          "prompt": "Quelles étapes font partie de la préparation des données ?",
+          "choices": [
+            "Traiter les valeurs manquantes",
+            "Encoder les variables catégorielles",
+            "Supprimer les doublons et corriger les erreurs",
+            "Choisir la couleur des graphiques du rapport"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La visualisation aide à explorer les données, mais la couleur des graphiques ne change rien au modèle.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "ia-evaluation",
       "title": "Évaluer un modèle",
       "summary": "Précision, rappel et surapprentissage.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "L'exactitude ne suffit pas",
+          "body": "Sur 1 000 transactions dont 10 frauduleuses, un modèle qui répond toujours « pas de fraude » a 99 % d'exactitude, et ne sert à rien. Avec des classes déséquilibrées, on regarde d'autres métriques."
+        },
+        {
+          "title": "Précision et rappel",
+          "body": "La précision : parmi les cas signalés positifs, combien le sont vraiment ? Le rappel : parmi les vrais positifs, combien ont été trouvés ? Augmenter l'un fait souvent baisser l'autre. Le score F1 les combine en une seule valeur.",
+          "code": "# 8 fraudes trouvées, 2 manquées,\n# 12 transactions saines signalées à tort\nprecision = 8 / (8 + 12)   # 0.4\nrappel    = 8 / (8 + 2)    # 0.8"
+        },
+        {
+          "title": "Surapprentissage",
+          "body": "Un modèle trop complexe apprend aussi le bruit de ses données d'entraînement : excellent sur l'entraînement, mauvais sur le test. C'est le surapprentissage (overfitting). À l'inverse, un modèle trop simple sous-apprend. La validation croisée et la régularisation aident à trouver l'équilibre."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-evaluation-q1",
+          "prompt": "Un modèle a 99 % de score sur l'entraînement et 62 % sur le test. Que se passe-t-il ?",
+          "choices": [
+            "Il surapprend : il a mémorisé les exemples au lieu de généraliser",
+            "Il sous-apprend",
+            "C'est un excellent modèle",
+            "Le jeu de test est trop grand"
+          ],
+          "answerIndex": 0,
+          "explanation": "Remèdes : plus de données, un modèle plus simple, de la régularisation, ou moins de variables.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-evaluation-q2",
+          "prompt": "Pour un dépistage médical, quelle métrique privilégier ?",
+          "choices": [
+            "Le rappel : rater un malade coûte bien plus cher qu'un examen complémentaire inutile",
+            "La précision uniquement",
+            "L'exactitude globale",
+            "Le temps de calcul"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le choix de la métrique dépend du coût de chaque type d'erreur pour le métier.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-evaluation-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from sklearn.metrics import precision_score\nfrom sklearn.metrics import recall_score\n\nvrai   = [1, 1, 1, 0, 0, 0, 0, 0]\npredit = [1, 1, 0, 1, 0, 0, 0, 0]\nprint(precision_score(vrai, predit),\n      recall_score(vrai, predit))",
+          "choices": [
+            "0.6666666666666666 0.6666666666666666",
+            "0.75 0.6666666666666666",
+            "1.0 0.6666666666666666",
+            "0.5 0.5"
+          ],
+          "answerIndex": 0,
+          "explanation": "3 positifs prédits dont 2 justes : précision 2/3. 3 vrais positifs dont 2 trouvés : rappel 2/3.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-evaluation-q4",
+          "prompt": "Pourquoi l'exactitude est-elle trompeuse pour détecter une fraude rare ?",
+          "choices": [
+            "Un modèle qui ne détecte jamais rien atteint déjà une exactitude très élevée",
+            "Elle est toujours trompeuse",
+            "Elle est impossible à calculer",
+            "Elle ne prend pas en compte le temps"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec 1 % de fraudes, « jamais de fraude » donne 99 % d'exactitude et un rappel de 0.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-evaluation-q5",
+          "prompt": "À quoi sert la validation croisée ?",
+          "choices": [
+            "À estimer le score de façon plus fiable en entraînant et évaluant sur plusieurs découpages des données",
+            "À entraîner plus vite",
+            "À remplacer le jeu de test final",
+            "À ajouter des données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec 5 plis, chaque exemple sert une fois à l'évaluation et quatre fois à l'entraînement. On garde quand même un jeu de test final intact.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ia-evaluation-q6",
+          "prompt": "Quels remèdes contre le surapprentissage ?",
+          "choices": [
+            "Collecter plus de données d'entraînement",
+            "Simplifier le modèle ou le régulariser",
+            "Arrêter l'entraînement quand le score de validation cesse de s'améliorer",
+            "Évaluer sur les données d'entraînement"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Évaluer sur l'entraînement masque le problème au lieu de le résoudre.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "ia-defi-fondamentaux",
+    "title": "Défi entretien : fondamentaux du ML",
+    "summary": "Un détecteur de fraude trop beau pour être vrai.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "ia-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Un collègue annonce 99,8 % d'exactitude sur la détection de fraude, avec 0,2 % de fraudes dans les données. Quelle est votre première question ?",
+        "choices": [
+          "Quel est le rappel ? Combien de fraudes sont réellement détectées ?",
+          "Combien de temps a duré l'entraînement ?",
+          "Quel langage a été utilisé ?",
+          "Aucune, le résultat est excellent"
+        ],
+        "answerIndex": 0,
+        "explanation": "99,8 % est exactement le score d'un modèle qui ne détecte jamais de fraude.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Le modèle utilise la variable « remboursement effectué », renseignée après l'enquête de fraude. Quel est le problème ?",
+        "choices": [
+          "Une fuite de données : cette information n'existe pas au moment de la prédiction",
+          "Aucun problème, c'est une excellente variable",
+          "La variable est trop corrélée au prix",
+          "Il faut la normaliser"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le modèle « triche » en utilisant une conséquence de la fraude. En production, il s'effondrera.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Comment construire une évaluation réaliste ?",
+        "choices": [
+          "Ne garder que les informations disponibles au moment de la transaction, tester sur une période postérieure à l'entraînement, et suivre précision et rappel",
+          "Évaluer sur les données d'entraînement",
+          "Mélanger toutes les périodes au hasard",
+          "Retirer toutes les fraudes du jeu de test"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'évaluation doit reproduire les conditions réelles d'utilisation du modèle.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi1-q4",
+        "prompt": "Le modèle produit une probabilité de fraude. Comment choisir le seuil de décision ?",
+        "choices": [
+          "Selon le coût métier : une fraude manquée contre une vérification manuelle inutile",
+          "Toujours 0,5",
+          "Le plus bas possible",
+          "Au hasard"
+        ],
+        "answerIndex": 0,
+        "explanation": "Abaisser le seuil augmente le rappel et diminue la précision. La courbe précision-rappel aide à choisir.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "ia-defi1-q5",
+        "prompt": "Quels signes doivent faire soupçonner une fuite de données ?",
+        "choices": [
+          "Un score presque parfait sur un problème réputé difficile",
+          "Une variable unique qui explique presque tout le résultat",
+          "Un écart énorme entre l'évaluation et les résultats en production",
+          "Un modèle qui met longtemps à s'entraîner"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La durée d'entraînement n'a pas de lien avec une fuite.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi1-q6",
+        "prompt": "En entretien : quelle est la première chose à établir dans un projet de machine learning ?",
+        "choices": [
+          "Le problème métier, la métrique de succès et une référence simple (baseline) à battre",
+          "Le modèle le plus récent à utiliser",
+          "Le nombre de GPU",
+          "Le nom du projet"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans baseline (une règle simple, un modèle naïf), impossible de savoir si un modèle complexe apporte vraiment quelque chose.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

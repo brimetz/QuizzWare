@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (90 écrits) | 341 (235 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (95 écrits) | 341 (249 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -967,25 +967,25 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Fondamentaux du machine learning
-   - Types d'apprentissage
-   - Préparer les données
-   - Évaluer un modèle
-2. 🕓 Modèles classiques
-   - Régression linéaire et logistique
-   - Arbres et forêts
-   - Clustering
-3. 🕓 Deep learning
-   - Réseaux de neurones
-   - Architectures classiques
-   - Transformers
-4. 🕓 Les LLM dans les applications
-   - Prompting
-   - RAG
-   - Agents et outils
-5. 🕓 L'IA en production
-   - MLOps
-   - Évaluer des LLM
+1. ✅ Fondamentaux du machine learning
+   - ✅ Types d'apprentissage
+   - ✅ Préparer les données
+   - ✅ Évaluer un modèle
+2. ✅ Modèles classiques
+   - ✅ Régression linéaire et logistique
+   - ✅ Arbres et forêts
+   - ✅ Clustering
+3. ✅ Deep learning
+   - ✅ Réseaux de neurones
+   - ✅ Architectures classiques
+   - ✅ Transformers
+4. ✅ Les LLM dans les applications
+   - ✅ Prompting
+   - ✅ RAG
+   - ✅ Agents et outils
+5. ✅ L'IA en production
+   - ✅ MLOps
+   - ✅ Évaluer des LLM
 
 **Spécialisations**
 

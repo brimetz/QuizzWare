@@ -7,13 +7,318 @@
       "id": "ia-mlops",
       "title": "MLOps",
       "summary": "Versionner, entraîner et déployer.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Un modèle, c'est du code et des données",
+          "body": "Pour reproduire un modèle, il faut le code d'entraînement, la version exacte des données, les hyperparamètres et l'environnement. On versionne les trois (Git pour le code, DVC ou un stockage versionné pour les données) et on enregistre chaque expérience avec ses métriques (MLflow, Weights & Biases)."
+        },
+        {
+          "title": "Servir le modèle",
+          "body": "Le modèle entraîné est un artefact, enregistré dans un registre de modèles avec sa version. Il est servi derrière une API (temps réel) ou appliqué par lots (batch nocturne). La transformation des données doit être identique à l'entraînement et en production : on l'empaquette avec le modèle.",
+          "code": "from sklearn.pipeline import make_pipeline\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\n\nmodele = make_pipeline(StandardScaler(),\n                       LogisticRegression())\nmodele.fit(X_train, y_train)\njoblib.dump(modele, \"modele-v3.joblib\")"
+        },
+        {
+          "title": "Surveiller la dérive",
+          "body": "Le monde change : comportements, prix, saisons. Les données de production s'éloignent de celles d'entraînement (dérive des données), ou la relation entre entrées et sortie change (dérive du concept). On surveille la distribution des entrées, celle des prédictions et, dès qu'elles sont connues, les vraies réponses, puis on réentraîne."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-mlops-q1",
+          "prompt": "Pourquoi empaqueter la mise à l'échelle et le modèle dans un même pipeline ?",
+          "choices": [
+            "Pour que la production applique exactement les mêmes transformations, avec les mêmes paramètres, qu'à l'entraînement",
+            "Pour accélérer l'entraînement",
+            "Pour réduire la taille du fichier",
+            "Ce n'est pas utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un écart entre les transformations d'entraînement et de production (training-serving skew) dégrade silencieusement les prédictions.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-mlops-q2",
+          "prompt": "Un modèle de prévision de ventes, excellent en 2019, se trompe massivement en 2020. Que s'est-il passé ?",
+          "choices": [
+            "Une dérive : les comportements d'achat ont changé, et le modèle a appris des relations qui ne tiennent plus",
+            "Un bug dans le code",
+            "Le serveur est trop lent",
+            "Les données de 2019 ont été effacées"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un modèle reflète le monde de ses données d'entraînement. Il faut surveiller ses performances et le réentraîner.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-mlops-q3",
+          "prompt": "Que faut-il enregistrer pour pouvoir reproduire un modèle dans six mois ?",
+          "choices": [
+            "La version du code, la version des données, les hyperparamètres et l'environnement",
+            "Uniquement le fichier du modèle",
+            "Uniquement le score final",
+            "Le nom de la personne qui l'a entraîné"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans la version des données, impossible de comprendre pourquoi deux entraînements diffèrent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-mlops-q4",
+          "prompt": "Comment déployer prudemment une nouvelle version d'un modèle de recommandation ?",
+          "choices": [
+            "En mode fantôme (prédictions calculées mais non utilisées), puis en test A/B sur une part du trafic",
+            "En remplaçant l'ancien modèle pour tout le monde d'un coup",
+            "En demandant aux utilisateurs de choisir",
+            "Sans aucune mesure"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le mode fantôme compare les deux modèles sans risque ; l'A/B test mesure l'effet réel sur les utilisateurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-mlops-q5",
+          "prompt": "Les vraies réponses ne sont connues que trois mois après la prédiction (défaut de paiement). Que surveiller en attendant ?",
+          "choices": [
+            "La distribution des entrées et des prédictions, pour détecter une dérive avant de connaître les erreurs",
+            "Rien, il faut attendre trois mois",
+            "Uniquement le temps de réponse",
+            "Le nombre de serveurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si la part de prédictions « risque élevé » double soudainement, quelque chose a changé, dans les données ou dans le pipeline.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "ia-mlops-q6",
+          "prompt": "Que contient une démarche MLOps ?",
+          "choices": [
+            "Le suivi des expériences et un registre des modèles",
+            "Des pipelines d'entraînement et de déploiement automatisés",
+            "La surveillance des performances et de la dérive en production",
+            "Un entraînement unique, jamais renouvelé"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un modèle se dégrade avec le temps : le réentraînement fait partie du cycle de vie normal.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "ia-evaluation-llm",
       "title": "Évaluer des LLM",
       "summary": "Jeux d'évaluation et garde-fous.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des tests pour du texte",
+          "body": "Changer un prompt ou un modèle peut améliorer certains cas et en casser d'autres. On constitue un jeu d'évaluation : des dizaines ou centaines d'entrées représentatives, avec ce qu'on attend. Chaque modification est mesurée sur ce jeu, comme des tests de non-régression."
+        },
+        {
+          "title": "Comment noter",
+          "body": "Quand la réponse attendue est précise (une catégorie, un JSON), on la compare automatiquement. Pour du texte libre, on utilise des critères explicites, notés par des humains ou par un autre LLM (LLM-as-judge) dont on vérifie l'accord avec des notes humaines. On mesure aussi la latence et le coût.",
+          "code": "resultats = []\nfor cas in jeu_eval:\n    sortie = classer(cas[\"texte\"])\n    resultats.append(sortie == cas[\"attendu\"])\nprint(f\"{sum(resultats)}/{len(resultats)}\")"
+        },
+        {
+          "title": "Les garde-fous",
+          "body": "En production, on filtre les entrées et sorties : détection de contenus interdits, de données personnelles, validation du format, limites de longueur. On journalise les échanges (dans le respect de la vie privée) pour enrichir le jeu d'évaluation avec les cas réels qui ont échoué."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-evalllm-q1",
+          "prompt": "Un développeur modifie le prompt pour corriger un cas signalé, puis livre. Quel est le risque ?",
+          "choices": [
+            "D'avoir dégradé d'autres cas sans le savoir : il faut relancer le jeu d'évaluation avant de livrer",
+            "Aucun, le cas est corrigé",
+            "Le prompt devient trop court",
+            "Le modèle refusera de répondre"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les prompts se comportent comme du code : sans tests de non-régression, chaque correction peut en casser une autre.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-evalllm-q2",
+          "prompt": "Le code d'évaluation de la leçon affiche « 87/100 ». Que mesure-t-il ?",
+          "choices": [
+            "Le nombre de cas où la sortie est exactement la réponse attendue",
+            "Le temps de réponse moyen",
+            "Le nombre de jetons",
+            "La satisfaction des utilisateurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "La comparaison exacte convient aux sorties fermées (catégories). Pour du texte libre, il faut d'autres critères.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-evalllm-q3",
+          "prompt": "On utilise un LLM pour noter les réponses d'un autre LLM. Quelle précaution prendre ?",
+          "choices": [
+            "Vérifier sur un échantillon que ses notes concordent avec celles d'humains, et lui donner des critères précis",
+            "Aucune, un LLM est toujours objectif",
+            "Utiliser une température élevée pour le juge",
+            "Lui demander de noter de 1 à 1 000"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un juge a ses biais : préférence pour les réponses longues, pour la première option présentée, ou pour son propre style.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ia-evalllm-q4",
+          "prompt": "D'où viennent les meilleurs cas pour enrichir un jeu d'évaluation ?",
+          "choices": [
+            "Des échanges réels de production qui ont mal tourné, anonymisés",
+            "Uniquement d'exemples inventés par l'équipe",
+            "D'Internet, au hasard",
+            "Des réponses que le modèle réussit déjà"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les vrais utilisateurs posent des questions qu'aucune équipe n'avait imaginées.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-evalllm-q5",
+          "prompt": "Faut-il passer au modèle le plus puissant pour toutes les requêtes ?",
+          "choices": [
+            "Pas forcément : on mesure sur le jeu d'évaluation si un modèle plus petit, plus rapide et moins cher suffit pour chaque tâche",
+            "Oui, toujours",
+            "Non, toujours le plus petit",
+            "Le choix du modèle n'a pas d'effet"
+          ],
+          "answerIndex": 0,
+          "explanation": "Qualité, latence et coût forment un compromis. Beaucoup d'applications routent les tâches simples vers un petit modèle.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ia-evalllm-q6",
+          "prompt": "Quels garde-fous placer autour d'un assistant grand public ?",
+          "choices": [
+            "Valider le format et la longueur des réponses",
+            "Détecter et masquer les données personnelles dans les journaux",
+            "Filtrer les contenus interdits en entrée et en sortie",
+            "Afficher les réponses sans aucun contrôle pour aller plus vite"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les garde-fous de l'application complètent ceux du modèle : aucun n'est parfait seul.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "ia-defi-production",
+    "title": "Défi entretien : l'IA en production",
+    "summary": "Un classifieur de tickets qui se dégrade.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "ia-defi5-q1",
+        "prompt": "Cas pratique 1/3 — Un LLM classe les tickets de support en 6 catégories. Après une mise à jour du modèle par le fournisseur, l'équipe support se plaint. Comment l'objectiver ?",
+        "choices": [
+          "Relancer le jeu d'évaluation de référence sur l'ancien et le nouveau modèle, et comparer catégorie par catégorie",
+          "Demander l'avis de chacun",
+          "Revenir au traitement manuel",
+          "Ignorer les plaintes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans jeu d'évaluation, impossible de savoir ce qui a changé. Fixer la version du modèle évite aussi les changements subis.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi5-q2",
+        "prompt": "Cas pratique 2/3 — La catégorie « Facturation » est passée de 92 % à 71 % de bonnes réponses. Que faire ?",
+        "choices": [
+          "Analyser les erreurs, ajuster le prompt (définitions, exemples ciblés), et vérifier qu'aucune autre catégorie ne régresse",
+          "Supprimer la catégorie",
+          "Augmenter la température",
+          "Relancer jusqu'à obtenir 92 %"
+        ],
+        "answerIndex": 0,
+        "explanation": "On corrige la cause, puis on valide l'ensemble pour éviter de déplacer le problème.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Comment éviter que cela se reproduise ?",
+        "choices": [
+          "Épingler la version du modèle, évaluer chaque nouvelle version avant de migrer, et surveiller en continu un échantillon de classements vérifiés",
+          "Ne plus jamais changer de modèle",
+          "Faire confiance au fournisseur",
+          "Supprimer le jeu d'évaluation"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les migrations deviennent des décisions mesurées, et la surveillance détecte les dérives des données entrantes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi5-q4",
+        "prompt": "Le modèle de scoring de crédit refuse beaucoup plus souvent les demandes d'un groupe de population. Que faire ?",
+        "choices": [
+          "Mesurer les écarts de performance et de décision entre groupes, en chercher la cause dans les données, et corriger avant tout déploiement",
+          "Rien, le modèle est objectif par nature",
+          "Retirer simplement la variable du groupe, sans autre vérification",
+          "Augmenter le seuil pour tout le monde"
+        ],
+        "answerIndex": 0,
+        "explanation": "D'autres variables peuvent servir de substitut (code postal, prénom) : retirer la variable ne suffit pas. Le règlement européen sur l'IA impose des exigences fortes pour ces systèmes.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "ia-defi5-q5",
+        "prompt": "Que surveiller pour un modèle en production ?",
+        "choices": [
+          "Les métriques de qualité, dès que les vraies réponses sont connues",
+          "La distribution des entrées et des prédictions",
+          "La latence et le coût",
+          "Le nombre de lignes du code d'entraînement"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un modèle est un système en production comme un autre, avec en plus le risque de dérive.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi5-q6",
+        "prompt": "En entretien : « Quelle est la principale différence entre tester du code classique et un système à base de LLM ? »",
+        "choices": [
+          "Les sorties ne sont pas parfaitement déterministes : on évalue statistiquement sur un jeu de cas, avec des seuils, plutôt qu'avec des égalités exactes",
+          "Les LLM n'ont pas besoin de tests",
+          "Il n'y a aucune différence",
+          "On ne peut tester les LLM qu'en production"
+        ],
+        "answerIndex": 0,
+        "explanation": "On combine des tests déterministes (format, outils) et des évaluations statistiques (qualité des réponses).",
+        "difficulty": 2
+      }
+    ]
+  }
 }
