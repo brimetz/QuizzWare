@@ -7,19 +7,430 @@
       "id": "infra-iac-principes",
       "title": "Principes de l'IaC",
       "summary": "Déclaratif, idempotence, état.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Fini les clics dans la console",
+          "body": "Une infrastructure créée à la main n'est ni reproductible ni documentée : personne ne sait recréer l'environnement de production à l'identique. Décrite en code, elle est versionnée, relue en pull request, testée en recette et recréable en quelques minutes."
+        },
+        {
+          "title": "Déclaratif ou impératif",
+          "body": "L'approche impérative décrit des étapes (« crée une machine, puis ajoute un disque »). L'approche déclarative décrit le résultat voulu (« il existe 3 machines avec ce disque ») : l'outil calcule les actions nécessaires pour y arriver depuis l'état actuel."
+        },
+        {
+          "title": "Idempotence et dérive",
+          "body": "Appliquer deux fois la même configuration doit donner le même résultat, sans rien recréer la seconde fois. Une modification manuelle crée une dérive (drift) entre le code et la réalité : la prochaine application l'écrasera ou échouera. Toute modification passe donc par le code."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-iac-principes-q1",
+          "prompt": "Quel est le principal avantage d'une approche déclarative ?",
+          "choices": [
+            "On décrit l'état voulu, l'outil calcule lui-même les changements à appliquer",
+            "On écrit chaque commande dans l'ordre",
+            "Elle n'a pas besoin d'être versionnée",
+            "Elle fonctionne sans fournisseur cloud"
+          ],
+          "answerIndex": 0,
+          "explanation": "Que l'infrastructure soit vide ou déjà partiellement créée, le même code mène au même résultat.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-iac-principes-q2",
+          "prompt": "Un administrateur ouvre un port dans la console cloud, en urgence. Quel problème cela crée-t-il ?",
+          "choices": [
+            "Une dérive : le code ne décrit plus la réalité, et la prochaine application refermera le port",
+            "Aucun problème",
+            "Le cloud refusera la modification",
+            "Le code est automatiquement mis à jour"
+          ],
+          "answerIndex": 0,
+          "explanation": "En urgence, on peut agir à la main, mais il faut reporter aussitôt le changement dans le code.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-iac-principes-q3",
+          "prompt": "Que signifie qu'une configuration est idempotente ?",
+          "choices": [
+            "L'appliquer plusieurs fois donne le même résultat qu'une seule fois",
+            "Elle ne peut être appliquée qu'une fois",
+            "Elle crée une nouvelle ressource à chaque application",
+            "Elle est chiffrée"
+          ],
+          "answerIndex": 0,
+          "explanation": "La seconde application constate que tout est déjà conforme et ne change rien.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-iac-principes-q4",
+          "prompt": "Ce script de création est-il idempotent ?",
+          "code": "aws s3api create-bucket --bucket factures-prod\naws s3api put-bucket-versioning \\\n  --bucket factures-prod \\\n  --versioning-configuration Status=Enabled",
+          "choices": [
+            "Non : la seconde exécution échoue car le bucket existe déjà",
+            "Oui, toujours",
+            "Oui, car il utilise le cloud",
+            "Cela dépend de la région uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un script impératif doit gérer lui-même les cas « existe déjà ». Un outil déclaratif le fait pour nous.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "infra-iac-principes-q5",
+          "prompt": "Que permet l'Infrastructure as Code ?",
+          "choices": [
+            "Recréer un environnement identique pour les tests",
+            "Relire les changements d'infrastructure en pull request",
+            "Connaître l'historique de chaque modification",
+            "Se passer de toute compétence réseau"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'IaC automatise ce qu'on sait faire : il faut toujours comprendre ce qu'on décrit.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-iac-principes-q6",
+          "prompt": "Qu'est-ce qu'une infrastructure immuable ?",
+          "choices": [
+            "On ne modifie pas un serveur en place : on en crée un nouveau à partir d'une image, puis on remplace l'ancien",
+            "Une infrastructure qu'on ne peut jamais changer",
+            "Un serveur sans disque",
+            "Une infrastructure sans réseau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Plus de serveurs « flocons de neige » modifiés au fil des années : chaque instance est identique et jetable, comme un conteneur.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "infra-iac-terraform",
       "title": "Terraform en bref",
       "summary": "Providers, plan, apply, état.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Ressources et providers",
+          "body": "Terraform décrit des ressources en HCL. Les providers (AWS, Azure, Google Cloud, Cloudflare, GitHub...) traduisent ces ressources en appels d'API. Les références entre ressources définissent l'ordre de création.",
+          "code": "resource \"aws_s3_bucket\" \"factures\" {\n  bucket = \"factures-prod\"\n}\n\nresource \"aws_s3_bucket_versioning\" \"v\" {\n  bucket = aws_s3_bucket.factures.id\n  versioning_configuration {\n    status = \"Enabled\"\n  }\n}",
+          "language": "text"
+        },
+        {
+          "title": "Le cycle plan / apply",
+          "body": "terraform plan compare le code, l'état connu et la réalité, puis affiche ce qui sera créé (+), modifié (~) ou détruit (-). terraform apply exécute ce plan. Relire le plan est essentiel : un simple renommage peut se traduire par « détruire puis recréer » une base de données.",
+          "code": "terraform init\nterraform plan -out plan.tfplan\nterraform apply plan.tfplan"
+        },
+        {
+          "title": "L'état",
+          "body": "Le fichier d'état associe chaque ressource du code à son identifiant réel. En équipe, il est stocké à distance (un bucket, Terraform Cloud) avec un verrou pour empêcher deux apply simultanés. Il peut contenir des secrets : il doit être protégé."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-terraform-q1",
+          "prompt": "Quelle commande montre les changements sans les appliquer ?",
+          "choices": [
+            "terraform plan",
+            "terraform apply",
+            "terraform init",
+            "terraform destroy"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le plan est relu (souvent publié en commentaire de la pull request) avant tout apply.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-terraform-q2",
+          "prompt": "Le plan affiche « -/+ aws_db_instance.principale (forces replacement) ». Que faut-il comprendre ?",
+          "choices": [
+            "La base va être détruite puis recréée : ses données seront perdues sans précaution",
+            "La base va être sauvegardée",
+            "Un simple redémarrage",
+            "Rien ne va changer"
+          ],
+          "answerIndex": 0,
+          "explanation": "Certains attributs ne peuvent pas être modifiés en place. lifecycle { prevent_destroy = true } protège les ressources critiques.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-terraform-q3",
+          "prompt": "Pourquoi stocker l'état Terraform à distance avec un verrou ?",
+          "choices": [
+            "Pour que toute l'équipe partage le même état et que deux apply ne s'exécutent pas en même temps",
+            "Pour accélérer le plan",
+            "Parce que le fichier est trop gros pour un poste",
+            "Pour le rendre public"
+          ],
+          "answerIndex": 0,
+          "explanation": "Deux personnes avec des états locaux différents créeraient des doublons ou s'écraseraient mutuellement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-terraform-q4",
+          "prompt": "Dans le code de la leçon, comment Terraform sait-il créer le bucket avant sa configuration de versioning ?",
+          "choices": [
+            "Par la référence aws_s3_bucket.factures.id, qui crée une dépendance implicite",
+            "Par l'ordre des blocs dans le fichier",
+            "Par ordre alphabétique",
+            "Il ne le sait pas, il faut lancer deux apply"
+          ],
+          "answerIndex": 0,
+          "explanation": "Terraform construit un graphe de dépendances à partir des références, et parallélise ce qui est indépendant.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-terraform-q5",
+          "prompt": "Faut-il commiter le fichier terraform.tfstate dans Git ?",
+          "choices": [
+            "Non : il peut contenir des secrets et il faut un stockage distant verrouillé",
+            "Oui, c'est le code source",
+            "Oui, mais seulement en production",
+            "Ce fichier n'existe pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les mots de passe générés, les clés d'accès, etc. apparaissent en clair dans l'état.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "infra-terraform-q6",
+          "prompt": "Quelles bonnes pratiques Terraform sont recommandées ?",
+          "choices": [
+            "Des modules réutilisables pour les motifs répétés",
+            "Des variables pour distinguer les environnements",
+            "Fixer les versions des providers",
+            "Lancer apply sans relire le plan en production"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une mise à jour non contrôlée d'un provider peut changer le comportement des ressources ; un apply sans relecture peut détruire la production.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "infra-iac-configuration",
       "title": "Gestion de configuration",
       "summary": "Ansible et consorts.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Provisionner et configurer",
+          "body": "Terraform crée l'infrastructure (provisionnement) ; un outil de gestion de configuration (Ansible, Chef, Puppet) configure l'intérieur des machines : paquets, fichiers, services, utilisateurs. Ansible se connecte en SSH, sans agent à installer."
+        },
+        {
+          "title": "Un playbook Ansible",
+          "body": "Un playbook liste des tâches appliquées à un groupe de machines de l'inventaire. Chaque module est idempotent : apt avec state: present n'installe nginx que s'il est absent.",
+          "code": "- hosts: web\n  become: true\n  tasks:\n    - name: Installer nginx\n      apt: { name: nginx, state: present }\n    - name: Déployer la configuration\n      template:\n        src: nginx.conf.j2\n        dest: /etc/nginx/nginx.conf\n      notify: recharger nginx\n  handlers:\n    - name: recharger nginx\n      service: { name: nginx, state: reloaded }",
+          "language": "yaml"
+        },
+        {
+          "title": "Et avec les conteneurs ?",
+          "body": "Avec les conteneurs et les images immuables, la configuration des machines passe dans le Dockerfile ou dans des images préparées (Packer). Ansible reste très utilisé pour les serveurs classiques, les équipements réseau et l'automatisation ponctuelle."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-config-q1",
+          "prompt": "Pourquoi dit-on qu'Ansible est « sans agent » ?",
+          "choices": [
+            "Il se connecte aux machines en SSH, sans logiciel à y installer",
+            "Il ne fonctionne qu'en local",
+            "Il n'a pas besoin de réseau",
+            "Il n'utilise pas de fichiers"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chef et Puppet installent un agent sur chaque machine. Ansible n'a besoin que de SSH et de Python sur la cible.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-config-q2",
+          "prompt": "Dans le playbook de la leçon, quand nginx est-il rechargé ?",
+          "choices": [
+            "Seulement si la tâche template a modifié le fichier de configuration",
+            "À chaque exécution du playbook",
+            "Jamais",
+            "Seulement à la première installation"
+          ],
+          "answerIndex": 0,
+          "explanation": "notify ne déclenche le handler que si la tâche rapporte un changement. Les handlers s'exécutent une fois, à la fin.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "infra-config-q3",
+          "prompt": "Cette tâche n'est pas idempotente : elle ajoute une ligne à chaque exécution. Touche la ligne en cause.",
+          "code": "- name: Ajouter le serveur DNS\n  shell: echo \"nameserver 1.1.1.1\" >> /etc/resolv.conf",
+          "language": "yaml",
+          "bugLines": [
+            2
+          ],
+          "explanation": "shell exécute la commande à chaque fois. Le module lineinfile vérifie si la ligne est déjà présente avant de l'ajouter.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-config-q4",
+          "prompt": "Que fait become: true dans un playbook ?",
+          "choices": [
+            "Exécute les tâches avec des privilèges élevés (sudo)",
+            "Rend le playbook plus rapide",
+            "Transforme le serveur en conteneur",
+            "Active le mode test"
+          ],
+          "answerIndex": 0,
+          "explanation": "Installer des paquets ou écrire dans /etc demande les droits root.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-config-q5",
+          "prompt": "Comment vérifier ce qu'un playbook changerait sans rien modifier ?",
+          "choices": [
+            "ansible-playbook site.yml --check --diff",
+            "ansible-playbook site.yml --force",
+            "ansible-playbook site.yml --destroy",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "--check simule l'exécution, --diff montre les modifications de fichiers : l'équivalent du terraform plan.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "infra-config-q6",
+          "prompt": "Associations correctes :",
+          "choices": [
+            "Terraform : créer les machines, réseaux et bases dans le cloud",
+            "Ansible : configurer les paquets et services dans les machines",
+            "Packer : construire des images de machine prêtes à l'emploi",
+            "Ansible : remplacer le fichier d'état de Terraform"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les outils se complètent : on provisionne avec Terraform des machines issues d'images Packer, ou configurées ensuite par Ansible.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "infra-defi-iac",
+    "title": "Défi entretien : Infrastructure as Code",
+    "summary": "Reprendre le contrôle d'un cloud.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "infra-defi5-q1",
+        "prompt": "Cas pratique 1/3 — Toute la production a été créée à la main dans la console, il y a trois ans. Personne ne sait la recréer. Par quoi commencer ?",
+        "choices": [
+          "Importer progressivement les ressources existantes dans Terraform (terraform import ou blocs import)",
+          "Tout supprimer et recréer en Terraform un vendredi",
+          "Continuer à la main",
+          "Prendre des captures d'écran de la console"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'import associe une ressource existante à son code, sans la recréer. Un plan sans changement confirme que le code décrit la réalité.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi5-q2",
+        "prompt": "Cas pratique 2/3 — Comment éviter qu'un apply détruise la base de production par erreur ?",
+        "choices": [
+          "prevent_destroy sur les ressources critiques, plan relu en pull request, et apply uniquement par le pipeline",
+          "Donner les droits d'apply à tous les développeurs",
+          "Ne jamais lancer de plan",
+          "Supprimer le fichier d'état"
+        ],
+        "answerIndex": 0,
+        "explanation": "Plusieurs garde-fous se cumulent : protection dans le code, relecture humaine et automatisation contrôlée.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Recette et production doivent être identiques, à la taille près. Comment l'organiser ?",
+        "choices": [
+          "Un même module, appelé avec des variables différentes par environnement, et des états séparés",
+          "Copier-coller le code pour chaque environnement",
+          "Un seul état pour tous les environnements",
+          "Créer la recette à la main"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le code est partagé, seules les valeurs changent. Des états séparés évitent qu'une erreur en recette touche la production.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi5-q4",
+        "prompt": "Deux membres de l'équipe lancent terraform apply en même temps. Qu'est-ce qui empêche la corruption de l'état ?",
+        "choices": [
+          "Le verrou du backend distant : le second apply attend ou échoue",
+          "Rien",
+          "Git",
+          "Le provider cloud"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est une raison de plus pour ne jamais utiliser d'état local en équipe.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "infra-defi5-q5",
+        "prompt": "Quels contrôles automatiques ajouter dans le pipeline de l'infrastructure ?",
+        "choices": [
+          "terraform fmt et validate",
+          "Un analyseur de sécurité (Checkov, tfsec) qui signale par exemple un bucket public",
+          "Le plan publié en commentaire de la pull request",
+          "Un apply en production sur chaque branche"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'apply en production ne se fait qu'après fusion et relecture, jamais depuis une branche en cours.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi5-q6",
+        "prompt": "En entretien : « Terraform ou Ansible ? »",
+        "choices": [
+          "Les deux répondent à des besoins différents : Terraform provisionne l'infrastructure, Ansible configure les machines",
+          "Terraform remplace complètement Ansible",
+          "Ansible remplace complètement Terraform",
+          "Aucun des deux n'est utilisé en entreprise"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ils se recoupent un peu, mais chacun excelle dans son domaine : le cycle de vie des ressources cloud pour l'un, l'état des systèmes pour l'autre.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

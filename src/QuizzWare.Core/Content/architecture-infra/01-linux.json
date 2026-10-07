@@ -7,19 +7,427 @@
       "id": "infra-linux-processus",
       "title": "Processus et services",
       "summary": "ps, signaux, systemd.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les processus",
+          "body": "Chaque programme en cours d'exécution est un processus, identifié par un PID, avec un processus parent. ps aux les liste, top ou htop les montrent en direct avec leur consommation de CPU et de mémoire.",
+          "code": "ps aux | grep nginx\ntop\npgrep -f api.dll     # PID par nom"
+        },
+        {
+          "title": "Les signaux",
+          "body": "kill envoie un signal à un processus. SIGTERM (15, par défaut) demande poliment l'arrêt : le programme peut terminer ses requêtes et fermer ses fichiers. SIGKILL (9) le tue immédiatement, sans lui laisser la moindre chance de nettoyer. On commence toujours par SIGTERM.",
+          "code": "kill 1234          # SIGTERM\nkill -9 1234       # SIGKILL, en dernier recours"
+        },
+        {
+          "title": "Les services avec systemd",
+          "body": "systemd démarre les services au boot, les redémarre s'ils plantent et centralise leurs logs dans le journal.",
+          "code": "sudo systemctl status nginx\nsudo systemctl restart nginx\nsudo systemctl enable nginx   # au démarrage\njournalctl -u nginx -f        # logs en direct"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-processus-q1",
+          "prompt": "Quel signal kill envoie-t-il par défaut ?",
+          "choices": [
+            "SIGTERM, une demande d'arrêt propre",
+            "SIGKILL, un arrêt immédiat",
+            "SIGHUP",
+            "SIGSTOP"
+          ],
+          "answerIndex": 0,
+          "explanation": "SIGTERM peut être intercepté par le programme pour s'arrêter proprement. C'est aussi le signal que Docker et Kubernetes envoient avant d'arrêter un conteneur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-processus-q2",
+          "prompt": "Pourquoi éviter kill -9 en premier réflexe ?",
+          "choices": [
+            "Le processus ne peut ni finir ses requêtes ni fermer proprement ses fichiers",
+            "Il est plus lent que kill",
+            "Il redémarre le serveur",
+            "Il ne fonctionne qu'en root"
+          ],
+          "answerIndex": 0,
+          "explanation": "SIGKILL ne peut pas être intercepté : des données en cours d'écriture peuvent être corrompues et des connexions coupées net.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-processus-q3",
+          "prompt": "Comment suivre en direct les logs du service api géré par systemd ?",
+          "choices": [
+            "journalctl -u api -f",
+            "systemctl logs api",
+            "cat /var/api.log",
+            "ps aux api"
+          ],
+          "answerIndex": 0,
+          "explanation": "-u filtre sur l'unité systemd, -f suit les nouvelles lignes comme tail -f.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-processus-q4",
+          "prompt": "Le service démarre bien avec systemctl start, mais n'est plus lancé après un redémarrage du serveur. Que manque-t-il ?",
+          "choices": [
+            "sudo systemctl enable api",
+            "sudo systemctl restart api",
+            "sudo kill -9 api",
+            "sudo systemctl status api"
+          ],
+          "answerIndex": 0,
+          "explanation": "start lance le service maintenant ; enable l'active au démarrage. systemctl enable --now fait les deux.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "infra-processus-q5",
+          "prompt": "Complète : trouver le PID du processus api.dll, puis lui demander de s'arrêter proprement.",
+          "code": "pid=$(___ -f api.dll)\nkill -___ \"$pid\"",
+          "answers": [
+            "pgrep",
+            "TERM"
+          ],
+          "distractors": [
+            "grep",
+            "KILL",
+            "ps"
+          ],
+          "explanation": "pgrep -f cherche dans la ligne de commande complète et renvoie les PID. kill -TERM est équivalent à kill tout court.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-processus-q6",
+          "prompt": "Un serveur est lent. Quelle commande montre en direct quels processus consomment le CPU et la mémoire ?",
+          "choices": [
+            "top (ou htop)",
+            "ls -la",
+            "chmod",
+            "echo $PATH"
+          ],
+          "answerIndex": 0,
+          "explanation": "top trie les processus par consommation et affiche la charge moyenne du système.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "infra-linux-fichiers",
       "title": "Fichiers et permissions",
       "summary": "Arborescence, droits, utilisateurs.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "L'arborescence",
+          "body": "Tout part de /. /etc contient la configuration, /var les données variables (/var/log pour les logs), /home les dossiers des utilisateurs, /tmp les fichiers temporaires, /usr/bin les programmes. Sous Linux, « tout est fichier », y compris les périphériques (/dev)."
+        },
+        {
+          "title": "Lire les permissions",
+          "body": "Chaque fichier a un propriétaire, un groupe, et trois triplets de droits : propriétaire, groupe, autres. r (lecture) vaut 4, w (écriture) 2, x (exécution) 1. rwxr-x--- vaut donc 750.",
+          "code": "$ ls -l deploy.sh\n-rwxr-x--- 1 alice ops 812 deploy.sh\n\nchmod 640 config.yml    # rw- r-- ---\nchmod +x deploy.sh\nsudo chown app:app /srv/app"
+        },
+        {
+          "title": "Le moindre privilège",
+          "body": "Un service tourne sous un utilisateur dédié, sans droits root. Un secret n'est lisible que par lui (600). chmod 777 « pour que ça marche » ouvre le fichier en écriture à tout le monde : c'est une faille, pas une solution."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-fichiers-q1",
+          "prompt": "Que signifie chmod 640 sur un fichier ?",
+          "choices": [
+            "Propriétaire : lecture et écriture ; groupe : lecture ; autres : rien",
+            "Tout le monde peut lire",
+            "Propriétaire : tout ; autres : lecture",
+            "Personne ne peut écrire"
+          ],
+          "answerIndex": 0,
+          "explanation": "6 = 4 + 2 (rw-), 4 = r--, 0 = ---.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-fichiers-q2",
+          "prompt": "Où trouve-t-on habituellement la configuration de nginx ?",
+          "choices": [
+            "/etc/nginx",
+            "/home/nginx",
+            "/tmp/nginx",
+            "/dev/nginx"
+          ],
+          "answerIndex": 0,
+          "explanation": "/etc regroupe la configuration du système et des services ; les logs sont dans /var/log/nginx.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-fichiers-q3",
+          "prompt": "Qu'affiche ce script ?",
+          "code": "touch f\nchmod 754 f\nstat -c %A f",
+          "choices": [
+            "-rwxr-xr--",
+            "-rwxrwxr--",
+            "-rw-r-xr--",
+            "-rwxr--r--"
+          ],
+          "answerIndex": 0,
+          "explanation": "7 = rwx, 5 = r-x, 4 = r--. Le premier caractère indique le type : - pour un fichier ordinaire, d pour un dossier.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-fichiers-q4",
+          "prompt": "L'application ne peut pas écrire dans /srv/app/uploads. Quelle correction est la bonne ?",
+          "choices": [
+            "sudo chown app:app /srv/app/uploads, l'utilisateur du service devient propriétaire",
+            "sudo chmod -R 777 /srv",
+            "Lancer l'application en root",
+            "Supprimer le dossier"
+          ],
+          "answerIndex": 0,
+          "explanation": "On donne le droit nécessaire à l'utilisateur qui en a besoin, et à lui seul. 777 ou root règlent le symptôme en ouvrant une faille.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-fichiers-q5",
+          "prompt": "Pour un dossier, que permet le droit x ?",
+          "choices": [
+            "Le traverser : y entrer avec cd et accéder aux fichiers qu'il contient",
+            "Exécuter tous les fichiers qu'il contient",
+            "Le supprimer",
+            "Rien, x n'a pas de sens pour un dossier"
+          ],
+          "answerIndex": 0,
+          "explanation": "r permet de lister son contenu, w d'y créer ou supprimer des fichiers, x de le traverser.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "infra-fichiers-q6",
+          "prompt": "Quelles pratiques respectent le moindre privilège ?",
+          "choices": [
+            "Faire tourner chaque service sous un utilisateur dédié",
+            "Restreindre un fichier de secrets à chmod 600",
+            "Utiliser sudo seulement pour les commandes qui l'exigent",
+            "Se connecter en root par SSH pour gagner du temps"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La connexion SSH en root est généralement désactivée (PermitRootLogin no) : on se connecte avec un compte nominatif, puis on utilise sudo.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "infra-linux-shell",
       "title": "Le shell",
       "summary": "Pipes, redirections, variables.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Pipes et redirections",
+          "body": "Le pipe | branche la sortie d'une commande sur l'entrée de la suivante. > écrit dans un fichier (en l'écrasant), >> ajoute à la fin, 2> redirige les erreurs, 2>&1 envoie les erreurs au même endroit que la sortie standard.",
+          "code": "grep ERROR app.log | sort | uniq -c | sort -rn | head\n./build.sh > build.log 2>&1"
+        },
+        {
+          "title": "Variables et guillemets",
+          "body": "Pas d'espace autour du = dans une affectation. Entre guillemets doubles, les variables sont remplacées ; entre guillemets simples, rien ne l'est. Toujours mettre les variables entre guillemets (\"$f\") pour supporter les espaces. $? contient le code de retour de la dernière commande : 0 signifie succès.",
+          "code": "nom=\"monde\"\necho \"Bonjour $nom\"    # Bonjour monde\necho 'Bonjour $nom'    # Bonjour $nom"
+        },
+        {
+          "title": "Des scripts robustes",
+          "body": "Par défaut, un script continue après une erreur. set -euo pipefail l'arrête à la première commande en échec (-e), sur une variable non définie (-u) et sur une erreur au milieu d'un pipe (pipefail).",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\nfor f in /var/log/app/*.log; do\n    gzip \"$f\"\ndone"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-shell-q1",
+          "prompt": "Qu'affiche ce script ?",
+          "code": "printf 'b\\na\\nb\\nc\\nb\\n' \\\n  | sort | uniq -c \\\n  | sort -rn | head -1",
+          "choices": [
+            "      3 b",
+            "b",
+            "      1 a",
+            "a b c"
+          ],
+          "answerIndex": 0,
+          "explanation": "uniq -c compte les lignes identiques consécutives (d'où le sort avant), sort -rn trie les comptes du plus grand au plus petit.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-shell-q2",
+          "prompt": "Qu'affiche ce script ?",
+          "code": "x=5\necho \"x=$x\" 'x=$x'",
+          "choices": [
+            "x=5 x=$x",
+            "x=5 x=5",
+            "x=$x x=$x",
+            "x=$x x=5"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les guillemets doubles remplacent les variables, les simples gardent le texte tel quel.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "infra-shell-q3",
+          "prompt": "Ce script échoue avec « nom : commande introuvable ». Touche la ligne fautive.",
+          "code": "#!/usr/bin/env bash\nnom = \"api\"\necho \"Déploiement de $nom\"",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Avec des espaces, bash comprend « lancer la commande nom avec les arguments = et api ». L'affectation s'écrit nom=\"api\", sans espace.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-shell-q4",
+          "prompt": "Que fait ./build.sh > build.log 2>&1 ?",
+          "choices": [
+            "Écrit la sortie standard et les erreurs dans build.log",
+            "Écrit uniquement les erreurs dans build.log",
+            "Ajoute la sortie à la fin de build.log",
+            "Affiche la sortie à l'écran et dans build.log"
+          ],
+          "answerIndex": 0,
+          "explanation": "> build.log redirige la sortie standard, puis 2>&1 envoie les erreurs (2) au même endroit que la sortie standard (1). Pour afficher et écrire à la fois, on utilise tee.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-shell-q5",
+          "prompt": "Qu'affiche ce script ?",
+          "code": "set -e\necho debut\nfalse\necho fin",
+          "choices": [
+            "debut",
+            "debut fin",
+            "fin",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "false renvoie le code 1 ; avec set -e, le script s'arrête aussitôt. Sans set -e, il afficherait aussi fin.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "infra-shell-q6",
+          "prompt": "Ce script échoue sur le fichier « rapport final.log ». Touche la ligne fautive.",
+          "code": "for f in /var/log/app/*.log; do\n    gzip $f\ndone",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Sans guillemets, $f est découpé sur les espaces : gzip reçoit « rapport » et « final.log ». Il faut écrire gzip \"$f\".",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "infra-defi-linux",
+    "title": "Défi entretien : Linux",
+    "summary": "Diagnostiquer un serveur.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "infra-defi1-q1",
+        "prompt": "Cas pratique 1/3 — L'API ne répond plus. Quelle est la première commande à lancer sur le serveur ?",
+        "choices": [
+          "systemctl status api, pour voir si le service tourne et ses dernières lignes de log",
+          "sudo reboot",
+          "rm -rf /var/log",
+          "chmod 777 /srv/app"
+        ],
+        "answerIndex": 0,
+        "explanation": "On observe avant d'agir : état du service, code de sortie, dernières erreurs.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Les logs indiquent « No space left on device ». Quelle commande confirme le problème ?",
+        "choices": [
+          "df -h, l'espace libre par système de fichiers",
+          "free -h",
+          "top",
+          "ls"
+        ],
+        "answerIndex": 0,
+        "explanation": "df montre l'espace disque ; free montre la mémoire vive. du -sh /var/log/* aide ensuite à trouver ce qui occupe la place.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Un fichier de log de 40 Go en est la cause. Le service l'a toujours ouvert. Que faire ?",
+        "choices": [
+          "Le vider avec truncate -s 0, puis mettre en place une rotation des logs (logrotate)",
+          "Le supprimer avec rm : l'espace est libéré immédiatement",
+          "Redémarrer le serveur chaque semaine",
+          "Agrandir le disque à chaque fois"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un fichier supprimé mais encore ouvert par un processus occupe toujours son espace disque jusqu'à la fermeture. La rotation évite la récidive.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi1-q4",
+        "prompt": "Qu'affiche ce script ?",
+        "code": "printf '200\\n500\\n200\\n404\\n500\\n500\\n' > codes\ngrep -c '^5' codes",
+        "choices": [
+          "3",
+          "2",
+          "6",
+          "500"
+        ],
+        "answerIndex": 0,
+        "explanation": "grep -c compte les lignes correspondantes : celles qui commencent par 5, soit les trois erreurs 500.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "infra-defi1-q5",
+        "prompt": "Quelles commandes aident à diagnostiquer un problème réseau sur un serveur ?",
+        "choices": [
+          "ss -tlnp, pour voir les ports en écoute et leurs processus",
+          "curl -v http://localhost:8080/health",
+          "dig api.exemple.com, pour vérifier la résolution DNS",
+          "chmod +x"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le service écoute-t-il ? Répond-il localement ? Le nom se résout-il ? On remonte la chaîne étape par étape.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "infra-defi1-q6",
+        "prompt": "Remets dans l'ordre ce script qui trouve les 5 adresses IP les plus fréquentes d'un log d'accès.",
+        "lines": [
+          "cut -d' ' -f1 access.log \\",
+          "  | sort \\",
+          "  | uniq -c \\",
+          "  | sort -rn \\",
+          "  | head -5"
+        ],
+        "explanation": "On extrait le premier champ (l'IP), on trie pour regrouper, on compte, on trie par compte décroissant, on garde les 5 premiers.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

@@ -7,13 +7,315 @@
       "id": "infra-sec-secrets",
       "title": "Gestion des secrets",
       "summary": "Coffres-forts et rotation.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Où ne pas mettre un secret",
+          "body": "Ni dans le code, ni dans un dépôt Git (même privé), ni dans une image Docker, ni dans les logs. Un secret commité reste dans l'historique pour toujours, et chaque clone du dépôt en emporte une copie."
+        },
+        {
+          "title": "Les coffres-forts",
+          "body": "Un gestionnaire de secrets (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault) stocke les secrets chiffrés, contrôle qui y accède et journalise chaque lecture. L'application les récupère au démarrage grâce à son identité, sans secret initial à stocker.",
+          "code": "# récupérer un secret avec l'identité de la machine\naws secretsmanager get-secret-value \\\n  --secret-id prod/api/db \\\n  --query SecretString --output text"
+        },
+        {
+          "title": "Rotation et secrets dynamiques",
+          "body": "Un secret qui ne change jamais finit par fuiter. La rotation régulière limite la durée d'exploitation d'une fuite. Vault peut même générer des identifiants de base de données à la demande, valables une heure : il n'y a plus de mot de passe permanent à voler."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-secrets-q1",
+          "prompt": "Un développeur commite un mot de passe, puis le supprime dans le commit suivant. Le secret est-il protégé ?",
+          "choices": [
+            "Non : il reste dans l'historique Git ; il faut le changer immédiatement",
+            "Oui, le commit suivant l'a effacé",
+            "Oui, si le dépôt est privé",
+            "Oui, Git chiffre l'historique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Réécrire l'historique ne suffit pas non plus : des clones existent déjà. Un secret exposé se considère comme compromis et se remplace.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-secrets-q2",
+          "prompt": "Quel avantage un gestionnaire de secrets apporte-t-il par rapport à des variables d'environnement dans un fichier ?",
+          "choices": [
+            "Contrôle d'accès fin, journal d'audit de chaque lecture et rotation facilitée",
+            "Il rend l'application plus rapide",
+            "Il supprime le besoin de chiffrement",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "On sait qui a lu quel secret et quand, et on peut le changer à un seul endroit.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-secrets-q3",
+          "prompt": "Quel est l'intérêt des identifiants dynamiques générés par Vault ?",
+          "choices": [
+            "Ils expirent rapidement et sont propres à chaque instance : une fuite a une portée et une durée très limitées",
+            "Ils sont plus faciles à retenir",
+            "Ils évitent d'utiliser une base de données",
+            "Ils sont partagés entre toutes les applications"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque identifiant est traçable jusqu'à l'instance qui l'a demandé, et révocable individuellement.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "infra-secrets-q4",
+          "prompt": "Comment empêcher que des secrets arrivent dans le dépôt ?",
+          "choices": [
+            "Un scanner de secrets en hook pre-commit et dans la CI (gitleaks, GitHub secret scanning)",
+            "Demander aux développeurs de faire attention",
+            "Rendre le dépôt privé",
+            "Supprimer les fichiers .env après chaque commit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les scanners reconnaissent les formats de clés connus et bloquent le push. GitHub peut même révoquer automatiquement certaines clés détectées.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "infra-secrets-q5",
+          "prompt": "Ce script de déploiement expose un secret. Touche la ligne en cause.",
+          "code": "#!/usr/bin/env bash\nset -euxo pipefail\nDB_PASS=$(vault kv get -field=pass secret/db)\n./migrer.sh --password \"$DB_PASS\"",
+          "bugLines": [
+            2
+          ],
+          "explanation": "L'option -x affiche chaque commande avec ses valeurs, donc le mot de passe, dans les logs du pipeline. En outre, un argument de ligne de commande est visible par les autres processus (ps) : une variable d'environnement est préférable.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "infra-secrets-q6",
+          "prompt": "Que faire quand une clé d'API a fuité ?",
+          "choices": [
+            "La révoquer et en émettre une nouvelle",
+            "Examiner les journaux d'accès pour voir si elle a été utilisée",
+            "Chercher comment elle a fuité pour éviter que cela recommence",
+            "Attendre son expiration naturelle dans un an"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Révocation immédiate, analyse de l'impact, correction de la cause : c'est un incident de sécurité à part entière.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "infra-sec-supply-chain",
       "title": "Chaîne d'approvisionnement",
       "summary": "Images, dépendances, signatures.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Vous exécutez le code des autres",
+          "body": "Une application moderne embarque des centaines de dépendances et une image de base qui contient un système complet. Une faille (Log4Shell) ou une dépendance piégée (la porte dérobée de xz-utils, des paquets npm malveillants) affecte tous ceux qui les utilisent."
+        },
+        {
+          "title": "Scanner et inventorier",
+          "body": "Un SBOM (Software Bill of Materials) liste tous les composants d'un logiciel, avec leurs versions. Les scanners (Trivy, Grype, Dependabot) comparent cet inventaire aux bases de vulnérabilités connues. Quand une faille est annoncée, on sait en quelques minutes quels services sont touchés.",
+          "code": "trivy image registre/api:1.4.2 \\\n  --severity HIGH,CRITICAL \\\n  --exit-code 1"
+        },
+        {
+          "title": "Signer et vérifier",
+          "body": "Le pipeline signe chaque image qu'il construit (Sigstore, cosign), et le cluster refuse toute image non signée par lui. Un attaquant qui pousse une image dans le registre ne peut pas la faire exécuter. Les fichiers de verrouillage et les condensats (sha256) garantissent qu'on installe exactement ce qui a été vérifié."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-supply-q1",
+          "prompt": "Qu'est-ce qu'un SBOM ?",
+          "choices": [
+            "L'inventaire de tous les composants et versions inclus dans un logiciel",
+            "Un type de pare-feu",
+            "Un format d'image Docker",
+            "Un outil de test de charge"
+          ],
+          "answerIndex": 0,
+          "explanation": "Lors de Log4Shell, les organisations avec des SBOM ont su immédiatement où se trouvait log4j ; les autres ont cherché pendant des semaines.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-supply-q2",
+          "prompt": "Que fait la commande trivy de la leçon dans un pipeline ?",
+          "choices": [
+            "Elle fait échouer le pipeline si l'image contient une vulnérabilité de gravité haute ou critique",
+            "Elle corrige automatiquement les vulnérabilités",
+            "Elle publie l'image",
+            "Elle supprime l'image"
+          ],
+          "answerIndex": 0,
+          "explanation": "--exit-code 1 transforme les découvertes en échec du pipeline : l'image vulnérable n'est pas publiée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-supply-q3",
+          "prompt": "Pourquoi signer les images et vérifier la signature au déploiement ?",
+          "choices": [
+            "Pour garantir que seules les images construites par notre pipeline peuvent s'exécuter",
+            "Pour les compresser",
+            "Pour accélérer leur téléchargement",
+            "Pour les rendre publiques"
+          ],
+          "answerIndex": 0,
+          "explanation": "Même avec un accès en écriture au registre, un attaquant ne peut pas produire la signature du pipeline.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-supply-q4",
+          "prompt": "Un paquet npm populaire publie une version piégée. Qu'est-ce qui protège un projet utilisant package-lock.json et npm ci ?",
+          "choices": [
+            "Les versions et condensats verrouillés : la nouvelle version n'est installée qu'après une mise à jour volontaire",
+            "Rien du tout",
+            "Le pare-feu de l'entreprise",
+            "Le fait que npm est open source"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec npm install et des plages de versions (^1.2.0), le build suivant aurait pu récupérer la version piégée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-supply-q5",
+          "prompt": "Un attaquant publie un paquet nommé « reqeusts » sur PyPI. Comment s'appelle cette attaque ?",
+          "choices": [
+            "Le typosquatting",
+            "L'injection SQL",
+            "Le déni de service",
+            "Le phishing"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il compte sur une faute de frappe lors de l'installation. Un registre interne qui ne relaie que des paquets approuvés limite ce risque.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "infra-supply-q6",
+          "prompt": "Quelles mesures renforcent la chaîne d'approvisionnement ?",
+          "choices": [
+            "Mettre à jour régulièrement les dépendances (Dependabot, Renovate)",
+            "Utiliser des images de base minimales",
+            "Épingler les actions GitHub tierces sur un condensat de commit",
+            "Installer la dernière version de chaque dépendance à chaque build"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une étiquette comme v4 peut être déplacée par l'auteur (ou un attaquant) ; un condensat de commit, non. Les mises à jour se font, mais de façon contrôlée et relue.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "infra-defi-securite",
+    "title": "Défi entretien : sécurité de l'infrastructure",
+    "summary": "Réagir à une faille critique.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "infra-defi8-q1",
+        "prompt": "Cas pratique 1/3 — Une faille critique est annoncée dans une bibliothèque de journalisation très répandue. Première question à se poser ?",
+        "choices": [
+          "Quels services utilisent cette bibliothèque, et dans quelle version ? Les SBOM répondent en minutes",
+          "Qui a écrit cette bibliothèque ?",
+          "Faut-il changer de langage ?",
+          "Faut-il attendre le prochain sprint ?"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans inventaire, il faut fouiller chaque dépôt et chaque image à la main, pendant que les attaquants scannent Internet.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi8-q2",
+        "prompt": "Cas pratique 2/3 — Le correctif ne sera disponible que demain. Que faire d'ici là ?",
+        "choices": [
+          "Appliquer une mitigation (désactiver la fonctionnalité vulnérable, règle de pare-feu applicatif) et surveiller les tentatives d'exploitation",
+          "Ne rien faire jusqu'au correctif",
+          "Éteindre toute l'infrastructure",
+          "Supprimer les logs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les mitigations temporaires réduisent l'exposition en attendant la correction définitive.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi8-q3",
+        "prompt": "Cas pratique 3/3 — Comment déployer le correctif sur 40 services rapidement ?",
+        "choices": [
+          "Grâce à des pipelines automatisés et des mises à jour de dépendances proposées automatiquement (Renovate, Dependabot)",
+          "En se connectant à chaque serveur pour modifier les fichiers",
+          "En envoyant un e-mail à chaque équipe",
+          "En réécrivant les services"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une organisation capable de livrer souvent est aussi capable de corriger vite : la CI/CD est un atout de sécurité.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi8-q4",
+        "prompt": "Que signifie le principe « zero trust » ?",
+        "choices": [
+          "Ne faire confiance à aucune requête par défaut, même depuis le réseau interne : chaque accès est authentifié et autorisé",
+          "Ne faire confiance à aucun employé",
+          "Désactiver toute authentification",
+          "Interdire Internet"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le modèle du « château fort » (tout est permis à l'intérieur du réseau) s'effondre dès qu'un attaquant y met un pied.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "infra-defi8-q5",
+        "prompt": "Quels principes de défense en profondeur appliquer à un cluster ?",
+        "choices": [
+          "Des politiques réseau qui limitent les flux entre pods",
+          "Des conteneurs non root avec un système de fichiers en lecture seule",
+          "Le RBAC : chaque service a un compte avec des droits minimaux",
+          "Un seul compte administrateur partagé"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Chaque couche limite ce qu'un attaquant peut faire s'il franchit la précédente.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi8-q6",
+        "prompt": "En entretien : « Comment sécuriser un pipeline CI/CD ? »",
+        "choices": [
+          "Identifiants temporaires (OIDC), droits minimaux, actions tierces épinglées, protection des branches et revue obligatoire",
+          "Désactiver les logs",
+          "Donner les droits d'administrateur au pipeline pour éviter les erreurs",
+          "Ne jamais mettre à jour les outils"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le pipeline a accès à la production et aux secrets : c'est une cible de choix, à protéger comme la production elle-même.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

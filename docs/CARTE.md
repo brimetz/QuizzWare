@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (71 écrits) | 335 (177 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (77 écrits) | 337 (196 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -79,33 +79,35 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Linux et shell
-   - Processus et services
-   - Fichiers et permissions
-   - Le shell
+1. ✅ Linux et shell
+   - ✅ Processus et services
+   - ✅ Fichiers et permissions
+   - ✅ Le shell
 2. ✅ Conteneurs
    - ✅ Conteneurs et Docker
+   - ✅ Conteneurs en pratique
 3. ✅ Orchestration et scalabilité
    - ✅ Kubernetes et scalabilité
-4. 🕓 CI/CD
-   - Pipelines d'intégration continue
-   - Stratégies de déploiement
-   - GitOps
-5. 🕓 Infrastructure as Code
-   - Principes de l'IaC
-   - Terraform en bref
-   - Gestion de configuration
-6. 🕓 Le cloud
-   - IaaS, PaaS, SaaS, serverless
-   - Réseau cloud
-   - Identités et accès
-7. 🕓 Observabilité et SRE
-   - Supervision et alertes
-   - SLI, SLO et budgets d'erreur
-   - Gestion d'incident
-8. 🕓 Sécurité de l'infrastructure
-   - Gestion des secrets
-   - Chaîne d'approvisionnement
+   - ✅ Manifestes et ressources
+4. ✅ CI/CD
+   - ✅ Pipelines d'intégration continue
+   - ✅ Stratégies de déploiement
+   - ✅ GitOps
+5. ✅ Infrastructure as Code
+   - ✅ Principes de l'IaC
+   - ✅ Terraform en bref
+   - ✅ Gestion de configuration
+6. ✅ Le cloud
+   - ✅ IaaS, PaaS, SaaS, serverless
+   - ✅ Réseau cloud
+   - ✅ Identités et accès
+7. ✅ Observabilité et SRE
+   - ✅ Supervision et alertes
+   - ✅ SLI, SLO et budgets d'erreur
+   - ✅ Gestion d'incident
+8. ✅ Sécurité de l'infrastructure
+   - ✅ Gestion des secrets
+   - ✅ Chaîne d'approvisionnement
 
 **Spécialisations**
 

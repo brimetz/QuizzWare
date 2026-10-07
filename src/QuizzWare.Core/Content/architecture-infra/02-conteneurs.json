@@ -79,8 +79,239 @@
           "answerIndex": 1,
           "explanation": "Le code change souvent : le copier après la restauration des dépendances évite de réinstaller celles-ci à chaque build.",
           "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "infra-conteneurs-q5",
+          "prompt": "Chaque modification d'un fichier source relance l'installation complète des dépendances. Touche la ligne mal placée.",
+          "code": "FROM node:22-alpine\nWORKDIR /app\nCOPY . .\nRUN npm ci\nCMD [\"node\", \"server.js\"]",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Copier tout le code avant npm ci invalide le cache de cette couche à chaque changement. On copie d'abord package.json et package-lock.json, on lance npm ci, puis on copie le reste.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-conteneurs-q6",
+          "prompt": "Un conteneur est supprimé puis recréé. Que deviennent les fichiers que l'application avait écrits dans son système de fichiers ?",
+          "choices": [
+            "Ils sont perdus, sauf s'ils étaient dans un volume",
+            "Ils sont conservés automatiquement",
+            "Ils sont copiés dans l'image",
+            "Ils sont envoyés sur le registre"
+          ],
+          "answerIndex": 0,
+          "explanation": "La couche inscriptible d'un conteneur disparaît avec lui. Les données persistantes vont dans un volume ou, mieux, dans un service externe (base, stockage objet).",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "infra-conteneurs-pratique",
+      "title": "Conteneurs en pratique",
+      "summary": "Volumes, réseau, Compose et sécurité.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Lancer un conteneur",
+          "body": "-p publie un port du conteneur sur l'hôte, -v monte un volume, -e définit une variable d'environnement, -d lance en arrière-plan. La configuration passe par l'environnement : la même image sert en test et en production.",
+          "code": "docker run -d --name db \\\n  -p 5432:5432 \\\n  -e POSTGRES_PASSWORD=dev \\\n  -v pgdata:/var/lib/postgresql/data \\\n  postgres:17\ndocker logs -f db\ndocker exec -it db psql -U postgres"
+        },
+        {
+          "title": "Docker Compose",
+          "body": "Compose décrit plusieurs conteneurs et leurs liens dans un fichier. Sur le réseau créé par Compose, chaque service est joignable par son nom : l'API contacte la base à l'adresse db:5432.",
+          "code": "services:\n  api:\n    build: .\n    ports: [\"8080:8080\"]\n    environment:\n      DB_HOST: db\n    depends_on: [db]\n  db:\n    image: postgres:17\n    volumes: [pgdata:/var/lib/postgresql/data]\nvolumes:\n  pgdata:",
+          "language": "yaml"
+        },
+        {
+          "title": "Des images sûres",
+          "body": "Ne pas tourner en root (instruction USER), utiliser une image de base minimale et une version précise plutôt que latest, ne jamais copier de secret dans l'image (il reste dans les couches même si on le supprime ensuite), et exclure .git, les binaires et les fichiers .env avec un .dockerignore."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-pratique-q1",
+          "prompt": "Que fait l'option -p 8080:80 ?",
+          "choices": [
+            "Le port 8080 de l'hôte redirige vers le port 80 du conteneur",
+            "Le port 80 de l'hôte redirige vers le port 8080 du conteneur",
+            "Le conteneur utilise 8080 processeurs",
+            "Elle limite le conteneur à 80 Mo"
+          ],
+          "answerIndex": 0,
+          "explanation": "La syntaxe est hôte:conteneur. On accède donc à l'application via http://localhost:8080.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-pratique-q2",
+          "prompt": "Dans le fichier Compose de la leçon, quelle adresse l'API utilise-t-elle pour joindre la base ?",
+          "choices": [
+            "db:5432",
+            "localhost:5432",
+            "127.0.0.1:5432",
+            "postgres:17"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans un conteneur, localhost désigne le conteneur lui-même. Compose fournit un DNS interne où chaque service porte son nom.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "infra-pratique-q3",
+          "prompt": "Ce Dockerfile laisse fuiter un secret, même s'il est supprimé. Touche la ligne en cause.",
+          "code": "FROM python:3.13-slim\nWORKDIR /app\nCOPY .npmrc-token /tmp/token\nRUN pip install -r req.txt && rm /tmp/token\nCOPY . .\nUSER app",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Le fichier est inscrit dans la couche créée par COPY : le rm de la couche suivante le masque mais ne l'efface pas. On utilise les secrets de build (RUN --mount=type=secret).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "infra-pratique-q4",
+          "prompt": "Pourquoi éviter l'étiquette latest en production ?",
+          "choices": [
+            "Elle change sans prévenir : deux déploiements peuvent utiliser des images différentes",
+            "Elle est plus lente à télécharger",
+            "Elle est réservée aux images officielles",
+            "Elle n'existe pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "On fige une version précise (postgres:17.2), voire un condensat (@sha256:...), pour des déploiements reproductibles.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "infra-pratique-q5",
+          "prompt": "Que mettre dans un .dockerignore ?",
+          "choices": [
+            ".git",
+            "Les fichiers .env contenant des secrets",
+            "Les dossiers bin, obj ou node_modules",
+            "Le code source de l'application"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Moins de fichiers envoyés au build, c'est un build plus rapide, un cache plus stable et aucun secret embarqué par erreur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-pratique-q6",
+          "prompt": "Comment ouvrir un shell dans un conteneur en cours d'exécution nommé api ?",
+          "choices": [
+            "docker exec -it api sh",
+            "docker run -it api sh",
+            "docker logs api",
+            "docker build api"
+          ],
+          "answerIndex": 0,
+          "explanation": "exec lance une commande dans un conteneur existant ; run en crée un nouveau à partir d'une image.",
+          "difficulty": 1
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "infra-defi-conteneurs",
+    "title": "Défi entretien : conteneurs",
+    "summary": "Optimiser une image.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "infra-defi2-q1",
+        "prompt": "Cas pratique 1/3 — L'image d'une API Go pèse 1,2 Go et met 8 minutes à se construire. Quelle est la cause la plus probable de sa taille ?",
+        "choices": [
+          "Elle embarque toute la chaîne de compilation : il faut un build multi-stage",
+          "Le code Go est trop long",
+          "Docker compresse mal",
+          "Le registre ajoute des fichiers"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un binaire Go statique tient dans une image distroless ou scratch de quelques dizaines de Mo.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "infra-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Remets le Dockerfile dans l'ordre optimal pour le cache.",
+        "lines": [
+          "FROM golang:1.24 AS build",
+          "WORKDIR /src",
+          "COPY go.mod go.sum ./",
+          "RUN go mod download",
+          "COPY . .",
+          "RUN CGO_ENABLED=0 go build -o /api"
+        ],
+        "explanation": "Les dépendances ne sont retéléchargées que si go.mod ou go.sum changent.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi2-q3",
+        "prompt": "Cas pratique 3/3 — Quelle étape finale choisir ?",
+        "choices": [
+          "FROM gcr.io/distroless/static, COPY --from=build /api /api, USER nonroot",
+          "FROM golang:1.24 en gardant tout",
+          "FROM ubuntu:latest avec les outils de debug",
+          "Aucune étape finale"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une image minimale réduit la taille et la surface d'attaque : pas de shell ni de gestionnaire de paquets à exploiter.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi2-q4",
+        "prompt": "Pourquoi l'application doit-elle gérer SIGTERM dans un conteneur ?",
+        "choices": [
+          "docker stop et Kubernetes envoient SIGTERM et attendent un délai avant SIGKILL : c'est le moment de terminer les requêtes en cours",
+          "Pour accélérer le démarrage",
+          "Pour réduire la taille de l'image",
+          "Ce n'est pas nécessaire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans arrêt propre, chaque déploiement coupe des requêtes en plein traitement.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "infra-defi2-q5",
+        "prompt": "Quelles pratiques rendent un conteneur conforme aux « 12 facteurs » ?",
+        "choices": [
+          "La configuration vient des variables d'environnement",
+          "Les logs sont écrits sur la sortie standard",
+          "Le conteneur est sans état et jetable",
+          "Les données sont stockées dans le conteneur"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un conteneur doit pouvoir être détruit et recréé à tout moment : l'état vit dans des services externes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi2-q6",
+        "prompt": "En entretien : « Un conteneur est-il aussi isolé qu'une VM ? »",
+        "choices": [
+          "Non : il partage le noyau de l'hôte ; une faille du noyau peut permettre d'en sortir. On ajoute des protections (non-root, seccomp, gVisor ou microVM)",
+          "Oui, exactement autant",
+          "Plus isolé qu'une VM",
+          "Pas du tout isolé"
+        ],
+        "answerIndex": 0,
+        "explanation": "Pour exécuter du code non fiable, les clouds utilisent des microVM (Firecracker) qui combinent légèreté et isolation matérielle.",
+        "difficulty": 3
+      }
+    ]
+  }
 }

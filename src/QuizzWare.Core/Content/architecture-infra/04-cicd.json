@@ -7,19 +7,426 @@
       "id": "infra-cicd-pipelines",
       "title": "Pipelines d'intégration continue",
       "summary": "Build, tests, artefacts.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "L'intégration continue",
+          "body": "À chaque push ou pull request, un pipeline compile le code, lance les tests et les analyses. Un problème est détecté en minutes, quand le changement est encore frais. Une branche principale toujours verte est la condition pour livrer souvent."
+        },
+        {
+          "title": "Un pipeline GitHub Actions",
+          "body": "Un workflow réagit à des événements (on), et contient des jobs composés d'étapes (steps). Chaque job démarre sur une machine vierge.",
+          "code": "on: [push, pull_request]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-dotnet@v4\n        with: { dotnet-version: 9.0.x }\n      - run: dotnet test -c Release\n      - run: dotnet publish -c Release -o out\n      - uses: actions/upload-artifact@v4\n        with: { name: app, path: out }",
+          "language": "yaml"
+        },
+        {
+          "title": "Construire une fois, déployer partout",
+          "body": "L'artefact (binaire, image Docker) est construit une seule fois, versionné, puis promu de la recette à la production. Reconstruire pour chaque environnement risque de livrer en production autre chose que ce qui a été testé."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-pipelines-q1",
+          "prompt": "Quel est le principal bénéfice de l'intégration continue ?",
+          "choices": [
+            "Détecter les problèmes quelques minutes après chaque changement",
+            "Supprimer le besoin de tests",
+            "Déployer sans artefact",
+            "Rendre les builds plus longs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Plus un bug est détecté tôt, moins il coûte : le contexte est frais et le changement est petit.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-pipelines-q2",
+          "prompt": "Pourquoi construire l'image une seule fois et la promouvoir d'environnement en environnement ?",
+          "choices": [
+            "Pour garantir que la production exécute exactement ce qui a été testé",
+            "Pour économiser de l'espace disque uniquement",
+            "Parce que Docker interdit de reconstruire",
+            "Pour éviter les tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une reconstruction peut récupérer une autre version d'une dépendance ou d'une image de base. Seule la configuration change entre environnements.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-pipelines-q3",
+          "prompt": "Dans le workflow de la leçon, que se passe-t-il si dotnet test échoue ?",
+          "choices": [
+            "Le job s'arrête : publish et l'envoi de l'artefact ne s'exécutent pas",
+            "Les étapes suivantes s'exécutent quand même",
+            "Le workflow réessaie indéfiniment",
+            "Les tests sont ignorés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une étape en échec arrête le job (sauf avec if: always() ou continue-on-error). L'artefact n'est produit que si les tests passent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-pipelines-q4",
+          "prompt": "Le pipeline prend 25 minutes car il retélécharge toutes les dépendances. Que faire ?",
+          "choices": [
+            "Mettre en cache les dépendances entre les exécutions (actions/cache, clé basée sur le fichier de verrouillage)",
+            "Supprimer les tests",
+            "Lancer le pipeline une fois par semaine",
+            "Passer sur une machine locale"
+          ],
+          "answerIndex": 0,
+          "explanation": "La clé de cache change seulement quand le fichier de verrouillage change. Paralléliser les jobs indépendants aide aussi.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "infra-pipelines-q5",
+          "prompt": "Ce workflow expose un secret dans ses logs. Touche la ligne en cause.",
+          "code": "- name: Déployer\n  env:\n    TOKEN: ${{ secrets.DEPLOY_TOKEN }}\n  run: |\n    echo \"Token : $TOKEN\" | base64\n    ./deploy.sh",
+          "language": "yaml",
+          "bugLines": [
+            5
+          ],
+          "explanation": "GitHub masque la valeur exacte du secret dans les logs, mais pas une version transformée (base64). Ne jamais afficher un secret, même encodé.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "infra-pipelines-q6",
+          "prompt": "Que vérifie typiquement un pipeline de pull request ?",
+          "choices": [
+            "La compilation",
+            "Les tests automatisés",
+            "Le formatage et l'analyse statique",
+            "Le déploiement en production"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le déploiement en production a lieu après la fusion, pas sur une branche en cours de revue.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "infra-cicd-deploiement",
       "title": "Stratégies de déploiement",
       "summary": "Rolling, blue / green, canary.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Rolling update",
+          "body": "Les instances sont remplacées progressivement par la nouvelle version. Pas de ressources en double, pas d'interruption, mais pendant la mise à jour, deux versions servent le trafic en même temps : elles doivent être compatibles (API, schéma de base)."
+        },
+        {
+          "title": "Blue / green",
+          "body": "La nouvelle version (green) est déployée à côté de l'ancienne (blue), testée, puis le trafic bascule d'un coup. Le retour arrière est instantané : on rebascule. Le prix : deux environnements complets pendant la bascule."
+        },
+        {
+          "title": "Canary et feature flags",
+          "body": "Le canary envoie d'abord une petite part du trafic (1 %, puis 10 %...) vers la nouvelle version, en surveillant erreurs et latence ; on étend ou on annule. Les feature flags séparent le déploiement du code de l'activation de la fonctionnalité : on livre désactivé, puis on active pour certains utilisateurs."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-deploiement-q1",
+          "prompt": "Quelle stratégie permet de revenir en arrière instantanément en rebasculant le trafic ?",
+          "choices": [
+            "Blue / green",
+            "Rolling update",
+            "Recréer toutes les instances",
+            "Déploiement manuel par SSH"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'ancienne version tourne toujours à côté : la rebascule est immédiate.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-deploiement-q2",
+          "prompt": "Quelle stratégie limite l'impact d'un bug à une petite partie des utilisateurs ?",
+          "choices": [
+            "Canary",
+            "Blue / green avec bascule totale",
+            "Arrêt complet puis redémarrage",
+            "Rolling update sans surveillance"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si le canary à 1 % montre plus d'erreurs, on l'annule : 99 % des utilisateurs n'ont rien vu.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-deploiement-q3",
+          "prompt": "La v2 renomme une colonne en base. Pendant un rolling update, la v1 encore active plante. Que fallait-il faire ?",
+          "choices": [
+            "Une migration en plusieurs étapes : ajouter la nouvelle colonne, écrire dans les deux, migrer, puis supprimer l'ancienne",
+            "Ne jamais renommer de colonne",
+            "Déployer la nuit",
+            "Désactiver les tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le pattern « expand and contract » : chaque étape reste compatible avec la version précédente du code.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "infra-deploiement-q4",
+          "prompt": "Quel est l'avantage principal d'un feature flag ?",
+          "choices": [
+            "Déployer du code sans activer la fonctionnalité, puis l'activer ou la couper sans redéploiement",
+            "Accélérer la compilation",
+            "Remplacer les tests",
+            "Réduire la taille du code"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le déploiement devient une opération technique sans risque, et le lancement une décision produit. Il faut ensuite nettoyer les flags devenus inutiles.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "infra-deploiement-q5",
+          "prompt": "Pendant un canary, quelles métriques comparer entre la nouvelle et l'ancienne version ?",
+          "choices": [
+            "Le taux d'erreur",
+            "La latence (p95, p99)",
+            "Les indicateurs métier, comme le taux de commandes",
+            "Le nombre de commits de la version"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un bug peut ne produire aucune erreur technique tout en faisant chuter les commandes : les métriques métier comptent aussi.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-deploiement-q6",
+          "prompt": "Quelle stratégie demande temporairement le double de ressources ?",
+          "choices": [
+            "Blue / green",
+            "Rolling update",
+            "Canary à 1 %",
+            "Feature flag"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux environnements complets coexistent pendant la bascule. Le rolling update n'ajoute que quelques instances à la fois (maxSurge).",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "infra-cicd-gitops",
       "title": "GitOps",
       "summary": "Le dépôt Git comme source de vérité.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le principe",
+          "body": "L'état souhaité de l'infrastructure et des déploiements est décrit dans un dépôt Git. Un agent dans le cluster (Argo CD, Flux) compare en continu le cluster au dépôt et applique les écarts. On ne déploie plus avec kubectl depuis un poste : on fusionne une pull request."
+        },
+        {
+          "title": "Pull plutôt que push",
+          "body": "En CI/CD classique, le pipeline pousse les changements dans le cluster : il détient des droits d'administration. En GitOps, l'agent tire depuis Git : la CI n'a plus besoin d'accès au cluster. Le pipeline construit l'image, puis met à jour son étiquette dans le dépôt de configuration."
+        },
+        {
+          "title": "Les bénéfices",
+          "body": "Historique complet de qui a changé quoi et pourquoi, revue de code des changements d'infrastructure, retour arrière par git revert, et correction automatique de la dérive : une modification manuelle dans le cluster est écrasée par l'état du dépôt."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-gitops-q1",
+          "prompt": "En GitOps, comment déploie-t-on une nouvelle version ?",
+          "choices": [
+            "En fusionnant un commit qui change l'étiquette de l'image dans le dépôt de configuration",
+            "Avec kubectl apply depuis son poste",
+            "En se connectant en SSH aux nœuds",
+            "En redémarrant le cluster"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'agent détecte le changement dans Git et l'applique. Le dépôt est la seule source de vérité.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-gitops-q2",
+          "prompt": "Un collègue modifie à la main le nombre de réplicas dans le cluster. Que fait Argo CD (en synchronisation automatique) ?",
+          "choices": [
+            "Il détecte la dérive et rétablit la valeur du dépôt",
+            "Il met à jour le dépôt avec la valeur du cluster",
+            "Il supprime le Deployment",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le cluster converge toujours vers Git. Pour changer durablement, on modifie le dépôt.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-gitops-q3",
+          "prompt": "Quel avantage de sécurité apporte le modèle pull du GitOps ?",
+          "choices": [
+            "Le pipeline de CI n'a plus besoin d'identifiants d'administration du cluster",
+            "Le cluster n'a plus besoin de réseau",
+            "Les images n'ont plus besoin d'être signées",
+            "Les secrets deviennent inutiles"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une CI compromise ne peut plus déployer directement en production : elle ne peut que proposer des changements dans Git, soumis à revue.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-gitops-q4",
+          "prompt": "La dernière version pose problème. Quel est le retour arrière en GitOps ?",
+          "choices": [
+            "git revert du commit de déploiement, que l'agent applique",
+            "kubectl rollout undo directement, durablement",
+            "Supprimer le dépôt",
+            "Restaurer une sauvegarde du cluster"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un rollout undo manuel serait écrasé par l'agent à la synchronisation suivante, puisque le dépôt désigne toujours la nouvelle version.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-gitops-q5",
+          "prompt": "Comment stocker des secrets dans un dépôt GitOps ?",
+          "choices": [
+            "Chiffrés (Sealed Secrets, SOPS) ou sous forme de références vers un coffre-fort externe",
+            "En clair, le dépôt est privé",
+            "En base64",
+            "Dans le message de commit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un dépôt privé est cloné sur de nombreux postes et conservé à vie dans l'historique : un secret en clair y est compromis.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "infra-gitops-q6",
+          "prompt": "Quels sont les bénéfices du GitOps ?",
+          "choices": [
+            "L'historique Git trace chaque changement d'infrastructure",
+            "Les changements passent par une revue de code",
+            "La dérive manuelle est corrigée automatiquement",
+            "Il n'y a plus besoin de tests"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "GitOps est une façon de déployer, pas une garantie de qualité : les tests restent indispensables en amont.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "infra-defi-cicd",
+    "title": "Défi entretien : livraison continue",
+    "summary": "Des déploiements qui font peur.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "infra-defi4-q1",
+        "prompt": "Cas pratique 1/3 — Une équipe déploie une fois par mois, un samedi, avec une checklist de 40 étapes manuelles. Les incidents sont fréquents. Quelle est la cause principale ?",
+        "choices": [
+          "Les changements accumulés sont énormes et le processus manuel est source d'erreurs",
+          "Le samedi porte malheur",
+          "Il y a trop de tests",
+          "Les serveurs sont trop récents"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un mois de changements livrés d'un coup : en cas de problème, impossible de savoir lequel est en cause. Livrer souvent, c'est livrer petit.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi4-q2",
+        "prompt": "Cas pratique 2/3 — Par quoi commencer pour améliorer la situation ?",
+        "choices": [
+          "Automatiser le build et les tests dans un pipeline, puis le déploiement en recette",
+          "Déployer directement en production à chaque commit sans test",
+          "Ajouter une seconde checklist",
+          "Interdire les déploiements"
+        ],
+        "answerIndex": 0,
+        "explanation": "On automatise progressivement, de l'intégration vers la livraison, en gagnant la confiance à chaque étape.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi4-q3",
+        "prompt": "Cas pratique 3/3 — L'équipe veut pouvoir livrer chaque jour sans risque majeur. Quelle combinaison ?",
+        "choices": [
+          "Pipeline automatisé, déploiement canary avec surveillance, et feature flags pour les fonctionnalités risquées",
+          "Un déploiement manuel quotidien",
+          "Supprimer l'environnement de recette",
+          "Tout déployer derrière un seul gros flag"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque mécanisme réduit un risque : les tests détectent, le canary limite l'impact, les flags permettent de couper sans redéployer.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi4-q4",
+        "prompt": "Quelle différence entre livraison continue et déploiement continu ?",
+        "choices": [
+          "En livraison continue, chaque version est prête à partir mais un humain décide ; en déploiement continu, tout ce qui passe le pipeline part en production",
+          "Ce sont deux synonymes",
+          "Le déploiement continu n'a pas de tests",
+          "La livraison continue ne concerne que les applications mobiles"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le déploiement continu supprime la dernière validation manuelle : il exige une grande confiance dans les tests et la surveillance.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "infra-defi4-q5",
+        "prompt": "Quels indicateurs DORA mesurent la performance de livraison d'une équipe ?",
+        "choices": [
+          "La fréquence de déploiement",
+          "Le délai entre un commit et sa mise en production",
+          "Le taux d'échec des changements, et le temps de rétablissement",
+          "Le nombre de lignes de code écrites"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les études DORA montrent que vitesse et stabilité vont ensemble : les meilleures équipes livrent souvent et ont moins d'incidents.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi4-q6",
+        "prompt": "Un test échoue une fois sur dix sans raison apparente, et l'équipe relance le pipeline. Quel est le risque ?",
+        "choices": [
+          "L'équipe s'habitue aux échecs et finit par ignorer un vrai problème ; il faut corriger ou isoler le test instable",
+          "Aucun, relancer suffit",
+          "Le pipeline devient plus rapide",
+          "Les tests instables améliorent la couverture"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un pipeline rouge doit signifier quelque chose. Les tests instables (flaky) détruisent la confiance dans toute la chaîne.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

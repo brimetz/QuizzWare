@@ -96,8 +96,228 @@
           "answerIndex": 2,
           "explanation": "La readiness contrôle le routage du trafic ; c'est l'échec de la liveness probe qui provoque un redémarrage.",
           "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "infra-k8s-q6",
+          "prompt": "Un Pod d'un Deployment à 3 réplicas est supprimé à la main. Que se passe-t-il ?",
+          "choices": [
+            "Kubernetes en recrée un pour revenir à 3 réplicas",
+            "Le Deployment passe à 2 réplicas",
+            "Le Deployment est supprimé",
+            "Les deux autres Pods s'arrêtent"
+          ],
+          "answerIndex": 0,
+          "explanation": "Kubernetes est déclaratif : il compare en permanence l'état réel à l'état souhaité, et corrige l'écart (boucle de réconciliation).",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "infra-k8s-manifestes",
+      "title": "Manifestes et ressources",
+      "summary": "Deployments, configuration et limites.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Décrire l'état souhaité",
+          "body": "On décrit les objets en YAML et on les applique avec kubectl apply -f. Le Deployment sélectionne ses Pods par leurs labels ; le Service fait de même pour savoir vers qui router le trafic.",
+          "code": "apiVersion: apps/v1\nkind: Deployment\nmetadata: { name: api }\nspec:\n  replicas: 3\n  selector: { matchLabels: { app: api } }\n  template:\n    metadata: { labels: { app: api } }\n    spec:\n      containers:\n      - name: api\n        image: registre/api:1.4.2\n        resources:\n          requests: { cpu: 250m, memory: 256Mi }\n          limits: { memory: 512Mi }",
+          "language": "yaml"
+        },
+        {
+          "title": "Requests et limits",
+          "body": "Les requests réservent des ressources : le planificateur ne place le Pod que sur un nœud qui les a. Les limits plafonnent : un conteneur qui dépasse sa limite de mémoire est tué (OOMKilled) ; au-delà de sa limite de CPU, il est ralenti. 250m signifie 250 millièmes de cœur."
+        },
+        {
+          "title": "Configuration et mises à jour",
+          "body": "Les ConfigMaps portent la configuration, les Secrets les données sensibles (encodées en base64, ce qui n'est pas un chiffrement). Changer l'image d'un Deployment déclenche une mise à jour progressive (rolling update) : de nouveaux Pods remplacent les anciens au fur et à mesure qu'ils sont prêts.",
+          "code": "kubectl apply -f api.yaml\nkubectl rollout status deployment/api\nkubectl rollout undo deployment/api\nkubectl logs -l app=api --tail=50\nkubectl describe pod api-7d9f-x2k4"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-manifestes-q1",
+          "prompt": "Un Pod redémarre en boucle avec le statut OOMKilled. Que s'est-il passé ?",
+          "choices": [
+            "Le conteneur a dépassé sa limite de mémoire et le noyau l'a tué",
+            "Le CPU était trop lent",
+            "L'image est introuvable",
+            "La readiness probe a échoué"
+          ],
+          "answerIndex": 0,
+          "explanation": "On augmente la limite si le besoin est légitime, ou on cherche une fuite mémoire. Une image introuvable donne ImagePullBackOff.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-manifestes-q2",
+          "prompt": "Un Pod reste dans l'état Pending. Quelle cause est la plus probable ?",
+          "choices": [
+            "Aucun nœud n'a assez de ressources libres pour satisfaire ses requests",
+            "L'application a planté",
+            "La liveness probe échoue",
+            "Le Service est mal configuré"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pending signifie que le Pod n'a pas encore été placé. kubectl describe pod affiche la raison dans ses événements.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-manifestes-q3",
+          "prompt": "La nouvelle version déployée renvoie des erreurs. Quelle commande revient à la version précédente ?",
+          "choices": [
+            "kubectl rollout undo deployment/api",
+            "kubectl delete deployment api",
+            "kubectl rollout status deployment/api",
+            "kubectl scale deployment api --replicas=0"
+          ],
+          "answerIndex": 0,
+          "explanation": "Kubernetes garde l'historique des versions du Deployment. Dans une approche GitOps, on reverte plutôt le commit.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-manifestes-q4",
+          "prompt": "Un Secret Kubernetes contient « cGFzc3dvcmQ= ». Est-ce protégé ?",
+          "choices": [
+            "Non : c'est du base64, décodable par quiconque peut lire le Secret ; il faut restreindre l'accès et chiffrer etcd",
+            "Oui, c'est chiffré en AES",
+            "Oui, seul Kubernetes peut le lire",
+            "Non, car les Secrets sont publics"
+          ],
+          "answerIndex": 0,
+          "explanation": "« cGFzc3dvcmQ= » se décode en « password ». La protection repose sur les droits d'accès (RBAC) et le chiffrement au repos.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "infra-manifestes-q5",
+          "prompt": "Le Service ne route le trafic vers aucun Pod. Touche la ligne fautive.",
+          "code": "kind: Service\nmetadata: { name: api }\nspec:\n  selector: { app: api-web }\n  ports:\n  - port: 80\n    targetPort: 8080",
+          "language": "yaml",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le sélecteur cherche le label app: api-web, alors que les Pods du Deployment portent app: api. Aucun Pod ne correspond.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "infra-manifestes-q6",
+          "prompt": "Que se passe-t-il lors d'un rolling update bien configuré ?",
+          "choices": [
+            "De nouveaux Pods sont créés avec la nouvelle image",
+            "Les anciens Pods sont arrêtés au fur et à mesure que les nouveaux sont prêts",
+            "Le service reste disponible pendant toute la mise à jour",
+            "Tous les Pods sont arrêtés puis recréés en même temps"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "maxSurge et maxUnavailable règlent le rythme. La readiness probe est essentielle : sans elle, du trafic part vers des Pods pas encore prêts.",
+          "difficulty": 2
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "infra-defi-orchestration",
+    "title": "Défi entretien : Kubernetes",
+    "summary": "Un déploiement qui tourne mal.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "infra-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Après un déploiement, les Pods sont en CrashLoopBackOff. Quelle commande regarder en premier ?",
+        "choices": [
+          "kubectl logs <pod> --previous, les logs du conteneur qui vient de planter",
+          "kubectl get nodes",
+          "kubectl delete namespace",
+          "kubectl scale --replicas=100"
+        ],
+        "answerIndex": 0,
+        "explanation": "--previous affiche les logs de l'exécution précédente, celle qui a planté. kubectl describe pod donne aussi le code de sortie.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi3-q2",
+        "prompt": "Cas pratique 2/3 — Les logs disent : « variable DB_URL manquante ». Où la définir ?",
+        "choices": [
+          "Dans un Secret, injecté comme variable d'environnement dans le Deployment",
+          "En dur dans l'image Docker",
+          "Dans le nom du Pod",
+          "Dans les labels du Service"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une URL de base contient souvent un mot de passe : c'est une donnée sensible, gérée hors de l'image.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi3-q3",
+        "prompt": "Cas pratique 3/3 — L'application met 40 s à démarrer, et la liveness probe la tue au bout de 30 s. Que faire ?",
+        "choices": [
+          "Ajouter une startup probe qui laisse le temps de démarrer avant d'activer la liveness",
+          "Supprimer toutes les probes",
+          "Mettre la liveness à 1 heure",
+          "Doubler la mémoire"
+        ],
+        "answerIndex": 0,
+        "explanation": "La startup probe protège le démarrage lent sans affaiblir la détection des blocages une fois l'application lancée.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi3-q4",
+        "prompt": "La liveness probe d'une API vérifie que la base de données répond. La base a un hoquet de 20 secondes. Que se passe-t-il ?",
+        "choices": [
+          "Kubernetes redémarre tous les Pods de l'API, ce qui aggrave la panne",
+          "Rien de grave",
+          "La base redémarre",
+          "Le trafic est mis en pause"
+        ],
+        "answerIndex": 0,
+        "explanation": "La liveness ne doit vérifier que le processus lui-même. Une dépendance indisponible concerne au plus la readiness.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "infra-defi3-q5",
+        "prompt": "Comment le Horizontal Pod Autoscaler peut-il décider d'ajouter des Pods ?",
+        "choices": [
+          "Selon l'utilisation CPU moyenne par rapport aux requests",
+          "Selon la mémoire utilisée",
+          "Selon une métrique personnalisée, comme la profondeur d'une file",
+          "Selon le nombre de lignes de code"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le pourcentage de CPU est calculé par rapport aux requests : sans requests définies, l'autoscaling sur le CPU ne fonctionne pas.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi3-q6",
+        "prompt": "En entretien : « Faut-il Kubernetes pour une application de 3 conteneurs ? »",
+        "choices": [
+          "Pas forcément : un service managé plus simple (Cloud Run, App Service, ECS) suffit souvent ; Kubernetes a un coût d'exploitation réel",
+          "Oui, toujours",
+          "Non, Kubernetes ne gère pas les petites applications",
+          "Oui, sinon les conteneurs ne démarrent pas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Kubernetes brille avec de nombreux services et des équipes plateforme. Pour un petit projet, sa complexité dépasse souvent ses bénéfices.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

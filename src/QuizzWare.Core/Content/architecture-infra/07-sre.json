@@ -7,19 +7,429 @@
       "id": "infra-sre-monitoring",
       "title": "Supervision et alertes",
       "summary": "Métriques, seuils et alertes utiles.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Collecter des métriques",
+          "body": "Prometheus interroge régulièrement les applications (sur /metrics) et stocke des séries temporelles étiquetées. Grafana les affiche en tableaux de bord. Les compteurs (requêtes, erreurs) ne font qu'augmenter : on regarde leur taux de variation.",
+          "code": "# taux d'erreur sur 5 minutes\nsum(rate(http_requests_total{code=~\"5..\"}[5m]))\n  / sum(rate(http_requests_total[5m]))",
+          "language": "text"
+        },
+        {
+          "title": "Les méthodes RED et USE",
+          "body": "Pour un service : RED, le débit (Rate), les erreurs (Errors), la durée (Duration). Pour une ressource (CPU, disque, connexions) : USE, l'utilisation, la saturation, les erreurs. Ces quelques métriques couvrent l'essentiel des problèmes."
+        },
+        {
+          "title": "Des alertes utiles",
+          "body": "Une alerte doit être urgente, actionnable et indiquer un impact réel. Une alerte qui sonne pour rien apprend à l'équipe à les ignorer. On attend qu'une condition dure quelques minutes avant d'alerter, pour ignorer les pics isolés, et chaque alerte renvoie vers une procédure (runbook)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-monitoring-q1",
+          "prompt": "Que mesure la méthode RED pour un service ?",
+          "choices": [
+            "Le débit de requêtes, les erreurs et la durée des requêtes",
+            "La RAM, l'espace disque et le débit réseau",
+            "Le nombre de déploiements",
+            "Le coût de l'infrastructure"
+          ],
+          "answerIndex": 0,
+          "explanation": "Rate, Errors, Duration : ce que l'utilisateur ressent. USE (utilisation, saturation, erreurs) s'applique aux ressources.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-monitoring-q2",
+          "prompt": "Pourquoi applique-t-on rate() à un compteur Prometheus ?",
+          "choices": [
+            "Un compteur ne fait qu'augmenter : sa valeur brute n'a pas de sens, c'est son évolution par seconde qui compte",
+            "Pour le remettre à zéro",
+            "Pour le chiffrer",
+            "rate() ne s'utilise pas sur les compteurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "« 3 millions de requêtes depuis le démarrage » ne dit rien ; « 450 requêtes par seconde » décrit l'activité.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-monitoring-q3",
+          "prompt": "Une alerte « CPU > 80 % » réveille l'astreinte trois fois par semaine, sans impact sur les utilisateurs. Que faire ?",
+          "choices": [
+            "La remplacer par une alerte sur un symptôme (taux d'erreur, latence) et garder le CPU sur un tableau de bord",
+            "Baisser le seuil à 50 %",
+            "Ignorer l'alerte quand elle sonne",
+            "Couper toutes les alertes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un CPU élevé n'est pas un problème en soi. On alerte sur ce qui touche les utilisateurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-monitoring-q4",
+          "prompt": "Pourquoi exiger qu'une condition dure 5 minutes avant de déclencher l'alerte ?",
+          "choices": [
+            "Pour ignorer les pics brefs qui se résorbent seuls",
+            "Pour retarder volontairement la réponse",
+            "Pour économiser de la mémoire",
+            "C'est imposé par Prometheus"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le compromis : trop court, les fausses alertes se multiplient ; trop long, on détecte tard.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-monitoring-q5",
+          "prompt": "Que doit contenir un runbook associé à une alerte ?",
+          "choices": [
+            "Ce que signifie l'alerte, comment vérifier l'impact et les actions de mitigation",
+            "Le code source de l'application",
+            "La liste des employés",
+            "Rien, l'astreinte improvise"
+          ],
+          "answerIndex": 0,
+          "explanation": "À 3 h du matin, une procédure claire fait gagner un temps précieux, surtout à quelqu'un qui ne connaît pas le service.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "infra-monitoring-q6",
+          "prompt": "Que mesure la méthode USE pour un disque ?",
+          "choices": [
+            "L'utilisation : la part du temps où il est occupé",
+            "La saturation : la file d'attente des opérations",
+            "Les erreurs d'entrée-sortie",
+            "Le nombre d'utilisateurs connectés"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un disque à 100 % d'utilisation avec une longue file d'attente est un goulot d'étranglement.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "infra-sre-slo",
       "title": "SLI, SLO et budgets d'erreur",
       "summary": "Quantifier la fiabilité.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Trois sigles",
+          "body": "Un SLI (indicateur) est une mesure de ce que vivent les utilisateurs : la part des requêtes réussies, ou servies en moins de 300 ms. Un SLO (objectif) fixe une cible pour ce SLI sur une période : 99,9 % sur 30 jours. Un SLA (accord) est un engagement contractuel, avec pénalités, toujours moins exigeant que le SLO interne."
+        },
+        {
+          "title": "Le budget d'erreur",
+          "body": "Un SLO de 99,9 % autorise 0,1 % d'échecs : c'est le budget d'erreur. Tant qu'il en reste, l'équipe livre librement. S'il est épuisé, elle ralentit les nouveautés et investit dans la fiabilité. Le budget transforme un débat d'opinions (« on livre ou pas ? ») en décision fondée sur des données."
+        },
+        {
+          "title": "100 % n'est pas l'objectif",
+          "body": "Chaque « 9 » supplémentaire coûte beaucoup plus cher, et l'utilisateur ne voit pas la différence : son propre réseau mobile est moins fiable que 99,99 %. Le bon SLO est celui en dessous duquel les utilisateurs sont réellement mécontents."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-slo-q1",
+          "prompt": "Lequel est un bon SLI pour une API ?",
+          "choices": [
+            "La proportion de requêtes réussies servies en moins de 300 ms",
+            "L'utilisation CPU des serveurs",
+            "Le nombre de lignes de code",
+            "Le nombre de serveurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un SLI mesure l'expérience de l'utilisateur, pas l'état interne des machines.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-slo-q2",
+          "prompt": "SLO de 99,9 % de requêtes réussies, 10 millions de requêtes ce mois-ci. Combien d'échecs le budget autorise-t-il ?",
+          "choices": [
+            "10 000",
+            "1 000",
+            "100 000",
+            "999"
+          ],
+          "answerIndex": 0,
+          "explanation": "0,1 % de 10 millions = 10 000 requêtes en échec.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-slo-q3",
+          "prompt": "Le budget d'erreur du mois est épuisé au 12. Que prévoit une politique de budget d'erreur ?",
+          "choices": [
+            "Geler les livraisons risquées et prioriser les travaux de fiabilité jusqu'à ce que le budget se reconstitue",
+            "Continuer comme si de rien n'était",
+            "Relever le SLO à 99,99 %",
+            "Licencier l'astreinte"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le budget aligne développement et exploitation : la vitesse est permise tant que la fiabilité est au rendez-vous.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-slo-q4",
+          "prompt": "Pourquoi le SLA contractuel est-il moins exigeant que le SLO interne ?",
+          "choices": [
+            "Pour garder une marge : on veut être alerté et réagir bien avant de devoir payer des pénalités",
+            "Parce que les clients ne lisent pas les contrats",
+            "C'est une obligation légale",
+            "Ils sont toujours identiques"
+          ],
+          "answerIndex": 0,
+          "explanation": "Par exemple : SLO à 99,95 %, SLA à 99,9 %.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-slo-q5",
+          "prompt": "Pourquoi viser 100 % de disponibilité est-il une erreur ?",
+          "choices": [
+            "Le coût explose, les livraisons se figent, et l'utilisateur ne perçoit pas la différence",
+            "Parce que c'est trop facile",
+            "Parce que les clouds l'interdisent",
+            "Ce n'est pas une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Viser 100 % interdit tout risque, donc tout changement. Et les dépendances (réseau, DNS, fournisseur) ne sont pas à 100 % non plus.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "infra-slo-q6",
+          "prompt": "Quelles affirmations sur les SLO sont vraies ?",
+          "choices": [
+            "Ils se mesurent sur une fenêtre glissante, par exemple 30 jours",
+            "On peut alerter sur la vitesse de consommation du budget (burn rate)",
+            "Ils doivent refléter ce que les utilisateurs considèrent comme acceptable",
+            "Un SLO doit toujours être à 100 %"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le burn rate permet d'alerter tôt : si le budget du mois est consommé au rythme de 14 fois la normale, il sera épuisé en deux jours.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "infra-sre-incidents",
       "title": "Gestion d'incident",
       "summary": "Astreinte, communication, post-mortem.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des rôles clairs",
+          "body": "Lors d'un incident sérieux, un responsable d'incident coordonne sans forcément corriger lui-même, un ou plusieurs intervenants enquêtent et agissent, et quelqu'un se charge de la communication (page de statut, équipes support, direction). Sans rôles, tout le monde enquête et personne ne communique."
+        },
+        {
+          "title": "Mitiger d'abord",
+          "body": "La priorité est de rétablir le service, pas de comprendre la cause : retour à la version précédente, bascule vers une autre région, désactivation d'une fonctionnalité, ajout de capacité. L'analyse approfondie vient une fois les utilisateurs tirés d'affaire."
+        },
+        {
+          "title": "Le post-mortem sans reproche",
+          "body": "Après l'incident : chronologie, impact, causes profondes, ce qui a bien ou mal fonctionné, et des actions concrètes avec un responsable et une échéance. On cherche ce qui dans le système a permis l'erreur, pas un coupable : une personne qui craint d'être blâmée cache des informations."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-incidents-q1",
+          "prompt": "Un incident commence juste après un déploiement. Quelle est la première action ?",
+          "choices": [
+            "Revenir à la version précédente, puis enquêter",
+            "Lire tout le diff pour trouver le bug",
+            "Écrire un correctif et le déployer en urgence",
+            "Attendre la réunion du lendemain"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le retour arrière est rapide et sûr ; un correctif écrit sous pression risque d'aggraver la situation.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-incidents-q2",
+          "prompt": "Quel est le rôle du responsable d'incident ?",
+          "choices": [
+            "Coordonner : répartir le travail, prendre les décisions et s'assurer que la communication est faite",
+            "Écrire tout le code de correction lui-même",
+            "Trouver le coupable",
+            "Rédiger le communiqué de presse"
+          ],
+          "answerIndex": 0,
+          "explanation": "Celui qui coordonne garde une vue d'ensemble ; plongé dans le débogage, il la perdrait.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-incidents-q3",
+          "prompt": "Le post-mortem conclut : « Cause : erreur humaine de Paul ». Quel est le problème ?",
+          "choices": [
+            "Ce n'est pas une cause profonde : il faut comprendre pourquoi le système a permis cette erreur",
+            "Il faut ajouter le nom de son manager",
+            "Aucun, c'est une bonne conclusion",
+            "Il manque la date"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pourquoi une commande aussi dangereuse était-elle possible sans confirmation ? Pourquoi aucun test ne l'a-t-il détecté ? Ce sont ces questions qui évitent la récidive.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "infra-incidents-q4",
+          "prompt": "Remets dans l'ordre les étapes d'un incident.",
+          "language": "text",
+          "lines": [
+            "Détection (alerte ou signalement)",
+            "Déclaration de l'incident et attribution des rôles",
+            "Mitigation : le service est rétabli",
+            "Résolution de la cause",
+            "Post-mortem et actions de suivi"
+          ],
+          "explanation": "La mitigation précède la résolution : on rétablit d'abord, on répare durablement ensuite.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-incidents-q5",
+          "prompt": "Pendant une panne, les clients inondent le support. Que publier ?",
+          "choices": [
+            "Une mise à jour régulière sur la page de statut, même sans nouvelle information",
+            "Rien jusqu'à la résolution",
+            "Un message technique détaillé avec les noms des serveurs",
+            "Une promesse de résolution dans 5 minutes"
+          ],
+          "answerIndex": 0,
+          "explanation": "« Nous enquêtons, prochaine mise à jour dans 30 minutes » rassure davantage que le silence. On évite de promettre un délai incertain.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "infra-incidents-q6",
+          "prompt": "Qu'est-ce qui rend une astreinte soutenable ?",
+          "choices": [
+            "Peu d'alertes, toutes actionnables",
+            "Des runbooks à jour",
+            "Une rotation équitable et le temps de récupérer après une nuit difficile",
+            "Une seule personne d'astreinte en permanence"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une astreinte épuisante fait fuir les meilleurs ingénieurs et augmente les erreurs.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "infra-defi-sre",
+    "title": "Défi entretien : SRE",
+    "summary": "Définir la fiabilité d'un service.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "infra-defi7-q1",
+        "prompt": "Cas pratique 1/3 — On lance un service de paiement. Quel SLI de disponibilité choisir ?",
+        "choices": [
+          "La proportion de tentatives de paiement qui aboutissent sans erreur serveur",
+          "Le temps de fonctionnement des machines virtuelles",
+          "Le nombre de pods",
+          "La mémoire disponible"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les machines peuvent tourner pendant que les paiements échouent. On mesure ce que vit l'utilisateur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi7-q2",
+        "prompt": "Cas pratique 2/3 — Le service dépend d'un fournisseur bancaire disponible à 99,9 %. Peut-on promettre un SLO de 99,99 % ?",
+        "choices": [
+          "Non, sauf à avoir plusieurs fournisseurs ou un mécanisme de repli : un service ne peut pas être plus fiable que ses dépendances critiques",
+          "Oui, sans problème",
+          "Oui, avec plus de serveurs",
+          "Oui, en ajoutant des retries uniquement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les retries aident pour les erreurs brèves, mais pas quand le fournisseur est en panne pendant une heure.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi7-q3",
+        "prompt": "Cas pratique 3/3 — Quelle alerte configurer ?",
+        "choices": [
+          "Une alerte sur la vitesse de consommation du budget d'erreur, par exemple quand 2 % du budget mensuel brûle en une heure",
+          "Une alerte à chaque erreur",
+          "Une alerte sur le CPU",
+          "Aucune alerte"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les alertes de burn rate se déclenchent vite pour une panne grave et ignorent les erreurs isolées sans conséquence.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi7-q4",
+        "prompt": "Que mesurent le MTTD et le MTTR ?",
+        "choices": [
+          "Le temps moyen pour détecter un incident, et pour rétablir le service",
+          "Le nombre de déploiements et de tests",
+          "La mémoire et le temps de réponse",
+          "Le coût des incidents"
+        ],
+        "answerIndex": 0,
+        "explanation": "Réduire ces deux durées limite l'impact des incidents, qui sont inévitables.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "infra-defi7-q5",
+        "prompt": "Que peut contenir le travail d'un ingénieur SRE ?",
+        "choices": [
+          "Automatiser les tâches manuelles répétitives (le « toil »)",
+          "Définir et suivre les SLO avec les équipes produit",
+          "Animer les post-mortems",
+          "Interdire tout déploiement"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Chez Google, les SRE limitent le toil à 50 % de leur temps : le reste sert à améliorer les systèmes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi7-q6",
+        "prompt": "En entretien : « Comment rendre un service fiable ? » Quelle réponse est la plus structurée ?",
+        "choices": [
+          "Mesurer (SLI), fixer un objectif (SLO), détecter les écarts (alertes), réagir (incidents) et apprendre (post-mortems)",
+          "Acheter de meilleurs serveurs",
+          "Ne plus rien déployer",
+          "Ajouter des logs partout"
+        ],
+        "answerIndex": 0,
+        "explanation": "La fiabilité est un processus continu, piloté par des mesures.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

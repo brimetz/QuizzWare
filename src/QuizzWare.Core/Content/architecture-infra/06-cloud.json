@@ -7,19 +7,426 @@
       "id": "infra-cloud-modeles",
       "title": "IaaS, PaaS, SaaS, serverless",
       "summary": "Qui gère quoi.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La responsabilité partagée",
+          "body": "IaaS (machines virtuelles) : le fournisseur gère le matériel et la virtualisation, vous gérez l'OS, ses mises à jour et tout le reste. PaaS (App Service, Cloud Run, Heroku) : vous fournissez le code ou le conteneur, la plateforme gère l'OS et la mise à l'échelle. SaaS (Gmail, Salesforce) : vous utilisez simplement le logiciel."
+        },
+        {
+          "title": "Le serverless",
+          "body": "Avec les fonctions (AWS Lambda, Azure Functions), on écrit une fonction déclenchée par un événement : requête HTTP, fichier déposé, message. On paie à l'exécution, et à zéro trafic on ne paie rien. Contreparties : démarrages à froid, durée d'exécution limitée, dépendance au fournisseur."
+        },
+        {
+          "title": "Stockage et services managés",
+          "body": "Le stockage objet (S3, Blob Storage) conserve des fichiers à très bas coût, avec une durabilité extrême. Les bases managées (RDS, Cloud SQL) prennent en charge sauvegardes, réplication et mises à jour. Chaque service managé retire du travail d'exploitation, contre moins de contrôle et un coût unitaire plus élevé."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-modeles-q1",
+          "prompt": "Sur une machine virtuelle (IaaS), qui applique les mises à jour de sécurité de l'OS ?",
+          "choices": [
+            "Vous",
+            "Le fournisseur cloud",
+            "Personne, ce n'est pas nécessaire",
+            "Le fabricant du processeur"
+          ],
+          "answerIndex": 0,
+          "explanation": "En IaaS, tout ce qui est au-dessus de l'hyperviseur vous revient. C'est la principale charge que le PaaS supprime.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-modeles-q2",
+          "prompt": "Une fonction doit redimensionner chaque image déposée dans un bucket, quelques centaines de fois par jour. Quel modèle convient le mieux ?",
+          "choices": [
+            "Une fonction serverless déclenchée par le dépôt du fichier",
+            "Une VM allumée en permanence",
+            "Un cluster Kubernetes dédié",
+            "Un serveur physique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un trafic faible et par événements est le cas idéal : on ne paie que les quelques secondes d'exécution.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-modeles-q3",
+          "prompt": "Qu'est-ce qu'un démarrage à froid (cold start) ?",
+          "choices": [
+            "Le délai supplémentaire quand la plateforme doit créer une nouvelle instance de la fonction",
+            "Le démarrage d'un serveur dans un datacenter froid",
+            "Une panne du fournisseur",
+            "Le premier déploiement d'une application"
+          ],
+          "answerIndex": 0,
+          "explanation": "Après une période d'inactivité, la première requête attend le démarrage de l'environnement. Gênant pour une API sensible à la latence.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-modeles-q4",
+          "prompt": "Où stocker les photos de profil téléversées par des millions d'utilisateurs ?",
+          "choices": [
+            "Dans un stockage objet (S3, Blob Storage), éventuellement servi par un CDN",
+            "Dans une colonne de la base de données",
+            "Sur le disque local du serveur web",
+            "Dans le dépôt Git"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le disque local disparaît avec l'instance et n'est pas partagé entre serveurs. Le stockage objet est conçu pour cela.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "infra-modeles-q5",
+          "prompt": "Que gère une base de données managée à votre place ?",
+          "choices": [
+            "Les sauvegardes automatiques",
+            "Les correctifs du moteur",
+            "La réplication et la bascule en cas de panne",
+            "La conception de votre schéma et de vos index"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La modélisation et les performances des requêtes restent votre responsabilité.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-modeles-q6",
+          "prompt": "Une API reçoit un trafic constant et élevé, 24 h sur 24. Pourquoi le serverless peut-il coûter plus cher que des conteneurs ?",
+          "choices": [
+            "Le prix à l'exécution devient supérieur à celui d'instances utilisées en continu",
+            "Le serverless ne supporte pas HTTP",
+            "Le serverless est toujours plus cher",
+            "Les conteneurs sont gratuits"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le serverless est imbattable pour un trafic faible ou irrégulier ; pour une charge constante, des instances réservées sont souvent moins chères.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "infra-cloud-reseau",
       "title": "Réseau cloud",
       "summary": "VPC, sous-réseaux, groupes de sécurité.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le réseau privé virtuel",
+          "body": "Un VPC (VNet chez Azure) est un réseau privé isolé, avec sa plage d'adresses (par exemple 10.0.0.0/16). On le découpe en sous-réseaux, répartis dans plusieurs zones de disponibilité (des datacenters distincts) pour survivre à la panne de l'un d'eux."
+        },
+        {
+          "title": "Public ou privé",
+          "body": "Un sous-réseau public a une route vers Internet : on y place le load balancer. Un sous-réseau privé n'en a pas : on y place les serveurs d'application et les bases. Pour que les machines privées sortent (mises à jour, API externes), on passe par une passerelle NAT, qui n'accepte aucune connexion entrante."
+        },
+        {
+          "title": "Les groupes de sécurité",
+          "body": "Un groupe de sécurité est un pare-feu attaché aux ressources. Tout est refusé par défaut, et on autorise des flux précis. On peut désigner une source par un autre groupe : « la base accepte le port 5432 depuis le groupe des serveurs d'application »."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-reseau-cloud-q1",
+          "prompt": "Où placer la base de données d'une application web ?",
+          "choices": [
+            "Dans un sous-réseau privé, accessible uniquement depuis les serveurs d'application",
+            "Dans un sous-réseau public avec une IP publique",
+            "Sur le load balancer",
+            "Hors du VPC"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une base n'a aucune raison d'être joignable depuis Internet. Des milliers de bases exposées sont piratées chaque année.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-reseau-cloud-q2",
+          "prompt": "Quelle règle est la plus sûre pour la base PostgreSQL ?",
+          "choices": [
+            "Port 5432 autorisé depuis le groupe de sécurité des serveurs d'application",
+            "Port 5432 autorisé depuis 0.0.0.0/0",
+            "Tous les ports autorisés depuis le VPC",
+            "Tous les ports autorisés depuis Internet"
+          ],
+          "answerIndex": 0,
+          "explanation": "0.0.0.0/0 signifie « n'importe quelle adresse ». Référencer un groupe autorise exactement les serveurs concernés, même si leurs IP changent.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-reseau-cloud-q3",
+          "prompt": "Les serveurs d'un sous-réseau privé doivent télécharger des mises à jour. Que faut-il ?",
+          "choices": [
+            "Une passerelle NAT : connexions sortantes possibles, aucune connexion entrante",
+            "Une IP publique sur chaque serveur",
+            "Déplacer les serveurs dans un sous-réseau public",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le NAT traduit les adresses privées en une adresse publique pour les connexions sortantes uniquement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-reseau-cloud-q4",
+          "prompt": "Pourquoi répartir les sous-réseaux sur plusieurs zones de disponibilité ?",
+          "choices": [
+            "Pour que l'application survive à la panne d'un datacenter entier",
+            "Pour réduire la facture",
+            "Parce qu'un sous-réseau ne peut contenir qu'une machine",
+            "Pour accélérer le DNS"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une zone peut tomber (électricité, réseau, incendie). Avec des instances dans plusieurs zones, le load balancer redirige le trafic.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-reseau-cloud-q5",
+          "prompt": "Combien d'adresses contient la plage 10.0.1.0/24 ?",
+          "choices": [
+            "256",
+            "24",
+            "65 536",
+            "16"
+          ],
+          "answerIndex": 0,
+          "explanation": "/24 fixe les 24 premiers bits : il reste 8 bits, soit 2⁸ = 256 adresses (dont quelques-unes réservées par le fournisseur). /16 en contient 65 536.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "infra-reseau-cloud-q6",
+          "prompt": "Comment un administrateur peut-il accéder à une machine d'un sous-réseau privé ?",
+          "choices": [
+            "Via un bastion, une machine durcie dédiée à l'accès",
+            "Via un service d'accès managé (AWS Systems Manager, Azure Bastion)",
+            "Via un VPN vers le VPC",
+            "En ouvrant SSH à tout Internet sur la machine"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le port 22 ouvert sur Internet subit des tentatives de connexion en continu. Les services managés évitent même d'exposer SSH.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "infra-cloud-iam",
       "title": "Identités et accès",
       "summary": "Rôles, politiques, moindre privilège.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Qui peut faire quoi sur quoi",
+          "body": "L'IAM associe des identités (utilisateurs, groupes, services) à des permissions sur des ressources. Une politique liste des actions autorisées (s3:GetObject) sur des ressources précises. Tout ce qui n'est pas autorisé est refusé.",
+          "code": "{\n  \"Effect\": \"Allow\",\n  \"Action\": [\"s3:GetObject\", \"s3:PutObject\"],\n  \"Resource\": \"arn:aws:s3:::factures-prod/*\"\n}",
+          "language": "text"
+        },
+        {
+          "title": "Des rôles plutôt que des clés",
+          "body": "Une application ne devrait pas utiliser de clé d'accès permanente stockée dans un fichier : elle fuit, ne tourne jamais et donne souvent trop de droits. On attribue un rôle à la ressource (identité managée, rôle d'instance) : elle obtient des identifiants temporaires, renouvelés automatiquement."
+        },
+        {
+          "title": "Le moindre privilège",
+          "body": "Chaque identité reçoit uniquement les permissions nécessaires à sa tâche, sur les ressources concernées. Les comptes humains utilisent l'authentification multifacteur, et le compte racine du cloud n'est jamais utilisé au quotidien."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "infra-iam-q1",
+          "prompt": "Comment une application sur une VM devrait-elle accéder à un bucket ?",
+          "choices": [
+            "Avec un rôle attribué à la VM, qui fournit des identifiants temporaires",
+            "Avec la clé d'accès d'un administrateur dans un fichier de configuration",
+            "Avec le compte racine",
+            "En rendant le bucket public"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pas de secret à stocker ni à faire tourner : le SDK récupère automatiquement des identifiants de courte durée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-iam-q2",
+          "prompt": "Le service de facturation n'écrit que dans le bucket factures-prod. Quelle politique lui donner ?",
+          "choices": [
+            "s3:PutObject sur arn:aws:s3:::factures-prod/*",
+            "s3:* sur *",
+            "AdministratorAccess",
+            "Aucune, il hérite des droits de l'équipe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si le service est compromis, l'attaquant ne pourra qu'écrire dans ce bucket, pas lire toutes les données ni supprimer l'infrastructure.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "infra-iam-q3",
+          "prompt": "Une clé d'accès AWS est poussée par erreur dans un dépôt GitHub public. Que faire en premier ?",
+          "choices": [
+            "Révoquer la clé immédiatement, puis analyser son utilisation dans les journaux d'audit",
+            "Supprimer le commit et considérer l'incident clos",
+            "Rendre le dépôt privé",
+            "Attendre de voir s'il se passe quelque chose"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des robots scannent GitHub en permanence : une clé publiée est exploitée en quelques minutes. Réécrire l'historique ne suffit pas, elle a déjà été copiée.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "infra-iam-q4",
+          "prompt": "Cette politique pour un service qui lit des rapports est bien trop large. Touche la ligne en cause.",
+          "code": "{\n  \"Effect\": \"Allow\",\n  \"Action\": \"s3:*\",\n  \"Resource\": \"arn:aws:s3:::rapports/*\"\n}",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "s3:* autorise aussi la suppression et l'écriture. Pour lire, s3:GetObject suffit.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "infra-iam-q5",
+          "prompt": "À quoi doit servir le compte racine d'un compte cloud ?",
+          "choices": [
+            "À presque rien : protégé par MFA, utilisé seulement pour les rares tâches qui l'exigent",
+            "Au travail quotidien des administrateurs",
+            "Aux pipelines de déploiement",
+            "Aux applications de production"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il a tous les droits sans restriction possible. On travaille avec des identités nominatives aux droits limités.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "infra-iam-q6",
+          "prompt": "Quelles pratiques réduisent le risque lié aux identités ?",
+          "choices": [
+            "L'authentification multifacteur pour les humains",
+            "Des identités managées pour les applications",
+            "Des pipelines CI qui obtiennent des identifiants temporaires par OIDC",
+            "Une clé d'accès partagée par toute l'équipe"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Avec OIDC, GitHub Actions obtient un jeton de courte durée auprès du cloud, sans aucun secret stocké. Une clé partagée rend tout audit impossible.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "infra-defi-cloud",
+    "title": "Défi entretien : architecture cloud",
+    "summary": "Héberger une application web.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "infra-defi6-q1",
+        "prompt": "Cas pratique 1/3 — On héberge une API et sa base PostgreSQL. Quelle architecture réseau ?",
+        "choices": [
+          "Load balancer en sous-réseau public, API et base en sous-réseaux privés, sur deux zones",
+          "Tout dans un sous-réseau public",
+          "Une seule VM avec une IP publique",
+          "La base en public, l'API en privé"
+        ],
+        "answerIndex": 0,
+        "explanation": "Seul le load balancer est exposé ; le reste n'est joignable que depuis l'intérieur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi6-q2",
+        "prompt": "Cas pratique 2/3 — Quels groupes de sécurité ?",
+        "choices": [
+          "LB : 443 depuis Internet ; API : son port depuis le groupe du LB ; base : 5432 depuis le groupe de l'API",
+          "Tout ouvert entre toutes les ressources",
+          "443 ouvert sur la base",
+          "Aucune règle, le VPC suffit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque niveau n'accepte que le niveau précédent : une défense en profondeur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi6-q3",
+        "prompt": "Cas pratique 3/3 — Comment l'API obtient-elle le mot de passe de la base ?",
+        "choices": [
+          "Depuis un gestionnaire de secrets, avec l'identité managée de l'API",
+          "En dur dans l'image",
+          "Dans une variable du dépôt Git",
+          "Dans le nom de la base"
+        ],
+        "answerIndex": 0,
+        "explanation": "Mieux encore : certaines bases acceptent une authentification par identité (IAM), sans mot de passe du tout.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi6-q4",
+        "prompt": "La facture cloud a doublé en un mois. Par où commencer ?",
+        "choices": [
+          "Analyser les coûts par service et par étiquette, et chercher les ressources inutilisées ou surdimensionnées",
+          "Supprimer des ressources au hasard",
+          "Changer de fournisseur immédiatement",
+          "Désactiver la supervision"
+        ],
+        "answerIndex": 0,
+        "explanation": "Coupables fréquents : environnements de test oubliés, disques orphelins, transferts de données, instances surdimensionnées. Les étiquettes permettent d'attribuer chaque coût.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "infra-defi6-q5",
+        "prompt": "Quels risques un « lock-in » (dépendance au fournisseur) fait-il peser ?",
+        "choices": [
+          "Une migration coûteuse si les prix augmentent",
+          "Des services propriétaires difficiles à reproduire ailleurs",
+          "Des compétences d'équipe spécifiques à un fournisseur",
+          "Une impossibilité d'utiliser des conteneurs"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "C'est un compromis : les services propriétaires font gagner du temps. On accepte le lock-in là où il apporte le plus de valeur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "infra-defi6-q6",
+        "prompt": "En entretien : quelle est la différence entre haute disponibilité et reprise après sinistre ?",
+        "choices": [
+          "La haute disponibilité absorbe une panne locale sans interruption ; la reprise après sinistre restaure le service après une catastrophe (région perdue, données corrompues)",
+          "Ce sont des synonymes",
+          "La reprise après sinistre concerne uniquement les incendies",
+          "La haute disponibilité remplace les sauvegardes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Répliquer une base ne protège pas d'un DELETE accidentel, qui est répliqué aussitôt : il faut aussi des sauvegardes. RPO et RTO définissent les objectifs de reprise.",
+        "difficulty": 3
+      }
+    ]
+  }
 }
