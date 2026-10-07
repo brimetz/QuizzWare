@@ -1,6 +1,6 @@
 # Règles de confidentialité de QuizzWare
 
-*Dernière mise à jour : 6 octobre 2026*
+*Dernière mise à jour : 7 octobre 2026*
 
 QuizzWare est une application d'apprentissage pour développeurs. Elle a été conçue pour fonctionner **entièrement sur ton appareil**.
 
@@ -16,6 +16,10 @@ Pour fonctionner, l'application enregistre localement, dans son espace privé :
 - tes réglages (objectif quotidien, heure des rappels, sons, profil et centres d'intérêt choisis au premier lancement).
 
 Ces données ne quittent pas ton appareil. Tu peux les effacer à tout moment depuis **Réglages › Réinitialiser la progression**, ou en désinstallant l'application. Si la sauvegarde Android est activée sur ton téléphone, le système peut les inclure dans ta sauvegarde personnelle, selon tes propres réglages Google.
+
+## Abonnement Premium
+
+L'abonnement Premium est vendu et géré par **Google Play** : le paiement, la facturation et la résiliation se font entièrement chez Google, selon ses [règles de confidentialité](https://policies.google.com/privacy). QuizzWare ne reçoit ni tes coordonnées bancaires, ni ton adresse e-mail : l'application demande seulement à Google Play si un abonnement est actif sur ton compte, et garde cette réponse (oui ou non) sur ton appareil. Pour compter les entretiens gratuits de la semaine, l'application enregistre localement la date de tes derniers entretiens.
 
 ## Notifications
 

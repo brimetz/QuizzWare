@@ -2,7 +2,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QuizzWare.Core.Content;
 using QuizzWare.Core.Models;
+using QuizzWare.Core.Premium;
 using QuizzWare.Core.Progress;
+using QuizzWare.Services;
 using QuizzWare.Views;
 
 namespace QuizzWare.ViewModels;
@@ -11,7 +13,8 @@ namespace QuizzWare.ViewModels;
 /// Premier lancement : bienvenue, profil, centres d'intérêt, objectif quotidien, puis un parcours conseillé
 /// (avec le test de niveau pour les profils expérimentés).
 /// </summary>
-public partial class OnboardingViewModel(ContentRepository content, ProgressService progressService) : ObservableObject
+public partial class OnboardingViewModel(ContentRepository content, ProgressService progressService, ISubscriptionService subscription)
+    : ObservableObject
 {
     public const int StepCount = 5;
 
@@ -167,7 +170,8 @@ public partial class OnboardingViewModel(ContentRepository content, ProgressServ
         var chosen = CategoryOptions.Where(o => o.IsSelected).Select(o => content.GetCategory(o.Id)).ToList();
 
         Recommendations = chosen
-            .Select(c => new RecommendationViewModel(c, suggestPlacement && c.Chapters.Count(ch => ch.Lessons.Any(l => !l.IsPlanned)) >= 2))
+            .Select(c => new RecommendationViewModel(c, suggestPlacement && c.Chapters.Count(ch => ch.Lessons.Any(l => !l.IsPlanned)) >= 2,
+                isPremiumLocked: !PremiumPolicy.CanAccessCategory(c.Id, subscription.IsPremium)))
             .ToList();
 
         SummaryText = suggestPlacement
@@ -197,19 +201,22 @@ public partial class OptionViewModel(string id, string label, string description
 }
 
 /// <summary>Une catégorie choisie, avec le bon point de départ.</summary>
-public partial class RecommendationViewModel(Category category, bool suggestPlacement)
+public partial class RecommendationViewModel(Category category, bool suggestPlacement, bool isPremiumLocked = false)
 {
     public string Name => category.Name;
     public string Icon => category.Icon;
     public Color Color { get; } = Color.FromArgb(category.Color);
-    public bool SuggestPlacement => suggestPlacement;
+    public bool SuggestPlacement => suggestPlacement && !isPremiumLocked;
     public bool HasContent => category.HasContent;
-    public string Hint => !category.HasContent ? "Contenu en préparation : l'arbre des sujets est déjà visible."
+    public string Hint => isPremiumLocked ? "⭐ Catégorie Premium : touche pour découvrir l'abonnement."
+        : !category.HasContent ? "Contenu en préparation : l'arbre des sujets est déjà visible."
         : suggestPlacement ? "Test de niveau conseillé (5 à 10 minutes)."
         : "Premier chapitre : " + category.Chapters.First(c => c.Lessons.Any(l => !l.IsPlanned)).Title;
 
     [RelayCommand]
-    private Task OpenAsync() => Shell.Current.GoToAsync($"../{nameof(CategoryPage)}?categoryId={category.Id}");
+    private Task OpenAsync() => Shell.Current.GoToAsync(isPremiumLocked
+        ? $"../{nameof(PremiumPage)}?categoryId={category.Id}"
+        : $"../{nameof(CategoryPage)}?categoryId={category.Id}");
 
     [RelayCommand]
     private Task PlacementAsync() => Shell.Current.GoToAsync($"../{nameof(QuizPage)}?categoryId={category.Id}&mode=placement");

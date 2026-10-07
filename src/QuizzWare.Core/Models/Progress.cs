@@ -30,6 +30,9 @@ public sealed class UserProgress
     /// <summary>Fiches de révision espacée, par identifiant de question.</summary>
     public Dictionary<string, ReviewCard> Reviews { get; set; } = [];
 
+    /// <summary>Débuts des entretiens récents : sert au quota d'entretiens gratuits (voir PremiumPolicy).</summary>
+    public List<DateTimeOffset> InterviewStarts { get; set; } = [];
+
     public CategoryProgress GetOrCreate(string categoryId)
     {
         if (!Categories.TryGetValue(categoryId, out var progress))

@@ -30,6 +30,13 @@ public static class MauiProgram
         builder.Services.AddSingleton<FeedbackService>();
         builder.Services.AddSingleton<ContentReporter>();
 
+        // Abonnement Premium : Google Play Billing en Release sur mobile, simulé en développement.
+#if (ANDROID || IOS) && !DEBUG
+        builder.Services.AddSingleton<ISubscriptionService, StoreSubscriptionService>();
+#else
+        builder.Services.AddSingleton<ISubscriptionService, SimulatedSubscriptionService>();
+#endif
+
         // Core
         builder.Services.AddSingleton(_ => ContentRepository.LoadEmbedded());
         builder.Services.AddSingleton<IProgressStore>(_ =>
@@ -48,6 +55,7 @@ public static class MauiProgram
         builder.Services.AddTransient<TrackPage>().AddTransient<TrackViewModel>();
         builder.Services.AddTransient<SettingsPage>().AddTransient<SettingsViewModel>();
         builder.Services.AddTransient<OnboardingPage>().AddTransient<OnboardingViewModel>();
+        builder.Services.AddTransient<PremiumPage>().AddTransient<PremiumViewModel>();
 
 #if DEBUG
         builder.Logging.AddDebug();

@@ -4,12 +4,15 @@ using CommunityToolkit.Mvvm.Input;
 using QuizzWare.Core.Content;
 using QuizzWare.Core.Leveling;
 using QuizzWare.Core.Models;
+using QuizzWare.Core.Premium;
 using QuizzWare.Core.Progress;
+using QuizzWare.Services;
 using QuizzWare.Views;
 
 namespace QuizzWare.ViewModels;
 
-public partial class HomeViewModel(ContentRepository content, ProgressService progressService) : ObservableObject
+public partial class HomeViewModel(ContentRepository content, ProgressService progressService, ISubscriptionService subscription)
+    : ObservableObject
 {
     [ObservableProperty]
     private string streakText = "🔥 0";
@@ -52,7 +55,8 @@ public partial class HomeViewModel(ContentRepository content, ProgressService pr
         var interests = progress.Settings.Interests.ToHashSet();
         Categories.Clear();
         foreach (var category in content.Categories.OrderByDescending(c => interests.Contains(c.Id)))
-            Categories.Add(new CategoryCardViewModel(category, progressService.GetLevel(progress, category.Id), interests.Contains(category.Id)));
+            Categories.Add(new CategoryCardViewModel(category, progressService.GetLevel(progress, category.Id), interests.Contains(category.Id),
+                isPremiumLocked: !PremiumPolicy.CanAccessCategory(category.Id, subscription.IsPremium)));
 
         var totalXp = progress.Categories.Values.Sum(c => c.TotalXp);
         var playableLessons = content.Categories.SelectMany(c => c.AllLessons).Where(l => !l.IsPlanned).Select(l => l.Id).ToHashSet();
@@ -74,10 +78,13 @@ public partial class HomeViewModel(ContentRepository content, ProgressService pr
     }
 }
 
-public sealed partial class CategoryCardViewModel(Category category, LevelInfo level, bool isFavorite = false)
+public sealed partial class CategoryCardViewModel(Category category, LevelInfo level, bool isFavorite = false, bool isPremiumLocked = false)
 {
     public string Name => category.Name;
     public bool IsFavorite => isFavorite;
+
+    /// <summary>Catégorie réservée à Premium pour un utilisateur gratuit : l'ouvrir présente l'abonnement.</summary>
+    public bool IsPremiumLocked => isPremiumLocked;
     public string Description => category.Description;
     public string Icon => category.Icon;
     public Color Color { get; } = Color.FromArgb(category.Color);
@@ -87,5 +94,7 @@ public sealed partial class CategoryCardViewModel(Category category, LevelInfo l
     public double Opacity => category.HasContent ? 1 : 0.6;
 
     [RelayCommand]
-    private Task OpenAsync() => Shell.Current.GoToAsync($"{nameof(CategoryPage)}?categoryId={category.Id}");
+    private Task OpenAsync() => Shell.Current.GoToAsync(isPremiumLocked
+        ? $"{nameof(PremiumPage)}?categoryId={category.Id}"
+        : $"{nameof(CategoryPage)}?categoryId={category.Id}");
 }

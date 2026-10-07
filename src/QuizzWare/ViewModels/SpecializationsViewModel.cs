@@ -2,7 +2,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QuizzWare.Core.Content;
 using QuizzWare.Core.Models;
+using QuizzWare.Core.Premium;
 using QuizzWare.Core.Progress;
+using QuizzWare.Services;
 using QuizzWare.Views;
 
 namespace QuizzWare.ViewModels;
@@ -11,7 +13,7 @@ namespace QuizzWare.ViewModels;
 /// Arbre des spécialisations d'une catégorie, aplati en lignes pour l'affichage :
 /// chaque ligne connaît les traits verticaux à dessiner à sa gauche pour relier parents et enfants.
 /// </summary>
-public partial class SpecializationsViewModel(ContentRepository content, ProgressService progressService)
+public partial class SpecializationsViewModel(ContentRepository content, ProgressService progressService, ISubscriptionService subscription)
     : ObservableObject, IQueryAttributable
 {
     private string? _categoryId;
@@ -129,6 +131,9 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
             lockedMessage = $"Ce parcours appartient à la catégorie {targetCategory.Name} : termine son chapitre « {chapter} » pour le débloquer.";
         }
 
+        // Un renvoi vers un parcours d'une catégorie Premium mène à l'abonnement.
+        var premiumLocked = node.IsLink && target.HasTrack && !PremiumPolicy.CanAccessCategory(targetCategory.Id, subscription.IsPremium);
+
         string status;
         Color statusColor;
         if (!unlocked)
@@ -139,6 +144,8 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
             (status, statusColor) = (tracks.Count == 0 ? "Bientôt disponible" : $"{tracks.Count} parcours · {done}/{total} leçons", Palette.TextMuted);
         else if (!target.HasTrack)
             (status, statusColor) = ("Bientôt disponible", Palette.TextMuted);
+        else if (premiumLocked)
+            (status, statusColor) = ("⭐ Premium", Palette.Warning);
         else if (targetLocked)
             (status, statusColor) = ($"🔒 S'ouvre dans « {targetCategory.Name} »", Palette.TextMuted);
         else if (done == total)
@@ -166,6 +173,7 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
             IsLocked = !unlocked || targetLocked,
             LockedMessage = lockedMessage,
             HasProgress = unlocked && done > 0,
+            IsPremiumLocked = unlocked && premiumLocked,
         };
     }
 
@@ -174,15 +182,19 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
         IReadOnlyList<bool> guides, bool isLast)
     {
         var target = content.GetCategory(node.LinkTo!);
+        var premiumLocked = !PremiumPolicy.CanAccessCategory(target.Id, subscription.IsPremium);
         return new TreeRowViewModel(target.Id, node, guides.Select(g => new TreeGuide(g)).ToList(), isLast)
         {
+            IsPremiumLocked = unlocked && premiumLocked,
             Badge = target.Icon,
             BadgeColor = Color.FromArgb(target.Color),
             Title = node.Title,
             Summary = node.Summary,
             KindLabel = SpecializationLabels.Kind(node.Kind),
             RelatedText = target.HasContent ? null : "🕓 Catégorie en préparation",
-            StatusText = unlocked ? $"🚪 Explorer « {target.Name} »" : string.Empty,
+            StatusText = !unlocked ? string.Empty
+                : premiumLocked ? $"⭐ « {target.Name} » est une catégorie Premium"
+                : $"🚪 Explorer « {target.Name} »",
             StatusColor = Palette.Primary,
             Opacity = unlocked ? 1 : 0.5,
             IsLocked = !unlocked,
@@ -210,6 +222,9 @@ public sealed partial class TreeRowViewModel(string categoryId, SpecializationNo
 
     /// <summary>Au moins une leçon faite sous ce nœud : il est « en cours » ou « terminé ».</summary>
     public bool HasProgress { get; init; }
+
+    /// <summary>Mène à une catégorie Premium alors que l'utilisateur n'est pas abonné.</summary>
+    public bool IsPremiumLocked { get; init; }
 
     public string ExpanderText => IsExpanded
         ? "▾ Touche deux fois pour replier"
@@ -271,6 +286,12 @@ public sealed partial class TreeRowViewModel(string categoryId, SpecializationNo
         if (IsLocked)
         {
             await Shell.Current.DisplayAlert("Pas encore disponible", LockedMessage, "OK");
+            return;
+        }
+
+        if (IsPremiumLocked)
+        {
+            await Shell.Current.GoToAsync($"{nameof(PremiumPage)}?categoryId={categoryId}");
             return;
         }
 

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:QuizzWare.ViewModels"
+             x:Class="QuizzWare.Views.PremiumPage"
+             x:DataType="vm:PremiumViewModel"
+             Title="Premium">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16,8,16,32" Spacing="16">
+
+            <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                <Label Text="⭐" FontSize="48" HorizontalOptions="Center" />
+                <Label Text="QuizzWare Premium" Style="{StaticResource TitleLabel}" HorizontalOptions="Center" />
+            </VerticalStackLayout>
+
+            <Border Style="{StaticResource Card}" Stroke="{StaticResource Warning}" IsVisible="{Binding HasReason}">
+                <Label Text="{Binding ReasonText}" Style="{StaticResource SubHeaderLabel}" />
+            </Border>
+
+            <!-- Déjà abonné -->
+            <Border Style="{StaticResource Card}" Stroke="{StaticResource Success}" IsVisible="{Binding IsPremium}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="✅ Tu es Premium. Merci pour ton soutien !" Style="{StaticResource SubHeaderLabel}" />
+                    <Button Text="Gérer mon abonnement" Command="{Binding ManageCommand}" Style="{StaticResource SecondaryButton}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Avantages -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="{Binding InterviewsText}" FontSize="15" />
+                    <Label Text="{Binding CategoriesText}" FontSize="15" />
+                    <Label Text="🌳 Toutes leurs spécialisations et leurs défis" FontSize="15" />
+                    <Label Text="{Binding FreeText}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Achat -->
+            <VerticalStackLayout Spacing="10" IsVisible="{Binding IsNotPremium}">
+                <Label Text="{Binding PriceText}" Style="{StaticResource HeaderLabel}" HorizontalOptions="Center" />
+                <Button Text="S'abonner" Command="{Binding SubscribeCommand}" />
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Primary}" />
+                <Label Style="{StaticResource MutedLabel}" FontSize="12" HorizontalTextAlignment="Center"
+                       Text="Abonnement mensuel à renouvellement automatique, débité sur ton compte Google Play. Tu peux le résilier à tout moment depuis Google Play : l'accès Premium reste actif jusqu'à la fin de la période payée." />
+            </VerticalStackLayout>
+
+            <Button Text="Restaurer mes achats" Command="{Binding RestoreCommand}" Style="{StaticResource SecondaryButton}"
+                    IsVisible="{Binding IsNotPremium}" />
+
+            <Label Text="🛠️ Version de développement : l'abonnement est simulé, aucun paiement n'est effectué."
+                   Style="{StaticResource MutedLabel}" FontSize="12" HorizontalTextAlignment="Center"
+                   IsVisible="{Binding IsSimulated}" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

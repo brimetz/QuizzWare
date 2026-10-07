@@ -45,7 +45,7 @@
             </Border>
 
             <Button Text="{Binding PracticeText}" Command="{Binding PracticeCommand}" IsVisible="{Binding CanPractice}" />
-            <Button Text="🎤 Mode entretien" Command="{Binding StartInterviewCommand}" IsVisible="{Binding CanInterview}"
+            <Button Text="{Binding InterviewText}" Command="{Binding StartInterviewCommand}" IsVisible="{Binding CanInterview}"
                     Style="{StaticResource SecondaryButton}" />
 
             <!-- Entrée vers l'arbre des spécialisations -->

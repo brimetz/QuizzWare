@@ -221,6 +221,26 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         Changed?.Invoke(this, progress);
     }
 
+    /// <summary>Note le début d'un entretien (quota gratuit) ; seuls les débuts du dernier mois sont gardés.</summary>
+    public async Task RecordInterviewStartAsync()
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            var progress = _progress ??= await store.LoadAsync();
+            var now = time.GetUtcNow();
+            progress.InterviewStarts.RemoveAll(d => now - d > TimeSpan.FromDays(30));
+            progress.InterviewStarts.Add(now);
+            await SaveAsync(progress);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public DateTimeOffset Now() => time.GetUtcNow();
+
     /// <summary>Efface toute la progression. Les réglages sont conservés.</summary>
     public async Task ResetAsync()
     {
@@ -228,8 +248,9 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         await _lock.WaitAsync();
         try
         {
-            var settings = (_progress ??= await store.LoadAsync()).Settings;
-            progress = _progress = new UserProgress { Settings = settings };
+            var old = _progress ??= await store.LoadAsync();
+            // Les réglages restent, et l'historique des entretiens aussi : réinitialiser ne doit pas rendre le quota gratuit.
+            progress = _progress = new UserProgress { Settings = old.Settings, InterviewStarts = old.InterviewStarts };
             await SaveAsync(progress);
         }
         finally

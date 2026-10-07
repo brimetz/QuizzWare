@@ -53,10 +53,14 @@
                                    HorizontalOptions="Center" VerticalOptions="Center" />
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="6">
-                            <Grid ColumnDefinitions="*,Auto">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
                                 <Label Text="{Binding Name}" Style="{StaticResource SubHeaderLabel}" />
                                 <Label Grid.Column="1" Text="★" TextColor="{StaticResource Warning}" FontSize="16"
                                        IsVisible="{Binding IsFavorite}" />
+                                <Border Grid.Column="2" Style="{StaticResource Pill}" Padding="8,2" VerticalOptions="Start"
+                                        IsVisible="{Binding IsPremiumLocked}">
+                                    <Label Text="⭐ Premium" FontSize="11" FontAttributes="Bold" TextColor="{StaticResource Warning}" />
+                                </Border>
                             </Grid>
                             <Label Text="{Binding LevelText}" Style="{StaticResource MutedLabel}" />
                             <ProgressBar Progress="{Binding Progress}" ProgressColor="{Binding Color}" />

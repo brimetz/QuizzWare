@@ -146,6 +146,7 @@ public partial class QuizViewModel(
         {
             _interviewLevel ??= InterviewLevel.Junior;
             _session = builder.ForInterview(category, _interviewLevel);
+            await progressService.RecordInterviewStartAsync(); // compte dans le quota gratuit, même s'il est abandonné
             Title = $"🎤 Entretien {_interviewLevel.Label}";
             CheckText = "Valider";
             HasTimer = true;

@@ -1,12 +1,23 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using QuizzWare.Core.Premium;
 using QuizzWare.Core.Progress;
 using QuizzWare.Services;
 
 namespace QuizzWare.ViewModels;
 
-public partial class SettingsViewModel(ProgressService progressService, IReminderService reminders) : ObservableObject
+public partial class SettingsViewModel(ProgressService progressService, IReminderService reminders, ISubscriptionService subscription)
+    : ObservableObject
 {
+    [ObservableProperty]
+    private string subscriptionTitle = string.Empty;
+
+    [ObservableProperty]
+    private string subscriptionText = string.Empty;
+
+    [RelayCommand]
+    private Task OpenPremiumAsync() => Shell.Current.GoToAsync(nameof(Views.PremiumPage));
+
     private bool _loading;
 
     public IReadOnlyList<GoalOptionViewModel> Goals { get; } =
@@ -51,6 +62,11 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
         HapticsEnabled = progress.Settings.HapticsEnabled;
         StatsText = $"🧠 {progressService.CountMasteredQuestions(progress)} questions maîtrisées · " +
                     $"{progressService.CountDueReviews(progress)} à réviser · 🔥 meilleure série : {progress.BestStreak} jours";
+
+        var freeLeft = PremiumPolicy.FreeInterviewsLeft(progress, progressService.Now());
+        (SubscriptionTitle, SubscriptionText) = subscription.IsPremium
+            ? ("⭐ Premium actif", "Toutes les catégories et les entretiens illimités. Touche pour gérer ton abonnement.")
+            : ("Version gratuite", $"{freeLeft} entretien{(freeLeft > 1 ? "s" : "")} gratuit{(freeLeft > 1 ? "s" : "")} restant{(freeLeft > 1 ? "s" : "")} cette semaine. Touche pour découvrir Premium.");
         _loading = false;
     }
 

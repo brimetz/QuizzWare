@@ -2,13 +2,15 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QuizzWare.Core.Content;
 using QuizzWare.Core.Models;
+using QuizzWare.Core.Premium;
 using QuizzWare.Core.Progress;
 using QuizzWare.Core.Quiz;
+using QuizzWare.Services;
 using QuizzWare.Views;
 
 namespace QuizzWare.ViewModels;
 
-public partial class CategoryViewModel(ContentRepository content, ProgressService progressService)
+public partial class CategoryViewModel(ContentRepository content, ProgressService progressService, ISubscriptionService subscription)
     : ObservableObject, IQueryAttributable
 {
     private string? _categoryId;
@@ -61,6 +63,9 @@ public partial class CategoryViewModel(ContentRepository content, ProgressServic
     [ObservableProperty]
     private bool canInterview;
 
+    [ObservableProperty]
+    private string interviewText = "🎤 Mode entretien";
+
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("categoryId", out var id))
@@ -87,6 +92,21 @@ public partial class CategoryViewModel(ContentRepository content, ProgressServic
     {
         if (_categoryId is null)
             return;
+
+        var progress = await progressService.GetProgressAsync();
+        var now = progressService.Now();
+        if (!PremiumPolicy.CanStartInterview(progress, now, subscription.IsPremium))
+        {
+            var next = PremiumPolicy.NextFreeInterviewAt(progress, now);
+            var when = next is { } n ? $" Le prochain entretien gratuit sera disponible le {n.ToLocalTime():dddd d MMMM à HH:mm}." : string.Empty;
+            var discover = await Shell.Current.DisplayAlert("🎤 Entretiens gratuits épuisés",
+                $"La version gratuite comprend {PremiumPolicy.FreeInterviewsPerWeek} entretiens par semaine.{when} "
+                + "Avec Premium, les entretiens sont illimités.", "Découvrir Premium", "Plus tard");
+            if (discover)
+                await Shell.Current.GoToAsync($"{nameof(PremiumPage)}?reason=interview");
+            return;
+        }
+
         var category = content.GetCategory(_categoryId);
         var levels = InterviewLevel.All.Where(l => QuizBuilder.CanInterview(category, l)).ToList();
         var choice = await Shell.Current.DisplayActionSheet("🎤 Niveau de l'entretien", "Annuler", null,
@@ -129,6 +149,10 @@ public partial class CategoryViewModel(ContentRepository content, ProgressServic
         CanTakePlacement = progressService.CanTakePlacement(userProgress, category);
         PlacementText = $"Tu connais déjà le {category.Name} ? Passe le test de niveau pour sauter les chapitres que tu maîtrises.";
         CanInterview = QuizBuilder.CanInterview(category, InterviewLevel.Junior);
+        var freeLeft = PremiumPolicy.FreeInterviewsLeft(userProgress, progressService.Now());
+        InterviewText = subscription.IsPremium
+            ? "🎤 Mode entretien"
+            : $"🎤 Mode entretien · {freeLeft} gratuit{(freeLeft > 1 ? "s" : "")} cette semaine";
 
         HasSpecializations = category.Specializations is not null;
         if (category.Specializations is { } tree)

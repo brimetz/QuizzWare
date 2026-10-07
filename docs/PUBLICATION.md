@@ -58,7 +58,7 @@ dotnet build src/QuizzWare -t:Run -f net9.0-android -c Release
 | Règles de confidentialité | URL publique de [confidentialite.md](confidentialite.md), par exemple `https://github.com/brimetz/QuizzWare/blob/main/docs/confidentialite.md` (le dépôt doit être public) |
 | Sécurité des données | **Aucune donnée collectée ni partagée** : tout reste sur l'appareil. Pas de chiffrement en transit à déclarer (aucune donnée envoyée). |
 | Publicités | Non |
-| Accès à l'application | Tout est accessible sans identifiants |
+| Accès à l'application | Tout est accessible sans identifiants (le contenu Premium s'obtient par l'abonnement Google Play, pas par un compte) |
 | Classification du contenu | Questionnaire IARC : catégorie « Référence, actualités ou éducation », aucune violence, aucun contenu sensible → classé tout public |
 | Public cible | 16 ans et plus (l'app ne vise pas les enfants, ce qui évite les exigences « Familles ») |
 | Catégorie | Éducation |
@@ -66,7 +66,26 @@ dotnet build src/QuizzWare -t:Run -f net9.0-android -c Release
 
 Permissions déclarées par l'app (rien à justifier) : notifications, démarrage de l'appareil (reprogrammer les rappels), vibration. Aucun accès internet : le bouton « Signaler » ouvre simplement le navigateur.
 
-## 6. Captures d'écran
+## 6. Abonnement Premium 👤
+
+Ce qui est gratuit et ce qui est Premium est défini à un seul endroit : [PremiumPolicy.cs](../src/QuizzWare.Core/Premium/PremiumPolicy.cs) (catégories gratuites, nombre d'entretiens gratuits par semaine, identifiant de l'abonnement). En **Debug**, l'abonnement est simulé (aucun paiement, bouton d'achat qui demande une confirmation) ; en **Release** sur Android, il passe par Google Play Billing.
+
+1. **Profil de paiement** : Play Console › Paramètres › Profil de paiement. Renseigner les coordonnées bancaires et fiscales. Vendre impose le statut de **professionnel** (règlement européen DSA) : adresse, téléphone et e-mail de contact deviennent publics sur la fiche.
+2. **Envoyer d'abord un `.aab`** contenant la facturation (cette version) sur une piste de test : la Play Console ne permet de créer des abonnements qu'après.
+3. **Créer l'abonnement** : Monétiser › Produits › Abonnements › Créer.
+   - ID produit : `quizzware_premium` (doit correspondre exactement à `PremiumPolicy.SubscriptionProductId`).
+   - Forfait de base : renouvellement automatique, période **1 mois**, prix (par exemple 4,99 €). Google convertit les prix pour les autres pays.
+   - Offre conseillée : **essai gratuit de 7 jours** pour les nouveaux abonnés.
+   - Activer le forfait de base et l'offre.
+4. **Testeurs de licence** : Paramètres › Test de licence › ajouter ton adresse Gmail. Leurs achats ne sont pas débités, et un abonnement mensuel se renouvelle toutes les 5 minutes, ce qui permet de tester renouvellement et expiration.
+5. **Tester** sur un téléphone avec un compte testeur, en installant l'appli **depuis le lien de la piste de test** (pas avec `dotnet build -t:Run`, que Google Play Billing ne reconnaît pas) :
+   - une catégorie Premium (par exemple Architecture système) ouvre la page Premium ;
+   - le prix s'affiche, l'achat aboutit, les catégories se débloquent ;
+   - « Restaurer mes achats » après une réinstallation ;
+   - après résiliation dans Google Play et expiration, les catégories se reverrouillent au retour dans l'appli.
+6. **Fiche du Store** : préciser « Achats via l'application » et mentionner Premium dans la description.
+
+## 7. Captures d'écran
 
 Le Play Store demande au moins 2 captures de téléphone (format portrait, 1080 × 1920 conseillé). Écrans conseillés, sur un émulateur ou un téléphone :
 
