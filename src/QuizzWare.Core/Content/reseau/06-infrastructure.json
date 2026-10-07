@@ -7,19 +7,426 @@
       "id": "net-load-balancing",
       "title": "Répartition de charge",
       "summary": "Couche 4 ou couche 7.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Pourquoi répartir",
+          "body": "Un répartiteur de charge (load balancer) distribue les requêtes entre plusieurs instances : on absorbe plus de trafic, et une instance en panne est retirée automatiquement grâce aux vérifications de santé (health checks). C'est le point d'entrée de presque toute architecture web."
+        },
+        {
+          "title": "Couche 4 ou couche 7",
+          "body": "Un répartiteur L4 travaille sur TCP/UDP : il voit des adresses et des ports, et transmet les connexions sans lire leur contenu. Très rapide, il ne peut pas router selon l'URL. Un répartiteur L7 comprend HTTP : il peut router /api vers un service et /images vers un autre, terminer TLS, ajouter des en-têtes, réessayer une requête."
+        },
+        {
+          "title": "Les algorithmes",
+          "body": "Round robin : chacun son tour. Moins de connexions : vers l'instance la moins occupée, utile quand les requêtes ont des durées très variables. Hachage (de l'IP ou d'un cookie) : un même client va toujours vers la même instance (affinité de session), ce qui complique la répartition et la tolérance aux pannes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-lb-q1",
+          "prompt": "On veut router /api vers un service et / vers le front-end, sur le même domaine. Quel répartiteur ?",
+          "choices": [
+            "Un répartiteur de couche 7, qui lit le chemin HTTP",
+            "Un répartiteur de couche 4",
+            "Un serveur DNS",
+            "Un commutateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un répartiteur L4 ne voit que des connexions TCP : il ignore tout de l'URL.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-lb-q2",
+          "prompt": "À quoi servent les vérifications de santé (health checks) ?",
+          "choices": [
+            "À retirer automatiquement de la rotation une instance qui ne répond plus correctement",
+            "À mesurer la satisfaction des utilisateurs",
+            "À redémarrer le répartiteur",
+            "À chiffrer le trafic"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le répartiteur interroge régulièrement chaque instance (/health) et n'envoie du trafic qu'aux instances saines.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-lb-q3",
+          "prompt": "Certaines requêtes durent 50 ms, d'autres 30 secondes (exports). Quel algorithme répartit le mieux la charge ?",
+          "choices": [
+            "Moins de connexions actives",
+            "Round robin",
+            "Aléatoire pondéré par le nom de domaine",
+            "Toujours la première instance"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec le round robin, une instance peut cumuler plusieurs exports pendant que les autres sont libres.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-lb-q4",
+          "prompt": "L'application garde la session des utilisateurs en mémoire. Que se passe-t-il avec un round robin sur 3 instances ?",
+          "choices": [
+            "Les utilisateurs perdent leur session dès qu'une requête arrive sur une autre instance",
+            "Rien de particulier",
+            "Les sessions sont copiées automatiquement",
+            "Le répartiteur refuse de fonctionner"
+          ],
+          "answerIndex": 0,
+          "explanation": "Solutions : affinité de session (fragile), ou mieux, une application sans état qui stocke les sessions dans Redis ou dans un jeton.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-lb-q5",
+          "prompt": "Derrière un répartiteur, l'application voit toutes les requêtes venir de l'adresse du répartiteur. Comment connaître l'IP du client ?",
+          "choices": [
+            "Avec l'en-tête X-Forwarded-For (ou Forwarded) ajouté par le répartiteur, en ne faisant confiance qu'à celui-ci",
+            "C'est impossible",
+            "Avec l'adresse MAC",
+            "Avec le cookie de session"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un client peut forger cet en-tête : il ne faut le croire que s'il vient d'un proxy de confiance (ForwardedHeaders en ASP.NET Core).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "net-lb-q6",
+          "prompt": "Que peut faire un répartiteur de couche 7 qu'un répartiteur L4 ne peut pas faire ?",
+          "choices": [
+            "Router selon le chemin ou l'en-tête Host",
+            "Terminer TLS et inspecter les requêtes",
+            "Réessayer une requête HTTP sur une autre instance",
+            "Répartir des connexions TCP"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les deux répartissent des connexions TCP ; seul le L7 comprend leur contenu.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "net-proxy",
       "title": "Proxys et reverse proxys",
       "summary": "Rôles et usages.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Proxy ou reverse proxy",
+          "body": "Un proxy (direct) agit pour le compte des clients : le réseau d'une entreprise fait passer la navigation des employés par un proxy qui filtre et journalise. Un reverse proxy agit pour le compte des serveurs : les clients s'adressent à lui, et il transmet aux serveurs d'application, qu'ils ne voient jamais."
+        },
+        {
+          "title": "Ce que fait un reverse proxy",
+          "body": "Terminer TLS (gérer les certificats à un seul endroit), compresser, mettre en cache, limiter le débit, servir les fichiers statiques, répartir la charge et masquer la topologie interne. nginx, HAProxy, Traefik, Envoy ou YARP en .NET en sont des exemples.",
+          "code": "server {\n    listen 443 ssl;\n    server_name api.exemple.fr;\n    location / {\n        proxy_pass http://127.0.0.1:5000;\n        proxy_set_header Host $host;\n        proxy_set_header X-Forwarded-For\n            $proxy_add_x_forwarded_for;\n    }\n}",
+          "language": "text"
+        },
+        {
+          "title": "Les délais",
+          "body": "Le proxy a ses propres timeouts. Si l'application met 90 secondes à répondre et que le proxy abandonne à 60, le client reçoit 504 Gateway Timeout alors que le traitement continue. 502 Bad Gateway signifie que le proxy n'a pas obtenu de réponse valide (application arrêtée, connexion refusée)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-proxy-q1",
+          "prompt": "Quelle différence entre un proxy et un reverse proxy ?",
+          "choices": [
+            "Le proxy représente les clients ; le reverse proxy représente les serveurs",
+            "Le reverse proxy est plus lent",
+            "Le proxy ne fonctionne qu'en HTTP",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le proxy d'entreprise est configuré côté client ; le reverse proxy est déployé devant les serveurs, sans que le client le sache.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-proxy-q2",
+          "prompt": "Le navigateur affiche 502 Bad Gateway. Où chercher en premier ?",
+          "choices": [
+            "Du côté de l'application derrière le proxy : est-elle démarrée, écoute-t-elle sur le bon port ?",
+            "Dans le navigateur",
+            "Dans le DNS",
+            "Dans le certificat TLS"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le proxy fonctionne, mais n'a pas obtenu de réponse valide du serveur en amont.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-proxy-q3",
+          "prompt": "Un export dure 2 minutes et le client reçoit 504 au bout de 60 secondes. Que faire ?",
+          "choices": [
+            "Rendre l'export asynchrone : le client lance la tâche, puis interroge son état ou reçoit une notification",
+            "Mettre tous les timeouts à une heure",
+            "Supprimer le proxy",
+            "Demander à l'utilisateur de réessayer"
+          ],
+          "answerIndex": 0,
+          "explanation": "Allonger les timeouts déplace le problème et immobilise des connexions. Une tâche longue a sa place en arrière-plan (202 Accepted).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-proxy-q4",
+          "prompt": "Pourquoi terminer TLS au reverse proxy ?",
+          "choices": [
+            "Pour gérer les certificats et les réglages de chiffrement à un seul endroit, et décharger les applications",
+            "Parce que les applications ne savent pas faire de TLS",
+            "Pour désactiver le chiffrement",
+            "Pour accélérer le DNS"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le trafic interne peut ensuite être rechiffré (mTLS) si le réseau interne n'est pas considéré comme sûr.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "net-proxy-q5",
+          "prompt": "L'application derrière ce proxy génère des liens vers 127.0.0.1:5000 au lieu de api.exemple.fr. Touche la ligne où il manque quelque chose.",
+          "code": "location / {\n    proxy_pass http://127.0.0.1:5000;\n}",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Sans proxy_set_header Host $host, l'application reçoit l'hôte du proxy_pass et construit ses URL avec. Il faut transmettre l'en-tête Host d'origine (et X-Forwarded-Proto pour le schéma).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "net-proxy-q6",
+          "prompt": "Quels rôles un reverse proxy peut-il jouer ?",
+          "choices": [
+            "Servir directement les fichiers statiques",
+            "Limiter le débit par client",
+            "Mettre en cache des réponses",
+            "Remplacer la base de données"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il soulage l'application de tout ce qui n'est pas de la logique métier.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "net-cdn",
       "title": "CDN",
       "summary": "Le cache géographique.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Rapprocher le contenu",
+          "body": "Un CDN (Cloudflare, Akamai, CloudFront, Fastly) dispose de centaines de points de présence dans le monde. L'utilisateur est dirigé vers le plus proche (par le DNS ou par anycast), qui sert le contenu depuis son cache ou le récupère auprès de l'origine."
+        },
+        {
+          "title": "Ce qu'on met en cache",
+          "body": "Les fichiers statiques versionnés (app.3f9a2c.js) peuvent être mis en cache un an : leur nom change à chaque version. Le HTML et les réponses d'API se mettent en cache avec prudence, sur de courtes durées. Les contenus personnalisés ne doivent jamais être mis en cache partagé."
+        },
+        {
+          "title": "Au-delà du cache",
+          "body": "Le CDN absorbe les attaques par déni de service grâce à sa capacité gigantesque, termine TLS près de l'utilisateur, filtre les requêtes malveillantes (WAF) et peut exécuter du code en périphérie (edge functions). L'invalidation (purge) permet de retirer un contenu avant son expiration."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-cdn-q1",
+          "prompt": "Pourquoi peut-on mettre en cache app.3f9a2c.js pendant un an ?",
+          "choices": [
+            "Son nom contient l'empreinte de son contenu : une nouvelle version aura un autre nom",
+            "Parce que le JavaScript ne change jamais",
+            "Parce que les CDN l'imposent",
+            "On ne peut pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le « cache busting » : le HTML référence le nouveau nom, et l'ancien fichier peut rester en cache sans risque.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-cdn-q2",
+          "prompt": "Un CDN met en cache la page « Mon compte » sans précaution. Quel risque ?",
+          "choices": [
+            "Servir les informations personnelles d'un utilisateur à d'autres",
+            "Une page plus lente",
+            "Aucun risque",
+            "Une erreur 404"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des incidents réels ont exposé des comptes de cette façon. Les réponses personnalisées portent Cache-Control: private ou no-store.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-cdn-q3",
+          "prompt": "Comment un CDN aide-t-il face à une attaque DDoS ?",
+          "choices": [
+            "Sa capacité répartie sur des centaines de sites absorbe un volume qu'aucun serveur d'origine ne pourrait encaisser",
+            "Il bloque Internet",
+            "Il éteint le site",
+            "Il n'aide pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'origine reste cachée derrière le CDN, qui filtre le trafic illégitime.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-cdn-q4",
+          "prompt": "On publie une correction urgente d'une image dont le cache dure 24 heures. Que faire ?",
+          "choices": [
+            "Purger cette URL dans le CDN, ou changer son nom",
+            "Attendre 24 heures",
+            "Redémarrer le serveur d'origine",
+            "Demander aux utilisateurs de vider leur cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "La purge retire la copie des points de présence. Le cache des navigateurs, lui, ne peut pas être purgé : d'où l'intérêt des noms versionnés.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-cdn-q5",
+          "prompt": "Qu'est-ce que le taux de succès du cache (cache hit ratio) ?",
+          "choices": [
+            "La part des requêtes servies directement depuis le cache, sans solliciter l'origine",
+            "Le nombre d'erreurs du CDN",
+            "La vitesse de téléchargement",
+            "Le nombre de points de présence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un taux faible indique souvent des clés de cache trop variées (paramètres d'URL, cookies) qui empêchent la réutilisation.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "net-cdn-q6",
+          "prompt": "Que peut apporter un CDN ?",
+          "choices": [
+            "Une latence réduite pour les utilisateurs lointains",
+            "Moins de charge sur les serveurs d'origine",
+            "Une protection contre les attaques volumétriques",
+            "Une base de données relationnelle"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un CDN se place devant l'application ; les données restent dans vos bases.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "net-defi-infrastructure",
+    "title": "Défi entretien : infrastructure réseau",
+    "summary": "Un site qui doit tenir un pic de trafic.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "net-defi6-q1",
+        "prompt": "Cas pratique 1/3 — Une billetterie attend 500 000 visiteurs en 10 minutes à l'ouverture des ventes. Que mettre devant le site ?",
+        "choices": [
+          "Un CDN pour les pages et fichiers statiques, et une file d'attente virtuelle pour réguler l'accès à l'achat",
+          "Un seul gros serveur",
+          "Rien, le serveur actuel suffira",
+          "Un pare-feu qui bloque les visiteurs au-delà de 1 000"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le CDN absorbe la consultation ; la file d'attente lisse l'accès à la partie coûteuse (réservation, paiement).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi6-q2",
+        "prompt": "Cas pratique 2/3 — Derrière le CDN, l'API d'achat tourne sur 10 instances. Comment répartir ?",
+        "choices": [
+          "Un répartiteur L7 avec health checks, vers des instances sans état",
+          "Un DNS qui renvoie une instance au hasard, sans vérification",
+          "Chaque client choisit son instance",
+          "Une instance par client"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les instances sans état permettent d'en ajouter ou d'en retirer à tout moment.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi6-q3",
+        "prompt": "Cas pratique 3/3 — Une instance plante en pleine vente. Que se passe-t-il ?",
+        "choices": [
+          "Le health check échoue, le répartiteur la retire et répartit le trafic sur les 9 autres",
+          "Tous les achats échouent",
+          "Le site entier redémarre",
+          "Les clients de cette instance doivent changer de navigateur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Seules les requêtes en cours sur cette instance échouent ; les clients peuvent réessayer (idempotence !).",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "net-defi6-q4",
+        "prompt": "Les journaux de l'API indiquent tous la même adresse IP cliente. Pourquoi ?",
+        "choices": [
+          "C'est l'adresse du répartiteur ou du CDN ; la vraie IP est dans X-Forwarded-For",
+          "Un seul client utilise le site",
+          "Une attaque est en cours",
+          "Le DNS est mal configuré"
+        ],
+        "answerIndex": 0,
+        "explanation": "Il faut configurer l'application pour lire cet en-tête, depuis les proxys de confiance uniquement.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "net-defi6-q5",
+        "prompt": "Quels codes HTTP viennent typiquement d'un proxy ou répartiteur, et non de l'application ?",
+        "choices": [
+          "502 Bad Gateway",
+          "504 Gateway Timeout",
+          "503 Service Unavailable quand aucune instance n'est saine",
+          "201 Created"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "201 est produit par l'application lors d'une création réussie.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi6-q6",
+        "prompt": "En entretien : « Load balancer L4 ou L7 ? »",
+        "choices": [
+          "L7 pour le routage HTTP fin et la terminaison TLS ; L4 pour la performance brute ou les protocoles non HTTP",
+          "Toujours L4",
+          "Toujours L7",
+          "Ils sont identiques"
+        ],
+        "answerIndex": 0,
+        "explanation": "On les combine souvent : un L4 très performant en entrée, puis des L7 qui routent vers les services.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

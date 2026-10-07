@@ -7,13 +7,321 @@
       "id": "net-diag-outils",
       "title": "Les outils de base",
       "summary": "ping, traceroute, dig, curl.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Remonter les couches",
+          "body": "Face à « le site ne marche pas », on teste couche par couche : la machine est-elle joignable (ping) ? Le nom se résout-il (dig) ? Le port est-il ouvert (nc) ? Le service répond-il correctement (curl) ? Chaque réponse élimine une partie des causes possibles.",
+          "code": "ping -c 3 api.exemple.fr\ndig +short api.exemple.fr\nnc -zv api.exemple.fr 443\ncurl -sv https://api.exemple.fr/health",
+          "language": "shell"
+        },
+        {
+          "title": "Les limites de ping",
+          "body": "ping utilise ICMP, que beaucoup de pare-feu et de clouds bloquent. Un ping sans réponse ne prouve donc pas qu'une machine est en panne. Inversement, un ping qui répond ne dit rien de l'état de l'application."
+        },
+        {
+          "title": "traceroute et curl",
+          "body": "traceroute envoie des paquets avec un TTL croissant : chaque routeur qui détruit un paquet se révèle, ce qui dessine le chemin et montre où la latence apparaît. curl -v affiche toute la conversation : résolution, connexion, négociation TLS, en-têtes envoyés et reçus. curl -w peut mesurer la durée de chaque étape.",
+          "code": "curl -o /dev/null -s -w \\\n  'dns %{time_namelookup}\\ntcp %{time_connect}\\n' \\\n  https://exemple.fr",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-outils-q1",
+          "prompt": "ping vers un serveur cloud ne répond pas, mais le site s'affiche. Comment est-ce possible ?",
+          "choices": [
+            "ICMP est bloqué par un pare-feu, alors que le port 443 est ouvert",
+            "Le site est en cache dans le navigateur",
+            "ping ne fonctionne qu'en IPv6",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "ping ne teste qu'ICMP. Pour vérifier un service, on teste son port (nc, curl).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-outils-q2",
+          "prompt": "Quelle commande vérifie qu'un nom de domaine se résout, et vers quelle adresse ?",
+          "choices": [
+            "dig api.exemple.fr (ou nslookup)",
+            "ping -t",
+            "curl -X POST",
+            "traceroute -n"
+          ],
+          "answerIndex": 0,
+          "explanation": "dig @8.8.8.8 interroge un résolveur précis, utile pour comparer avec le résolveur local.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-outils-q3",
+          "prompt": "nc -zv api.exemple.fr 443 répond « succeeded », mais curl renvoie une erreur TLS. Où se trouve le problème ?",
+          "choices": [
+            "Au niveau TLS : certificat, chaîne ou configuration du chiffrement",
+            "Dans le DNS",
+            "Dans le réseau : le port est fermé",
+            "Dans le câble"
+          ],
+          "answerIndex": 0,
+          "explanation": "La connexion TCP fonctionne : le réseau et le port sont hors de cause.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-outils-q4",
+          "prompt": "Comment traceroute découvre-t-il les routeurs du chemin ?",
+          "choices": [
+            "En envoyant des paquets avec un TTL de 1, 2, 3... : chaque routeur qui atteint zéro renvoie un message d'erreur et se révèle",
+            "En interrogeant le DNS de chaque routeur",
+            "En lisant la table de routage d'Internet",
+            "En demandant à BGP"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les « * * * » signifient qu'un routeur ne répond pas à ces messages, ce qui est fréquent et pas forcément un problème.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-outils-q5",
+          "prompt": "La commande curl -w de la leçon affiche dns 2.513 et tcp 2.540. Où passe le temps ?",
+          "choices": [
+            "Dans la résolution DNS, qui prend 2,5 secondes",
+            "Dans la connexion TCP",
+            "Dans le serveur web",
+            "Dans le transfert du contenu"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les temps sont cumulés : la connexion TCP n'a pris que 27 ms une fois le nom résolu. Un résolveur lent ou un timeout IPv6 sont des coupables fréquents.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "net-outils-q6",
+          "prompt": "Remets dans l'ordre le diagnostic, des couches basses aux couches hautes.",
+          "language": "text",
+          "lines": [
+            "Le nom se résout-il ? (dig)",
+            "La machine est-elle joignable ? (ping, traceroute)",
+            "Le port est-il ouvert ? (nc)",
+            "TLS est-il valide ? (openssl s_client)",
+            "Le service répond-il correctement ? (curl)"
+          ],
+          "explanation": "Chaque étape suppose que les précédentes fonctionnent. Le DNS vient d'abord, car sans adresse on ne peut rien tester d'autre.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "net-diag-captures",
       "title": "Lire une capture",
       "summary": "tcpdump et Wireshark.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Capturer",
+          "body": "Quand les outils de haut niveau ne suffisent plus, on regarde les paquets eux-mêmes. tcpdump capture sur un serveur, en ligne de commande ; Wireshark analyse visuellement les captures. Un filtre limite la capture au trafic utile.",
+          "code": "sudo tcpdump -i eth0 -nn 'tcp port 5432'\nsudo tcpdump -i any host 10.0.3.7 -w cap.pcap",
+          "language": "shell"
+        },
+        {
+          "title": "Lire les drapeaux TCP",
+          "body": "[S] est un SYN, [S.] un SYN-ACK, [.] un ACK, [P.] des données poussées, [F.] une fermeture, [R] un reset. Un SYN répété sans réponse signale un filtrage. Un SYN suivi d'un RST : le port est fermé. Des retransmissions nombreuses révèlent des pertes.",
+          "code": "10.0.1.5.51874 > 10.0.3.7.5432: Flags [S]\n10.0.1.5.51874 > 10.0.3.7.5432: Flags [S]\n10.0.1.5.51874 > 10.0.3.7.5432: Flags [S]",
+          "language": "text"
+        },
+        {
+          "title": "Le chiffrement",
+          "body": "Avec TLS, on voit les échanges de la négociation (dont le nom du site, SNI) mais pas le contenu. Pour déboguer une application à soi, on peut exporter ses clés de session (variable SSLKEYLOGFILE) et les donner à Wireshark. Une capture peut contenir des données personnelles : elle se manipule avec précaution."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-capture-q1",
+          "prompt": "Dans la capture de la leçon, que montrent les trois SYN identiques sans réponse ?",
+          "choices": [
+            "Le client retransmet son SYN : un pare-feu ignore probablement les paquets vers le port 5432",
+            "La connexion est établie",
+            "Le serveur a refusé avec un RST",
+            "Le client envoie des données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un port fermé répondrait par un RST ; l'absence totale de réponse évoque un filtrage silencieux (ou un routage cassé).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-capture-q2",
+          "prompt": "Que signifie le drapeau [R] dans une capture tcpdump ?",
+          "choices": [
+            "Un reset : la connexion est refusée ou coupée brutalement",
+            "Une retransmission",
+            "Une requête DNS",
+            "Une réponse réussie"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un RST arrive quand aucun processus n'écoute, ou quand un équipement intermédiaire coupe la connexion.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-capture-q3",
+          "prompt": "Pourquoi utiliser l'option -nn de tcpdump ?",
+          "choices": [
+            "Pour afficher les adresses et ports en numérique, sans résolution DNS qui ralentit et pollue la capture",
+            "Pour capturer deux interfaces",
+            "Pour chiffrer la capture",
+            "Pour ignorer TCP"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans -n, tcpdump fait lui-même des requêtes DNS, qui apparaissent... dans la capture.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-capture-q4",
+          "prompt": "Dans une capture du trafic HTTPS, que peut-on voir sans les clés ?",
+          "choices": [
+            "Les adresses, les ports, la taille et le rythme des échanges, et le nom du site (SNI)",
+            "Le contenu des requêtes et les mots de passe",
+            "Les cookies de session",
+            "Rien du tout"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les métadonnées restent visibles. Encrypted Client Hello (ECH) vise à masquer aussi le SNI.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-capture-q5",
+          "prompt": "La capture montre de nombreuses retransmissions entre deux serveurs. Que suspecter ?",
+          "choices": [
+            "Des pertes de paquets : lien saturé, équipement défaillant ou problème de MTU",
+            "Un certificat expiré",
+            "Une erreur DNS",
+            "Un serveur parfaitement sain"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les retransmissions font chuter le débit TCP et augmenter la latence de façon irrégulière.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "net-capture-q6",
+          "prompt": "Quelles précautions prendre avec une capture réseau de production ?",
+          "choices": [
+            "Filtrer au plus juste pour limiter les données capturées",
+            "La traiter comme une donnée sensible et la supprimer après usage",
+            "Obtenir l'autorisation nécessaire avant de capturer",
+            "La publier dans un ticket public pour obtenir de l'aide"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une capture peut contenir des jetons, des données personnelles ou des requêtes non chiffrées.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "net-defi-diagnostic",
+    "title": "Défi entretien : diagnostic",
+    "summary": "« L'API ne répond plus. »",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "net-defi8-q1",
+        "prompt": "Cas pratique 1/3 — Après une migration, l'API ne répond plus pour certains utilisateurs seulement. dig donne l'ancienne adresse chez eux. Cause ?",
+        "choices": [
+          "Leur résolveur garde en cache l'ancien enregistrement jusqu'à l'expiration du TTL",
+          "Leur navigateur est trop ancien",
+          "Le serveur est surchargé",
+          "Leur adresse IP est bloquée"
+        ],
+        "answerIndex": 0,
+        "explanation": "D'où la règle : baisser le TTL avant une migration, et laisser l'ancien serveur actif le temps que les caches expirent.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi8-q2",
+        "prompt": "Cas pratique 2/3 — Depuis un autre serveur, curl vers l'API reste bloqué puis échoue après 2 minutes. Le service tourne et écoute bien sur le port. Que vérifier ?",
+        "choices": [
+          "Les règles de pare-feu ou de groupe de sécurité entre les deux machines",
+          "Le contenu de la base de données",
+          "La version de curl",
+          "Le certificat"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un service qui écoute mais qu'on n'atteint pas, avec un timeout plutôt qu'un refus : signature typique d'un filtrage.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi8-q3",
+        "prompt": "Cas pratique 3/3 — Comment confirmer, sur le serveur de l'API, que les paquets arrivent ou non ?",
+        "choices": [
+          "tcpdump -nn sur le port de l'API pendant un essai : si aucun SYN n'arrive, le blocage est en amont",
+          "Redémarrer l'API",
+          "Lire le code source",
+          "Changer le port"
+        ],
+        "answerIndex": 0,
+        "explanation": "Si les SYN arrivent sans réponse, c'est le pare-feu local de la machine ; s'ils n'arrivent pas, c'est sur le chemin.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "net-defi8-q4",
+        "prompt": "Les petites requêtes passent, mais les grosses réponses se bloquent à travers un VPN. Quelle cause classique ?",
+        "choices": [
+          "Un problème de MTU : les gros paquets dépassent la taille permise dans le tunnel et sont perdus silencieusement",
+          "Le DNS",
+          "Le certificat TLS",
+          "Un manque de mémoire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le tunnel ajoute des en-têtes ; si les messages ICMP qui signalent le problème sont bloqués, les gros paquets disparaissent sans explication.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "net-defi8-q5",
+        "prompt": "Quels symptômes orientent vers un problème DNS ?",
+        "choices": [
+          "« Could not resolve host »",
+          "Le site fonctionne avec son adresse IP, mais pas avec son nom",
+          "Des requêtes lentes uniquement à la première connexion",
+          "Une erreur 500 renvoyée par l'application"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une erreur 500 vient de l'application : le DNS a fonctionné, puisque la requête lui est parvenue.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi8-q6",
+        "prompt": "En entretien : quelle est la meilleure démarche face à un problème réseau ?",
+        "choices": [
+          "Procéder couche par couche, en faisant une hypothèse et en la vérifiant à chaque étape",
+          "Redémarrer tous les équipements",
+          "Changer la configuration au hasard jusqu'à ce que ça marche",
+          "Attendre que le problème disparaisse"
+        ],
+        "answerIndex": 0,
+        "explanation": "« C'est toujours le DNS » est une blague répandue chez les administrateurs, mais seule une démarche méthodique le prouve.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

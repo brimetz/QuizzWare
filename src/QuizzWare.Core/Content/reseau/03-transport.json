@@ -7,19 +7,425 @@
       "id": "net-tcp-connexion",
       "title": "Cycle de vie d'une connexion TCP",
       "summary": "Handshake, fermeture, TIME_WAIT.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Ouvrir",
+          "body": "SYN, SYN-ACK, ACK : chaque côté annonce son numéro de séquence initial et confirme celui de l'autre. Ces numéros permettent ensuite de remettre les octets dans l'ordre et de détecter les pertes. Le handshake coûte un aller-retour complet avant le premier octet utile."
+        },
+        {
+          "title": "Fiabilité",
+          "body": "Le destinataire acquitte les octets reçus (ACK). Sans acquittement dans un délai, l'émetteur retransmet. Un paquet perdu bloque la livraison des suivants à l'application jusqu'à sa retransmission : c'est le blocage en tête de file (head-of-line blocking)."
+        },
+        {
+          "title": "Fermer",
+          "body": "Chaque sens se ferme séparément avec FIN puis ACK. Le côté qui ferme en premier passe en TIME_WAIT pendant environ une minute, pour absorber les paquets retardataires. Un serveur qui ouvre et ferme des milliers de connexions sortantes par seconde peut accumuler des TIME_WAIT et épuiser ses ports éphémères. Un RST, lui, coupe la connexion brutalement.",
+          "code": "$ ss -tan state time-wait | wc -l\n28412",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-tcpcx-q1",
+          "prompt": "À quoi servent les numéros de séquence échangés pendant le handshake ?",
+          "choices": [
+            "À numéroter les octets pour les remettre dans l'ordre et détecter les pertes",
+            "À chiffrer la connexion",
+            "À identifier l'utilisateur",
+            "À choisir le port"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque octet a un numéro ; les ACK indiquent jusqu'où tout a été reçu.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-tcpcx-q2",
+          "prompt": "Que signifie un grand nombre de connexions en TIME_WAIT sur un serveur ?",
+          "choices": [
+            "Il ferme activement beaucoup de connexions de courte durée ; il faudrait les réutiliser (pool, keep-alive)",
+            "Le serveur est en panne",
+            "Le réseau est saturé",
+            "Les clients sont malveillants"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est typique d'un service qui ouvre une nouvelle connexion HTTP ou base de données à chaque requête.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-tcpcx-q3",
+          "prompt": "Un client reçoit « Connection refused » immédiatement. Qu'est-ce que cela indique ?",
+          "choices": [
+            "La machine est joignable, mais aucun processus n'écoute sur ce port : elle a répondu par un RST",
+            "La machine est éteinte",
+            "Un pare-feu ignore silencieusement les paquets",
+            "Le DNS ne répond pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un pare-feu qui ignore les paquets provoque plutôt un timeout : le client attend une réponse qui ne vient jamais.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "net-tcpcx-q4",
+          "prompt": "Remets dans l'ordre la vie d'une connexion TCP.",
+          "language": "text",
+          "lines": [
+            "Client → SYN",
+            "Serveur → SYN-ACK",
+            "Client → ACK",
+            "Échange de données et d'acquittements",
+            "FIN et ACK dans chaque sens"
+          ],
+          "explanation": "Ouverture en trois temps, données, puis fermeture indépendante de chaque sens.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-tcpcx-q5",
+          "prompt": "Qu'est-ce que le blocage en tête de file (head-of-line blocking) dans TCP ?",
+          "choices": [
+            "Un paquet perdu retient tous les octets suivants, même déjà reçus, jusqu'à sa retransmission",
+            "Le premier client bloque les autres",
+            "Le serveur traite une seule requête à la fois",
+            "Le routeur refuse les gros paquets"
+          ],
+          "answerIndex": 0,
+          "explanation": "TCP livre un flux ordonné : il ne peut pas sauter le trou. HTTP/2 en souffre, car tous ses flux partagent une seule connexion TCP.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-tcpcx-q6",
+          "prompt": "Une connexion vers un serveur reste « en attente » pendant 2 minutes avant d'échouer. Quelle est la cause la plus probable ?",
+          "choices": [
+            "Un pare-feu ignore les paquets SYN sans répondre",
+            "Aucun processus n'écoute sur le port",
+            "Le serveur a envoyé un RST",
+            "Le certificat est expiré"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans réponse, le client retransmet son SYN plusieurs fois avant d'abandonner. Un port fermé répondrait immédiatement par un RST.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "net-tcp-flux",
       "title": "Contrôle de flux et de congestion",
       "summary": "Fenêtres et slow start.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le contrôle de flux",
+          "body": "Le récepteur annonce une fenêtre de réception : la quantité de données qu'il peut encore accepter. L'émetteur ne peut pas avoir plus de données non acquittées en vol que cette fenêtre. Un récepteur lent ralentit ainsi l'émetteur."
+        },
+        {
+          "title": "Le contrôle de congestion",
+          "body": "Le réseau aussi a une capacité. L'émetteur maintient une fenêtre de congestion : il démarre petit (slow start), double à chaque aller-retour réussi, puis croît plus doucement. Une perte est interprétée comme une congestion : il réduit fortement son débit. Des algorithmes modernes comme BBR estiment plutôt le débit et la latence du chemin."
+        },
+        {
+          "title": "Débit et latence",
+          "body": "Le débit maximal d'une connexion est limité par la fenêtre divisée par le temps d'aller-retour. Avec une fenêtre de 64 Ko et 100 ms d'aller-retour, on plafonne à environ 5 Mbit/s, quelle que soit la fibre. Une connexion neuve démarre lentement : les petits transferts n'atteignent jamais le débit maximal."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-tcpflux-q1",
+          "prompt": "Quelle différence entre contrôle de flux et contrôle de congestion ?",
+          "choices": [
+            "Le flux protège le récepteur ; la congestion protège le réseau",
+            "Ce sont des synonymes",
+            "Le flux concerne UDP, la congestion TCP",
+            "La congestion protège le récepteur"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'émetteur respecte le minimum des deux fenêtres.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-tcpflux-q2",
+          "prompt": "Que fait TCP au démarrage d'une connexion (slow start) ?",
+          "choices": [
+            "Il envoie peu de données puis double sa fenêtre à chaque aller-retour réussi",
+            "Il envoie à pleine vitesse immédiatement",
+            "Il attend une minute avant d'envoyer",
+            "Il envoie un seul octet par seconde"
+          ],
+          "answerIndex": 0,
+          "explanation": "Malgré son nom, la croissance est exponentielle ; elle sonde la capacité du réseau sans le saturer d'emblée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-tcpflux-q3",
+          "prompt": "Fenêtre de 64 Ko, aller-retour de 100 ms. Quel débit maximal, environ ?",
+          "choices": [
+            "5 Mbit/s",
+            "64 Mbit/s",
+            "640 Mbit/s",
+            "500 kbit/s"
+          ],
+          "answerIndex": 0,
+          "explanation": "64 Ko toutes les 0,1 s = 640 Ko/s ≈ 5,2 Mbit/s. Les systèmes modernes agrandissent la fenêtre (window scaling) pour dépasser cette limite.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-tcpflux-q4",
+          "prompt": "Pourquoi un serveur proche des utilisateurs (CDN) accélère-t-il aussi le débit, pas seulement la latence ?",
+          "choices": [
+            "Un aller-retour plus court fait croître la fenêtre de congestion plus vite et augmente le débit maximal",
+            "Les serveurs CDN ont des câbles plus épais",
+            "Le CDN compresse toujours tout",
+            "Il n'accélère pas le débit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Débit ≈ fenêtre / aller-retour : diviser l'aller-retour par 5 multiplie le débit atteignable.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-tcpflux-q5",
+          "prompt": "Comment un algorithme classique (Reno, CUBIC) réagit-il à une perte de paquet ?",
+          "choices": [
+            "Il réduit fortement sa fenêtre de congestion, considérant que le réseau est saturé",
+            "Il double sa fenêtre",
+            "Il ferme la connexion",
+            "Il ignore la perte"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est mal adapté aux réseaux Wi-Fi ou mobiles, où les pertes viennent souvent d'interférences : BBR, basé sur la mesure du débit, s'en sort mieux.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "net-tcpflux-q6",
+          "prompt": "Quelles pratiques améliorent les performances réseau d'une application web ?",
+          "choices": [
+            "Réutiliser les connexions plutôt que d'en ouvrir de nouvelles",
+            "Rapprocher les serveurs des utilisateurs",
+            "Réduire le nombre d'allers-retours nécessaires",
+            "Ouvrir une nouvelle connexion pour chaque petit fichier"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une connexion neuve paie le handshake et repart en slow start : c'est le pire choix pour de petits transferts.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "net-udp-quic",
       "title": "UDP et QUIC",
       "summary": "Quand la fiabilité passe au second plan.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "UDP, le minimum",
+          "body": "UDP ajoute aux paquets IP des ports et une somme de contrôle, et rien d'autre : pas de connexion, pas d'ordre, pas de retransmission, pas de contrôle de congestion. L'application décide elle-même de ce qu'elle fait d'une perte."
+        },
+        {
+          "title": "QUIC",
+          "body": "QUIC réimplémente au-dessus d'UDP ce dont le web a besoin : fiabilité, contrôle de congestion et chiffrement TLS 1.3 intégré. Ses flux sont indépendants : un paquet perdu ne bloque que son flux. La connexion s'établit en un seul aller-retour, et survit au passage du Wi-Fi à la 4G (identifiant de connexion)."
+        },
+        {
+          "title": "HTTP/3",
+          "body": "HTTP/3 est HTTP sur QUIC. Comme il est implémenté dans l'application plutôt que dans le noyau, il évolue plus vite que TCP. Certains réseaux d'entreprise bloquent UDP : les navigateurs reviennent alors à HTTP/2 sur TCP."
+        }
+      ],
+      "questions": [
+        {
+          "type": "multi",
+          "id": "net-udp-q1",
+          "prompt": "Que n'offre pas UDP ?",
+          "choices": [
+            "La retransmission des paquets perdus",
+            "L'ordre de livraison",
+            "Le contrôle de congestion",
+            "Des numéros de port"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "UDP fournit des ports (pour atteindre la bonne application) et une somme de contrôle, rien de plus.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-udp-q2",
+          "prompt": "Pourquoi QUIC est-il construit sur UDP plutôt que sur un nouveau protocole de transport ?",
+          "choices": [
+            "Les routeurs, pare-feu et box d'Internet ne laissent passer que TCP et UDP : un nouveau protocole serait bloqué",
+            "Parce qu'UDP est plus fiable que TCP",
+            "Parce qu'UDP est chiffré",
+            "Par hasard"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'« ossification » d'Internet : les équipements intermédiaires rendent impossible le déploiement d'un nouveau protocole de transport.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-udp-q3",
+          "prompt": "Quel problème de HTTP/2 QUIC résout-il ?",
+          "choices": [
+            "Le blocage en tête de file : un paquet perdu ne bloque plus que son propre flux",
+            "L'absence de chiffrement",
+            "L'absence de compression des en-têtes",
+            "L'impossibilité d'envoyer plusieurs requêtes"
+          ],
+          "answerIndex": 0,
+          "explanation": "HTTP/2 multiplexe déjà, mais sur une seule connexion TCP : une perte fige tous les flux.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-udp-q4",
+          "prompt": "Un utilisateur passe du Wi-Fi à la 4G pendant un téléchargement. Pourquoi QUIC s'en sort-il mieux que TCP ?",
+          "choices": [
+            "Sa connexion est identifiée par un identifiant, pas par le quadruplet d'adresses : elle survit au changement d'IP",
+            "Il télécharge plus vite en 4G",
+            "Il ne change pas d'adresse IP",
+            "TCP s'en sort mieux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une connexion TCP est liée à l'adresse IP : la nouvelle IP impose une nouvelle connexion.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-udp-q5",
+          "prompt": "Le jeu en ligne envoie la position du joueur 30 fois par seconde. Pourquoi UDP ?",
+          "choices": [
+            "Une position perdue est remplacée 33 ms plus tard ; la retransmettre arriverait trop tard",
+            "UDP est chiffré",
+            "TCP ne fonctionne pas sur Internet",
+            "UDP garantit la livraison"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les messages importants (achat, chat) passent en revanche par un canal fiable, souvent implémenté au-dessus d'UDP.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-udp-q6",
+          "prompt": "Un réseau d'entreprise bloque le port UDP 443. Que se passe-t-il pour un site en HTTP/3 ?",
+          "choices": [
+            "Le navigateur revient à HTTP/2 ou HTTP/1.1 sur TCP, et le site fonctionne",
+            "Le site est inaccessible",
+            "Le navigateur passe en HTTP non chiffré",
+            "Le site bascule en FTP"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le serveur annonce HTTP/3 (en-tête Alt-Svc ou enregistrement DNS HTTPS), mais le navigateur garde toujours TCP en repli.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "net-defi-transport",
+    "title": "Défi entretien : transport",
+    "summary": "Une API lente à l'autre bout du monde.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "net-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Une API hébergée en Europe répond en 20 ms aux clients européens mais en 900 ms en Australie, pour une réponse de 50 Ko. Quelle est la cause principale ?",
+        "choices": [
+          "L'aller-retour d'environ 300 ms, multiplié par les étapes : TCP, TLS, slow start",
+          "Le serveur est plus lent la nuit",
+          "Les Australiens ont des ordinateurs plus lents",
+          "La taille de la réponse uniquement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Handshake TCP, négociation TLS, puis plusieurs allers-retours de slow start : chaque aller-retour coûte 300 ms.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "net-defi3-q2",
+        "prompt": "Cas pratique 2/3 — Quelle mesure apporte le gain le plus important ?",
+        "choices": [
+          "Terminer TCP et TLS près des utilisateurs (CDN ou proxy régional) et réutiliser les connexions vers l'origine",
+          "Augmenter le CPU du serveur",
+          "Compresser les en-têtes uniquement",
+          "Ajouter des index en base"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les handshakes se font à quelques millisecondes de l'utilisateur ; le proxy garde des connexions chaudes vers l'Europe.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "net-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Activer HTTP/3, est-ce utile pour ces clients ?",
+        "choices": [
+          "Oui : un handshake combiné en un aller-retour, et une meilleure tenue sur les réseaux mobiles qui perdent des paquets",
+          "Non, aucun effet",
+          "Oui, car HTTP/3 supprime la latence physique",
+          "Non, HTTP/3 est plus lent"
+        ],
+        "answerIndex": 0,
+        "explanation": "La vitesse de la lumière reste la limite : on réduit le nombre d'allers-retours, pas leur durée.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi3-q4",
+        "prompt": "Un microservice appelle un autre service 2 000 fois par seconde, en ouvrant une connexion à chaque fois. Que risque-t-il ?",
+        "choices": [
+          "L'épuisement des ports éphémères à cause des connexions en TIME_WAIT, et une latence inutile",
+          "Aucun risque",
+          "Une saturation du DNS uniquement",
+          "Un chiffrement plus faible"
+        ],
+        "answerIndex": 0,
+        "explanation": "En .NET, c'est le piège classique du new HttpClient() à chaque requête ; IHttpClientFactory gère un pool de connexions.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "net-defi3-q5",
+        "prompt": "Quels symptômes distinguent un port fermé d'un port filtré par un pare-feu ?",
+        "choices": [
+          "Port fermé : refus immédiat (RST)",
+          "Port filtré : attente puis timeout",
+          "Port filtré : parfois un message ICMP « interdit »",
+          "Port fermé : attente de plusieurs minutes"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un pare-feu peut ignorer (DROP) ou rejeter (REJECT) ; ignorer est plus discret mais rend le diagnostic plus lent.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi3-q6",
+        "prompt": "En entretien : « Pourquoi ne pas tout faire en UDP, puisque c'est plus rapide ? »",
+        "choices": [
+          "Il faudrait réimplémenter fiabilité, ordre et contrôle de congestion : c'est ce que fait QUIC, au prix d'une grande complexité",
+          "Parce qu'UDP est interdit sur Internet",
+          "Parce qu'UDP est plus lent",
+          "Il faut effectivement tout faire en UDP"
+        ],
+        "answerIndex": 0,
+        "explanation": "UDP n'est pas « plus rapide » par magie : il en fait moins. Une application sans contrôle de congestion peut même saturer le réseau.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

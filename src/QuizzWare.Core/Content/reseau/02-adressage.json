@@ -7,19 +7,434 @@
       "id": "net-ipv4-cidr",
       "title": "IPv4 et CIDR",
       "summary": "Masques et calcul de sous-réseaux.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "32 bits",
+          "body": "Une adresse IPv4 compte 32 bits, écrits en 4 octets décimaux (192.168.1.20). Le préfixe CIDR (/24) indique combien de bits identifient le réseau ; les bits restants numérotent les hôtes. Le masque correspondant à /24 s'écrit 255.255.255.0."
+        },
+        {
+          "title": "Calculer un sous-réseau",
+          "body": "Avec n bits d'hôte, un réseau contient 2ⁿ adresses. La première est l'adresse du réseau, la dernière celle de diffusion (broadcast) : il reste 2ⁿ − 2 hôtes. Deux machines sont sur le même réseau si leurs adresses ont les mêmes bits de préfixe.",
+          "code": "10.0.0.0/16   65 536 adresses\n10.0.1.0/24   256 adresses (254 hôtes)\n10.0.1.0/26   64 adresses : .0 à .63\n10.0.1.64/26  64 adresses : .64 à .127",
+          "language": "text"
+        },
+        {
+          "title": "Découper",
+          "body": "Allonger le préfixe d'un bit coupe le réseau en deux. Un /24 donne deux /25, quatre /26 ou huit /27. Prévoir large dès le départ : agrandir un réseau en production oblige souvent à tout renuméroter."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-cidr-q1",
+          "prompt": "Combien d'adresses contient un réseau /28 ?",
+          "choices": [
+            "16",
+            "28",
+            "256",
+            "14"
+          ],
+          "answerIndex": 0,
+          "explanation": "32 − 28 = 4 bits d'hôte, soit 2⁴ = 16 adresses, dont 14 utilisables pour des hôtes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-cidr-q2",
+          "prompt": "Quel masque correspond à /24 ?",
+          "choices": [
+            "255.255.255.0",
+            "255.255.0.0",
+            "255.255.255.255",
+            "255.0.0.0"
+          ],
+          "answerIndex": 0,
+          "explanation": "24 bits à 1, soit trois octets à 255, puis un octet à 0.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-cidr-q3",
+          "prompt": "Les machines 10.0.1.70 et 10.0.1.130 sont-elles dans le même sous-réseau 10.0.1.64/26 ?",
+          "choices": [
+            "Non : le /26 qui commence à .64 s'arrête à .127",
+            "Oui, elles commencent toutes deux par 10.0.1",
+            "Oui, tout 10.0.1.x est le même réseau",
+            "Impossible à savoir"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un /26 contient 64 adresses : .64 à .127. L'adresse .130 appartient au /26 suivant (.128 à .191).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-cidr-q4",
+          "prompt": "Quelle est l'adresse de diffusion du réseau 192.168.10.0/23 ?",
+          "choices": [
+            "192.168.11.255",
+            "192.168.10.255",
+            "192.168.10.0",
+            "192.168.23.255"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un /23 réunit deux /24 : 192.168.10.0 à 192.168.11.255. La diffusion est la dernière adresse.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-cidr-q5",
+          "prompt": "Un VPC en 10.0.0.0/16 doit être découpé en sous-réseaux /24. Combien peut-on en créer ?",
+          "choices": [
+            "256",
+            "16",
+            "24",
+            "65 536"
+          ],
+          "answerIndex": 0,
+          "explanation": "On passe de 16 à 24 bits de préfixe : 8 bits de plus, soit 2⁸ = 256 sous-réseaux de 256 adresses.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "net-cidr-q6",
+          "prompt": "Quelles adresses appartiennent à 172.16.0.0/12 ?",
+          "choices": [
+            "172.16.5.4",
+            "172.31.255.1",
+            "172.20.0.10",
+            "172.32.0.1"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "/12 fixe les 4 premiers bits du deuxième octet : il va de 16 (0001 0000) à 31 (0001 1111). 172.32 en sort.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "net-ipv6",
       "title": "IPv6",
       "summary": "Adresses, notation et cohabitation avec IPv4.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Pourquoi IPv6",
+          "body": "IPv4 offre environ 4,3 milliards d'adresses, épuisées depuis les années 2010. IPv6 utilise 128 bits : assez pour attribuer des milliards de milliards d'adresses à chaque être humain. Plus besoin de NAT pour économiser les adresses."
+        },
+        {
+          "title": "La notation",
+          "body": "8 groupes de 4 chiffres hexadécimaux séparés par « : ». On supprime les zéros en tête de chaque groupe, et on remplace une seule suite de groupes nuls par « :: ». Dans une URL, l'adresse s'écrit entre crochets.",
+          "code": "2001:0db8:0000:0000:0000:ff00:0042:8329\n2001:db8::ff00:42:8329        (forme courte)\n::1                            (localhost)\nhttp://[2001:db8::1]:8080/",
+          "language": "text"
+        },
+        {
+          "title": "Cohabiter avec IPv4",
+          "body": "La plupart des réseaux fonctionnent en double pile (dual stack) : chaque machine a une adresse IPv4 et une IPv6, et le client essaie les deux (Happy Eyeballs). Un sous-réseau IPv6 standard est un /64, et un site reçoit souvent un /48."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-ipv6-q1",
+          "prompt": "Combien de bits compte une adresse IPv6 ?",
+          "choices": [
+            "128",
+            "64",
+            "32",
+            "256"
+          ],
+          "answerIndex": 0,
+          "explanation": "Quatre fois plus de bits qu'IPv4, soit 2¹²⁸ adresses possibles.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-ipv6-q2",
+          "prompt": "Quelle est la forme courte de 2001:0db8:0000:0000:0000:0000:0000:0001 ?",
+          "choices": [
+            "2001:db8::1",
+            "2001:db8:1",
+            "2001::db8::1",
+            "21:db8::1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les zéros en tête de groupe disparaissent (0db8 → db8), et la suite de groupes nuls devient ::. 2001 ne peut pas devenir 21 : seuls les zéros de tête sont supprimés.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-ipv6-q3",
+          "prompt": "Pourquoi « :: » ne peut-il apparaître qu'une fois dans une adresse ?",
+          "choices": [
+            "Sinon on ne saurait pas combien de groupes nuls chaque « :: » remplace",
+            "Par convention esthétique",
+            "Parce que les navigateurs l'interdisent",
+            "Il peut apparaître plusieurs fois"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans 2001::1::2, les 5 groupes manquants pourraient se répartir de plusieurs façons : l'adresse serait ambiguë.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-ipv6-q4",
+          "prompt": "Quelle est l'adresse de bouclage (localhost) en IPv6 ?",
+          "choices": [
+            "::1",
+            "127.0.0.1",
+            "fe80::",
+            "::"
+          ],
+          "answerIndex": 0,
+          "explanation": "127.0.0.1 est le bouclage IPv4. :: (tout à zéro) signifie « adresse non spécifiée », l'équivalent de 0.0.0.0.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-ipv6-q5",
+          "prompt": "Comment écrire l'URL d'un serveur IPv6 2001:db8::5 sur le port 8080 ?",
+          "choices": [
+            "http://[2001:db8::5]:8080/",
+            "http://2001:db8::5:8080/",
+            "http://2001:db8::5/8080",
+            "http://(2001:db8::5):8080/"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les crochets évitent de confondre les « : » de l'adresse avec celui du port.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "net-ipv6-q6",
+          "prompt": "Quelles affirmations sur IPv6 sont vraies ?",
+          "choices": [
+            "Un sous-réseau standard est un /64",
+            "Le NAT n'est plus nécessaire pour économiser les adresses",
+            "Une machine peut avoir à la fois une adresse IPv4 et une IPv6",
+            "IPv6 est incompatible avec TCP"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "TCP, UDP et tous les protocoles au-dessus fonctionnent indifféremment sur IPv4 et IPv6.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "net-nat",
       "title": "NAT et adresses privées",
       "summary": "Traduire des adresses.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les plages privées",
+          "body": "Trois plages IPv4 sont réservées aux réseaux privés et ne sont jamais routées sur Internet : 10.0.0.0/8, 172.16.0.0/12 et 192.168.0.0/16. Chaque maison, entreprise ou VPC peut les réutiliser librement."
+        },
+        {
+          "title": "La traduction d'adresses",
+          "body": "Le routeur (votre box) remplace l'adresse privée source par son unique adresse publique, et note la correspondance dans une table, avec un port. Quand la réponse revient, il retrouve à quelle machine interne la renvoyer. Des dizaines d'appareils partagent ainsi une seule adresse publique.",
+          "code": "192.168.1.20:51874  →  203.0.113.7:40001\n192.168.1.35:51874  →  203.0.113.7:40002",
+          "language": "text"
+        },
+        {
+          "title": "Les conséquences",
+          "body": "Une connexion entrante non sollicitée ne correspond à aucune entrée de la table : elle est rejetée. Pour héberger un serveur derrière un NAT, il faut une redirection de port. Le pair-à-pair (appels vidéo, jeux) doit contourner le NAT avec des techniques comme STUN ou des serveurs relais (TURN)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "multi",
+          "id": "net-nat-q1",
+          "prompt": "Quelles adresses sont privées ?",
+          "choices": [
+            "10.42.0.7",
+            "192.168.0.1",
+            "172.20.3.4",
+            "8.8.8.8"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "8.8.8.8 est le DNS public de Google. Les trois autres appartiennent aux plages réservées.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-nat-q2",
+          "prompt": "Dans la table de la leçon, comment le routeur distingue-t-il les réponses destinées aux deux machines, qui utilisent le même port local ?",
+          "choices": [
+            "Par le port public qu'il a attribué à chaque connexion (40001, 40002)",
+            "Par leur adresse MAC",
+            "Il ne peut pas les distinguer",
+            "Par le contenu des paquets"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la traduction de port (PAT ou NAPT), la forme de NAT utilisée par toutes les box.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-nat-q3",
+          "prompt": "Un serveur de jeu tourne sur un PC à la maison (192.168.1.35:25565). Pourquoi les amis ne peuvent-ils pas s'y connecter ?",
+          "choices": [
+            "La box ne sait pas vers quelle machine interne envoyer une connexion entrante : il faut une redirection de port",
+            "Le port 25565 est interdit sur Internet",
+            "Les adresses privées sont plus lentes",
+            "Le PC doit être éteint"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans entrée dans la table NAT, la connexion entrante est rejetée. La redirection crée une règle permanente.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-nat-q4",
+          "prompt": "Pourquoi le NAT est-il souvent présenté, à tort, comme une mesure de sécurité ?",
+          "choices": [
+            "Il bloque de fait les connexions entrantes, mais ce n'est pas son but : un vrai pare-feu reste nécessaire",
+            "Il chiffre le trafic",
+            "Il authentifie les utilisateurs",
+            "Il détecte les virus"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'effet protecteur est un effet de bord. En IPv6, sans NAT, c'est le pare-feu qui joue ce rôle explicitement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-nat-q5",
+          "prompt": "Un fournisseur bloque les connexions selon l'adresse IP. Tout un immeuble passe par le même NAT de l'opérateur (CGNAT). Quel problème ?",
+          "choices": [
+            "Bloquer un utilisateur abusif bloque tous ceux qui partagent son adresse publique",
+            "Aucun problème",
+            "Les utilisateurs obtiennent plus de débit",
+            "Les adresses deviennent privées"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une adresse IP n'identifie pas un utilisateur : limiter par IP touche parfois des milliers de personnes.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-nat-q6",
+          "prompt": "Un appel vidéo entre deux personnes, chacune derrière son NAT, ne peut pas s'établir directement. Quelle solution de dernier recours ?",
+          "choices": [
+            "Un serveur relais (TURN) par lequel passe tout le flux",
+            "Désactiver le NAT des deux côtés",
+            "Utiliser des adresses privées identiques",
+            "Passer en IPv4 uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "WebRTC tente d'abord une connexion directe grâce à STUN ; si les NAT l'empêchent, le flux passe par TURN, plus coûteux.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "net-defi-adressage",
+    "title": "Défi entretien : adressage",
+    "summary": "Planifier le réseau d'un VPC.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "net-defi2-q1",
+        "prompt": "Cas pratique 1/3 — On crée un VPC pour une entreprise qui a déjà un réseau interne en 10.0.0.0/16 et prévoit un VPN entre les deux. Quelle plage choisir ?",
+        "choices": [
+          "Une plage qui ne chevauche pas, par exemple 10.1.0.0/16",
+          "10.0.0.0/16, la même",
+          "Une plage publique quelconque",
+          "192.168.1.0/24, trop petite mais simple"
+        ],
+        "answerIndex": 0,
+        "explanation": "Deux réseaux reliés qui utilisent les mêmes adresses ne savent plus où router les paquets. Les chevauchements sont un piège classique.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Il faut 6 sous-réseaux (public, privé, données × 2 zones). En combien de parts découper le /16 ?",
+        "choices": [
+          "8 parts en /19, ce qui laisse 2 parts libres pour l'avenir",
+          "6 parts exactement",
+          "2 parts en /17",
+          "256 parts en /24, toutes utilisées"
+        ],
+        "answerIndex": 0,
+        "explanation": "On découpe par puissances de deux : 3 bits de plus donnent 8 sous-réseaux de 8 192 adresses chacun.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "net-defi2-q3",
+        "prompt": "Cas pratique 3/3 — Combien d'adresses contient chaque /19 ?",
+        "choices": [
+          "8 192",
+          "4 096",
+          "19",
+          "65 536"
+        ],
+        "answerIndex": 0,
+        "explanation": "32 − 19 = 13 bits d'hôte : 2¹³ = 8 192 adresses.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi2-q4",
+        "prompt": "Qu'affiche ce code Python ?",
+        "code": "import ipaddress\nn = ipaddress.ip_network(\"10.0.1.0/26\")\nprint(n.num_addresses, n.broadcast_address)",
+        "language": "python",
+        "choices": [
+          "64 10.0.1.63",
+          "26 10.0.1.26",
+          "256 10.0.1.255",
+          "62 10.0.1.62"
+        ],
+        "answerIndex": 0,
+        "explanation": "6 bits d'hôte, soit 64 adresses de .0 à .63. Le module ipaddress évite les erreurs de calcul à la main.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi2-q5",
+        "prompt": "Pourquoi un cluster Kubernetes consomme-t-il souvent beaucoup plus d'adresses que prévu ?",
+        "choices": [
+          "Selon le plugin réseau, chaque pod peut recevoir une adresse du VPC, en plus de celles des nœuds",
+          "Kubernetes réserve tout le VPC",
+          "Chaque conteneur reçoit un /24",
+          "Ce n'est jamais le cas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sur AWS EKS, avec le plugin par défaut, des centaines de pods épuisent vite un petit sous-réseau. Il faut prévoir large.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "net-defi2-q6",
+        "prompt": "Quelles erreurs d'adressage sont coûteuses à corriger plus tard ?",
+        "choices": [
+          "Un VPC trop petit",
+          "Une plage qui chevauche un réseau auquel il faudra se connecter",
+          "Des sous-réseaux sans marge de croissance",
+          "Des noms de sous-réseaux peu clairs"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Renuméroter un réseau en production est un chantier lourd. Un nom se change en un clic.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

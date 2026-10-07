@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (77 écrits) | 337 (196 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (83 écrits) | 339 (215 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -150,31 +150,33 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 1. ✅ Fondamentaux des réseaux
    - ✅ Modèle OSI et TCP/IP
-2. 🕓 Adressage IP
-   - IPv4 et CIDR
-   - IPv6
-   - NAT et adresses privées
-3. 🕓 TCP et UDP en profondeur
-   - Cycle de vie d'une connexion TCP
-   - Contrôle de flux et de congestion
-   - UDP et QUIC
+   - ✅ Encapsulation, adresses et ports
+2. ✅ Adressage IP
+   - ✅ IPv4 et CIDR
+   - ✅ IPv6
+   - ✅ NAT et adresses privées
+3. ✅ TCP et UDP en profondeur
+   - ✅ Cycle de vie d'une connexion TCP
+   - ✅ Contrôle de flux et de congestion
+   - ✅ UDP et QUIC
 4. ✅ Le web : DNS, HTTP et TLS
    - ✅ DNS, HTTP et adressage IP
-5. 🕓 Routage et commutation
-   - Commutation et VLAN
-   - Routage IP
-   - Internet et BGP
-6. 🕓 Infrastructure réseau des applications
-   - Répartition de charge
-   - Proxys et reverse proxys
-   - CDN
-7. 🕓 Sécurité réseau
-   - TLS en détail
-   - Pare-feu et segmentation
-   - Attaques courantes
-8. 🕓 Diagnostic réseau
-   - Les outils de base
-   - Lire une capture
+   - ✅ HTTP en détail
+5. ✅ Routage et commutation
+   - ✅ Commutation et VLAN
+   - ✅ Routage IP
+   - ✅ Internet et BGP
+6. ✅ Infrastructure réseau des applications
+   - ✅ Répartition de charge
+   - ✅ Proxys et reverse proxys
+   - ✅ CDN
+7. ✅ Sécurité réseau
+   - ✅ TLS en détail
+   - ✅ Pare-feu et segmentation
+   - ✅ Attaques courantes
+8. ✅ Diagnostic réseau
+   - ✅ Les outils de base
+   - ✅ Lire une capture
 
 **Spécialisations**
 

@@ -7,19 +7,428 @@
       "id": "net-commutation",
       "title": "Commutation et VLAN",
       "summary": "Couche 2 et adresses MAC.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le commutateur (switch)",
+          "body": "Sur un réseau local, les machines s'échangent des trames Ethernet adressées par MAC. Le commutateur apprend sur quel port se trouve chaque adresse MAC (en lisant l'adresse source des trames) et n'envoie chaque trame que vers le bon port. Une adresse inconnue ou de diffusion est envoyée sur tous les ports."
+        },
+        {
+          "title": "ARP",
+          "body": "Pour envoyer un paquet à 192.168.1.30 sur le réseau local, il faut son adresse MAC. La machine diffuse une requête ARP (« qui a 192.168.1.30 ? »), et le propriétaire répond avec sa MAC. Le résultat est mis en cache.",
+          "code": "$ ip neigh\n192.168.1.1 dev eth0 lladdr 3c:84:6a:12:9f:01 REACHABLE\n192.168.1.30 dev eth0 lladdr a4:5e:60:c2:11:7b STALE",
+          "language": "shell"
+        },
+        {
+          "title": "Les VLAN",
+          "body": "Un VLAN découpe un commutateur physique en plusieurs réseaux logiques isolés : les postes, les serveurs et les invités ne se voient pas directement, même branchés sur le même équipement. Pour passer d'un VLAN à l'autre, il faut un routeur, qui peut filtrer les flux."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-switch-q1",
+          "prompt": "Comment un commutateur apprend-il où se trouve chaque machine ?",
+          "choices": [
+            "En notant l'adresse MAC source des trames reçues sur chaque port",
+            "En interrogeant le DNS",
+            "Par configuration manuelle obligatoire",
+            "En lisant les adresses IP"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il construit sa table d'adresses MAC tout seul, en observant le trafic.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-switch-q2",
+          "prompt": "À quoi sert le protocole ARP ?",
+          "choices": [
+            "À trouver l'adresse MAC correspondant à une adresse IP du réseau local",
+            "À trouver l'adresse IP d'un nom de domaine",
+            "À attribuer des adresses IP",
+            "À chiffrer les trames"
+          ],
+          "answerIndex": 0,
+          "explanation": "DNS traduit nom → IP ; ARP traduit IP → MAC, sur le réseau local seulement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-switch-q3",
+          "prompt": "Le Wi-Fi invités et les serveurs de l'entreprise sont sur le même commutateur. Comment les isoler ?",
+          "choices": [
+            "Les placer dans des VLAN différents, avec un filtrage au niveau du routeur",
+            "Utiliser des câbles de couleurs différentes",
+            "Changer leurs adresses MAC",
+            "C'est impossible sans acheter un second commutateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les VLAN créent des réseaux logiques séparés sur le même matériel.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-switch-q4",
+          "prompt": "Pour joindre 8.8.8.8 depuis 192.168.1.20, de quelle adresse MAC la machine a-t-elle besoin ?",
+          "choices": [
+            "Celle de sa passerelle (le routeur), car la destination n'est pas sur le réseau local",
+            "Celle de 8.8.8.8",
+            "Celle du serveur DNS",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "La trame est adressée au routeur, qui la réemballe pour le saut suivant. L'IP de destination, elle, reste 8.8.8.8.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-switch-q5",
+          "prompt": "Que fait un commutateur d'une trame destinée à une adresse MAC qu'il ne connaît pas encore ?",
+          "choices": [
+            "Il l'envoie sur tous les ports sauf celui d'arrivée",
+            "Il la détruit",
+            "Il la renvoie à l'expéditeur",
+            "Il demande l'adresse au DNS"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'inondation (flooding) : quand le destinataire répondra, le commutateur apprendra son port.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-switch-q6",
+          "prompt": "Un attaquant répond aux requêtes ARP à la place de la passerelle. Que peut-il faire ?",
+          "choices": [
+            "Recevoir le trafic des victimes destiné à Internet : c'est l'usurpation ARP, une attaque de l'homme du milieu",
+            "Rien, ARP est chiffré",
+            "Seulement ralentir le réseau",
+            "Changer les adresses IP des victimes"
+          ],
+          "answerIndex": 0,
+          "explanation": "ARP n'a aucune authentification. Les commutateurs d'entreprise proposent une protection (Dynamic ARP Inspection), et TLS protège le contenu.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "net-routage",
       "title": "Routage IP",
       "summary": "Tables de routage et passerelles.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Local ou distant",
+          "body": "Avant d'envoyer un paquet, une machine compare l'adresse de destination à son propre réseau. Si elle est dans le même sous-réseau, elle l'envoie directement. Sinon, elle l'envoie à sa passerelle par défaut, le routeur, qui se charge de la suite."
+        },
+        {
+          "title": "La table de routage",
+          "body": "Chaque routeur (et chaque machine) a une table qui associe des préfixes à un prochain saut. La route la plus spécifique gagne : un /24 l'emporte sur un /16. La route 0.0.0.0/0 (par défaut) attrape tout le reste.",
+          "code": "$ ip route\ndefault via 192.168.1.1 dev eth0\n10.8.0.0/16 via 10.8.0.1 dev tun0\n192.168.1.0/24 dev eth0 scope link",
+          "language": "shell"
+        },
+        {
+          "title": "TTL et boucles",
+          "body": "Chaque routeur décrémente le champ TTL du paquet ; à zéro, le paquet est détruit et un message ICMP « Time Exceeded » est renvoyé. Cela empêche un paquet de tourner indéfiniment en cas de boucle de routage, et c'est ce qu'exploite traceroute."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-routage-q1",
+          "prompt": "Avec la table de la leçon, par où passe un paquet vers 10.8.3.4 ?",
+          "choices": [
+            "Par 10.8.0.1 via tun0 (le VPN)",
+            "Par la passerelle par défaut 192.168.1.1",
+            "Directement sur eth0",
+            "Il est détruit"
+          ],
+          "answerIndex": 0,
+          "explanation": "10.8.3.4 appartient à 10.8.0.0/16, plus spécifique que la route par défaut.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-routage-q2",
+          "prompt": "Et un paquet vers 151.101.1.69 ?",
+          "choices": [
+            "Par la passerelle par défaut 192.168.1.1",
+            "Par le VPN",
+            "Directement sur eth0",
+            "Il est détruit faute de route"
+          ],
+          "answerIndex": 0,
+          "explanation": "Aucune route spécifique ne correspond : la route par défaut s'applique.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-routage-q3",
+          "prompt": "Une table contient 10.0.0.0/8 via A et 10.1.2.0/24 via B. Où va un paquet vers 10.1.2.9 ?",
+          "choices": [
+            "Vers B, la route la plus spécifique",
+            "Vers A, la première route",
+            "Vers A et B",
+            "Nulle part"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la règle du plus long préfixe correspondant (longest prefix match).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-routage-q4",
+          "prompt": "À quoi sert le TTL d'un paquet IP ?",
+          "choices": [
+            "À limiter le nombre de routeurs qu'il peut traverser, pour qu'une boucle ne le fasse pas circuler indéfiniment",
+            "À indiquer sa durée de mise en cache",
+            "À chiffrer le paquet",
+            "À donner sa priorité"
+          ],
+          "answerIndex": 0,
+          "explanation": "Malgré son nom (Time To Live), c'est un compteur de sauts. Le TTL du DNS, lui, est bien une durée en secondes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-routage-q5",
+          "prompt": "Une machine a une adresse correcte, mais aucune passerelle par défaut. Que peut-elle joindre ?",
+          "choices": [
+            "Uniquement les machines de son propre sous-réseau",
+            "Tout Internet",
+            "Rien du tout",
+            "Uniquement le DNS"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans passerelle, aucun paquet ne peut sortir du réseau local.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "net-routage-q6",
+          "prompt": "Que contient une entrée de table de routage ?",
+          "choices": [
+            "Un préfixe de destination",
+            "Le prochain saut (ou « directement connecté »)",
+            "L'interface de sortie",
+            "Le nom de domaine de destination"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le routage IP ignore totalement les noms de domaine : il ne travaille qu'avec des adresses.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "net-bgp",
       "title": "Internet et BGP",
       "summary": "Comment les réseaux s'interconnectent.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Un réseau de réseaux",
+          "body": "Internet est formé de dizaines de milliers de systèmes autonomes (AS) : opérateurs, clouds, grandes entreprises, chacun identifié par un numéro. Ils s'interconnectent dans des points d'échange (IXP) ou par des liens privés, selon des accords commerciaux (transit payant ou peering gratuit)."
+        },
+        {
+          "title": "BGP",
+          "body": "BGP est le protocole par lequel les AS s'annoncent les préfixes qu'ils savent joindre. Chaque AS choisit ses routes selon ses politiques (coût, accords), pas seulement selon la distance. C'est un système fondé sur la confiance : un AS peut annoncer des préfixes qui ne lui appartiennent pas."
+        },
+        {
+          "title": "Quand BGP casse",
+          "body": "En 2021, une erreur de configuration a fait retirer à Facebook ses annonces BGP : ses serveurs DNS sont devenus injoignables, et ses services ont disparu d'Internet pendant six heures. Des détournements BGP ont aussi servi à voler des cryptomonnaies. RPKI permet de signer qui a le droit d'annoncer un préfixe."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-bgp-q1",
+          "prompt": "Qu'est-ce qu'un système autonome (AS) ?",
+          "choices": [
+            "Un ensemble de réseaux sous une même administration, avec sa propre politique de routage",
+            "Un serveur qui fonctionne sans intervention humaine",
+            "Un logiciel de pare-feu",
+            "Un type de câble"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque opérateur ou grand acteur (Orange, Google, Cloudflare...) est un AS identifié par un numéro (ASN).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-bgp-q2",
+          "prompt": "Pourquoi BGP ne choisit-il pas forcément le chemin le plus court ?",
+          "choices": [
+            "Chaque AS applique ses politiques commerciales : il préfère par exemple un lien de peering gratuit à un transit payant",
+            "Parce qu'il ne connaît pas les distances",
+            "Il choisit toujours le plus court",
+            "Parce qu'il choisit au hasard"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le routage entre AS reflète des contrats autant que la topologie.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-bgp-q3",
+          "prompt": "Un AS annonce par erreur des préfixes appartenant à un autre. Que se passe-t-il ?",
+          "choices": [
+            "Une partie du trafic d'Internet vers ces adresses est détournée vers lui",
+            "Rien, BGP vérifie automatiquement la propriété",
+            "Les adresses changent de propriétaire légalement",
+            "Seul l'AS fautif est affecté"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est un détournement BGP. RPKI, en cours de généralisation, permet aux routeurs de rejeter les annonces non autorisées.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-bgp-q4",
+          "prompt": "Lors de la panne de Facebook en 2021, pourquoi même les employés ne pouvaient-ils plus entrer dans certains bâtiments ?",
+          "choices": [
+            "Les systèmes internes, dont les badges, dépendaient du même réseau devenu injoignable",
+            "Une coupure de courant",
+            "Un incendie",
+            "Une grève"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une leçon d'architecture : les outils de secours ne doivent pas dépendre du système qu'ils servent à réparer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-bgp-q5",
+          "prompt": "Qu'est-ce qu'un point d'échange Internet (IXP) ?",
+          "choices": [
+            "Un lieu où de nombreux réseaux se connectent directement entre eux pour échanger du trafic",
+            "Un bureau de change de cryptomonnaies",
+            "Un serveur DNS racine",
+            "Un fournisseur d'accès"
+          ],
+          "answerIndex": 0,
+          "explanation": "Échanger localement évite de faire passer le trafic par un intermédiaire lointain et coûteux. France-IX en est un exemple.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "net-bgp-q6",
+          "prompt": "Quelles affirmations sur BGP sont vraies ?",
+          "choices": [
+            "Il échange des annonces de préfixes entre systèmes autonomes",
+            "Il repose historiquement sur la confiance entre opérateurs",
+            "RPKI aide à vérifier qu'un AS a le droit d'annoncer un préfixe",
+            "Il fonctionne uniquement à l'intérieur d'une entreprise"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "À l'intérieur d'un AS, on utilise plutôt des protocoles comme OSPF ; BGP relie les AS entre eux.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "net-defi-routage",
+    "title": "Défi entretien : routage",
+    "summary": "Le VPN qui casse tout.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "net-defi5-q1",
+        "prompt": "Cas pratique 1/3 — Une fois connecté au VPN, un développeur n'accède plus à son imprimante en 192.168.1.50. Quelle est la cause probable ?",
+        "choices": [
+          "Le VPN a installé une route qui capture aussi 192.168.1.0/24, ou tout le trafic",
+          "L'imprimante est en panne",
+          "Le DNS est mal configuré",
+          "Le câble Ethernet est débranché"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un VPN « tout le trafic » envoie même le trafic local dans le tunnel, sauf exception configurée.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi5-q2",
+        "prompt": "Cas pratique 2/3 — Quelle commande vérifie par où passe le trafic vers l'imprimante ?",
+        "choices": [
+          "ip route get 192.168.1.50",
+          "ping 8.8.8.8",
+          "dig imprimante",
+          "netstat -s"
+        ],
+        "answerIndex": 0,
+        "explanation": "Elle affiche la route choisie, l'interface et la passerelle pour cette destination précise.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Le réseau de l'entreprise utilise aussi 192.168.1.0/24. Quelle est la vraie solution ?",
+        "choices": [
+          "Renuméroter le réseau de l'entreprise dans une plage moins courante, pour éviter les conflits avec les réseaux domestiques",
+          "Demander aux employés de changer de box",
+          "Désactiver le VPN",
+          "Ajouter un second VPN"
+        ],
+        "answerIndex": 0,
+        "explanation": "192.168.0.0/24 et 192.168.1.0/24 sont utilisées par la plupart des box : une entreprise devrait les éviter.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "net-defi5-q4",
+        "prompt": "Qu'affiche ce code Python ?",
+        "code": "import ipaddress as ip\nroutes = [\"0.0.0.0/0\", \"10.0.0.0/8\", \"10.1.0.0/16\"]\ndest = ip.ip_address(\"10.1.4.2\")\nok = [ip.ip_network(r) for r in routes\n      if dest in ip.ip_network(r)]\nprint(max(ok, key=lambda n: n.prefixlen))",
+        "language": "python",
+        "choices": [
+          "10.1.0.0/16",
+          "0.0.0.0/0",
+          "10.0.0.0/8",
+          "Une erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les trois routes correspondent ; la plus spécifique (le plus long préfixe) l'emporte.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "net-defi5-q5",
+        "prompt": "Quels équipements fonctionnent à quelle couche ?",
+        "choices": [
+          "Commutateur : couche 2, adresses MAC",
+          "Routeur : couche 3, adresses IP",
+          "Répartiteur de charge L7 : couche application, HTTP",
+          "Câble : couche 7"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le câble, c'est la couche 1 (physique).",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "net-defi5-q6",
+        "prompt": "En entretien : « Quelle différence entre un commutateur et un routeur ? »",
+        "choices": [
+          "Le commutateur relie les machines d'un même réseau local par leurs adresses MAC ; le routeur relie des réseaux différents par les adresses IP",
+          "Ce sont des synonymes",
+          "Le routeur est sans fil, le commutateur filaire",
+          "Le commutateur relie des réseaux différents"
+        ],
+        "answerIndex": 0,
+        "explanation": "La box domestique combine les deux, avec un point d'accès Wi-Fi et du NAT.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

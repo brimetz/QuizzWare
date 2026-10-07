@@ -7,19 +7,430 @@
       "id": "net-sec-tls",
       "title": "TLS en détail",
       "summary": "Certificats et chaîne de confiance.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Trois garanties",
+          "body": "TLS assure la confidentialité (personne ne lit les échanges), l'intégrité (personne ne les modifie sans que ce soit détecté) et l'authentification du serveur (on parle bien à exemple.fr). Sans la troisième, les deux premières ne servent à rien : on pourrait chiffrer parfaitement... avec un attaquant."
+        },
+        {
+          "title": "La négociation",
+          "body": "Client et serveur conviennent d'une clé de session par un échange Diffie-Hellman : un observateur qui voit tout l'échange ne peut pas en déduire la clé. Le serveur prouve son identité en signant l'échange avec la clé privée de son certificat. Ensuite, tout est chiffré par un algorithme symétrique rapide (AES, ChaCha20)."
+        },
+        {
+          "title": "La chaîne de confiance",
+          "body": "Le certificat du site est signé par une autorité intermédiaire, elle-même signée par une autorité racine présente dans le système. Le client vérifie chaque signature, le nom de domaine et la validité. Le serveur doit envoyer sa chaîne complète (sauf la racine), sinon certains clients échouent.",
+          "code": "$ openssl s_client -connect exemple.fr:443 \\\n    -servername exemple.fr\n 0 s:CN=exemple.fr\n   i:C=US, O=Let's Encrypt, CN=R11\n 1 s:C=US, O=Let's Encrypt, CN=R11\n   i:C=US, O=Internet Security Research Group,\n     CN=ISRG Root X1",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "multi",
+          "id": "net-tls-q1",
+          "prompt": "Quelles garanties TLS apporte-t-il ?",
+          "choices": [
+            "La confidentialité des échanges",
+            "L'intégrité des données",
+            "L'authentification du serveur",
+            "L'anonymat de l'utilisateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le serveur, le fournisseur d'accès et le DNS savent toujours à qui vous parlez : TLS protège le contenu, pas l'anonymat.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-tls-q2",
+          "prompt": "Pourquoi TLS utilise-t-il un chiffrement symétrique après la négociation ?",
+          "choices": [
+            "Il est des centaines de fois plus rapide que le chiffrement asymétrique",
+            "Il est plus sûr que l'asymétrique",
+            "Il n'a pas besoin de clé",
+            "Par compatibilité avec HTTP/1.0"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'asymétrique sert à établir la clé et à authentifier ; le symétrique chiffre les données en masse.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-tls-q3",
+          "prompt": "Le site fonctionne dans Chrome sur ordinateur, mais une application Android échoue : « certificat non fiable ». Cause la plus probable ?",
+          "choices": [
+            "Le serveur n'envoie pas le certificat intermédiaire ; Chrome le retrouve seul, pas l'application",
+            "Android ne supporte pas TLS",
+            "Le certificat est expiré",
+            "Le DNS est faux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Certains navigateurs complètent la chaîne eux-mêmes, masquant l'erreur de configuration. Un certificat expiré échouerait partout.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-tls-q4",
+          "prompt": "Que signifie la confidentialité persistante (forward secrecy) ?",
+          "choices": [
+            "Même si la clé privée du serveur est volée plus tard, les échanges passés enregistrés restent indéchiffrables",
+            "Le certificat ne peut jamais expirer",
+            "Les cookies sont chiffrés",
+            "La connexion dure indéfiniment"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque session utilise une clé éphémère (Diffie-Hellman), jamais dérivée de la clé du certificat. TLS 1.3 l'impose.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-tls-q5",
+          "prompt": "Dans la sortie openssl de la leçon, qui a signé le certificat de exemple.fr ?",
+          "choices": [
+            "L'autorité intermédiaire R11 de Let's Encrypt",
+            "ISRG Root X1 directement",
+            "exemple.fr lui-même",
+            "Le navigateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "« i: » désigne l'émetteur (issuer). R11 est elle-même signée par la racine ISRG Root X1.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-tls-q6",
+          "prompt": "Une application désactive la vérification des certificats « pour que ça marche en développement », et le code part en production. Quel risque ?",
+          "choices": [
+            "N'importe qui sur le chemin réseau peut intercepter et modifier les échanges sans être détecté",
+            "Aucun, le trafic reste chiffré",
+            "Les requêtes sont plus lentes",
+            "Le certificat expire plus vite"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le chiffrement sans authentification ne protège pas contre l'homme du milieu. En développement, on fait plutôt confiance à un certificat local (dotnet dev-certs).",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "net-sec-pare-feu",
       "title": "Pare-feu et segmentation",
       "summary": "Filtrer les flux.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Filtrer",
+          "body": "Un pare-feu autorise ou bloque le trafic selon des règles : adresses source et destination, ports, protocole. Un pare-feu à états (stateful) suit les connexions : les réponses à une connexion sortante autorisée sont acceptées automatiquement. Bonne pratique : tout refuser par défaut, puis autoriser explicitement.",
+          "code": "sudo ufw default deny incoming\nsudo ufw default allow outgoing\nsudo ufw allow 443/tcp\nsudo ufw allow from 10.0.5.0/24 to any port 22\nsudo ufw enable",
+          "language": "shell"
+        },
+        {
+          "title": "La segmentation",
+          "body": "Un réseau « plat », où tout le monde voit tout, laisse un attaquant entré par un poste atteindre directement les serveurs. On découpe en zones (postes, serveurs, administration, DMZ pour les services exposés) et on ne laisse passer entre elles que les flux nécessaires. La micro-segmentation applique la même idée entre services."
+        },
+        {
+          "title": "Le pare-feu applicatif (WAF)",
+          "body": "Un WAF inspecte le contenu HTTP pour bloquer les attaques connues : injections SQL, XSS, robots abusifs. Il complète la sécurité de l'application mais ne la remplace pas : le code doit rester sûr par lui-même."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-firewall-q1",
+          "prompt": "Avec les règles ufw de la leçon, qui peut se connecter en SSH ?",
+          "choices": [
+            "Uniquement les machines du réseau 10.0.5.0/24",
+            "Tout le monde",
+            "Personne",
+            "Uniquement localhost"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les connexions entrantes sont refusées par défaut ; SSH n'est autorisé que depuis ce réseau d'administration.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-firewall-q2",
+          "prompt": "Pourquoi un pare-feu à états n'a-t-il pas besoin d'une règle pour les réponses aux requêtes sortantes ?",
+          "choices": [
+            "Il mémorise les connexions établies et laisse passer leur trafic retour",
+            "Parce que les réponses ne passent pas par le pare-feu",
+            "Parce que tout le trafic entrant est autorisé",
+            "Il en a besoin"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un filtre sans état devrait ouvrir tous les ports éphémères en entrée, ce qui serait bien moins sûr.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-firewall-q3",
+          "prompt": "Pourquoi « refuser par défaut » plutôt que « autoriser par défaut et bloquer les dangers » ?",
+          "choices": [
+            "On ne peut pas lister tous les dangers ; on peut lister ce qui est nécessaire",
+            "Parce que c'est plus rapide",
+            "C'est imposé par la loi",
+            "Les deux sont équivalents"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un service oublié ou installé par erreur reste inaccessible tant qu'on ne l'a pas explicitement autorisé.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "net-firewall-q4",
+          "prompt": "Un poste de travail est compromis par un e-mail piégé. Pourquoi la segmentation limite-t-elle les dégâts ?",
+          "choices": [
+            "L'attaquant ne peut pas atteindre directement les bases de données depuis la zone des postes",
+            "Elle supprime le virus",
+            "Elle chiffre les e-mails",
+            "Elle ne limite rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les attaques par rançongiciel exploitent les réseaux plats pour se propager à tout le système d'information.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-firewall-q5",
+          "prompt": "Un WAF bloque les injections SQL connues. Peut-on garder des requêtes SQL construites par concaténation ?",
+          "choices": [
+            "Non : un WAF se contourne ; les requêtes paramétrées restent indispensables",
+            "Oui, le WAF suffit",
+            "Oui, si le WAF est récent",
+            "Oui, en production uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le WAF est une couche de défense supplémentaire, pas un correctif. Les attaquants ont des catalogues entiers de contournements.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "net-firewall-q6",
+          "prompt": "Que placer dans une DMZ ?",
+          "choices": [
+            "Le reverse proxy exposé à Internet",
+            "Un serveur de messagerie entrant",
+            "Un serveur web public",
+            "La base de données des clients"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La DMZ accueille ce qui doit être joignable depuis Internet. Les données sensibles restent dans une zone interne, accessible seulement depuis la DMZ.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "net-sec-attaques",
       "title": "Attaques courantes",
       "summary": "DDoS, homme du milieu, usurpation.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le déni de service distribué",
+          "body": "Un DDoS submerge une cible depuis des milliers de machines (souvent des objets connectés piratés). Volumétrique : saturer la bande passante. Protocolaire : épuiser les tables de connexion (inondation de SYN). Applicatif : des requêtes coûteuses (recherches, connexions) qui épuisent le serveur. Les amplifications exploitent des services UDP qui répondent bien plus gros que la requête, à une adresse source usurpée."
+        },
+        {
+          "title": "L'homme du milieu",
+          "body": "L'attaquant s'interpose entre la victime et le serveur : faux point d'accès Wi-Fi, usurpation ARP, DNS falsifié. Sans TLS correctement vérifié, il lit et modifie tout. HSTS force le navigateur à n'utiliser que HTTPS pour un site, empêchant le retour forcé en HTTP."
+        },
+        {
+          "title": "L'usurpation",
+          "body": "Usurper une adresse IP source est facile en UDP (pas de handshake), presque impossible pour une connexion TCP complète. L'usurpation DNS (cache poisoning) injecte de fausses réponses dans un résolveur : DNSSEC signe les réponses. L'usurpation d'e-mail est combattue par SPF, DKIM et DMARC."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "net-attaques-q1",
+          "prompt": "Une attaque par amplification DNS envoie de petites requêtes avec l'adresse source de la victime. Pourquoi est-ce efficace ?",
+          "choices": [
+            "Les serveurs renvoient des réponses bien plus grosses vers la victime, qui reçoit un volume multiplié",
+            "Les serveurs DNS sont piratés",
+            "La victime perd ses noms de domaine",
+            "Ce n'est pas efficace"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une requête de 60 octets peut produire une réponse de plusieurs kilo-octets. UDP permet d'usurper l'adresse source.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-attaques-q2",
+          "prompt": "Que fait l'en-tête Strict-Transport-Security (HSTS) ?",
+          "choices": [
+            "Le navigateur n'accepte plus que HTTPS pour ce site pendant la durée indiquée",
+            "Il chiffre les cookies",
+            "Il bloque les attaques DDoS",
+            "Il signe le DNS"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans HSTS, un attaquant sur le Wi-Fi peut intercepter la première requête en HTTP avant la redirection vers HTTPS.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-attaques-q3",
+          "prompt": "Pourquoi est-il très difficile d'établir une connexion TCP complète avec une adresse IP source usurpée ?",
+          "choices": [
+            "Le SYN-ACK part vers la vraie adresse : l'attaquant ne reçoit pas le numéro de séquence nécessaire pour terminer le handshake",
+            "TCP est chiffré",
+            "Les routeurs vérifient les identités",
+            "C'est très facile"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est pourquoi l'usurpation sert surtout en UDP ou pour des inondations de SYN qui n'ont pas besoin de réponse.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "net-attaques-q4",
+          "prompt": "Un serveur reçoit des millions de SYN sans ACK final, et sa table de connexions déborde. Quelle protection ?",
+          "choices": [
+            "Les SYN cookies : le serveur ne réserve rien tant que le handshake n'est pas terminé",
+            "Augmenter le TTL DNS",
+            "Désactiver TLS",
+            "Redémarrer le serveur toutes les heures"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'état de la connexion est encodé dans le numéro de séquence renvoyé, et reconstitué seulement à la réception de l'ACK.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "net-attaques-q5",
+          "prompt": "Quels mécanismes protègent contre l'usurpation d'e-mails d'un domaine ?",
+          "choices": [
+            "SPF : la liste des serveurs autorisés à envoyer pour le domaine",
+            "DKIM : une signature des messages",
+            "DMARC : la politique à appliquer en cas d'échec",
+            "MX : la liste des destinataires"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les trois sont publiés dans le DNS (enregistrements TXT). MX indique les serveurs qui reçoivent le courrier.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "net-attaques-q6",
+          "prompt": "Une attaque envoie 2 000 requêtes de recherche complexes par seconde à une API. Quelle catégorie de DDoS ?",
+          "choices": [
+            "Applicative (couche 7) : peu de volume, mais chaque requête coûte cher au serveur",
+            "Volumétrique",
+            "Par amplification",
+            "Ce n'est pas une attaque"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle passe sous les radars des protections volumétriques. Limitation de débit, cache et défis anti-robots sont les parades.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "net-defi-securite",
+    "title": "Défi entretien : sécurité réseau",
+    "summary": "Durcir l'exposition d'une API.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "net-defi7-q1",
+        "prompt": "Cas pratique 1/3 — Un audit révèle que la base PostgreSQL est joignable depuis Internet sur le port 5432. Que faire ?",
+        "choices": [
+          "La placer dans un réseau privé et n'autoriser que les serveurs d'application",
+          "Changer le port pour 15432",
+          "Renforcer seulement le mot de passe",
+          "Ne rien faire, PostgreSQL est sûr"
+        ],
+        "answerIndex": 0,
+        "explanation": "Changer de port n'est pas une protection : les scanners testent tous les ports. Un service non exposé ne peut pas être attaqué depuis Internet.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "net-defi7-q2",
+        "prompt": "Cas pratique 2/3 — L'API publique accepte encore TLS 1.0. Pourquoi le désactiver ?",
+        "choices": [
+          "Il contient des faiblesses connues ; on n'accepte que TLS 1.2 et 1.3",
+          "Il est plus rapide que TLS 1.3",
+          "Il n'a pas de chiffrement du tout",
+          "Il est obligatoire de le garder"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les navigateurs l'ont abandonné en 2020. Garder de vieilles versions expose aux attaques par repli (downgrade).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi7-q3",
+        "prompt": "Cas pratique 3/3 — Les services internes communiquent en HTTP clair, « car c'est le réseau interne ». Qu'en penser ?",
+        "choices": [
+          "C'est risqué : un attaquant entré dans le réseau peut tout lire ; on chiffre aussi en interne (mTLS, maillage de services)",
+          "C'est parfait, le réseau interne est sûr",
+          "Il faut au contraire désactiver TLS partout",
+          "Le chiffrement interne est interdit"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est l'approche zero trust : la position dans le réseau ne vaut pas authentification.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi7-q4",
+        "prompt": "Qu'apporte le TLS mutuel (mTLS) ?",
+        "choices": [
+          "Le client présente aussi un certificat : chaque côté authentifie l'autre",
+          "Deux couches de chiffrement",
+          "La suppression des certificats",
+          "Un chiffrement plus rapide"
+        ],
+        "answerIndex": 0,
+        "explanation": "Dans un maillage de services (Istio, Linkerd), chaque service reçoit une identité par certificat, renouvelée automatiquement.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "net-defi7-q5",
+        "prompt": "Quels en-têtes de sécurité ajouter aux réponses d'un site web ?",
+        "choices": [
+          "Strict-Transport-Security",
+          "Content-Security-Policy",
+          "X-Content-Type-Options: nosniff",
+          "Server: nginx/1.18.0 (Ubuntu)"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Annoncer la version exacte du serveur aide plutôt les attaquants à cibler une faille connue.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "net-defi7-q6",
+        "prompt": "En entretien : « HTTPS suffit-il à sécuriser une application ? »",
+        "choices": [
+          "Non : il protège le transport, pas les failles de l'application (injections, contrôle d'accès) ni le serveur",
+          "Oui, entièrement",
+          "Non, HTTPS n'apporte rien",
+          "Oui, si le certificat est payant"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un site en HTTPS peut très bien transmettre de façon chiffrée les données qu'un attaquant lui a fait divulguer par une injection SQL.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

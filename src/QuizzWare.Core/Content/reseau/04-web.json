@@ -97,8 +97,234 @@
           "answerIndex": 1,
           "explanation": "TLS 1.3 négocie une nouvelle connexion en 1-RTT (contre 2 pour TLS 1.2). Le 0-RTT n'est possible qu'en reprise de session.",
           "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "reseau-web-q6",
+          "prompt": "On change l'adresse IP d'un serveur et on met à jour son enregistrement A, dont le TTL est de 24 heures. Que se passe-t-il ?",
+          "choices": [
+            "Certains clients utiliseront l'ancienne adresse jusqu'à 24 heures, le temps que leurs caches DNS expirent",
+            "Tous les clients basculent instantanément",
+            "Le domaine devient inaccessible pendant 24 heures",
+            "Le TTL ne concerne que les e-mails"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avant une migration, on baisse le TTL (à 5 minutes par exemple) quelques jours à l'avance, puis on le remonte une fois la bascule faite.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "reseau-http",
+      "title": "HTTP en détail",
+      "summary": "En-têtes, cookies, cache et versions.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Une requête, une réponse",
+          "body": "HTTP est un protocole texte (jusqu'à HTTP/1.1) : une ligne de requête, des en-têtes, une ligne vide, un corps éventuel. Host indique le site visé (plusieurs sites partagent souvent une IP), Content-Type le format du corps, Authorization les identifiants.",
+          "code": "GET /api/produits/42 HTTP/1.1\nHost: boutique.exemple\nAccept: application/json\n\nHTTP/1.1 200 OK\nContent-Type: application/json\nCache-Control: max-age=60\n\n{\"id\": 42, \"nom\": \"Clavier\"}",
+          "language": "text"
+        },
+        {
+          "title": "Sans état, avec cookies",
+          "body": "Chaque requête HTTP est indépendante. Pour garder une session, le serveur envoie un cookie (Set-Cookie) que le navigateur renvoie à chaque requête vers ce site. Attributs essentiels : HttpOnly (illisible en JavaScript), Secure (HTTPS uniquement), SameSite (limite l'envoi depuis d'autres sites)."
+        },
+        {
+          "title": "Le cache HTTP",
+          "body": "Cache-Control: max-age=60 autorise à réutiliser la réponse pendant 60 secondes. Ensuite, le client peut revalider avec l'ETag : si rien n'a changé, le serveur répond 304 Not Modified, sans corps. no-store interdit tout stockage (données sensibles)."
+        },
+        {
+          "title": "HTTP/1.1, 2 et 3",
+          "body": "HTTP/1.1 traite une requête à la fois par connexion : les navigateurs ouvrent jusqu'à 6 connexions par domaine. HTTP/2 multiplexe de nombreux flux sur une seule connexion et compresse les en-têtes. HTTP/3 fait de même sur QUIC, sans blocage en tête de file."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "reseau-http-q1",
+          "prompt": "À quoi sert l'en-tête Host ?",
+          "choices": [
+            "À indiquer quel site est demandé, car plusieurs sites peuvent partager la même adresse IP",
+            "À indiquer l'adresse IP du client",
+            "À chiffrer la requête",
+            "À choisir la version HTTP"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un même serveur héberge souvent des dizaines de sites : c'est Host qui permet de les distinguer (hébergement virtuel).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "reseau-http-q2",
+          "prompt": "Quel attribut empêche un script injecté de lire le cookie de session ?",
+          "choices": [
+            "HttpOnly",
+            "Secure",
+            "Max-Age",
+            "Path"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un cookie HttpOnly n'est pas accessible via document.cookie : une faille XSS ne permet pas de le voler directement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "reseau-http-q3",
+          "prompt": "Le navigateur renvoie If-None-Match avec l'ETag de sa copie, et la ressource n'a pas changé. Que répond le serveur ?",
+          "choices": [
+            "304 Not Modified, sans corps",
+            "200 OK avec tout le contenu",
+            "404 Not Found",
+            "204 No Content"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le navigateur réutilise sa copie : on économise le transfert du contenu.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "reseau-http-q4",
+          "prompt": "Quel en-tête mettre sur une page affichant le relevé bancaire d'un utilisateur ?",
+          "choices": [
+            "Cache-Control: no-store",
+            "Cache-Control: public, max-age=86400",
+            "Cache-Control: max-age=60",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "public autoriserait même un proxy partagé à la stocker et à la servir à d'autres utilisateurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "reseau-http-q5",
+          "prompt": "Quel est l'apport principal de HTTP/2 par rapport à HTTP/1.1 ?",
+          "choices": [
+            "Le multiplexage de nombreuses requêtes en parallèle sur une seule connexion",
+            "Le chiffrement obligatoire du corps",
+            "L'utilisation d'UDP",
+            "La suppression des en-têtes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les astuces de HTTP/1.1 (concaténer les fichiers, multiplier les sous-domaines) deviennent inutiles.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "reseau-http-q6",
+          "prompt": "Quels attributs de cookie renforcent la sécurité d'une session ?",
+          "choices": [
+            "Secure",
+            "HttpOnly",
+            "SameSite=Lax ou Strict",
+            "Un Max-Age de dix ans"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "SameSite limite l'envoi du cookie lors de requêtes venant d'autres sites, ce qui protège contre le CSRF. Une session de dix ans augmente au contraire le risque en cas de vol.",
+          "difficulty": 2
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "reseau-defi-web",
+    "title": "Défi entretien : que se passe-t-il quand on tape une URL ?",
+    "summary": "La question classique, étape par étape.",
+    "questions": [
+      {
+        "type": "order",
+        "id": "reseau-defi4-q1",
+        "prompt": "Cas pratique 1/3 — Remets dans l'ordre ce qui se passe quand on tape https://exemple.fr.",
+        "language": "text",
+        "lines": [
+          "Résolution DNS du nom en adresse IP",
+          "Connexion TCP (ou QUIC)",
+          "Négociation TLS et vérification du certificat",
+          "Envoi de la requête HTTP GET /",
+          "Réception du HTML, puis des ressources qu'il référence"
+        ],
+        "explanation": "C'est l'une des questions d'entretien les plus posées. Chaque étape peut être approfondie à volonté.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "reseau-defi4-q2",
+        "prompt": "Cas pratique 2/3 — Où le navigateur cherche-t-il l'adresse IP avant d'interroger un serveur DNS sur le réseau ?",
+        "choices": [
+          "Dans son propre cache, puis celui du système (et le fichier hosts)",
+          "Dans le certificat TLS",
+          "Dans les cookies",
+          "Nulle part, il interroge toujours la racine"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ensuite, le résolveur (de la box ou de l'opérateur) a lui-même un cache ; il n'interroge la racine, puis le TLD, puis le serveur faisant autorité qu'en dernier recours.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "reseau-defi4-q3",
+        "prompt": "Cas pratique 3/3 — Comment le navigateur sait-il que le certificat présenté est légitime ?",
+        "choices": [
+          "Il vérifie la signature de la chaîne jusqu'à une autorité racine de confiance, le nom de domaine et la date de validité",
+          "Il fait confiance à tout certificat",
+          "Il demande à l'utilisateur",
+          "Il compare au certificat de la veille"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le système et le navigateur embarquent une liste d'autorités racines de confiance.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "reseau-defi4-q4",
+        "prompt": "Le site répond 301 avec Location: https://www.exemple.fr/. Que fait le navigateur ?",
+        "choices": [
+          "Il suit la redirection, et peut la mémoriser durablement car elle est permanente",
+          "Il affiche une erreur",
+          "Il ignore la réponse",
+          "Il réessaie la même URL"
+        ],
+        "answerIndex": 0,
+        "explanation": "301 est permanente (mise en cache), 302 et 307 sont temporaires. Une 301 erronée peut donc persister longtemps chez les clients.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "reseau-defi4-q5",
+        "prompt": "Quels enregistrements DNS sont correctement décrits ?",
+        "choices": [
+          "CNAME : un alias vers un autre nom",
+          "MX : les serveurs de messagerie du domaine",
+          "TXT : du texte libre, utilisé pour SPF ou la vérification de propriété",
+          "AAAA : une adresse IPv4"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "AAAA désigne une adresse IPv6 (quatre fois plus longue, d'où les quatre A).",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "reseau-defi4-q6",
+        "prompt": "Un site affiche « NET::ERR_CERT_DATE_INVALID ». Quelle est la cause la plus probable ?",
+        "choices": [
+          "Le certificat a expiré (ou l'horloge du client est fausse)",
+          "Le DNS est en panne",
+          "Le serveur est surchargé",
+          "Le site n'existe pas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les certificats expirent (90 jours avec Let's Encrypt, et bientôt moins pour tous) : le renouvellement doit être automatisé.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

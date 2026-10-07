@@ -96,8 +96,229 @@
           "answerIndex": 1,
           "explanation": "Le client envoie SYN, le serveur répond SYN-ACK, le client termine avec ACK.",
           "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "reseau-osi-q6",
+          "prompt": "Une visioconférence perd quelques paquets. Pourquoi UDP est-il préféré à TCP ?",
+          "choices": [
+            "Une image perdue n'a plus d'intérêt une seconde plus tard : mieux vaut passer à la suivante que d'attendre une retransmission",
+            "UDP chiffre les flux vidéo",
+            "UDP garantit l'ordre des paquets",
+            "TCP ne peut pas transporter de vidéo"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec TCP, un paquet perdu bloque tous les suivants jusqu'à sa retransmission : l'image se fige.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "reseau-encapsulation",
+      "title": "Encapsulation, adresses et ports",
+      "summary": "Ce que contient vraiment un paquet.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "L'encapsulation",
+          "body": "Chaque couche ajoute son en-tête autour des données de la couche du dessus. Une requête HTTP est placée dans un segment TCP (ports), lui-même dans un paquet IP (adresses IP), lui-même dans une trame Ethernet (adresses MAC). Le destinataire retire les en-têtes dans l'ordre inverse."
+        },
+        {
+          "title": "Trois identifiants",
+          "body": "L'adresse MAC identifie une carte réseau sur le réseau local, et change à chaque saut. L'adresse IP identifie une machine de bout en bout. Le port identifie une application sur cette machine. Une connexion TCP est identifiée par le quadruplet IP source, port source, IP destination, port destination."
+        },
+        {
+          "title": "Ports et sockets",
+          "body": "Un serveur écoute sur un port connu (443). Le client utilise un port éphémère, choisi au hasard par son système (souvent entre 32768 et 60999 sous Linux). C'est ce qui permet à un même navigateur d'ouvrir plusieurs connexions vers le même serveur.",
+          "code": "$ ss -tn\nLocal              Peer\n192.168.1.20:51874 142.250.75.238:443\n192.168.1.20:51876 142.250.75.238:443",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "order",
+          "id": "reseau-encap-q1",
+          "prompt": "Remets dans l'ordre l'encapsulation, de l'extérieur vers l'intérieur.",
+          "language": "text",
+          "lines": [
+            "Trame Ethernet (adresses MAC)",
+            "Paquet IP (adresses IP)",
+            "Segment TCP (ports)",
+            "Requête HTTP (données)"
+          ],
+          "explanation": "Chaque couche enveloppe celle du dessus. Le routeur ne regarde que jusqu'à IP, le pare-feu souvent jusqu'à TCP.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "reseau-encap-q2",
+          "prompt": "Un paquet traverse trois routeurs entre deux machines. Qu'est-ce qui change à chaque saut ?",
+          "choices": [
+            "Les adresses MAC de la trame",
+            "Les adresses IP source et destination",
+            "Les ports TCP",
+            "Le contenu HTTP"
+          ],
+          "answerIndex": 0,
+          "explanation": "La trame Ethernet ne vit que sur un réseau local : chaque routeur en construit une nouvelle. Les adresses IP restent les mêmes de bout en bout (hors NAT).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "reseau-encap-q3",
+          "prompt": "Dans la sortie de ss de la leçon, pourquoi les deux connexions ont-elles des ports locaux différents ?",
+          "choices": [
+            "Chaque connexion utilise son propre port éphémère côté client, pour être distinguée",
+            "Parce que le serveur l'exige",
+            "Parce que ce sont deux navigateurs",
+            "C'est une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le quadruplet doit être unique : même IP et même port distants, donc le port local diffère.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "reseau-encap-q4",
+          "prompt": "Quel identifiant permet de savoir à quelle application d'une machine livrer les données ?",
+          "choices": [
+            "Le port",
+            "L'adresse MAC",
+            "L'adresse IP",
+            "Le nom DNS"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'IP amène les données à la machine, le port à l'application qui écoute.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "reseau-encap-q5",
+          "prompt": "Deux serveurs web peuvent-ils écouter sur le port 443 de la même machine et de la même adresse IP ?",
+          "choices": [
+            "Non : le second échoue avec « Address already in use »",
+            "Oui, sans aucune configuration",
+            "Oui, s'ils sont écrits dans des langages différents",
+            "Oui, le système alterne entre les deux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un seul processus peut écouter sur un couple IP:port (sauf option SO_REUSEPORT). Un reverse proxy unique répartit ensuite vers plusieurs applications.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "reseau-encap-q6",
+          "prompt": "Qu'est-ce qui identifie de façon unique une connexion TCP ?",
+          "choices": [
+            "L'adresse IP source",
+            "Le port source",
+            "L'adresse IP et le port de destination",
+            "L'adresse MAC du routeur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le quadruplet (IP et port de chaque côté). Le protocole s'y ajoute pour distinguer TCP et UDP.",
+          "difficulty": 2
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "reseau-defi-fondamentaux",
+    "title": "Défi entretien : fondamentaux réseau",
+    "summary": "Suivre une requête de bout en bout.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "reseau-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Un navigateur ouvre https://exemple.fr. Que se passe-t-il avant tout envoi de données HTTP ?",
+        "choices": [
+          "Résolution DNS, poignée de main TCP, puis négociation TLS",
+          "Négociation TLS, puis DNS",
+          "Envoi direct de la requête HTTP",
+          "Téléchargement du certificat depuis le DNS"
+        ],
+        "answerIndex": 0,
+        "explanation": "Il faut d'abord l'adresse IP, puis une connexion TCP, puis un canal chiffré. Chaque étape coûte des allers-retours.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "reseau-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Le serveur est à 100 ms aller-retour. Avec TCP puis TLS 1.3, combien de temps avant d'envoyer la requête HTTP ?",
+        "choices": [
+          "Environ 200 ms : 1 aller-retour pour TCP, 1 pour TLS",
+          "Environ 100 ms",
+          "Environ 400 ms",
+          "0 ms"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans compter le DNS. C'est pourquoi on réutilise les connexions, et pourquoi HTTP/3 (QUIC) fusionne transport et chiffrement.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "reseau-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Comment réduire ce délai pour les requêtes suivantes ?",
+        "choices": [
+          "Garder la connexion ouverte et la réutiliser (keep-alive, HTTP/2)",
+          "Ouvrir une nouvelle connexion par requête",
+          "Désactiver TLS",
+          "Augmenter la taille des paquets"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les requêtes suivantes sur la même connexion ne paient plus ni le handshake TCP ni la négociation TLS.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "reseau-defi1-q4",
+        "prompt": "Un service doit diffuser des cotations boursières en temps réel. Chaque mise à jour remplace la précédente. TCP ou UDP ?",
+        "choices": [
+          "UDP peut convenir : une cotation perdue est vite remplacée, et la latence prime",
+          "TCP obligatoirement",
+          "Ni l'un ni l'autre",
+          "HTTP uniquement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les flux de marché utilisent souvent UDP multicast. Mais pour des ordres d'achat, où chaque message compte, TCP s'impose.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "reseau-defi1-q5",
+        "prompt": "Quels protocoles utilisent habituellement UDP ?",
+        "choices": [
+          "DNS (pour les requêtes courtes)",
+          "QUIC, donc HTTP/3",
+          "La voix sur IP",
+          "SSH"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "SSH utilise TCP : une session interactive ne tolère aucune perte.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "reseau-defi1-q6",
+        "prompt": "En entretien : « À quoi sert le modèle en couches ? »",
+        "choices": [
+          "Chaque couche ne dépend que de l'interface de ses voisines : on peut changer le Wi-Fi pour la fibre sans toucher à HTTP",
+          "À rendre les réseaux plus lents",
+          "À chiffrer les données",
+          "Il n'a qu'un intérêt historique"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est la même idée que l'architecture logicielle en couches : des interfaces stables, des implémentations remplaçables.",
+        "difficulty": 1
+      }
+    ]
+  }
 }
