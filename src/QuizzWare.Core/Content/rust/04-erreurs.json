@@ -7,13 +7,326 @@
       "id": "rust-result",
       "title": "Result et ?",
       "summary": "Propager les erreurs.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Result<T, E>",
+          "body": "Une opération qui peut échouer renvoie un Result : Ok(valeur) ou Err(erreur). Le type dit, dans la signature même, qu'il faut traiter l'échec, et le compilateur avertit si un Result est ignoré. On le traite avec match, ou avec des combinateurs comme map, unwrap_or ou ok_or.",
+          "code": "fn parse_age(s: &str) -> Result<u8, String> {\n    match s.trim().parse::<u8>() {\n        Ok(n) if n <= 130 => Ok(n),\n        Ok(_) => Err(\"âge irréaliste\".into()),\n        Err(e) => Err(format!(\"pas un nombre : {e}\")),\n    }\n}"
+        },
+        {
+          "title": "L'opérateur ?",
+          "body": "? propage l'erreur : si le Result est un Err, la fonction s'arrête et renvoie cette erreur (convertie au besoin avec From) ; sinon, il extrait la valeur. Il remplace des cascades de match par un code linéaire. Il fonctionne aussi avec Option.",
+          "code": "fn lire_config(chemin: &str)\n    -> Result<Config, Box<dyn Error>> {\n    let texte = fs::read_to_string(chemin)?;\n    let config = toml::from_str(&texte)?;\n    Ok(config)\n}"
+        },
+        {
+          "title": "Des erreurs bien typées",
+          "body": "Une bibliothèque définit une enum d'erreurs précise, souvent avec thiserror, pour que l'appelant puisse distinguer les cas. Une application peut se contenter d'anyhow, qui accepte toute erreur et permet d'ajouter du contexte (.context(\"lecture de la configuration\"))."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-result-q1",
+          "prompt": "Avec parse_age de la leçon, que renvoient ces appels ?",
+          "code": "println!(\"{:?}\", parse_age(\" 42 \"));\nprintln!(\"{:?}\", parse_age(\"200\"));",
+          "choices": [
+            "Ok(42) puis Err(\"âge irréaliste\")",
+            "Ok(42) puis Ok(200)",
+            "Err puis Err",
+            "Ok(42) puis Err(\"pas un nombre : ...\")"
+          ],
+          "answerIndex": 0,
+          "explanation": "trim retire les espaces ; 200 tient dans un u8 (0 à 255) mais la garde n <= 130 le refuse.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-result-q2",
+          "prompt": "Que fait l'opérateur ? appliqué à un Result ?",
+          "choices": [
+            "Il extrait la valeur si c'est Ok, sinon il renvoie immédiatement l'erreur à l'appelant",
+            "Il ignore l'erreur",
+            "Il provoque une panique en cas d'erreur",
+            "Il affiche l'erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il ne peut être utilisé que dans une fonction qui renvoie elle-même un Result (ou une Option).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-result-q3",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "use std::num::ParseIntError;\n\nfn somme(a: &str, b: &str) -> Result<i32, ParseIntError> {\n    Ok(a.parse::<i32>()? + b.parse::<i32>()?)\n}\n\nprintln!(\"{:?}\", somme(\"2\", \"3\"));\nprintln!(\"{}\", somme(\"2\", \"x\").is_err());",
+          "choices": [
+            "Ok(5) puis true",
+            "5 puis false",
+            "Ok(5) puis une panique",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le second parse échoue : ? renvoie l'erreur, et is_err() vaut true.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "rust-result-q4",
+          "prompt": "Cette fonction ne compile pas. Touche la ligne en cause.",
+          "code": "fn taille(chemin: &str) -> u64 {\n    let meta = std::fs::metadata(chemin)?;\n    meta.len()\n}",
+          "bugLines": [
+            1
+          ],
+          "explanation": "? ne peut propager l'erreur que si la fonction renvoie un Result. La signature doit être -> std::io::Result<u64>, et la fin Ok(meta.len()).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-result-q5",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "let a: Result<i32, String> = Err(\"oups\".into());\nlet b: Option<i32> = Some(4);\nprintln!(\"{} {}\", a.unwrap_or(0),\n         b.map(|x| x * 10).unwrap_or(0));",
+          "choices": [
+            "0 40",
+            "oups 40",
+            "0 4",
+            "Une panique"
+          ],
+          "answerIndex": 0,
+          "explanation": "unwrap_or fournit une valeur de repli ; map transforme le contenu d'une Option sans la déballer.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-result-q6",
+          "prompt": "Quelles pratiques sont recommandées pour les erreurs en Rust ?",
+          "choices": [
+            "Renvoyer Result pour les échecs attendus (fichier absent, saisie invalide)",
+            "Une enum d'erreurs précise dans une bibliothèque (thiserror)",
+            "anyhow avec du contexte dans une application",
+            "unwrap partout dans le code de production"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "unwrap fait paniquer sur la première erreur : acceptable dans des tests ou des prototypes, pas pour des échecs prévisibles en production.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "rust-panic",
       "title": "panic! et unwrap",
       "summary": "Quand les utiliser.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les erreurs irrécupérables",
+          "body": "panic! arrête le thread courant (par défaut en déroulant la pile) quand le programme atteint un état qu'il ne sait pas gérer : un bug, un invariant violé. Un accès hors limites (v[10]), une division entière par zéro ou un débordement en mode debug paniquent aussi."
+        },
+        {
+          "title": "unwrap et expect",
+          "body": "unwrap extrait la valeur d'un Option ou d'un Result, et panique sinon. expect fait de même avec un message explicatif. On les réserve aux cas où l'échec est un bug, avec un message qui dit pourquoi on était sûr, ou aux tests et prototypes.",
+          "code": "let port: u16 = std::env::var(\"PORT\")\n    .unwrap_or(\"8080\".into())\n    .parse()\n    .expect(\"PORT doit être un entier de 0 à 65535\");"
+        },
+        {
+          "title": "Panic ou Result ?",
+          "body": "Une erreur que l'appelant peut raisonnablement gérer (fichier introuvable, saisie invalide, réseau) est un Result. Une situation qui ne devrait jamais arriver si le code est correct est une panique. Dans une bibliothèque, paniquer sur une entrée de l'utilisateur est un défaut : on lui renvoie un Result."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-panic-q1",
+          "prompt": "Que se passe-t-il avec ce code ?",
+          "code": "let v = vec![1, 2, 3];\nlet x = v[10];",
+          "choices": [
+            "Une panique à l'exécution : index out of bounds",
+            "x vaut 0",
+            "Une erreur de compilation",
+            "Un comportement indéfini, comme en C"
+          ],
+          "answerIndex": 0,
+          "explanation": "Rust vérifie les indices : jamais de lecture hors limites silencieuse. v.get(10) renvoie None pour traiter le cas sans paniquer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-panic-q2",
+          "prompt": "Quelle différence entre unwrap et expect ?",
+          "choices": [
+            "expect permet de donner un message qui explique la panique",
+            "expect ne panique jamais",
+            "unwrap renvoie une valeur par défaut",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le message d'expect aide énormément au diagnostic : il dit ce qu'on supposait.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-panic-q3",
+          "prompt": "Une bibliothèque de parsing de dates panique quand l'utilisateur fournit « 31/02/2026 ». Qu'en penser ?",
+          "choices": [
+            "C'est un défaut : une entrée invalide est un cas attendu, qui doit être signalé par un Result",
+            "C'est parfait",
+            "Il faut ajouter unwrap",
+            "Il faut utiliser unsafe"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'appelant doit pouvoir réagir (afficher un message) au lieu de voir son programme s'arrêter.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-panic-q4",
+          "prompt": "Dans quel cas unwrap est-il acceptable ?",
+          "choices": [
+            "Dans un test, ou quand l'échec est logiquement impossible (une expression régulière littérale qu'on sait valide)",
+            "Pour lire un fichier fourni par l'utilisateur",
+            "Pour parser une saisie",
+            "Pour toute requête réseau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans ces cas, une panique signalerait un bug du programme, pas une situation normale.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-panic-q5",
+          "prompt": "Qu'affiche ce programme si PORT n'est pas défini ?",
+          "code": "let port: u16 = std::env::var(\"PORT\")\n    .unwrap_or(\"8080\".into())\n    .parse()\n    .expect(\"PORT invalide\");\nprintln!(\"{port}\");",
+          "choices": [
+            "8080",
+            "Une panique : PORT invalide",
+            "0",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "unwrap_or fournit la valeur par défaut ; expect ne panique que si la valeur n'est pas un u16 valide.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-panic-q6",
+          "prompt": "Quelles opérations paniquent en Rust ?",
+          "choices": [
+            "Un accès hors limites avec v[i]",
+            "unwrap sur None",
+            "Une division entière par zéro",
+            "v.get(i) avec un indice hors limites"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "get renvoie None : c'est l'alternative sans panique.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "rust-defi-erreurs",
+    "title": "Défi entretien : erreurs en Rust",
+    "summary": "Lire un fichier de configuration.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "rust-defi4-q1",
+        "prompt": "Cas pratique 1/3 — Une application lit config.toml au démarrage. Le fichier peut manquer ou être mal formé. Quelle signature ?",
+        "choices": [
+          "fn charger(chemin: &Path) -> Result<Config, ErreurConfig>",
+          "fn charger(chemin: &Path) -> Config, avec unwrap à l'intérieur",
+          "fn charger(chemin: &Path) -> Option<Config>",
+          "fn charger() -> ()"
+        ],
+        "answerIndex": 0,
+        "explanation": "Result garde l'information sur la cause de l'échec, qu'Option perdrait.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "rust-defi4-q2",
+        "prompt": "Cas pratique 2/3 — Remets dans l'ordre l'enum d'erreurs et la conversion qui permet d'utiliser ?.",
+        "lines": [
+          "enum ErreurConfig {",
+          "    Lecture(std::io::Error),",
+          "    Format(String),",
+          "}",
+          "impl From<std::io::Error> for ErreurConfig {",
+          "    fn from(e: std::io::Error) -> Self {",
+          "        Self::Lecture(e)",
+          "    }",
+          "}"
+        ],
+        "explanation": "Grâce à From, ? convertit automatiquement une io::Error en ErreurConfig. thiserror génère ce code avec #[from].",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi4-q3",
+        "prompt": "Cas pratique 3/3 — Dans main, comment réagir à une ErreurConfig ?",
+        "choices": [
+          "Afficher un message clair à l'utilisateur et quitter avec un code d'erreur",
+          "Paniquer avec unwrap",
+          "Ignorer l'erreur et continuer avec des valeurs vides",
+          "Boucler jusqu'à ce que le fichier apparaisse"
+        ],
+        "answerIndex": 0,
+        "explanation": "main peut aussi renvoyer un Result : en cas d'Err, le programme affiche l'erreur et sort avec un code non nul.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi4-q4",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "fn diviser(a: i32, b: i32) -> Option<i32> {\n    if b == 0 { None } else { Some(a / b) }\n}\n\nfn calcul() -> Option<i32> {\n    let x = diviser(20, 2)?;\n    let y = diviser(x, 0)?;\n    Some(y + 1)\n}\n\nprintln!(\"{:?}\", calcul());",
+        "choices": [
+          "None",
+          "Some(11)",
+          "Some(1)",
+          "Une panique"
+        ],
+        "answerIndex": 0,
+        "explanation": "La seconde division renvoie None : ? l'arrête et calcul renvoie None.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "rust-defi4-q5",
+        "prompt": "Quels avantages Result apporte-t-il par rapport aux exceptions ?",
+        "choices": [
+          "Les erreurs possibles sont visibles dans la signature",
+          "Le compilateur avertit si un Result est ignoré",
+          "La propagation avec ? reste explicite à chaque appel",
+          "Les erreurs n'ont jamais besoin d'être traitées"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "C'est l'inverse : il faut traiter ou propager chaque erreur, explicitement.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi4-q6",
+        "prompt": "En entretien : « Quand paniquer plutôt que renvoyer une erreur ? »",
+        "choices": [
+          "Quand la situation révèle un bug (invariant violé, état impossible), pas pour un échec prévisible lié aux entrées ou à l'environnement",
+          "Toujours",
+          "Jamais, panic! est interdit",
+          "Uniquement dans les bibliothèques"
+        ],
+        "answerIndex": 0,
+        "explanation": "La règle rejoint celle d'autres langages : exceptions pour l'inattendu, valeurs de retour pour l'attendu.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

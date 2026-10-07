@@ -7,13 +7,318 @@
       "id": "rust-threads",
       "title": "Threads, Arc et Mutex",
       "summary": "Partager en sécurité.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Lancer des threads",
+          "body": "std::thread::spawn lance un thread système avec une fermeture. Le mot-clé move transfère la propriété des variables capturées au thread, qui peut survivre à la fonction qui l'a lancé. join attend sa fin et récupère son résultat. thread::scope permet d'emprunter des données locales, car tous les threads se terminent avant la fin du bloc.",
+          "code": "let v = vec![1, 2, 3];\nlet h = std::thread::spawn(move || {\n    v.iter().sum::<i32>()\n});\nprintln!(\"{}\", h.join().unwrap());   // 6"
+        },
+        {
+          "title": "Arc et Mutex",
+          "body": "Pour partager une donnée entre threads, Arc (comptage de références atomique) donne plusieurs propriétaires, et Mutex autorise une seule modification à la fois. Le verrou est relâché automatiquement quand la garde sort de portée : impossible d'oublier unlock.",
+          "code": "let total = Arc::new(Mutex::new(0));\nlet mut hs = vec![];\nfor _ in 0..4 {\n    let t = Arc::clone(&total);\n    hs.push(thread::spawn(move || {\n        *t.lock().unwrap() += 1;\n    }));\n}\nfor h in hs { h.join().unwrap(); }"
+        },
+        {
+          "title": "Send et Sync",
+          "body": "Le trait Send indique qu'une valeur peut être transférée à un autre thread ; Sync, qu'elle peut être partagée par référence entre threads. Rc, au compteur non atomique, n'est pas Send : le compilateur refuse de l'envoyer à un thread. Les courses de données deviennent des erreurs de compilation : c'est la « concurrence sans peur »."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-threads-q1",
+          "prompt": "Pourquoi le mot-clé move est-il nécessaire dans thread::spawn(move || ...) quand la fermeture utilise v ?",
+          "choices": [
+            "Le thread peut vivre plus longtemps que la fonction : il doit posséder v, pas l'emprunter",
+            "Pour accélérer le thread",
+            "Pour copier v en profondeur",
+            "Il n'est jamais nécessaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans move, le compilateur refuse : la référence pourrait survivre à v.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-threads-q2",
+          "prompt": "Après l'exemple Arc et Mutex de la leçon, que vaut *total.lock().unwrap() ?",
+          "choices": [
+            "4",
+            "Une valeur imprévisible",
+            "0",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque thread incrémente sous le verrou ; les join garantissent que tous ont fini.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-threads-q3",
+          "prompt": "Que se passe-t-il si l'on remplace Arc par Rc pour partager le compteur entre threads ?",
+          "choices": [
+            "Le programme ne compile pas : Rc n'est pas Send, car son compteur de références n'est pas atomique",
+            "Il fonctionne, plus vite",
+            "Il compile mais donne un résultat faux",
+            "Il panique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le bug potentiel est détecté avant même l'exécution.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "rust-threads-q4",
+          "prompt": "Quand le verrou d'un Mutex est-il relâché ?",
+          "choices": [
+            "Quand la garde renvoyée par lock() sort de portée",
+            "Il faut appeler unlock() manuellement",
+            "À la fin du programme",
+            "Jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le relâchement est lié à la durée de vie de la garde (RAII) : même un return anticipé ou une panique le libère.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-threads-q5",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "let mut v = vec![1, 2, 3, 4];\nstd::thread::scope(|s| {\n    let (a, b) = v.split_at_mut(2);\n    s.spawn(|| a.iter_mut().for_each(|x| *x *= 10));\n    s.spawn(|| b.iter_mut().for_each(|x| *x += 1));\n});\nprintln!(\"{v:?}\");",
+          "choices": [
+            "[10, 20, 4, 5]",
+            "[11, 21, 31, 41]",
+            "[1, 2, 3, 4]",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "split_at_mut donne deux moitiés disjointes : chaque thread modifie la sienne, sans verrou. scope garantit qu'ils finissent avant la suite.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "rust-threads-q6",
+          "prompt": "Quelles affirmations sur la concurrence en Rust sont vraies ?",
+          "choices": [
+            "Les courses de données sont empêchées à la compilation en code sûr",
+            "Arc permet à plusieurs threads de posséder une même valeur",
+            "Mutex<T> n'autorise l'accès à T qu'à travers le verrou",
+            "Les interblocages sont impossibles en Rust"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les interblocages restent possibles : deux verrous pris dans un ordre différent bloquent en Rust comme ailleurs.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "rust-async",
       "title": "async et Tokio",
       "summary": "L'asynchrone en Rust.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des futures paresseuses",
+          "body": "Une fonction async renvoie une Future : une valeur qui représente un calcul pas encore terminé. Contrairement à d'autres langages, une future Rust ne fait rien tant qu'on ne l'attend pas avec .await. Il faut un runtime, le plus souvent Tokio, pour exécuter les futures et gérer les E/S."
+        },
+        {
+          "title": "Tokio",
+          "body": "#[tokio::main] crée le runtime. tokio::spawn lance une tâche légère, l'équivalent d'une goroutine. join! attend plusieurs futures en parallèle, select! la première qui se termine. Les tâches coopèrent : elles ne rendent la main qu'aux .await.",
+          "code": "#[tokio::main]\nasync fn main() {\n    let (a, b) = tokio::join!(\n        telecharger(\"https://a.exemple\"),\n        telecharger(\"https://b.exemple\"),\n    );\n}"
+        },
+        {
+          "title": "Ne pas bloquer le runtime",
+          "body": "Un calcul long ou un appel bloquant (std::thread::sleep, lecture de fichier synchrone) dans une tâche bloque un thread du runtime et toutes les tâches qui l'attendent. On utilise les versions asynchrones (tokio::time::sleep, tokio::fs) ou spawn_blocking pour le travail bloquant."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-async-q1",
+          "prompt": "Que se passe-t-il quand on appelle une fonction async sans .await ?",
+          "choices": [
+            "Rien n'est exécuté : la future est créée, mais elle est paresseuse",
+            "Elle s'exécute en arrière-plan",
+            "Elle s'exécute immédiatement et bloque",
+            "Une panique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le compilateur avertit d'ailleurs qu'une future inutilisée « does nothing unless polled ».",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-async-q2",
+          "prompt": "Pourquoi faut-il un runtime comme Tokio ?",
+          "choices": [
+            "La bibliothèque standard définit les futures mais ne fournit pas d'exécuteur ni d'E/S asynchrones",
+            "Parce qu'async ne compile pas sans lui",
+            "Pour remplacer le compilateur",
+            "Il n'en faut pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ce choix laisse l'écosystème proposer des runtimes adaptés (serveur, embarqué).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "rust-async-q3",
+          "prompt": "Cette tâche bloque le thread du runtime. Touche la ligne en cause.",
+          "code": "async fn relancer(id: u32) {\n    for essai in 0..3 {\n        if envoyer(id).await.is_ok() { return; }\n        std::thread::sleep(Duration::from_secs(2));\n    }\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "std::thread::sleep bloque tout le thread, et toutes les tâches qui partagent ce thread. Il faut tokio::time::sleep(...).await, qui rend la main pendant l'attente.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "rust-async-q4",
+          "prompt": "Que fait tokio::join!(a, b) ?",
+          "choices": [
+            "Il attend les deux futures, qui progressent en même temps, et renvoie leurs deux résultats",
+            "Il attend a, puis seulement ensuite démarre b",
+            "Il renvoie le premier résultat disponible",
+            "Il crée deux threads système"
+          ],
+          "answerIndex": 0,
+          "explanation": "select! renverrait le premier résultat. join! fait progresser les deux futures au sein de la même tâche.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-async-q5",
+          "prompt": "Comment exécuter un calcul lourd de 2 secondes depuis du code Tokio ?",
+          "choices": [
+            "Avec tokio::task::spawn_blocking, qui le lance sur un pool de threads dédié",
+            "Directement dans la tâche async",
+            "Dans une boucle avec .await",
+            "Avec std::thread::sleep"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les threads du runtime restent ainsi disponibles pour les autres tâches.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "rust-async-q6",
+          "prompt": "Quelles affirmations sur l'async en Rust sont vraies ?",
+          "choices": [
+            "Les futures sont paresseuses",
+            "Une tâche ne rend la main qu'aux points .await",
+            "Bloquer dans une tâche ralentit les autres tâches du même thread",
+            "Une fonction async s'exécute toujours dans un nouveau thread"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Des milliers de tâches se partagent quelques threads : c'est tout l'intérêt de l'asynchrone.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "rust-defi-concurrence",
+    "title": "Défi entretien : concurrence en Rust",
+    "summary": "Compter des mots en parallèle.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "rust-defi5-q1",
+        "prompt": "Cas pratique 1/3 — On compte les mots de 8 gros fichiers en parallèle, en fusionnant dans une HashMap partagée. Quel type pour la map ?",
+        "choices": [
+          "Arc<Mutex<HashMap<String, usize>>>",
+          "Rc<HashMap<String, usize>>",
+          "&mut HashMap partagée par tous les threads",
+          "HashMap globale sans protection"
+        ],
+        "answerIndex": 0,
+        "explanation": "Arc pour plusieurs propriétaires entre threads, Mutex pour des modifications exclusives. Les autres options ne compilent pas.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi5-q2",
+        "prompt": "Cas pratique 2/3 — Le verrou est pris à chaque mot : les threads passent leur temps à attendre. Comment améliorer ?",
+        "choices": [
+          "Chaque thread compte dans sa propre HashMap locale, puis on fusionne les résultats à la fin",
+          "Ajouter plus de threads",
+          "Prendre le verrou deux fois",
+          "Utiliser Rc"
+        ],
+        "answerIndex": 0,
+        "explanation": "Moins de partage, c'est moins de contention : le verrou n'est plus pris qu'une fois par thread.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Qu'affiche ce programme ?",
+        "code": "use std::thread;\n\nlet textes = vec![\"a b a\", \"b c\", \"a\"];\nlet hs: Vec<_> = textes.into_iter()\n    .map(|t| thread::spawn(move || {\n        t.split(' ').filter(|m| *m == \"a\").count()\n    }))\n    .collect();\nlet total: usize = hs.into_iter()\n    .map(|h| h.join().unwrap()).sum();\nprintln!(\"{total}\");",
+        "choices": [
+          "3",
+          "6",
+          "2",
+          "Une erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque thread compte ses « a » (2, 0, 1) et renvoie son résultat via join : aucun état partagé.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi5-q4",
+        "prompt": "Pour paralléliser simplement un calcul sur une grosse collection, quelle bibliothèque est la plus courante ?",
+        "choices": [
+          "Rayon, avec par_iter() à la place de iter()",
+          "Tokio",
+          "Serde",
+          "Clap"
+        ],
+        "answerIndex": 0,
+        "explanation": "Rayon répartit le travail sur un pool de threads ; Tokio vise plutôt les E/S asynchrones.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "rust-defi5-q5",
+        "prompt": "Que signifient Send et Sync ?",
+        "choices": [
+          "Send : une valeur peut être transférée à un autre thread",
+          "Sync : une valeur peut être partagée par référence entre threads",
+          "Ils sont implémentés automatiquement quand tous les champs les implémentent",
+          "Ils servent à envoyer des données sur le réseau"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Ce sont des traits « marqueurs », vérifiés par le compilateur, sans méthode.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi5-q6",
+        "prompt": "En entretien : « Que veut dire la concurrence sans peur de Rust ? »",
+        "choices": [
+          "Le système de types (ownership, Send, Sync) rend les courses de données impossibles à compiler en code sûr",
+          "Rust n'a pas de threads",
+          "Les interblocages sont impossibles",
+          "Le programme ne peut jamais planter"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les erreurs de logique et les interblocages restent possibles, mais toute une classe de bugs subtils disparaît.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

@@ -7,19 +7,434 @@
       "id": "rust-ownership",
       "title": "Ownership",
       "summary": "Déplacement et copie.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Un seul propriétaire",
+          "body": "Chaque valeur a un propriétaire unique. Quand le propriétaire sort de portée, la valeur est libérée automatiquement (drop). Pas de ramasse-miettes, pas de free manuel : la libération est déterminée à la compilation."
+        },
+        {
+          "title": "Le déplacement",
+          "body": "Affecter une String ou la passer à une fonction déplace la propriété (move) : l'ancienne variable n'est plus utilisable. Les types simples stockés entièrement sur la pile (entiers, booléens, char) implémentent Copy : ils sont copiés, et l'original reste utilisable.",
+          "code": "let a = String::from(\"bonjour\");\nlet b = a;               // a est déplacée dans b\n// println!(\"{a}\");      // erreur : a a été déplacée\n\nlet x = 5;\nlet y = x;               // i32 est Copy\nprintln!(\"{x} {y}\");     // ok"
+        },
+        {
+          "title": "clone",
+          "body": "Pour obtenir une vraie copie d'une valeur sur le tas, on appelle clone() explicitement. C'est visible dans le code, donc on voit où se trouvent les copies coûteuses. Une fonction qui prend une String par valeur en devient propriétaire ; si l'appelant veut la garder, il passe une référence."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-ownership-q1",
+          "prompt": "Ce code compile-t-il ?",
+          "code": "let s1 = String::from(\"Rust\");\nlet s2 = s1;\nprintln!(\"{s1} {s2}\");",
+          "choices": [
+            "Non : s1 a été déplacée dans s2 et n'est plus utilisable",
+            "Oui, il affiche Rust Rust",
+            "Oui, mais s1 est vide",
+            "Non, à cause de println!"
+          ],
+          "answerIndex": 0,
+          "explanation": "Erreur « borrow of moved value: s1 ». Il faut let s2 = s1.clone(); ou utiliser une référence.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-ownership-q2",
+          "prompt": "Pourquoi let y = x; laisse-t-il x utilisable quand x est un i32 ?",
+          "choices": [
+            "i32 implémente Copy : la valeur est copiée bit à bit au lieu d'être déplacée",
+            "Parce que les entiers sont toujours des références",
+            "Parce que x est mut",
+            "Ce n'est pas le cas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les types Copy sont petits et sans ressource à libérer : les copier ne coûte presque rien.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-ownership-q3",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "fn longueur(s: String) -> usize {\n    s.len()\n}\n\nfn main() {\n    let s = String::from(\"héron\");\n    let n = longueur(s.clone());\n    println!(\"{n} {s}\");\n}",
+          "choices": [
+            "6 héron",
+            "5 héron",
+            "Une erreur de compilation",
+            "6"
+          ],
+          "answerIndex": 0,
+          "explanation": "len() compte des octets, pas des caractères : é occupe 2 octets en UTF-8. Grâce au clone, s reste utilisable.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "rust-ownership-q4",
+          "prompt": "Quand une String est-elle libérée ?",
+          "choices": [
+            "Quand son propriétaire sort de portée : drop est appelé automatiquement",
+            "Quand le ramasse-miettes passe",
+            "Quand on appelle free",
+            "À la fin du programme seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le RAII du C++, rendu sûr par le compilateur : impossible d'utiliser la valeur après sa libération.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "rust-ownership-q5",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "fn afficher(v: Vec<i32>) {\n    println!(\"{v:?}\");\n}\n\nfn main() {\n    let v = vec![1, 2, 3];\n    afficher(v);\n    println!(\"{}\", v.len());\n}",
+          "bugLines": [
+            8
+          ],
+          "explanation": "afficher a pris possession de v, qui a été libérée à la fin de la fonction. Elle devrait prendre une référence : fn afficher(v: &[i32]), appelée avec afficher(&v).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-ownership-q6",
+          "prompt": "Quels types sont Copy ?",
+          "choices": [
+            "i32",
+            "bool",
+            "char",
+            "String"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "String possède un tampon sur le tas : la copier implicitement provoquerait une double libération. Elle se déplace, ou se clone explicitement.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "rust-emprunts",
       "title": "Références et emprunts",
       "summary": "& et &mut, et leurs règles.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Emprunter sans prendre",
+          "body": "Une référence &T emprunte une valeur sans en prendre la propriété : la fonction peut la lire, et l'appelant la garde. Une référence mutable &mut T autorise la modification.",
+          "code": "fn ajouter_point(s: &mut String) {\n    s.push('.');\n}\n\nlet mut phrase = String::from(\"Fin\");\najouter_point(&mut phrase);\nprintln!(\"{phrase}\");   // Fin."
+        },
+        {
+          "title": "La règle d'or",
+          "body": "À un instant donné : soit plusieurs références partagées (&T), soit une seule référence mutable (&mut T), jamais les deux. Cette règle, vérifiée à la compilation par le borrow checker, élimine les conditions de course sur les données et les invalidations d'itérateur."
+        },
+        {
+          "title": "Aucune référence pendante",
+          "body": "Une référence ne peut pas survivre à la valeur qu'elle désigne : renvoyer une référence vers une variable locale est refusé. Le compilateur est assez fin pour voir qu'une référence n'est plus utilisée (non-lexical lifetimes) : l'emprunt s'arrête à sa dernière utilisation."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-emprunts-q1",
+          "prompt": "Ce code compile-t-il ?",
+          "code": "let mut v = vec![1, 2, 3];\nlet premier = &v[0];\nv.push(4);\nprintln!(\"{premier}\");",
+          "choices": [
+            "Non : v est emprunté de façon partagée par premier, puis modifié alors que premier est encore utilisé",
+            "Oui, il affiche 1",
+            "Oui, mais premier vaut 4",
+            "Non, car v n'est pas mut"
+          ],
+          "answerIndex": 0,
+          "explanation": "push peut réallouer le vecteur et rendre premier pendant : c'est exactement le bug que le borrow checker empêche (en C++, un comportement indéfini).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-emprunts-q2",
+          "prompt": "Et si l'on déplace println! avant le push ?",
+          "code": "let mut v = vec![1, 2, 3];\nlet premier = &v[0];\nprintln!(\"{premier}\");\nv.push(4);",
+          "choices": [
+            "Il compile : l'emprunt se termine à la dernière utilisation de premier",
+            "Il ne compile toujours pas",
+            "Il compile mais panique",
+            "Il affiche 4"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les durées de vie non lexicales : le compilateur voit que premier n'est plus utilisé après println!.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-emprunts-q3",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "fn ajouter_point(s: &mut String) {\n    s.push('.');\n}\n\nfn main() {\n    let mut p = String::from(\"Fin\");\n    ajouter_point(&mut p);\n    ajouter_point(&mut p);\n    println!(\"{p} {}\", p.len());\n}",
+          "choices": [
+            "Fin.. 5",
+            "Fin. 4",
+            "Fin 3",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Deux emprunts mutables successifs sont permis : ils ne se chevauchent pas.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "rust-emprunts-q4",
+          "prompt": "Cette fonction ne compile pas. Touche la ligne en cause.",
+          "code": "fn salutation() -> &String {\n    let s = String::from(\"bonjour\");\n    &s\n}",
+          "bugLines": [
+            1,
+            3
+          ],
+          "explanation": "Le compilateur refuse (« missing lifetime specifier ») : la référence ne peut venir de nulle part, car s est libérée à la fin de la fonction et la référence serait pendante. On renvoie la String elle-même (fn salutation() -> String).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-emprunts-q5",
+          "prompt": "Combien de références mutables vers une même valeur peuvent exister en même temps ?",
+          "choices": [
+            "Une seule, et aucune référence partagée pendant ce temps",
+            "Autant qu'on veut",
+            "Deux",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un seul écrivain à la fois, ou plusieurs lecteurs : c'est ce qui rend les courses de données impossibles en Rust sûr.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "rust-emprunts-q6",
+          "prompt": "Quels bugs le borrow checker empêche-t-il à la compilation ?",
+          "choices": [
+            "L'utilisation d'une valeur après sa libération",
+            "L'invalidation d'une référence par la modification de la collection",
+            "Les courses de données entre threads",
+            "Les erreurs de logique métier"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il garantit la sûreté mémoire, pas que le programme calcule ce qu'on attend.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "rust-lifetimes",
       "title": "Durées de vie",
       "summary": "Annotations de lifetimes.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Relier les durées de vie",
+          "body": "Quand une fonction renvoie une référence, le compilateur doit savoir de quelle entrée elle provient, pour vérifier qu'elle ne survit pas à sa source. Une annotation de durée de vie ('a) l'exprime : elle ne change pas la durée de vie des valeurs, elle décrit une relation.",
+          "code": "fn plus_long<'a>(x: &'a str, y: &'a str) -> &'a str {\n    if x.len() >= y.len() { x } else { y }\n}"
+        },
+        {
+          "title": "L'élision",
+          "body": "Dans la plupart des cas, on n'écrit rien : des règles d'élision les déduisent. Avec une seule référence en entrée, la sortie lui est liée. Avec &self, la sortie est liée à self. Il ne faut annoter que les cas ambigus, comme plus_long qui reçoit deux références."
+        },
+        {
+          "title": "Dans les structs, et 'static",
+          "body": "Une struct qui contient une référence doit annoter sa durée de vie : elle ne peut pas survivre à la donnée empruntée. 'static désigne ce qui vit tout le programme, comme les littéraux de chaîne. Quand les annotations deviennent envahissantes, posséder les données (String plutôt que &str) simplifie souvent tout.",
+          "code": "struct Extrait<'a> {\n    texte: &'a str,\n}\n\nlet s: &'static str = \"littéral\";"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-lifetimes-q1",
+          "prompt": "Que signifie l'annotation 'a dans fn plus_long<'a>(x: &'a str, y: &'a str) -> &'a str ?",
+          "choices": [
+            "La référence renvoyée est valable au plus aussi longtemps que la plus courte des deux entrées",
+            "Les entrées vivent éternellement",
+            "La fonction alloue une nouvelle chaîne",
+            "x et y doivent être identiques"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le compilateur peut alors vérifier, chez l'appelant, que le résultat n'est pas utilisé après la fin d'une des sources.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "rust-lifetimes-q2",
+          "prompt": "Pourquoi fn premier_mot(s: &str) -> &str n'a-t-elle pas besoin d'annotation ?",
+          "choices": [
+            "Avec une seule référence en entrée, les règles d'élision lient automatiquement la sortie à elle",
+            "Parce que &str est toujours 'static",
+            "Parce que la fonction ne renvoie rien",
+            "Elle en a besoin"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les annotations ne sont nécessaires que lorsque le compilateur ne peut pas deviner la relation.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-lifetimes-q3",
+          "prompt": "Ce code compile-t-il, avec plus_long de la leçon ?",
+          "code": "let r;\nlet a = String::from(\"abcd\");\n{\n    let b = String::from(\"xy\");\n    r = plus_long(&a, &b);\n}\nprintln!(\"{r}\");",
+          "choices": [
+            "Non : b ne vit pas assez longtemps, alors que r pourrait la désigner",
+            "Oui, il affiche abcd",
+            "Oui, il affiche xy",
+            "Il panique à l'exécution"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le compilateur raisonne sur les types, pas sur les valeurs : r pourrait être b, détruite à la fin du bloc. Erreur « b does not live long enough ».",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "rust-lifetimes-q4",
+          "prompt": "Que désigne la durée de vie 'static ?",
+          "choices": [
+            "Une donnée valable pendant toute l'exécution du programme, comme un littéral de chaîne",
+            "Une variable globale mutable",
+            "Une donnée sur la pile",
+            "Une constante numérique uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les littéraux sont intégrés dans le binaire : une &'static str ne devient jamais pendante.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-lifetimes-q5",
+          "prompt": "Les annotations de durée de vie se multiplient dans une struct. Quelle simplification envisager ?",
+          "choices": [
+            "Faire posséder les données par la struct (String au lieu de &str), au prix de quelques copies",
+            "Utiliser unsafe partout",
+            "Ajouter 'static à toutes les références",
+            "Supprimer la struct"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les références dans les structs sont utiles pour la performance, mais posséder les données est souvent plus simple.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "rust-lifetimes-q6",
+          "prompt": "Quelles affirmations sur les durées de vie sont vraies ?",
+          "choices": [
+            "Les annotations décrivent des relations, elles ne prolongent la vie d'aucune valeur",
+            "Une struct contenant une référence doit déclarer une durée de vie",
+            "Les règles d'élision évitent la plupart des annotations",
+            "Elles sont vérifiées à l'exécution"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Tout est vérifié à la compilation : les durées de vie n'existent plus dans le binaire.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "rust-defi-ownership",
+    "title": "Défi entretien : ownership",
+    "summary": "Écrire une fonction premier_mot.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "rust-defi2-q1",
+        "prompt": "Cas pratique 1/3 — On veut une fonction qui renvoie le premier mot d'un texte. Quelle signature ?",
+        "choices": [
+          "fn premier_mot(s: &str) -> &str",
+          "fn premier_mot(s: String) -> String",
+          "fn premier_mot(s: &mut String) -> usize",
+          "fn premier_mot(s: str) -> str"
+        ],
+        "answerIndex": 0,
+        "explanation": "Elle emprunte le texte sans le posséder, et renvoie une tranche de celui-ci, sans copie. &str accepte aussi bien une String (&s) qu'un littéral.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "rust-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Remets dans l'ordre l'implémentation.",
+        "lines": [
+          "fn premier_mot(s: &str) -> &str {",
+          "    match s.find(' ') {",
+          "        Some(i) => &s[..i],",
+          "        None => s,",
+          "    }",
+          "}"
+        ],
+        "explanation": "find renvoie une Option<usize> : la position de l'espace, ou None s'il n'y en a pas.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi2-q3",
+        "prompt": "Cas pratique 3/3 — Ce code compile-t-il ?",
+        "code": "let mut texte = String::from(\"bonjour monde\");\nlet mot = premier_mot(&texte);\ntexte.clear();\nprintln!(\"{mot}\");",
+        "choices": [
+          "Non : texte est emprunté par mot, puis modifié par clear alors que mot est encore utilisé",
+          "Oui, il affiche bonjour",
+          "Oui, il affiche une chaîne vide",
+          "Il panique"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec un indice (usize) au lieu d'une tranche, le code compilerait et l'indice serait silencieusement faux : la tranche rend le bug impossible.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi2-q4",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "fn main() {\n    let mut v = vec![1, 2, 3];\n    for x in v.iter_mut() {\n        *x *= 10;\n    }\n    let total: i32 = v.iter().sum();\n    println!(\"{v:?} {total}\");\n}",
+        "choices": [
+          "[10, 20, 30] 60",
+          "[1, 2, 3] 6",
+          "[10, 20, 30] 6",
+          "Une erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "iter_mut fournit des &mut i32 ; on modifie la valeur pointée avec *x.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "rust-defi2-q5",
+        "prompt": "Comment passer une donnée à une fonction qui doit seulement la lire, sans la copier ?",
+        "choices": [
+          "Avec une référence partagée &T",
+          "Avec &str plutôt que &String pour du texte",
+          "Avec &[T] plutôt que &Vec<T> pour une séquence",
+          "En la passant par valeur puis en la clonant"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "&str et &[T] acceptent plus de types d'arguments (littéraux, tableaux, tranches) que &String ou &Vec<T>.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi2-q6",
+        "prompt": "En entretien : « Comment Rust garantit-il la sûreté mémoire sans ramasse-miettes ? »",
+        "choices": [
+          "Par l'ownership (un propriétaire, libération à la sortie de portée) et le borrow checker, qui vérifient tout à la compilation",
+          "Par un ramasse-miettes caché",
+          "Par un comptage de références automatique partout",
+          "Il ne la garantit pas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le coût est payé à la compilation et en apprentissage, pas à l'exécution.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

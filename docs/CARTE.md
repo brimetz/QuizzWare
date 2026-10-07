@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (128 écrits) | 341 (330 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (133 écrits) | 341 (341 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -711,22 +711,22 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Bases du langage
-   - Types et variables
-   - Contrôle et pattern matching
-2. 🕓 Ownership et emprunts
-   - Ownership
-   - Références et emprunts
-   - Durées de vie
-3. 🕓 Structs, enums et traits
-   - Structs et enums
-   - Traits
-4. 🕓 Gestion des erreurs
-   - Result et ?
-   - panic! et unwrap
-5. 🕓 Concurrence
-   - Threads, Arc et Mutex
-   - async et Tokio
+1. ✅ Bases du langage
+   - ✅ Types et variables
+   - ✅ Contrôle et pattern matching
+2. ✅ Ownership et emprunts
+   - ✅ Ownership
+   - ✅ Références et emprunts
+   - ✅ Durées de vie
+3. ✅ Structs, enums et traits
+   - ✅ Structs et enums
+   - ✅ Traits
+4. ✅ Gestion des erreurs
+   - ✅ Result et ?
+   - ✅ panic! et unwrap
+5. ✅ Concurrence
+   - ✅ Threads, Arc et Mutex
+   - ✅ async et Tokio
 
 **Spécialisations**
 

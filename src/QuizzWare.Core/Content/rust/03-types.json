@@ -7,13 +7,323 @@
       "id": "rust-structs-enums",
       "title": "Structs et enums",
       "summary": "Option et Result.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Structs et méthodes",
+          "body": "Une struct regroupe des champs ; un bloc impl lui ajoute des méthodes. &self emprunte la valeur, &mut self la modifie, self en prend possession. Une fonction associée sans self (souvent new) sert de constructeur. #[derive(Debug, Clone, PartialEq)] génère automatiquement des comportements courants.",
+          "code": "#[derive(Debug)]\nstruct Rect { l: u32, h: u32 }\n\nimpl Rect {\n    fn carre(c: u32) -> Self { Rect { l: c, h: c } }\n    fn aire(&self) -> u32 { self.l * self.h }\n}"
+        },
+        {
+          "title": "Des enums qui portent des données",
+          "body": "Chaque variante d'une enum peut contenir ses propres données. Combinée à match, elle modélise précisément des états exclusifs : un paiement est soit en attente, soit validé avec une référence, soit refusé avec un motif. Un état impossible devient irreprésentable.",
+          "code": "enum Paiement {\n    EnAttente,\n    Valide { reference: String },\n    Refuse(String),\n}"
+        },
+        {
+          "title": "Option à la place de null",
+          "body": "Rust n'a pas de null. Une valeur qui peut manquer est une Option<T> : Some(valeur) ou None. Le compilateur oblige à traiter le cas None avant d'utiliser la valeur. Result<T, E> fait de même pour les opérations qui peuvent échouer : Ok(valeur) ou Err(erreur)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-se-q1",
+          "prompt": "Avec la struct Rect de la leçon, qu'affiche ce code ?",
+          "code": "let r = Rect::carre(4);\nprintln!(\"{} {:?}\", r.aire(), r);",
+          "choices": [
+            "16 Rect { l: 4, h: 4 }",
+            "16 Rect",
+            "8 Rect { l: 4, h: 4 }",
+            "Une erreur : Rect n'est pas affichable"
+          ],
+          "answerIndex": 0,
+          "explanation": "#[derive(Debug)] permet l'affichage avec {:?}. Rect::carre est une fonction associée, r.aire() une méthode.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-se-q2",
+          "prompt": "Comment Rust représente-t-il une valeur qui peut être absente ?",
+          "choices": [
+            "Avec Option<T> : Some(valeur) ou None",
+            "Avec null",
+            "Avec une valeur spéciale comme -1",
+            "Avec une exception"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le compilateur empêche d'utiliser la valeur sans avoir traité l'absence : plus d'erreur de référence nulle.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-se-q3",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "enum Paiement {\n    EnAttente,\n    Valide { reference: String },\n    Refuse(String),\n}\n\nfn statut(p: &Paiement) -> String {\n    match p {\n        Paiement::EnAttente => \"attente\".into(),\n        Paiement::Valide { reference: r } => r.clone(),\n        Paiement::Refuse(m) => format!(\"refus : {m}\"),\n    }\n}\nlet p = Paiement::Refuse(\"carte\".into());\nprintln!(\"{}\", statut(&p));",
+          "choices": [
+            "refus : carte",
+            "attente",
+            "carte",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "match déstructure chaque variante et récupère ses données.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-se-q4",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "let v = vec![10, 20, 30];\nmatch v.get(5) {\n    Some(x) => println!(\"{x}\"),\n    None => println!(\"absent\"),\n}\nprintln!(\"{:?}\", v.get(1));",
+          "choices": [
+            "absent puis Some(20)",
+            "Une panique",
+            "30 puis 20",
+            "absent puis 20"
+          ],
+          "answerIndex": 0,
+          "explanation": "get renvoie une Option au lieu de paniquer comme v[5]. {:?} affiche Some(20).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-se-q5",
+          "prompt": "Pourquoi modéliser un paiement par une enum plutôt que par une struct avec un statut et des champs optionnels ?",
+          "choices": [
+            "Chaque état porte exactement ses données : impossible d'avoir une référence de validation sur un paiement refusé",
+            "Pour gagner de la mémoire uniquement",
+            "Parce que les structs ne peuvent pas avoir de champs String",
+            "Ce n'est pas mieux"
+          ],
+          "answerIndex": 0,
+          "explanation": "« Rendre les états impossibles irreprésentables » : le compilateur garantit la cohérence.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-se-q6",
+          "prompt": "Que peut générer #[derive(...)] ?",
+          "choices": [
+            "Debug, pour l'affichage avec {:?}",
+            "Clone, pour la copie explicite",
+            "PartialEq, pour la comparaison avec ==",
+            "La logique métier des méthodes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "derive génère des implémentations mécaniques de traits standards ; le reste s'écrit à la main.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "rust-traits",
       "title": "Traits",
       "summary": "Comportements partagés et génériques.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Définir un comportement",
+          "body": "Un trait décrit un ensemble de méthodes qu'un type peut implémenter, explicitement avec impl Trait for Type. Il peut fournir des méthodes par défaut. Les traits standards (Display, Debug, Clone, Iterator, From) branchent vos types sur tout l'écosystème.",
+          "code": "trait Forme {\n    fn aire(&self) -> f64;\n    fn decrire(&self) -> String {\n        format!(\"aire {:.1}\", self.aire())\n    }\n}\n\nstruct Cercle { r: f64 }\nimpl Forme for Cercle {\n    fn aire(&self) -> f64 { 3.14159 * self.r * self.r }\n}"
+        },
+        {
+          "title": "Génériques et contraintes",
+          "body": "Une fonction générique précise les traits requis : fn total<T: Forme>(formes: &[T]). Le compilateur génère une version spécialisée par type (monomorphisation) : aucun coût à l'exécution. impl Forme en paramètre est une écriture abrégée de la même chose."
+        },
+        {
+          "title": "Le dispatch dynamique",
+          "body": "Pour une collection de types différents, on utilise des objets traits : Vec<Box<dyn Forme>>. L'appel passe alors par une table de méthodes à l'exécution, comme les méthodes virtuelles d'autres langages. On choisit les génériques pour la performance, dyn pour la flexibilité.",
+          "code": "let formes: Vec<Box<dyn Forme>> = vec![\n    Box::new(Cercle { r: 1.0 }),\n    Box::new(Carre { c: 2.0 }),\n];"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-traits-q1",
+          "prompt": "Avec le trait Forme de la leçon, qu'affiche Cercle { r: 2.0 }.decrire() ?",
+          "choices": [
+            "aire 12.6",
+            "aire 12.56636",
+            "Une erreur : decrire n'est pas implémentée pour Cercle",
+            "aire 6.3"
+          ],
+          "answerIndex": 0,
+          "explanation": "decrire est une méthode par défaut du trait, qui appelle l'aire de Cercle : 3.14159 × 4 ≈ 12.57, arrondi à une décimale.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-traits-q2",
+          "prompt": "Quelle différence entre fn total<T: Forme>(v: &[T]) et fn total(v: &[Box<dyn Forme>]) ?",
+          "choices": [
+            "La version générique est spécialisée à la compilation pour un seul type ; la version dyn accepte des types mélangés, avec un appel indirect à l'exécution",
+            "Aucune",
+            "dyn est plus rapide",
+            "La version générique accepte des types mélangés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une slice de T contient un seul type concret. Pour mélanger cercles et carrés, il faut dyn.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "rust-traits-q3",
+          "prompt": "Quel trait implémenter pour qu'un type s'affiche avec println!(\"{}\", x) ?",
+          "choices": [
+            "std::fmt::Display",
+            "Debug",
+            "Clone",
+            "ToString directement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Display sert à l'affichage pour l'utilisateur ({}), Debug à l'affichage technique ({:?}). Implémenter Display fournit to_string() automatiquement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-traits-q4",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "use std::fmt;\n\nstruct Euros(u32);\n\nimpl fmt::Display for Euros {\n    fn fmt(&self, f: &mut fmt::Formatter)\n        -> fmt::Result {\n        let (e, c) = (self.0 / 100, self.0 % 100);\n        write!(f, \"{e},{c:02} €\")\n    }\n}\n\nprintln!(\"{}\", Euros(1905));",
+          "choices": [
+            "19,05 €",
+            "1905 €",
+            "19,5 €",
+            "Euros(1905)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les centimes sont formatés sur deux chiffres avec {:02}. Stocker des centimes entiers évite les erreurs d'arrondi des flottants.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "rust-traits-q5",
+          "prompt": "Cette fonction ne compile pas. Touche la ligne en cause.",
+          "code": "fn plus_grand<T>(a: T, b: T) -> T {\n    if a > b { a } else { b }\n}",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Rien ne garantit qu'un T quelconque se compare avec >. Il faut la contrainte T: PartialOrd.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-traits-q6",
+          "prompt": "Quelles affirmations sur les traits sont vraies ?",
+          "choices": [
+            "Un trait peut fournir des méthodes par défaut",
+            "Les génériques contraints par un trait sont spécialisés à la compilation",
+            "Box<dyn Trait> permet de stocker des types différents dans une même collection",
+            "Un type implémente un trait automatiquement s'il a les bonnes méthodes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Contrairement aux interfaces Go, l'implémentation d'un trait est toujours explicite (impl Trait for Type).",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "rust-defi-types",
+    "title": "Défi entretien : modéliser en Rust",
+    "summary": "Une machine à états de commande.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "rust-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Une commande est en panier, payée (avec un montant) ou expédiée (avec un numéro de suivi). Comment la modéliser ?",
+        "choices": [
+          "Une enum avec trois variantes, chacune portant ses données",
+          "Une struct avec trois booléens",
+          "Une String décrivant l'état",
+          "Trois structs sans lien"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les trois booléens permettraient des états absurdes (payée et en panier à la fois).",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi3-q2",
+        "prompt": "Cas pratique 2/3 — On ajoute une variante Annulee. Que se passe-t-il dans le reste du code ?",
+        "choices": [
+          "Chaque match sans cas générique ne compile plus tant que la nouvelle variante n'est pas traitée",
+          "Rien, la variante est ignorée",
+          "Le programme panique à l'exécution",
+          "Il faut tout réécrire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le compilateur liste chaque endroit à mettre à jour : c'est un avantage majeur de l'exhaustivité.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Qu'affiche ce programme ?",
+        "code": "enum Commande { Panier, Payee(u32), Expediee(String) }\n\nfn suivant(c: Commande) -> Commande {\n    use Commande::*;\n    match c {\n        Panier => Payee(4990),\n        Payee(_) => Expediee(\"FR123\".into()),\n        e => e,\n    }\n}\n\nlet c = suivant(suivant(Commande::Panier));\nif let Commande::Expediee(n) = c {\n    println!(\"{n}\");\n}",
+        "choices": [
+          "FR123",
+          "4990",
+          "Rien",
+          "Une erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "Panier devient Payee, puis Expediee. if let traite un seul motif.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi3-q4",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "let noms = vec![Some(\"Ada\"), None, Some(\"Linus\")];\nlet presents: Vec<&str> =\n    noms.iter().flatten().copied().collect();\nprintln!(\"{presents:?}\");",
+        "choices": [
+          "[\"Ada\", \"Linus\"]",
+          "[Some(\"Ada\"), None, Some(\"Linus\")]",
+          "[\"Ada\"]",
+          "Une erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une Option est itérable (zéro ou un élément) : flatten retire les None.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "rust-defi3-q5",
+        "prompt": "Quels traits standards une struct de valeur métier implémente-t-elle souvent ?",
+        "choices": [
+          "Debug",
+          "Clone",
+          "PartialEq",
+          "Drop dans tous les cas"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Drop ne s'implémente que pour libérer une ressource particulière ; la libération mémoire est automatique.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi3-q6",
+        "prompt": "En entretien : « Pourquoi Rust n'a-t-il pas de null ? »",
+        "choices": [
+          "Pour que l'absence de valeur soit explicite dans les types (Option) et vérifiée par le compilateur, ce qui élimine les erreurs de référence nulle",
+          "Par oubli",
+          "Pour économiser de la mémoire",
+          "Rust a un null caché"
+        ],
+        "answerIndex": 0,
+        "explanation": "Son inventeur, Tony Hoare, a qualifié la référence nulle d'« erreur à un milliard de dollars ». Option<&T> ne coûte d'ailleurs pas plus qu'un pointeur.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

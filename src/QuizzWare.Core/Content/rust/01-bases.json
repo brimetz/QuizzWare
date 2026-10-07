@@ -7,13 +7,329 @@
       "id": "rust-types",
       "title": "Types et variables",
       "summary": "Immutabilité par défaut et shadowing.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Immuable par défaut",
+          "body": "let crée une variable immuable : la réassigner est une erreur de compilation. On ajoute mut pour autoriser la modification. Ce choix rend visibles, à la lecture, les valeurs qui changent.",
+          "code": "let x = 5;\n// x = 6;           // erreur : x n'est pas mut\nlet mut compteur = 0;\ncompteur += 1;"
+        },
+        {
+          "title": "Des types précis",
+          "body": "Les entiers ont une taille explicite : i32 (par défaut), i64, u8, u64, usize pour les tailles et indices. Les flottants sont f64 par défaut. Aucune conversion n'est implicite : on écrit x as f64. En mode debug, un débordement d'entier provoque une panique ; en release, il fait le tour, sauf si on utilise checked_add ou wrapping_add."
+        },
+        {
+          "title": "Le shadowing",
+          "body": "On peut redéclarer une variable du même nom avec let : la nouvelle masque l'ancienne, et peut même changer de type. C'est utile pour transformer une valeur étape par étape sans inventer de noms.",
+          "code": "let saisie = \"42\";\nlet saisie: i32 = saisie.parse().unwrap();\nlet saisie = saisie * 2;   // 84"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-types-q1",
+          "prompt": "Ce code compile-t-il ?",
+          "code": "fn main() {\n    let total = 10;\n    total += 5;\n    println!(\"{total}\");\n}",
+          "choices": [
+            "Non : total n'est pas déclaré mut",
+            "Oui, il affiche 15",
+            "Oui, il affiche 10",
+            "Non : println! ne connaît pas total"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les variables sont immuables par défaut. Il faut let mut total = 10;.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-types-q2",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "fn main() {\n    let x = 5;\n    let x = x * 2;\n    {\n        let x = x + 1;\n        print!(\"{x} \");\n    }\n    println!(\"{x}\");\n}",
+          "choices": [
+            "11 10",
+            "11 11",
+            "6 5",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque let crée une nouvelle variable qui masque la précédente. Celle du bloc disparaît à sa sortie : on retrouve x = 10.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-types-q3",
+          "prompt": "Ce code compile-t-il ?",
+          "code": "let a: i32 = 7;\nlet b: f64 = 2.5;\nlet c = a * b;",
+          "choices": [
+            "Non : il faut convertir explicitement, par exemple (a as f64) * b",
+            "Oui, c vaut 17.5",
+            "Oui, c vaut 14",
+            "Non, à cause du point-virgule"
+          ],
+          "answerIndex": 0,
+          "explanation": "Rust ne fait aucune conversion numérique implicite.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-types-q4",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "fn main() {\n    let x: u8 = 250;\n    println!(\"{:?}\", x.checked_add(10));\n    println!(\"{}\", x.wrapping_add(10));\n}",
+          "choices": [
+            "None puis 4",
+            "Some(260) puis 260",
+            "Une panique",
+            "None puis 255"
+          ],
+          "answerIndex": 0,
+          "explanation": "260 dépasse u8 (0 à 255). checked_add renvoie None ; wrapping_add fait le tour : 260 − 256 = 4.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-types-q5",
+          "prompt": "Quel type utilise-t-on pour un indice ou une longueur de collection ?",
+          "choices": [
+            "usize",
+            "i8",
+            "f64",
+            "char"
+          ],
+          "answerIndex": 0,
+          "explanation": "usize a la taille d'un pointeur de la plateforme ; len() renvoie un usize.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "rust-types-q6",
+          "prompt": "Quelles affirmations sur Rust sont vraies ?",
+          "choices": [
+            "Les variables sont immuables par défaut",
+            "Le shadowing permet de changer le type sous le même nom",
+            "Les conversions numériques sont explicites (as, from, try_from)",
+            "Une variable non initialisée vaut 0"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Lire une variable non initialisée est une erreur de compilation : il n'y a pas de valeur par défaut implicite.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "rust-controle",
       "title": "Contrôle et pattern matching",
       "summary": "match et if let.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Tout est expression",
+          "body": "if, match et les blocs produisent une valeur : la dernière expression d'un bloc, sans point-virgule, est sa valeur. Une fonction renvoie ainsi sa dernière expression.",
+          "code": "fn signe(n: i32) -> &'static str {\n    if n < 0 { \"négatif\" } else { \"positif ou nul\" }\n}\n\nlet carre = { let x = 4; x * x };   // 16"
+        },
+        {
+          "title": "match",
+          "body": "match compare une valeur à des motifs : valeurs, plages, tuples, structures, avec des gardes (if). Il doit être exhaustif : tous les cas possibles doivent être couverts, sinon le programme ne compile pas. _ attrape le reste.",
+          "code": "let message = match note {\n    0..=9 => \"insuffisant\",\n    10..=13 => \"passable\",\n    14..=20 => \"bien\",\n    _ => \"note invalide\",\n};"
+        },
+        {
+          "title": "if let et les boucles",
+          "body": "if let traite un seul motif sans écrire tous les cas. loop boucle indéfiniment et peut renvoyer une valeur avec break ; while et for complètent l'ensemble. for parcourt tout ce qui est itérable : plages (0..5), collections, itérateurs."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-controle-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "fn main() {\n    let note = 12;\n    let m = match note {\n        0..=9 => \"insuffisant\",\n        10..=13 => \"passable\",\n        _ => \"bien\",\n    };\n    println!(\"{m}\");\n}",
+          "choices": [
+            "passable",
+            "insuffisant",
+            "bien",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "10..=13 est une plage inclusive qui contient 12.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-controle-q2",
+          "prompt": "Pourquoi ce match ne compile-t-il pas ?",
+          "code": "let n: u8 = lire();\nlet t = match n {\n    0 => \"zéro\",\n    1..=9 => \"chiffre\",\n};",
+          "choices": [
+            "Il n'est pas exhaustif : les valeurs 10 à 255 ne sont pas couvertes",
+            "Les plages sont interdites dans match",
+            "match ne peut pas renvoyer de valeur",
+            "Il compile parfaitement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le compilateur vérifie que tous les cas sont traités ; on ajoute _ => ... pour le reste.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-controle-q3",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "fn double(x: i32) -> i32 {\n    x * 2\n}\n\nfn main() {\n    let y = { let z = double(3); z + 1 };\n    println!(\"{y}\");\n}",
+          "choices": [
+            "7",
+            "6",
+            "()",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "La dernière expression sans point-virgule est la valeur du bloc et de la fonction : 6 + 1.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "rust-controle-q4",
+          "prompt": "Cette fonction ne compile pas. Touche la ligne en cause.",
+          "code": "fn carre(x: i32) -> i32 {\n    x * x;\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le point-virgule transforme l'expression en instruction : le bloc renvoie () au lieu d'un i32. On retire le point-virgule.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-controle-q5",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "fn main() {\n    let mut n = 0;\n    let r = loop {\n        n += 3;\n        if n > 10 {\n            break n * 2;\n        }\n    };\n    println!(\"{r}\");\n}",
+          "choices": [
+            "24",
+            "12",
+            "22",
+            "La boucle ne s'arrête pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "n vaut 3, 6, 9, 12 ; à 12, break renvoie 12 × 2 comme valeur de la boucle.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-controle-q6",
+          "prompt": "Quels motifs sont valides dans un match ?",
+          "choices": [
+            "Une plage : 1..=5",
+            "Plusieurs valeurs : 1 | 2 | 3",
+            "Une garde : n if n % 2 == 0",
+            "Une expression quelconque : f(x)"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un motif décrit une forme de valeur ; un appel de fonction n'en est pas un (on utilise une garde).",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "rust-defi-bases",
+    "title": "Défi entretien : bases de Rust",
+    "summary": "FizzBuzz à la manière de Rust.",
+    "questions": [
+      {
+        "type": "order",
+        "id": "rust-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Remets dans l'ordre un FizzBuzz qui utilise match sur un tuple.",
+        "lines": [
+          "for n in 1..=15 {",
+          "    match (n % 3, n % 5) {",
+          "        (0, 0) => println!(\"FizzBuzz\"),",
+          "        (0, _) => println!(\"Fizz\"),",
+          "        (_, 0) => println!(\"Buzz\"),",
+          "        _ => println!(\"{n}\"),",
+          "    }",
+          "}"
+        ],
+        "explanation": "Le cas (0, 0) vient en premier : match s'arrête au premier motif qui correspond.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Que se passe-t-il si l'on place (0, _) avant (0, 0) ?",
+        "choices": [
+          "15 affiche Fizz, et le compilateur avertit que le motif (0, 0) n'est jamais atteint",
+          "Une erreur de compilation",
+          "15 affiche FizzBuzz quand même",
+          "Le programme panique"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le motif plus général capture d'abord ; l'avertissement « unreachable pattern » aide à repérer l'erreur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Combien de fois « Fizz » seul est-il affiché pour n de 1 à 15 ?",
+        "choices": [
+          "4",
+          "5",
+          "3",
+          "1"
+        ],
+        "answerIndex": 0,
+        "explanation": "3, 6, 9 et 12 ; 15 affiche FizzBuzz.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi1-q4",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "fn main() {\n    let v = [3, 8, 1, 9];\n    let mut max = v[0];\n    for &x in &v {\n        if x > max { max = x; }\n    }\n    let pairs = v.iter().filter(|x| *x % 2 == 0)\n                     .count();\n    println!(\"{max} {pairs}\");\n}",
+        "choices": [
+          "9 1",
+          "8 2",
+          "9 2",
+          "3 1"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le maximum est 9 ; seul 8 est pair. Les itérateurs (filter, count) sont l'approche idiomatique.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "rust-defi1-q5",
+        "prompt": "Que vérifie le compilateur Rust que beaucoup d'autres langages laissent passer ?",
+        "choices": [
+          "L'exhaustivité des match",
+          "L'utilisation d'une variable non initialisée",
+          "La modification d'une variable non mut",
+          "La logique métier du programme"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Il vérifie énormément de choses, mais pas que le programme fait ce que le métier veut : les tests restent nécessaires.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi1-q6",
+        "prompt": "En entretien : « Pourquoi les variables sont-elles immuables par défaut en Rust ? »",
+        "choices": [
+          "Pour rendre explicites les valeurs qui changent, ce qui facilite la lecture, évite des bugs et sécurise la concurrence",
+          "Pour économiser de la mémoire",
+          "Parce que mut est plus lent",
+          "Par compatibilité avec le C"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une donnée qui ne change pas peut être partagée sans risque entre threads.",
+        "difficulty": 1
+      }
+    ]
+  }
 }
