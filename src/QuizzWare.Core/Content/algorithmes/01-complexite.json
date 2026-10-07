@@ -7,13 +7,318 @@
       "id": "algo-big-o",
       "title": "La notation grand O",
       "summary": "O(1), O(log n), O(n), O(n²)…",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Ce que mesure le grand O",
+          "body": "La notation O décrit comment le coût (en temps ou en mémoire) grandit quand la taille n des données augmente. On garde le terme dominant et on ignore les constantes : 3n² + 100n + 7 s'écrit O(n²). On parle en général du pire cas."
+        },
+        {
+          "title": "Les classes courantes",
+          "body": "O(1) : constant (accès à un tableau). O(log n) : on divise le problème à chaque étape (recherche binaire). O(n) : un parcours. O(n log n) : un bon tri. O(n²) : deux boucles imbriquées. O(2ⁿ) : explorer toutes les combinaisons.",
+          "code": "n = 1 000 000\nO(log n)   ≈ 20 opérations\nO(n)       = 10⁶\nO(n log n) ≈ 2 × 10⁷\nO(n²)      = 10¹²   (des heures)",
+          "language": "text"
+        },
+        {
+          "title": "Le temps et la mémoire",
+          "body": "La complexité en espace mesure la mémoire supplémentaire utilisée. Construire une nouvelle liste de n éléments coûte O(n) en mémoire ; modifier une liste sur place coûte O(1)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-big-o-q1",
+          "prompt": "Comment s'écrit 3n² + 100n + 7 en notation O ?",
+          "choices": [
+            "O(n²)",
+            "O(3n²)",
+            "O(n² + n)",
+            "O(n³)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour n grand, n² domine tout le reste, et les constantes multiplicatives sont ignorées.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-big-o-q2",
+          "prompt": "Quelle est la complexité en temps de cette fonction ?",
+          "code": "def doublons(l):\n    for i in range(len(l)):\n        for j in range(i + 1, len(l)):\n            if l[i] == l[j]:\n                return True\n    return False",
+          "choices": [
+            "O(n²)",
+            "O(n)",
+            "O(n log n)",
+            "O(1)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans le pire cas (aucun doublon), on compare chaque paire : n(n-1)/2 comparaisons, soit O(n²). Avec un set, on descendrait à O(n).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-big-o-q3",
+          "prompt": "Quelle est la complexité de cette fonction ?",
+          "code": "def f(n):\n    etapes = 0\n    while n > 1:\n        n //= 2\n        etapes += 1\n    return etapes",
+          "choices": [
+            "O(log n)",
+            "O(n)",
+            "O(n / 2)",
+            "O(1)"
+          ],
+          "answerIndex": 0,
+          "explanation": "n est divisé par 2 à chaque tour : il faut environ log₂(n) tours pour atteindre 1. f(1 000 000) vaut 19.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "algo-big-o-q4",
+          "prompt": "Lesquelles de ces complexités croissent moins vite que O(n) ?",
+          "choices": [
+            "O(1)",
+            "O(log n)",
+            "O(n log n)",
+            "O(√n)"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "O(n log n) croît plus vite que O(n). L'ordre complet : 1 < log n < √n < n < n log n < n² < 2ⁿ.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-big-o-q5",
+          "prompt": "Un algorithme en O(n²) traite n = 1 000 000 éléments sur une machine qui fait 10⁸ opérations par seconde. Combien de temps faut-il, environ ?",
+          "choices": [
+            "Environ 3 heures",
+            "Environ 1 seconde",
+            "Environ 10 millisecondes",
+            "Environ 1 an"
+          ],
+          "answerIndex": 0,
+          "explanation": "10¹² opérations / 10⁸ par seconde = 10⁴ secondes, soit près de 3 heures. En O(n log n), ce serait de l'ordre d'un dixième de seconde.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-big-o-q6",
+          "prompt": "Quelle est la complexité en espace de cette fonction ?",
+          "code": "def carres(l):\n    return [x * x for x in l]",
+          "choices": [
+            "O(n)",
+            "O(1)",
+            "O(n²)",
+            "O(log n)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle construit une nouvelle liste de n éléments. Une version qui modifie l'entrée sur place n'utiliserait que O(1) mémoire supplémentaire.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "algo-analyse",
       "title": "Analyser un algorithme",
       "summary": "Boucles, récursion et coût amorti.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Boucles et coûts cachés",
+          "body": "Des étapes successives s'additionnent ; des boucles imbriquées se multiplient. Attention aux opérations qui cachent une boucle : x in liste (O(n)), liste[a:b] (copie, O(b - a)), la concaténation de chaînes, liste.insert(0, x)..."
+        },
+        {
+          "title": "La récursion",
+          "body": "On compte le nombre d'appels et le travail de chacun. fib(n) naïf fait deux appels par appel : environ 1,6ⁿ appels. Diviser le problème en deux moitiés, plus un travail linéaire pour combiner (tri fusion), donne O(n log n) : log n niveaux de travail O(n).",
+          "code": "def fib(n):           # O(φⁿ) ≈ O(1.6ⁿ)\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)"
+        },
+        {
+          "title": "Le coût amorti",
+          "body": "Une opération peut être parfois chère mais rare. list.append redimensionne de temps en temps (copie de tout le tableau), mais la capacité augmente à chaque fois proportionnellement : sur n ajouts, le coût total reste O(n), donc O(1) amorti par ajout."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-analyse-q1",
+          "prompt": "a et b sont des listes de tailles n et m. Quelle est la complexité ?",
+          "code": "def communs(a, b):\n    return [x for x in a if x in b]",
+          "choices": [
+            "O(n × m)",
+            "O(n + m)",
+            "O(n)",
+            "O(n log m)"
+          ],
+          "answerIndex": 0,
+          "explanation": "x in b parcourt la liste b à chaque élément de a. Convertir b en set d'abord donne O(n + m).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-analyse-q2",
+          "prompt": "Quelle est la complexité de fib(n) écrite naïvement (deux appels récursifs) ?",
+          "choices": [
+            "Exponentielle : environ 1,6ⁿ appels",
+            "O(n)",
+            "O(n²)",
+            "O(log n)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque appel en déclenche deux autres, et les mêmes valeurs sont recalculées des milliards de fois. Avec un cache (mémoïsation), on passe à O(n).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-analyse-q3",
+          "prompt": "Un algorithme coupe le problème en deux moitiés, les traite récursivement, puis combine les résultats en O(n). Quelle est sa complexité ?",
+          "choices": [
+            "O(n log n)",
+            "O(n²)",
+            "O(n)",
+            "O(log n)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il y a log₂ n niveaux de découpage, et chaque niveau fait un travail total de O(n) : c'est le cas du tri fusion.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "algo-analyse-q4",
+          "prompt": "Cette fonction est en O(n²) au lieu de O(n). Touche la ligne qui coûte cher.",
+          "code": "def somme(l):\n    if not l:\n        return 0\n    return l[0] + somme(l[1:])",
+          "bugLines": [
+            4
+          ],
+          "explanation": "l[1:] copie la liste à chaque appel : n + (n-1) + ... + 1 copies, soit O(n²). On passerait plutôt un indice (somme(l, i + 1)), ou simplement sum(l). (Et la récursion dépasserait la limite de Python vers 1000 éléments.)",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-analyse-q5",
+          "prompt": "Pourquoi list.append est-il en O(1) amorti, alors qu'il recopie parfois tout le tableau ?",
+          "choices": [
+            "La capacité grandit proportionnellement : les recopies sont rares, et leur coût total reste O(n) sur n ajouts",
+            "Python ne recopie jamais une liste",
+            "La recopie se fait en O(1)",
+            "append réserve un million d'emplacements à l'avance"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si la capacité double à chaque agrandissement, les recopies coûtent 1 + 2 + 4 + ... + n < 2n au total. CPython agrandit d'environ 12 % à chaque fois : le principe est le même.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "algo-analyse-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "compte = 0\nn = 8\ni = 1\nwhile i < n:\n    for j in range(n):\n        compte += 1\n    i *= 2\nprint(compte)",
+          "choices": [
+            "24",
+            "64",
+            "8",
+            "32"
+          ],
+          "answerIndex": 0,
+          "explanation": "i vaut 1, 2 puis 4 : trois tours de la boucle externe (log₂ 8), chacun avec 8 tours internes. Le coût est en O(n log n).",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "algo-defi-complexite",
+    "title": "Défi entretien : complexité",
+    "summary": "Repérer et corriger un algorithme quadratique.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "algo-defi1-q1",
+        "prompt": "Qu'affiche ce code, et quelle est sa complexité ?",
+        "code": "compte = 0\nfor i in range(5):\n    for j in range(i):\n        compte += 1\nprint(compte)",
+        "choices": [
+          "10, en O(n²)",
+          "25, en O(n²)",
+          "10, en O(n log n)",
+          "15, en O(n)"
+        ],
+        "answerIndex": 0,
+        "explanation": "0 + 1 + 2 + 3 + 4 = 10, soit n(n-1)/2 en général : même avec une boucle interne « plus courte », c'est O(n²).",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "algo-defi1-q2",
+        "prompt": "Cas pratique 1/3 — Sur un million d'éléments, la fonction est très lente. Touche la ligne qui coûte le plus.",
+        "code": "def premier_doublon(l):\n    vus = []\n    for x in l:\n        if x in vus:\n            return x\n        vus.append(x)\n    return None",
+        "bugLines": [
+          4
+        ],
+        "explanation": "x in vus parcourt une liste qui grandit à chaque tour.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi1-q3",
+        "prompt": "Cas pratique 2/3 — Quelle est la complexité de cette version ?",
+        "choices": [
+          "O(n²)",
+          "O(n)",
+          "O(n log n)",
+          "O(1)"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le tour i fait jusqu'à i comparaisons : au total de l'ordre de n²/2.",
+        "difficulty": 1
+      },
+      {
+        "type": "fill",
+        "id": "algo-defi1-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version en O(n).",
+        "code": "def premier_doublon(l):\n    vus = ___()\n    for x in l:\n        if x in vus:\n            return x\n        vus.___(x)\n    return None",
+        "answers": [
+          "set",
+          "add"
+        ],
+        "distractors": [
+          "list",
+          "append",
+          "dict"
+        ],
+        "explanation": "Le test d'appartenance dans un set est en O(1) en moyenne. Un set n'a pas de méthode append : on ajoute avec add.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "algo-defi1-q5",
+        "prompt": "Lesquelles de ces opérations Python sont en O(1) (en moyenne ou amorti) ?",
+        "choices": [
+          "Lire d[cle] dans un dict",
+          "liste.append(x)",
+          "x in liste",
+          "len(liste)"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          3
+        ],
+        "explanation": "x in liste compare les éléments un par un : O(n). La longueur d'une liste est stockée, sa lecture est immédiate.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi1-q6",
+        "prompt": "En entretien : pourquoi ignore-t-on les constantes dans la notation O ?",
+        "choices": [
+          "Elle décrit la croissance pour n grand ; les constantes dépendent de la machine et du langage",
+          "Parce que les constantes valent toujours 1",
+          "Parce que les ordinateurs sont assez rapides",
+          "On ne les ignore pas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le grand O compare des comportements asymptotiques. Pour des petites données, les constantes comptent : un tri par insertion bat le tri fusion sur quelques dizaines d'éléments.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

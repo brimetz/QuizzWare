@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (58 écrits) | 333 (138 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (65 écrits) | 333 (157 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -534,32 +534,32 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Complexité
-   - La notation grand O
-   - Analyser un algorithme
-2. 🕓 Structures linéaires
-   - Tableaux dynamiques
-   - Listes chaînées
-   - Piles et files
-3. 🕓 Tables de hachage
-   - Fonctionnement
-   - Problèmes classiques
-4. 🕓 Arbres
-   - Arbres binaires
-   - Arbres binaires de recherche
-   - Tas et files de priorité
-5. 🕓 Graphes
-   - Représenter un graphe
-   - BFS et DFS
-   - Plus court chemin
-6. 🕓 Tri et recherche
-   - Algorithmes de tri
-   - Recherche binaire
-7. 🕓 Techniques de résolution
-   - Deux pointeurs et fenêtre glissante
-   - Récursion et backtracking
-   - Programmation dynamique
-   - Algorithmes gloutons
+1. ✅ Complexité
+   - ✅ La notation grand O
+   - ✅ Analyser un algorithme
+2. ✅ Structures linéaires
+   - ✅ Tableaux dynamiques
+   - ✅ Listes chaînées
+   - ✅ Piles et files
+3. ✅ Tables de hachage
+   - ✅ Fonctionnement
+   - ✅ Problèmes classiques
+4. ✅ Arbres
+   - ✅ Arbres binaires
+   - ✅ Arbres binaires de recherche
+   - ✅ Tas et files de priorité
+5. ✅ Graphes
+   - ✅ Représenter un graphe
+   - ✅ BFS et DFS
+   - ✅ Plus court chemin
+6. ✅ Tri et recherche
+   - ✅ Algorithmes de tri
+   - ✅ Recherche binaire
+7. ✅ Techniques de résolution
+   - ✅ Deux pointeurs et fenêtre glissante
+   - ✅ Récursion et backtracking
+   - ✅ Programmation dynamique
+   - ✅ Algorithmes gloutons
 
 **Spécialisations**
 

@@ -7,19 +7,435 @@
       "id": "algo-arbres-binaires",
       "title": "Arbres binaires",
       "summary": "Parcours en profondeur et en largeur.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Nœuds et hauteur",
+          "body": "Chaque nœud a au plus deux enfants, gauche et droit. La hauteur est le nombre de niveaux : environ log₂ n pour un arbre bien rempli, mais jusqu'à n s'il dégénère en chaîne. La plupart des algorithmes sur les arbres sont récursifs.",
+          "code": "class N:\n    def __init__(self, val, gauche=None, droite=None):\n        self.val = val\n        self.gauche = gauche\n        self.droite = droite\n\ndef hauteur(n):\n    if n is None:\n        return 0\n    return 1 + max(hauteur(n.gauche), hauteur(n.droite))"
+        },
+        {
+          "title": "Les parcours en profondeur",
+          "body": "Préfixe : le nœud, puis le sous-arbre gauche, puis le droit. Infixe : gauche, nœud, droite. Suffixe : gauche, droite, nœud. Pour l'arbre 1 (enfants 2 et 3, et 2 a pour enfants 4 et 5) : préfixe 1 2 4 5 3, infixe 4 2 5 1 3, suffixe 4 5 2 3 1.",
+          "code": "        1\n       / \\\n      2   3\n     / \\\n    4   5",
+          "language": "text"
+        },
+        {
+          "title": "Le parcours en largeur",
+          "body": "On visite les nœuds niveau par niveau avec une file (FIFO) : 1 2 3 4 5 pour l'arbre ci-dessus. Utile pour trouver la profondeur minimale ou traiter un arbre par étages. Tous ces parcours sont en O(n)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-ab-q1",
+          "prompt": "Pour l'arbre de la leçon (1 ; enfants 2 et 3 ; 2 a pour enfants 4 et 5), quel est le parcours infixe ?",
+          "choices": [
+            "4 2 5 1 3",
+            "1 2 4 5 3",
+            "4 5 2 3 1",
+            "1 2 3 4 5"
+          ],
+          "answerIndex": 0,
+          "explanation": "Infixe : sous-arbre gauche, nœud, sous-arbre droit. On descend d'abord tout à gauche (4), puis 2, puis 5, puis la racine 1, puis 3.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-ab-q2",
+          "prompt": "Quel parcours donne 1 2 3 4 5 pour cet arbre ?",
+          "choices": [
+            "Le parcours en largeur",
+            "Le parcours préfixe",
+            "Le parcours infixe",
+            "Le parcours suffixe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le parcours en largeur visite la racine, puis le niveau 2 (2, 3), puis le niveau 3 (4, 5).",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "algo-ab-q3",
+          "prompt": "Complète le calcul de la hauteur.",
+          "code": "def hauteur(n):\n    if n is None:\n        return ___\n    return 1 + ___(hauteur(n.gauche),\n                   hauteur(n.droite))",
+          "answers": [
+            "0",
+            "max"
+          ],
+          "distractors": [
+            "min",
+            "sum",
+            "None"
+          ],
+          "explanation": "Un arbre vide a une hauteur de 0 ; sinon, c'est un niveau de plus que le plus haut des deux sous-arbres.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "algo-ab-q4",
+          "prompt": "Ce « parcours en largeur » visite les nœuds dans le mauvais ordre. Touche la ligne fautive.",
+          "code": "def largeur(racine):\n    file = [racine]\n    ordre = []\n    while file:\n        n = file.pop()\n        ordre.append(n.val)\n        for e in (n.gauche, n.droite):\n            if e:\n                file.append(e)\n    return ordre",
+          "bugLines": [
+            5
+          ],
+          "explanation": "pop() retire le dernier ajouté : la liste se comporte comme une pile, et l'on obtient un parcours en profondeur. Il faut une file : deque et popleft().",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-ab-q5",
+          "prompt": "Quel est le coût d'un parcours récursif en profondeur d'un arbre de n nœuds et de hauteur h ?",
+          "choices": [
+            "O(n) en temps, O(h) en mémoire (la pile d'appels)",
+            "O(n) en temps, O(1) en mémoire",
+            "O(log n) en temps",
+            "O(n²) en temps"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque nœud est visité une fois ; la pile d'appels contient au plus h cadres. Sur un arbre dégénéré, h = n.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "algo-ab-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Un arbre binaire bien rempli de n nœuds a une hauteur d'environ log₂ n",
+            "Un arbre qui dégénère en chaîne a une hauteur de n",
+            "Le parcours infixe d'un arbre binaire de recherche donne les valeurs triées",
+            "Le parcours en largeur utilise une pile"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le parcours en largeur utilise une file ; c'est le parcours en profondeur, itératif, qui utilise une pile.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "algo-abr",
       "title": "Arbres binaires de recherche",
       "summary": "Insertion, recherche et équilibrage.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La propriété",
+          "body": "Dans un arbre binaire de recherche (ABR), toutes les valeurs du sous-arbre gauche sont plus petites que le nœud, et toutes celles du sous-arbre droit plus grandes. Rechercher ou insérer consiste à descendre à gauche ou à droite : O(h).",
+          "code": "def chercher(n, v):\n    while n and n.val != v:\n        n = n.gauche if v < n.val else n.droite\n    return n"
+        },
+        {
+          "title": "L'équilibre",
+          "body": "Si l'on insère des valeurs déjà triées (1, 2, 3, 4...), l'arbre dégénère en chaîne : les opérations passent à O(n). Les arbres auto-équilibrés (AVL, rouge-noir) se réorganisent à chaque insertion pour garder une hauteur en O(log n). TreeMap en Java et std::map en C++ sont des arbres rouge-noir."
+        },
+        {
+          "title": "Ce que les ABR font mieux",
+          "body": "Contrairement à une table de hachage, un ABR garde l'ordre : parcourir les clés triées, trouver le plus petit élément supérieur à x, ou toutes les clés d'un intervalle."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-abr-q1",
+          "prompt": "Quelle propriété définit un arbre binaire de recherche ?",
+          "choices": [
+            "Tout le sous-arbre gauche est plus petit que le nœud, tout le sous-arbre droit plus grand",
+            "Chaque nœud est plus petit que ses enfants",
+            "L'arbre est complet",
+            "Les feuilles sont toutes au même niveau"
+          ],
+          "answerIndex": 0,
+          "explanation": "La propriété porte sur des sous-arbres entiers, pas seulement sur les enfants directs. « Plus petit que ses enfants » décrit un tas.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-abr-q2",
+          "prompt": "On insère 1, 2, 3, 4, 5, dans cet ordre, dans un ABR simple (non équilibré). Quelle est sa hauteur ?",
+          "choices": [
+            "5",
+            "3",
+            "2",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque valeur va à droite de la précédente : l'arbre est une chaîne, et la recherche devient linéaire.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "algo-abr-q3",
+          "prompt": "Complète la recherche dans un ABR.",
+          "code": "def chercher(n, v):\n    while n and n.val != v:\n        n = n.gauche if v ___ n.val else n.___\n    return n",
+          "answers": [
+            "<",
+            "droite"
+          ],
+          "distractors": [
+            ">",
+            "gauche",
+            "parent"
+          ],
+          "explanation": "Plus petit : à gauche ; plus grand : à droite. À chaque étape, on écarte tout un sous-arbre.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "algo-abr-q4",
+          "prompt": "Cette vérification accepte un arbre invalide (racine 5, enfant gauche 3, qui a lui-même un enfant droit 6). Touche une ligne en cause.",
+          "code": "def est_abr(n):\n    if n is None:\n        return True\n    if n.gauche and n.gauche.val > n.val:\n        return False\n    if n.droite and n.droite.val < n.val:\n        return False\n    return est_abr(n.gauche) and est_abr(n.droite)",
+          "bugLines": [
+            4,
+            6
+          ],
+          "explanation": "Comparer un nœud à ses seuls enfants ne suffit pas : 6 est bien plus grand que 3, mais il se trouve dans le sous-arbre gauche de 5. Il faut transmettre des bornes : est_abr(n, mini, maxi).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "algo-abr-q5",
+          "prompt": "Comment garantir des opérations en O(log n) quel que soit l'ordre des insertions ?",
+          "choices": [
+            "Utiliser un arbre auto-équilibré (AVL, rouge-noir)",
+            "Insérer les valeurs dans un ordre aléatoire",
+            "Trier les valeurs avant de les insérer",
+            "Limiter l'arbre à 1 000 nœuds"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les rotations effectuées à chaque insertion et suppression maintiennent une hauteur logarithmique. Trier avant d'insérer produit justement le pire cas.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "algo-abr-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "TreeMap (Java) est un arbre rouge-noir",
+            "std::map (C++) est en général un arbre rouge-noir",
+            "Le dict de Python est un arbre binaire de recherche",
+            "Un ABR permet de lister les clés d'un intervalle dans l'ordre"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "dict est une table de hachage : rapide, mais sans ordre de tri. Pour un intervalle, il faudrait tout parcourir.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "algo-tas",
       "title": "Tas et files de priorité",
       "summary": "Top K et médiane.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le tas binaire",
+          "body": "Dans un tas min, chaque nœud est plus petit que ses enfants : le minimum est à la racine. L'arbre est complet, donc rangé dans un simple tableau : les enfants de l'indice i sont aux indices 2i + 1 et 2i + 2. Ajouter et retirer le minimum : O(log n). Lire le minimum : O(1). Construire un tas à partir de n éléments : O(n)."
+        },
+        {
+          "title": "heapq en Python",
+          "body": "heapq transforme une liste en tas min. Pour un tas max, on insère les valeurs opposées.",
+          "code": "import heapq\ntas = []\nheapq.heappush(tas, 5)\nheapq.heappush(tas, 1)\nheapq.heappop(tas)       # 1\nheapq.heappush(tas, -x)   # tas max"
+        },
+        {
+          "title": "Top K et médiane",
+          "body": "Pour les k plus grands éléments d'un flux, on garde un tas min de taille k : son sommet est le plus petit des k meilleurs. Coût : O(n log k). Pour la médiane d'un flux, deux tas : un tas max pour la moitié basse, un tas min pour la moitié haute."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-tas-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "import heapq\nh = []\nfor x in [5, 1, 4, 2]:\n    heapq.heappush(h, x)\nprint(heapq.heappop(h), heapq.heappop(h))",
+          "choices": [
+            "1 2",
+            "5 1",
+            "5 4",
+            "1 5"
+          ],
+          "answerIndex": 0,
+          "explanation": "heapq est un tas min : chaque heappop renvoie le plus petit élément restant.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-tas-q2",
+          "prompt": "Comment obtenir un tas max avec heapq ?",
+          "choices": [
+            "Insérer les valeurs opposées (-x), et reprendre l'opposé à la sortie",
+            "Utiliser heapq.maxheap()",
+            "Trier la liste à l'envers",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le plus grand x devient le plus petit -x : il sort en premier. Pour des objets, on pousse des tuples (-priorité, objet).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "algo-tas-q3",
+          "prompt": "Complète : garder les k plus grands éléments.",
+          "code": "import heapq\n\ndef k_plus_grands(t, k):\n    tas = []\n    for x in t:\n        heapq.heappush(tas, x)\n        if len(tas) > k:\n            heapq.___(tas)\n    return sorted(tas, reverse=True)",
+          "answers": [
+            "heappop"
+          ],
+          "distractors": [
+            "heappush",
+            "heapify",
+            "pop"
+          ],
+          "explanation": "Le tas min de taille k retire à chaque fois le plus petit : il ne reste que les k plus grands. (pop() retirerait le dernier élément de la liste et casserait le tas.)",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-tas-q4",
+          "prompt": "Quelle est la complexité de k_plus_grands sur n éléments ?",
+          "choices": [
+            "O(n log k)",
+            "O(n log n)",
+            "O(n × k)",
+            "O(k)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le tas ne dépasse jamais k + 1 éléments : chaque opération coûte O(log k). Trier tout le tableau coûterait O(n log n).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-tas-q5",
+          "prompt": "Dans un tas stocké en tableau (indices à partir de 0), où sont les enfants de l'élément d'indice i ?",
+          "choices": [
+            "Aux indices 2i + 1 et 2i + 2",
+            "Aux indices i + 1 et i + 2",
+            "Aux indices 2i et 2i + 1",
+            "Ils sont stockés dans des nœuds séparés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le parent de l'indice i est (i - 1) // 2. Ce rangement sans pointeurs est compact et très favorable au cache.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "algo-tas-q6",
+          "prompt": "Quelles affirmations sur un tas min sont vraies ?",
+          "choices": [
+            "heapify construit un tas en O(n)",
+            "Lire le minimum coûte O(1)",
+            "Chercher une valeur quelconque coûte O(log n)",
+            "Le tableau sous-jacent est trié"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "Le tas n'ordonne que les parents par rapport à leurs enfants : chercher une valeur quelconque demande O(n), et le tableau n'est pas trié.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "algo-defi-arbres",
+    "title": "Défi entretien : arbres et tas",
+    "summary": "La médiane d'un flux de données.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "algo-defi4-q1",
+        "prompt": "Avec la classe N et la fonction hauteur de la leçon, qu'affiche ce code ?",
+        "code": "racine = N(1, N(2, N(4)), N(3))\nprint(hauteur(racine))",
+        "choices": [
+          "3",
+          "4",
+          "2",
+          "1"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le chemin le plus long est 1 → 2 → 4 : trois niveaux.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "algo-defi4-q2",
+        "prompt": "Cas pratique 1/3 — On calcule la médiane d'un flux de valeurs. Avec un million de valeurs, ajouter devient très lent. Touche la ligne en cause.",
+        "code": "class Mediane:\n    def __init__(self):\n        self.t = []\n    def ajouter(self, x):\n        self.t.append(x)\n        self.t.sort()\n    def valeur(self):\n        return self.t[len(self.t) // 2]",
+        "bugLines": [
+          6
+        ],
+        "explanation": "Trier toute la liste à chaque ajout coûte O(n log n) par valeur (un peu moins grâce à l'algorithme de tri de Python, mais au moins O(n)).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi4-q3",
+        "prompt": "Cas pratique 2/3 — Quelle structure donne un ajout en O(log n) et une médiane en O(1) ?",
+        "choices": [
+          "Deux tas : un tas max pour la moitié basse, un tas min pour la moitié haute",
+          "Une table de hachage",
+          "Une pile",
+          "Une liste chaînée triée"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les deux tas gardent chacun une moitié des valeurs ; la médiane est au sommet de l'un d'eux. Chaque ajout fait quelques opérations en O(log n) pour rééquilibrer.",
+        "difficulty": 3
+      },
+      {
+        "type": "fill",
+        "id": "algo-defi4-q4",
+        "prompt": "Cas pratique 3/3 — bas est un tas max (valeurs stockées en opposé), haut un tas min. Complète l'ajout.",
+        "code": "def ajouter(self, x):\n    heapq.heappush(self.bas, -x)\n    heapq.heappush(self.haut,\n                   ___heapq.heappop(self.bas))\n    if len(self.haut) > len(self.bas):\n        heapq.heappush(self.bas,\n                       ___heapq.heappop(self.haut))",
+        "answers": [
+          "-",
+          "-"
+        ],
+        "distractors": [
+          "+",
+          "abs",
+          "~"
+        ],
+        "explanation": "On passe le plus grand de la moitié basse dans la moitié haute (en reprenant l'opposé), puis on rééquilibre si haut est devenu plus gros. La médiane est alors -bas[0] (ou la moyenne des deux sommets pour un nombre pair de valeurs).",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "algo-defi4-q5",
+        "prompt": "Quelles complexités sont correctes ?",
+        "choices": [
+          "Insertion dans un ABR équilibré : O(log n)",
+          "Insertion dans un ABR non équilibré, pire cas : O(n)",
+          "Retrait du minimum d'un tas : O(log n)",
+          "Recherche d'une valeur quelconque dans un tas : O(1)"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le tas ne donne un accès rapide qu'à son sommet ; chercher une autre valeur oblige à parcourir le tableau.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi4-q6",
+        "prompt": "En entretien : tas ou arbre équilibré pour une file de priorité ?",
+        "choices": [
+          "Le tas : plus simple, plus compact et minimum en O(1) ; l'arbre seulement si l'on a aussi besoin de l'ordre complet",
+          "L'arbre équilibré, toujours plus rapide",
+          "Une table de hachage",
+          "Une liste triée"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un tas tient dans un tableau, sans pointeurs, et heapify construit tout en O(n). Un arbre équilibré permet en plus de parcourir dans l'ordre ou de supprimer n'importe quel élément en O(log n).",
+        "difficulty": 2
+      }
+    ]
+  }
 }

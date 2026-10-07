@@ -7,19 +7,431 @@
       "id": "algo-graphes-representation",
       "title": "Représenter un graphe",
       "summary": "Listes et matrices d'adjacence.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Sommets et arêtes",
+          "body": "Un graphe relie des sommets par des arêtes, orientées (A → B) ou non, pondérées (une distance, un coût) ou non. Réseaux sociaux, routes, dépendances entre tâches, pages web : tout cela se modélise en graphe. Un arbre est un graphe connexe sans cycle."
+        },
+        {
+          "title": "Liste ou matrice d'adjacence",
+          "body": "La liste d'adjacence associe à chaque sommet la liste de ses voisins : O(V + E) en mémoire, idéale pour les graphes peu denses (la grande majorité). La matrice d'adjacence (V × V cases) teste une arête en O(1) mais occupe O(V²).",
+          "code": "from collections import defaultdict\ng = defaultdict(list)\nfor u, v in aretes:\n    g[u].append(v)\n    g[v].append(u)   # non orienté"
+        },
+        {
+          "title": "Les graphes implicites",
+          "body": "Souvent, le graphe n'est pas construit : une grille (labyrinthe, carte) est un graphe dont les voisins d'une case se calculent à la volée."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-graphes-q1",
+          "prompt": "Combien de mémoire occupe une matrice d'adjacence pour V sommets ?",
+          "choices": [
+            "O(V²)",
+            "O(V + E)",
+            "O(E)",
+            "O(V)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une case par paire de sommets, même absente. Pour un million de sommets, c'est inenvisageable.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-graphes-q2",
+          "prompt": "Un réseau social : des millions de personnes, chacune avec quelques centaines d'amis. Quelle représentation choisir ?",
+          "choices": [
+            "Des listes d'adjacence",
+            "Une matrice d'adjacence",
+            "Une liste de tous les chemins possibles",
+            "Un tableau trié de sommets"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le graphe est très peu dense (E est bien plus petit que V²) : les listes ne stockent que les arêtes existantes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-graphes-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from collections import defaultdict\naretes = [(\"a\", \"b\"), (\"b\", \"c\"), (\"a\", \"c\")]\ng = defaultdict(list)\nfor u, v in aretes:\n    g[u].append(v)\n    g[v].append(u)\nprint(sorted(g[\"c\"]))",
+          "choices": [
+            "['a', 'b']",
+            "[]",
+            "['a']",
+            "['b']"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le graphe est non orienté : chaque arête est ajoutée dans les deux sens. c est relié à b et à a.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "algo-graphes-q4",
+          "prompt": "Le graphe d'amitiés est non orienté, mais b ne figure pas parmi les amis de... ceux qui l'ont ajouté. Touche la ligne où il manque quelque chose.",
+          "code": "g = defaultdict(list)\nfor u, v in amities:\n    g[u].append(v)",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Pour un graphe non orienté, chaque arête doit être ajoutée dans les deux sens : g[v].append(u) aussi.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "algo-graphes-q5",
+          "prompt": "Complète les voisins d'une case dans une grille de n lignes et m colonnes.",
+          "code": "def voisins(l, c, n, m):\n    for dl, dc in ((1, 0), (-1, 0), (0, 1), (0, ___)):\n        nl, nc = l + dl, c + dc\n        if 0 <= nl < n and 0 <= nc ___ m:\n            yield nl, nc",
+          "answers": [
+            "-1",
+            "<"
+          ],
+          "distractors": [
+            "1",
+            "<=",
+            "0"
+          ],
+          "explanation": "Les quatre directions : bas, haut, droite, gauche. Les indices valides vont de 0 à m - 1, d'où la comparaison stricte.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "algo-graphes-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Un arbre est un graphe connexe sans cycle",
+            "Dans un graphe orienté, une arête peut n'exister que dans un sens",
+            "Une matrice d'adjacence teste l'existence d'une arête en O(1)",
+            "Une liste d'adjacence occupe O(V²) mémoire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une liste d'adjacence n'occupe que O(V + E) : on ne stocke que les arêtes existantes.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "algo-bfs-dfs",
       "title": "BFS et DFS",
       "summary": "Les parcours et leurs applications.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le parcours en largeur (BFS)",
+          "body": "Avec une file, on visite les sommets par distance croissante depuis le départ. Dans un graphe non pondéré (toutes les arêtes valent 1), BFS donne donc le plus court chemin. On marque les sommets dès qu'ils entrent dans la file.",
+          "code": "def distance(g, depart, arrivee):\n    file = deque([(depart, 0)])\n    vus = {depart}\n    while file:\n        n, d = file.popleft()\n        if n == arrivee:\n            return d\n        for v in g[n]:\n            if v not in vus:\n                vus.add(v)\n                file.append((v, d + 1))\n    return -1"
+        },
+        {
+          "title": "Le parcours en profondeur (DFS)",
+          "body": "Avec une pile (ou la récursion), on va le plus loin possible avant de revenir en arrière. Il sert à tester la connexité, compter les composantes, détecter un cycle ou ordonner des tâches dépendantes (tri topologique)."
+        },
+        {
+          "title": "Toujours marquer les sommets visités",
+          "body": "Sans ensemble des sommets visités, le moindre cycle fait tourner le parcours à l'infini. Avec lui, chaque sommet et chaque arête sont traités une fois : O(V + E)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-bfs-q1",
+          "prompt": "Avec la fonction distance de la leçon, que renvoie distance(g, \"a\", \"e\") ?",
+          "code": "g = {\"a\": [\"b\", \"c\"], \"b\": [\"d\"], \"c\": [\"d\"],\n     \"d\": [\"e\"], \"e\": []}",
+          "choices": [
+            "3",
+            "4",
+            "2",
+            "-1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le plus court chemin est a → b → d → e (ou par c) : trois arêtes. BFS trouve cette distance en visitant les sommets niveau par niveau.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "algo-bfs-q2",
+          "prompt": "Sur un graphe qui contient un cycle, cette fonction ne s'arrête jamais. Touche une ligne en cause.",
+          "code": "def atteignables(g, depart):\n    pile = [depart]\n    vus = []\n    while pile:\n        n = pile.pop()\n        vus.append(n)\n        pile.extend(g[n])\n    return vus",
+          "bugLines": [
+            6,
+            7
+          ],
+          "explanation": "Les voisins sont empilés même s'ils ont déjà été visités : un cycle les fait revenir sans fin. Il faut un set vus, et n'empiler que les sommets pas encore vus.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-bfs-q3",
+          "prompt": "Quel algorithme donne le plus court chemin dans un graphe non pondéré ?",
+          "choices": [
+            "BFS",
+            "DFS",
+            "Un tri topologique",
+            "Une recherche binaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "BFS atteint chaque sommet d'abord par le chemin le plus court. DFS trouve un chemin, pas forcément le plus court.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "algo-bfs-q4",
+          "prompt": "Complète le parcours en largeur.",
+          "code": "while file:\n    n, d = file.___()\n    if n == arrivee:\n        return d\n    for v in g[n]:\n        if v not in vus:\n            vus.___(v)\n            file.append((v, d + 1))",
+          "answers": [
+            "popleft",
+            "add"
+          ],
+          "distractors": [
+            "pop",
+            "append",
+            "push"
+          ],
+          "explanation": "popleft fait de la deque une file (FIFO) ; pop en ferait une pile, et le parcours deviendrait un DFS. vus est un set : on y ajoute avec add.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-bfs-q5",
+          "prompt": "Des tâches de build dépendent les unes des autres. Quel algorithme donne un ordre d'exécution valide ?",
+          "choices": [
+            "Un tri topologique (DFS ou algorithme de Kahn)",
+            "Dijkstra",
+            "Un tri par ordre alphabétique",
+            "Une recherche binaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le tri topologique place chaque tâche après toutes ses dépendances. Il échoue s'il existe un cycle de dépendances, ce qui permet aussi de le détecter.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-bfs-q6",
+          "prompt": "Combien de composantes connexes compte ce graphe non orienté ?",
+          "code": "g = {1: [2], 2: [1], 3: [4], 4: [3], 5: []}",
+          "choices": [
+            "3",
+            "5",
+            "2",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "{1, 2}, {3, 4} et {5} isolé. On les compte en lançant un parcours depuis chaque sommet pas encore visité.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "algo-plus-court-chemin",
       "title": "Plus court chemin",
       "summary": "Dijkstra et consorts.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Dijkstra",
+          "body": "Pour des arêtes de poids positifs, on traite toujours le sommet le plus proche non encore définitif, grâce à un tas min. Coût : O((V + E) log V). Avec des poids négatifs, il peut se tromper : un sommet est déclaré définitif alors qu'un chemin passant par une arête négative serait plus court.",
+          "code": "def dijkstra(g, s):\n    dist = {s: 0}\n    tas = [(0, s)]\n    while tas:\n        d, u = heapq.heappop(tas)\n        if d > dist[u]:\n            continue         # entrée périmée\n        for v, w in g[u]:\n            if d + w < dist.get(v, float(\"inf\")):\n                dist[v] = d + w\n                heapq.heappush(tas, (d + w, v))\n    return dist"
+        },
+        {
+          "title": "Les autres algorithmes",
+          "body": "Bellman-Ford accepte les poids négatifs et détecte les cycles négatifs, en O(V × E). A* ajoute une estimation de la distance restante (à vol d'oiseau sur une carte) pour explorer moins de sommets. Floyd-Warshall calcule toutes les paires en O(V³)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-dijkstra-q1",
+          "prompt": "Avec la fonction dijkstra de la leçon, que vaut dijkstra(g, \"A\")[\"D\"] ?",
+          "code": "g = {\"A\": [(\"B\", 4), (\"C\", 1)],\n     \"C\": [(\"B\", 2), (\"D\", 5)],\n     \"B\": [(\"D\", 1)],\n     \"D\": []}",
+          "choices": [
+            "4",
+            "5",
+            "6",
+            "3"
+          ],
+          "answerIndex": 0,
+          "explanation": "A → C (1) → B (1 + 2 = 3) → D (3 + 1 = 4). Le chemin direct A → C → D coûte 6, et A → B → D coûte 5.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-dijkstra-q2",
+          "prompt": "Pourquoi Dijkstra ne fonctionne-t-il pas avec des poids négatifs ?",
+          "choices": [
+            "Il considère un sommet comme définitif trop tôt, avant qu'un chemin passant par une arête négative ne le raccourcisse",
+            "Le tas ne peut pas contenir de nombres négatifs",
+            "Il boucle à l'infini",
+            "Il fonctionne parfaitement avec des poids négatifs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Son principe suppose qu'allonger un chemin ne peut jamais le raccourcir. Bellman-Ford est l'algorithme adapté.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "algo-dijkstra-q3",
+          "prompt": "Complète l'utilisation du tas dans Dijkstra.",
+          "code": "while tas:\n    d, u = heapq.___(tas)\n    if d > dist[u]:\n        continue\n    for v, w in g[u]:\n        if d + w < dist.get(v, float(\"inf\")):\n            dist[v] = d + w\n            heapq.___(tas, (d + w, v))",
+          "answers": [
+            "heappop",
+            "heappush"
+          ],
+          "distractors": [
+            "pop",
+            "append",
+            "heapify"
+          ],
+          "explanation": "On retire le sommet de plus petite distance, puis on pousse chaque voisin amélioré. Les entrées obsolètes restent dans le tas et sont ignorées grâce au test d > dist[u].",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-dijkstra-q4",
+          "prompt": "Quelle est la complexité de Dijkstra avec un tas binaire ?",
+          "choices": [
+            "O((V + E) log V)",
+            "O(V + E)",
+            "O(V × E)",
+            "O(V³)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque arête peut provoquer une insertion dans le tas, en O(log V).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-dijkstra-q5",
+          "prompt": "Un GPS cherche un itinéraire sur une carte. Quel algorithme explore le moins de routes inutiles ?",
+          "choices": [
+            "A*, guidé par la distance à vol d'oiseau jusqu'à l'arrivée",
+            "BFS",
+            "Floyd-Warshall",
+            "DFS"
+          ],
+          "answerIndex": 0,
+          "explanation": "A* est un Dijkstra qui privilégie les sommets proches de l'arrivée selon une estimation. Si l'estimation ne surestime jamais la distance réelle, le chemin trouvé reste optimal.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "algo-dijkstra-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Bellman-Ford accepte les poids négatifs",
+            "Bellman-Ford détecte les cycles de poids négatif",
+            "Si toutes les arêtes ont le même poids, BFS suffit",
+            "Dijkstra fonctionne avec des poids négatifs"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Avec des poids égaux, le plus court chemin est celui qui a le moins d'arêtes : BFS le trouve en O(V + E), sans tas.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "algo-defi-graphes",
+    "title": "Défi entretien : graphes",
+    "summary": "Dépendances et labyrinthes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "algo-defi5-q1",
+        "prompt": "Qu'affiche ce tri topologique (algorithme de Kahn) ?",
+        "code": "avant = {\"fetch\": [], \"compile\": [\"fetch\"],\n         \"build\": [\"compile\"], \"test\": [\"build\"]}\nreste = {t: len(d) for t, d in avant.items()}\nfile = deque(t for t, n in reste.items() if n == 0)\nordre = []\nwhile file:\n    t = file.popleft()\n    ordre.append(t)\n    for u, deps in avant.items():\n        if t in deps:\n            reste[u] -= 1\n            if reste[u] == 0:\n                file.append(u)\nprint(\" \".join(ordre))",
+        "choices": [
+          "fetch compile build test",
+          "test build compile fetch",
+          "build compile fetch test",
+          "fetch build compile test"
+        ],
+        "answerIndex": 0,
+        "explanation": "On commence par les tâches sans dépendance ; chaque tâche terminée débloque celles qui en dépendaient.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi5-q2",
+        "prompt": "Cas pratique 1/3 — On cherche le plus court chemin dans un labyrinthe avec un DFS récursif qui s'arrête au premier chemin trouvé. Quel est le problème ?",
+        "choices": [
+          "Le premier chemin trouvé par un DFS n'est pas forcément le plus court",
+          "DFS ne peut pas parcourir une grille",
+          "Il n'y a aucun problème",
+          "DFS est toujours plus lent que BFS"
+        ],
+        "answerIndex": 0,
+        "explanation": "DFS s'enfonce dans la première direction venue et peut trouver un long détour. Explorer tous les chemins pour garder le meilleur deviendrait exponentiel.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi5-q3",
+        "prompt": "Cas pratique 2/3 — Tous les déplacements coûtent 1. Quel algorithme utiliser ?",
+        "choices": [
+          "BFS",
+          "Dijkstra obligatoirement",
+          "Bellman-Ford",
+          "Floyd-Warshall"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec des poids égaux, BFS donne le plus court chemin en O(V + E), plus simplement que Dijkstra.",
+        "difficulty": 1
+      },
+      {
+        "type": "order",
+        "id": "algo-defi5-q4",
+        "prompt": "Cas pratique 3/3 — Remets le parcours en largeur dans l'ordre.",
+        "lines": [
+          "file, vus = deque([depart]), {depart}",
+          "while file:",
+          "    case = file.popleft()",
+          "    for v in voisins(case):",
+          "        if v not in vus:",
+          "            vus.add(v)",
+          "            file.append(v)"
+        ],
+        "explanation": "On marque une case dès qu'elle entre dans la file, pas quand on la retire : sinon, la même case peut être ajoutée plusieurs fois.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "algo-defi5-q5",
+        "prompt": "Comment détecter un cycle ?",
+        "choices": [
+          "Graphe orienté : un DFS qui retombe sur un sommet en cours d'exploration",
+          "Graphe non orienté : union-find, qui détecte une arête reliant deux sommets déjà dans le même ensemble",
+          "En triant les sommets par degré",
+          "Avec Dijkstra"
+        ],
+        "answerIndices": [
+          0,
+          1
+        ],
+        "explanation": "En orienté, on distingue les sommets « en cours » (sur la pile de récursion) des sommets « terminés » : revenir sur un sommet en cours révèle un cycle.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi5-q6",
+        "prompt": "En entretien : quand préférer BFS à DFS ?",
+        "choices": [
+          "BFS pour les plus courts chemins non pondérés ; DFS pour explorer en profondeur (connexité, cycles, tri topologique, backtracking)",
+          "BFS est toujours meilleur",
+          "DFS est toujours meilleur",
+          "Ils sont interchangeables"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les deux sont en O(V + E). BFS peut stocker tout un niveau dans sa file (beaucoup de mémoire sur un graphe large) ; DFS stocke un chemin (beaucoup de mémoire sur un graphe très profond).",
+        "difficulty": 2
+      }
+    ]
+  }
 }

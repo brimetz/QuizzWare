@@ -7,25 +7,528 @@
       "id": "algo-deux-pointeurs",
       "title": "Deux pointeurs et fenêtre glissante",
       "summary": "Parcourir intelligemment.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Deux pointeurs",
+          "body": "Sur un tableau trié, deux indices partant des deux bouts remplacent une double boucle. Pour trouver deux nombres de somme donnée : trop petit, on avance la gauche ; trop grand, on recule la droite. O(n) au lieu de O(n²).",
+          "code": "def paire(t, cible):\n    g, d = 0, len(t) - 1\n    while g < d:\n        s = t[g] + t[d]\n        if s == cible:\n            return t[g], t[d]\n        if s < cible:\n            g += 1\n        else:\n            d -= 1\n    return None"
+        },
+        {
+          "title": "La fenêtre glissante",
+          "body": "Pour les sous-tableaux ou sous-chaînes contigus, on maintient une fenêtre [g, d] : on l'étend à droite, et on la réduit à gauche quand elle devient invalide. Chaque indice entre et sort une seule fois : O(n).",
+          "code": "def plus_long_sans_doublon(s):\n    vus = set()\n    g = meilleur = 0\n    for d, c in enumerate(s):\n        while c in vus:\n            vus.remove(s[g])\n            g += 1\n        vus.add(c)\n        meilleur = max(meilleur, d - g + 1)\n    return meilleur"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-2p-q1",
+          "prompt": "Avec la fonction de la leçon, que renvoie plus_long_sans_doublon(\"abcabcbb\") ?",
+          "choices": [
+            "3",
+            "8",
+            "2",
+            "4"
+          ],
+          "answerIndex": 0,
+          "explanation": "La fenêtre la plus longue sans caractère répété est « abc » (ou « bca », « cab »).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-2p-q2",
+          "prompt": "Pourquoi la fenêtre glissante est-elle en O(n) malgré la boucle while imbriquée ?",
+          "choices": [
+            "g ne fait qu'avancer : au total, chaque caractère entre une fois et sort au plus une fois",
+            "Parce que la boucle while ne s'exécute jamais",
+            "Elle est en O(n²)",
+            "Parce que le set est trié"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une analyse amortie : sur toute l'exécution, la boucle intérieure fait au plus n tours au total, pas n par itération.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "algo-2p-q3",
+          "prompt": "Complète la recherche d'une paire de somme cible dans un tableau trié.",
+          "code": "while g < d:\n    s = t[g] + t[d]\n    if s == cible:\n        return t[g], t[d]\n    if s < cible:\n        ___\n    else:\n        ___",
+          "answers": [
+            "g += 1",
+            "d -= 1"
+          ],
+          "distractors": [
+            "g -= 1",
+            "d += 1"
+          ],
+          "explanation": "Somme trop petite : on remplace le plus petit élément par le suivant, plus grand. Trop grande : on remplace le plus grand par le précédent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-2p-q4",
+          "prompt": "Qu'affiche ce code, qui calcule la plus grande somme de k éléments consécutifs ?",
+          "code": "def max_somme(t, k):\n    s = meilleur = sum(t[:k])\n    for i in range(k, len(t)):\n        s += t[i] - t[i - k]\n        meilleur = max(meilleur, s)\n    return meilleur\nprint(max_somme([2, 1, 5, 1, 3, 2], 3))",
+          "choices": [
+            "9",
+            "8",
+            "14",
+            "6"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les fenêtres valent 8, 7, 9 et 6. À chaque pas, on ajoute l'élément qui entre et retire celui qui sort au lieu de tout resommer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-2p-q5",
+          "prompt": "Comment vérifier qu'une chaîne est un palindrome en O(1) de mémoire ?",
+          "choices": [
+            "Deux pointeurs aux extrémités qui se rapprochent en comparant les caractères",
+            "Comparer la chaîne à sa copie inversée",
+            "Trier la chaîne",
+            "Compter les caractères avec un dictionnaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "s == s[::-1] marche aussi, mais crée une copie : O(n) de mémoire.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "algo-2p-q6",
+          "prompt": "Cette fonction doit retirer les doublons d'une liste triée, en place. Pour [1, 2, 2] elle renvoie 1 au lieu de 2. Touche la ligne fautive.",
+          "code": "def dedoublonner(t):\n    k = 1\n    for i in range(1, len(t)):\n        if t[i] != t[k]:\n            t[k] = t[i]\n            k += 1\n    return k",
+          "bugLines": [
+            4
+          ],
+          "explanation": "k est la prochaine case libre : on doit comparer à la dernière valeur gardée, t[k - 1]. Ici, au premier tour, t[1] est comparé à lui-même et le 2 est ignoré.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "algo-backtracking",
       "title": "Récursion et backtracking",
       "summary": "Explorer les possibilités.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Essayer, puis revenir en arrière",
+          "body": "Le backtracking construit une solution pas à pas : à chaque étape, on essaie chaque choix possible, on explore la suite récursivement, puis on annule le choix pour essayer le suivant. Sudoku, N reines, permutations, sous-ensembles.",
+          "code": "def permutations(t):\n    res, cur = [], []\n    def explorer():\n        if len(cur) == len(t):\n            res.append(cur[:])\n            return\n        for x in t:\n            if x not in cur:\n                cur.append(x)\n                explorer()\n                cur.pop()\n    explorer()\n    return res"
+        },
+        {
+          "title": "Élaguer",
+          "body": "Le coût est exponentiel (n! permutations, 2ⁿ sous-ensembles). L'art est d'abandonner une branche dès qu'elle ne peut plus mener à une solution : une reine déjà attaquée, une somme déjà dépassée."
+        },
+        {
+          "title": "Le piège de la copie",
+          "body": "cur est modifiée en permanence : ajouter cur directement au résultat stockerait plusieurs fois la même liste, vide à la fin. Il faut en ajouter une copie (cur[:])."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-bt-q1",
+          "prompt": "Combien de listes renvoie permutations([1, 2, 3, 4]) ?",
+          "choices": [
+            "24",
+            "16",
+            "4",
+            "12"
+          ],
+          "answerIndex": 0,
+          "explanation": "4! = 4 × 3 × 2 × 1 = 24 : 4 choix pour la première place, 3 pour la deuxième, etc.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "algo-bt-q2",
+          "prompt": "Cette fonction renvoie [[], [], [], [], [], [], [], []] pour [1, 2, 3]. Touche la ligne fautive.",
+          "code": "def sous_ensembles(t):\n    res, cur = [], []\n    def explorer(i):\n        if i == len(t):\n            res.append(cur)\n            return\n        explorer(i + 1)\n        cur.append(t[i])\n        explorer(i + 1)\n        cur.pop()\n    explorer(0)\n    return res",
+          "bugLines": [
+            5
+          ],
+          "explanation": "res contient 8 fois la même liste cur, vidée à la fin par les pop. Il faut stocker une copie : res.append(cur[:]).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-bt-q3",
+          "prompt": "Combien de sous-ensembles a un ensemble de 10 éléments ?",
+          "choices": [
+            "1 024",
+            "100",
+            "3 628 800",
+            "20"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque élément est pris ou non : 2¹⁰ = 1 024. (3 628 800 est 10!, le nombre de permutations.)",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "algo-bt-q4",
+          "prompt": "Remets dans l'ordre l'étape de backtracking.",
+          "lines": [
+            "for x in choix_possibles:",
+            "    if valide(x):",
+            "        cur.append(x)",
+            "        explorer()",
+            "        cur.pop()"
+          ],
+          "explanation": "Choisir, explorer, annuler : le pop remet l'état exactement comme avant le choix, pour essayer le suivant.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-bt-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def combinaisons(t, cible, i=0):\n    if cible == 0:\n        return 1\n    if cible < 0 or i == len(t):\n        return 0\n    return (combinaisons(t, cible - t[i], i + 1)\n            + combinaisons(t, cible, i + 1))\nprint(combinaisons([1, 2, 3, 4], 5))",
+          "choices": [
+            "2",
+            "1",
+            "3",
+            "4"
+          ],
+          "answerIndex": 0,
+          "explanation": "On compte les sous-ensembles de somme 5 : {1, 4} et {2, 3}. Le test cible < 0 élague les branches déjà trop grandes.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "algo-bt-q6",
+          "prompt": "Quels problèmes se prêtent au backtracking ?",
+          "choices": [
+            "Résoudre un sudoku",
+            "Placer N reines sans qu'elles s'attaquent",
+            "Générer toutes les combinaisons valides de parenthèses",
+            "Trouver le maximum d'un tableau"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le maximum se trouve en un simple parcours. Le backtracking sert quand il faut explorer un espace de choix combinatoire.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "algo-programmation-dynamique",
       "title": "Programmation dynamique",
       "summary": "Mémoïsation et tabulation.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Ne jamais calculer deux fois",
+          "body": "Quand un problème se découpe en sous-problèmes qui se recoupent, on stocke leurs résultats. Fibonacci naïf est exponentiel ; en mémorisant chaque fib(k), il devient O(n).",
+          "code": "from functools import cache\n\n@cache\ndef fib(n):\n    return n if n < 2 else fib(n - 1) + fib(n - 2)"
+        },
+        {
+          "title": "Mémoïsation ou tabulation",
+          "body": "La mémoïsation (de haut en bas) garde la récursion et met en cache. La tabulation (de bas en haut) remplit un tableau du plus petit sous-problème au plus grand : pas de risque de dépasser la profondeur de récursion, et on peut souvent ne garder que les dernières cases.",
+          "code": "def nb_chemins(n):    # marches de 1 ou 2\n    a, b = 1, 1\n    for _ in range(n - 1):\n        a, b = b, a + b\n    return b"
+        },
+        {
+          "title": "La méthode",
+          "body": "1. Définir l'état : que représente dp[i] ? 2. Trouver la relation entre dp[i] et les états plus petits. 3. Fixer les cas de base. 4. Choisir l'ordre de calcul. La difficulté est presque toujours l'étape 1."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-dp-q1",
+          "prompt": "Quelles conditions rendent la programmation dynamique utile ?",
+          "choices": [
+            "Des sous-problèmes qui se recoupent, et une solution optimale construite à partir de solutions optimales de sous-problèmes",
+            "Un tableau trié",
+            "Un graphe sans cycle uniquement",
+            "Des données qui tiennent en mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans recoupement (comme le tri fusion), la mise en cache ne sert à rien : c'est du simple diviser pour régner.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-dp-q2",
+          "prompt": "Avec la fonction nb_chemins de la leçon, de combien de façons monte-t-on 5 marches, par pas de 1 ou 2 ?",
+          "choices": [
+            "8",
+            "5",
+            "10",
+            "13"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour arriver à la marche n, on vient de n - 1 ou de n - 2 : c'est Fibonacci. 1, 2, 3, 5, 8.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-dp-q3",
+          "prompt": "Qu'affiche ce code, qui calcule le nombre minimal de pièces pour rendre la monnaie ?",
+          "code": "def pieces(valeurs, montant):\n    dp = [0] + [float(\"inf\")] * montant\n    for m in range(1, montant + 1):\n        for v in valeurs:\n            if v <= m:\n                dp[m] = min(dp[m], dp[m - v] + 1)\n    return dp[montant]\nprint(pieces([1, 3, 4], 6))",
+          "choices": [
+            "2",
+            "3",
+            "6",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "3 + 3. dp[m] est le minimum de pièces pour le montant m : on essaie chaque dernière pièce v et on réutilise dp[m - v].",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "algo-dp-q4",
+          "prompt": "Complète la plus longue sous-suite commune de deux chaînes a et b.",
+          "code": "for i in range(1, len(a) + 1):\n    for j in range(1, len(b) + 1):\n        if a[i - 1] == b[j - 1]:\n            dp[i][j] = dp[i - 1][j - 1] ___\n        else:\n            dp[i][j] = ___(dp[i - 1][j], dp[i][j - 1])",
+          "answers": [
+            "+ 1",
+            "max"
+          ],
+          "distractors": [
+            "- 1",
+            "min",
+            "sum"
+          ],
+          "explanation": "Caractères égaux : on prolonge la meilleure sous-suite des préfixes plus courts. Sinon, on ignore le dernier caractère de l'une ou de l'autre chaîne et on garde le meilleur.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "algo-dp-q5",
+          "prompt": "Ce Fibonacci est censé être mémoïsé, mais reste exponentiel. Touche la ligne fautive.",
+          "code": "def fib(n, memo={}):\n    if n < 2:\n        return n\n    if n in memo:\n        return memo[n]\n    r = fib(n - 1) + fib(n - 2)\n    return r",
+          "bugLines": [
+            7
+          ],
+          "explanation": "Le résultat n'est jamais stocké : il faut memo[n] = r avant de le renvoyer. Le cache reste vide.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-dp-q6",
+          "prompt": "Pour le rendu de monnaie, pourquoi ne pas toujours prendre la plus grosse pièce possible ?",
+          "choices": [
+            "Avec les pièces [1, 3, 4] et 6, cela donne 4 + 1 + 1 (3 pièces) au lieu de 3 + 3",
+            "C'est toujours optimal",
+            "Parce que c'est plus lent",
+            "Parce que la plus grosse pièce n'existe pas toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le choix glouton est optimal pour les euros, pas pour n'importe quel système de pièces. La programmation dynamique, elle, considère tous les cas.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "algo-glouton",
       "title": "Algorithmes gloutons",
       "summary": "Quand le choix local suffit.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le meilleur choix immédiat",
+          "body": "Un algorithme glouton fait à chaque étape le choix qui semble le meilleur, sans jamais revenir dessus. Simple et rapide, mais correct seulement pour certains problèmes : il faut pouvoir prouver qu'un choix local ne compromet pas l'optimum."
+        },
+        {
+          "title": "Un classique : la planification de réunions",
+          "body": "Pour caser un maximum de réunions sans chevauchement dans une salle, on trie par heure de fin et on prend chaque réunion compatible. Finir le plus tôt possible laisse le plus de place aux suivantes.",
+          "code": "def max_reunions(r):\n    n, fin = 0, float(\"-inf\")\n    for debut, f in sorted(r, key=lambda x: x[1]):\n        if debut >= fin:\n            n += 1\n            fin = f\n    return n"
+        },
+        {
+          "title": "Des gloutons célèbres",
+          "body": "Dijkstra, les arbres couvrants minimaux (Kruskal, Prim) et le codage de Huffman sont des algorithmes gloutons. Le sac à dos avec objets fractionnables se résout en glouton ; avec des objets entiers, il faut la programmation dynamique."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-glouton-q1",
+          "prompt": "Avec la fonction max_reunions de la leçon, que renvoie cet appel ?",
+          "code": "max_reunions([(1, 4), (3, 5), (0, 6),\n              (5, 7), (8, 9), (5, 9)])",
+          "choices": [
+            "3",
+            "2",
+            "4",
+            "6"
+          ],
+          "answerIndex": 0,
+          "explanation": "Triées par fin : (1, 4) est prise, (3, 5) et (0, 6) chevauchent, (5, 7) est prise, (8, 9) est prise, (5, 9) chevauche.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-glouton-q2",
+          "prompt": "Pour maximiser le nombre de réunions, pourquoi trier par heure de fin plutôt que par durée ?",
+          "choices": [
+            "Une réunion courte peut chevaucher deux réunions compatibles entre elles ; finir tôt laisse toujours le plus de place",
+            "Trier par durée donne le même résultat",
+            "Trier par fin est plus rapide",
+            "Pour respecter l'ordre chronologique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Contre-exemple : (1, 5), (4, 7), (6, 10). La plus courte, (4, 7), bloque les deux autres, qui étaient compatibles.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "algo-glouton-q3",
+          "prompt": "Pièces de 1, 2, 5, 10, 20 et 50 centimes. Combien de pièces au minimum pour rendre 87 centimes ?",
+          "choices": [
+            "5",
+            "4",
+            "6",
+            "7"
+          ],
+          "answerIndex": 0,
+          "explanation": "50 + 20 + 10 + 5 + 2. Avec les pièces en euros, prendre la plus grosse pièce possible est optimal.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "algo-glouton-q4",
+          "prompt": "Lesquels de ces algorithmes sont gloutons ?",
+          "choices": [
+            "Dijkstra",
+            "Kruskal",
+            "Le codage de Huffman",
+            "Le tri fusion"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le tri fusion relève du diviser pour régner : il ne fait aucun choix local définitif.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "algo-glouton-q5",
+          "prompt": "Cette version renvoie 1 pour [(1, 10), (2, 3), (4, 5)] au lieu de 2. Touche la ligne fautive.",
+          "code": "def max_reunions(r):\n    n, fin = 0, float(\"-inf\")\n    for debut, f in sorted(r):\n        if debut >= fin:\n            n += 1\n            fin = f\n    return n",
+          "bugLines": [
+            3
+          ],
+          "explanation": "sorted(r) trie par heure de début : (1, 10) est prise en premier et bloque tout. Il faut trier par heure de fin, avec key=lambda x: x[1].",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-glouton-q6",
+          "prompt": "Sac à dos de 10 kg, objets indivisibles. Quand le glouton « meilleur rapport valeur / poids » échoue-t-il ?",
+          "choices": [
+            "Quand l'objet au meilleur rapport laisse un espace qu'aucun autre ne remplit bien ; il faut alors la programmation dynamique",
+            "Jamais, il est toujours optimal",
+            "Seulement si deux objets ont le même poids",
+            "Seulement si le sac fait moins de 5 kg"
+          ],
+          "answerIndex": 0,
+          "explanation": "Objets (6 kg, 30 €), (5 kg, 20 €), (5 kg, 20 €) : le glouton prend le premier (5 €/kg) et ne peut plus rien ajouter, 30 €. Les deux autres font 40 €.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "algo-defi-techniques",
+    "title": "Défi entretien : techniques",
+    "summary": "Reconnaître le bon pattern.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "algo-defi7-q1",
+        "prompt": "« Trouver le plus long sous-tableau dont la somme est ≤ k, avec des nombres positifs. » Quel pattern ?",
+        "choices": [
+          "Fenêtre glissante",
+          "Backtracking",
+          "Recherche binaire sur un tableau trié",
+          "Tri topologique"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sous-tableau contigu et valeurs positives : élargir la fenêtre augmente la somme, la réduire la diminue. C'est exactement le cadre de la fenêtre glissante.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi7-q2",
+        "prompt": "« Lister toutes les façons de placer 8 reines sur un échiquier. » Quel pattern ?",
+        "choices": [
+          "Backtracking",
+          "Glouton",
+          "Deux pointeurs",
+          "Programmation dynamique"
+        ],
+        "answerIndex": 0,
+        "explanation": "On veut toutes les solutions : on place une reine par ligne, on élague les cases attaquées, et on revient en arrière.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi7-q3",
+        "prompt": "Cas pratique 1/3 — Un voleur parcourt une rue de maisons ; il ne peut pas cambrioler deux maisons voisines. On cherche le butin maximal. Que vaut le meilleur butin best[i] sur les maisons 0 à i ?",
+        "choices": [
+          "max(best[i - 1], best[i - 2] + t[i])",
+          "best[i - 1] + t[i]",
+          "max(t)",
+          "best[i - 2] + best[i - 1]"
+        ],
+        "answerIndex": 0,
+        "explanation": "Soit il saute la maison i (best[i - 1]), soit il la prend, et alors pas la i - 1 (best[i - 2] + t[i]).",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi7-q4",
+        "prompt": "Cas pratique 2/3 — Qu'affiche ce code ?",
+        "code": "def butin(t):\n    a = b = 0\n    for x in t:\n        a, b = b, max(b, a + x)\n    return b\nprint(butin([2, 7, 9, 3, 1]))",
+        "choices": [
+          "12",
+          "11",
+          "10",
+          "22"
+        ],
+        "answerIndex": 0,
+        "explanation": "2 + 9 + 1 = 12. a et b sont best[i - 2] et best[i - 1] : on ne garde que les deux dernières cases du tableau.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi7-q5",
+        "prompt": "Cas pratique 3/3 — Quelle est la complexité en mémoire de cette solution ?",
+        "choices": [
+          "O(1)",
+          "O(n)",
+          "O(n²)",
+          "O(2ⁿ)"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque état ne dépend que des deux précédents : deux variables suffisent. C'est l'optimisation classique d'une tabulation.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "algo-defi7-q6",
+        "prompt": "En entretien, quelles habitudes aident à résoudre un problème d'algorithmique ?",
+        "choices": [
+          "Reformuler le problème et poser des questions sur les entrées (taille, bornes, doublons)",
+          "Proposer d'abord une solution naïve correcte, puis l'optimiser",
+          "Tester son code à la main sur un petit exemple et sur les cas limites",
+          "Coder immédiatement sans rien dire"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'intervieweur évalue aussi le raisonnement : penser à voix haute et annoncer les complexités compte autant que le code final.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

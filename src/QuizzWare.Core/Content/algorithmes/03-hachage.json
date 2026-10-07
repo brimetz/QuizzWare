@@ -7,13 +7,326 @@
       "id": "algo-hachage",
       "title": "Fonctionnement",
       "summary": "Fonctions de hachage et collisions.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le principe",
+          "body": "Une fonction de hachage transforme une clé en un nombre, qui indique un compartiment d'un tableau. On y range la paire clé-valeur, et on la retrouve en recalculant le hash : O(1) en moyenne. C'est ce qu'il y a derrière dict et set en Python, HashMap en Java, unordered_map en C++."
+        },
+        {
+          "title": "Les collisions",
+          "body": "Deux clés différentes peuvent tomber dans le même compartiment. On les gère par chaînage (une petite liste par compartiment) ou par adressage ouvert (on essaie le compartiment suivant). Avec une mauvaise fonction de hachage, toutes les clés se retrouvent ensemble et la recherche devient O(n)."
+        },
+        {
+          "title": "Le facteur de charge",
+          "body": "Quand la table se remplit (au-delà de deux tiers en Python, de 0,75 en Java), elle est agrandie et chaque élément est replacé (rehash) : une opération coûteuse mais rare, d'où un ajout en O(1) amorti."
+        },
+        {
+          "title": "Des clés immuables",
+          "body": "Le hash d'une clé ne doit jamais changer, et deux clés égales doivent avoir le même hash. C'est pourquoi les clés sont immuables : str, int, tuple, frozenset, mais pas list ni dict."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-hachage-q1",
+          "prompt": "Qu'est-ce qu'une collision dans une table de hachage ?",
+          "choices": [
+            "Deux clés différentes qui tombent dans le même compartiment",
+            "Deux valeurs identiques",
+            "Une clé insérée deux fois",
+            "Une table pleine"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les collisions sont inévitables (il y a plus de clés possibles que de compartiments) ; la table doit simplement savoir les gérer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-hachage-q2",
+          "prompt": "Quelle est la complexité d'une recherche dans une table de hachage ?",
+          "choices": [
+            "O(1) en moyenne, O(n) dans le pire cas",
+            "O(log n) dans tous les cas",
+            "O(1) dans tous les cas",
+            "O(n) en moyenne"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le pire cas survient quand toutes les clés entrent en collision. Java 8 limite ce pire cas en transformant les compartiments trop remplis en arbres.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-hachage-q3",
+          "prompt": "Que se passe-t-il quand le facteur de charge d'une table de hachage dépasse son seuil ?",
+          "choices": [
+            "La table est agrandie et tous les éléments sont replacés",
+            "Les nouvelles insertions sont refusées",
+            "Les éléments les plus anciens sont supprimés",
+            "La table devient une liste triée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le replacement (rehash) coûte O(n), mais comme la taille augmente proportionnellement, il reste rare : l'insertion est en O(1) amorti.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-hachage-q4",
+          "prompt": "Que se passe-t-il ?",
+          "code": "d = {[1, 2]: \"x\"}",
+          "choices": [
+            "TypeError : une liste n'est pas hachable",
+            "d contient la clé [1, 2]",
+            "La liste est convertie en tuple",
+            "SyntaxError"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une liste peut changer après son insertion, ce qui changerait son hash : Python refuse donc de l'utiliser comme clé. (1, 2) fonctionne.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-hachage-q5",
+          "prompt": "Pourquoi Python rend-il le hash des chaînes différent à chaque lancement du programme ?",
+          "choices": [
+            "Pour empêcher un attaquant de fabriquer des clés qui entrent toutes en collision",
+            "Pour économiser de la mémoire",
+            "Pour trier les dictionnaires",
+            "C'est un bug connu"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un hash prévisible, on peut envoyer à un serveur des milliers de clés qui tombent dans le même compartiment et le ralentir énormément (déni de service). La graine aléatoire (PYTHONHASHSEED) empêche cette attaque.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "algo-hachage-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Deux clés égales doivent avoir le même hash",
+            "La fonction de hachage doit être rapide à calculer",
+            "Une table de hachage garde ses clés triées",
+            "Agrandir la table oblige à recalculer l'emplacement des éléments"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "L'ordre dépend des hash, pas des valeurs : pour des clés triées, il faut un arbre équilibré (TreeMap, std::map) ou trier à la demande.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "algo-hachage-problemes",
       "title": "Problèmes classiques",
       "summary": "Two sum, anagrammes, fréquences.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Échanger de la mémoire contre du temps",
+          "body": "Beaucoup de problèmes d'entretien passent de O(n²) à O(n) en mémorisant ce qu'on a déjà vu dans un dict ou un set. Exemple : trouver deux nombres dont la somme vaut une cible. Pour chaque x, on cherche si cible - x a déjà été vu.",
+          "code": "def deux_somme(t, cible):\n    vus = {}                    # valeur -> indice\n    for i, x in enumerate(t):\n        if cible - x in vus:\n            return [vus[cible - x], i]\n        vus[x] = i"
+        },
+        {
+          "title": "Compter et regrouper",
+          "body": "Counter compte les occurrences en une passe. Pour regrouper des anagrammes, on utilise une clé commune à tous les mots d'un groupe : leurs lettres triées.",
+          "code": "groupes = defaultdict(list)\nfor mot in mots:\n    groupes[\"\".join(sorted(mot))].append(mot)"
+        },
+        {
+          "title": "Dédoublonner",
+          "body": "set(l) supprime les doublons mais perd l'ordre. dict.fromkeys(l) les supprime en gardant l'ordre de première apparition, car un dict conserve l'ordre d'insertion."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "algo-hachage-pb-q1",
+          "prompt": "Complète la recherche de deux nombres dont la somme vaut la cible.",
+          "code": "def deux_somme(t, cible):\n    vus = {}\n    for i, x in enumerate(t):\n        if cible - x ___ vus:\n            return [vus[cible - x], i]\n        vus[___] = i",
+          "answers": [
+            "in",
+            "x"
+          ],
+          "distractors": [
+            "not in",
+            "i",
+            "cible"
+          ],
+          "explanation": "On mémorise chaque valeur avec son indice ; le complément cible - x, s'il a déjà été vu, donne la réponse en une seule passe : O(n).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-hachage-pb-q2",
+          "prompt": "Avec la fonction deux_somme de la leçon, que renvoie deux_somme([2, 7, 11, 15], 9) ?",
+          "choices": [
+            "[0, 1]",
+            "[1, 0]",
+            "[2, 7]",
+            "None"
+          ],
+          "answerIndex": 0,
+          "explanation": "À l'indice 1 (x = 7), le complément 2 a été vu à l'indice 0.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-hachage-pb-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from collections import defaultdict\ngroupes = defaultdict(list)\nfor m in [\"chien\", \"niche\", \"chat\", \"tach\"]:\n    groupes[\"\".join(sorted(m))].append(m)\nprint(len(groupes))",
+          "choices": [
+            "2",
+            "4",
+            "1",
+            "3"
+          ],
+          "answerIndex": 0,
+          "explanation": "chien et niche ont les mêmes lettres triées (cehin), tout comme chat et tach (acht) : deux groupes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-hachage-pb-q4",
+          "prompt": "Quelle est la complexité de deux_somme avec un dict ?",
+          "choices": [
+            "O(n) en temps et O(n) en mémoire",
+            "O(n²) en temps et O(1) en mémoire",
+            "O(n log n) en temps",
+            "O(1) en temps"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le compromis classique : la version naïve à deux boucles est en O(n²) sans mémoire supplémentaire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-hachage-pb-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from collections import Counter\ns = \"abacbd\"\nc = Counter(s)\nprint(next(ch for ch in s if c[ch] == 1))",
+          "choices": [
+            "c",
+            "a",
+            "d",
+            "b"
+          ],
+          "answerIndex": 0,
+          "explanation": "a et b apparaissent deux fois ; le premier caractère unique, dans l'ordre de la chaîne, est c. Deux passes, O(n).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "algo-hachage-pb-q6",
+          "prompt": "La fonction doit supprimer les doublons en gardant l'ordre de première apparition. Touche la ligne fautive.",
+          "code": "def sans_doublons(l):\n    return list(set(l))",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Un set n'a pas d'ordre garanti. list(dict.fromkeys(l)) garde l'ordre, toujours en O(n).",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "algo-defi-hachage",
+    "title": "Défi entretien : hachage",
+    "summary": "Des sommes préfixes au temps linéaire.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "algo-defi3-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "print(list(dict.fromkeys([3, 1, 3, 2, 1])))",
+        "choices": [
+          "[3, 1, 2]",
+          "[1, 2, 3]",
+          "[3, 1, 3, 2, 1]",
+          "[2, 1, 3]"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les clés d'un dict sont uniques et gardent l'ordre de leur première insertion.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi3-q2",
+        "prompt": "Cas pratique 1/3 — On compte les sous-tableaux contigus de somme k. Quelle est la complexité de cette version ?",
+        "code": "def nb_sous_tableaux(t, k):\n    n = 0\n    for i in range(len(t)):\n        for j in range(i, len(t)):\n            if sum(t[i:j + 1]) == k:\n                n += 1\n    return n",
+        "choices": [
+          "O(n³)",
+          "O(n²)",
+          "O(n)",
+          "O(n log n)"
+        ],
+        "answerIndex": 0,
+        "explanation": "Deux boucles imbriquées, et pour chaque paire une tranche suivie d'une somme en O(n).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi3-q3",
+        "prompt": "Cas pratique 2/3 — Quelle idée permet de passer en O(n) ?",
+        "choices": [
+          "Les sommes préfixes : un sous-tableau vaut k si somme_actuelle - k est une somme préfixe déjà vue",
+          "Trier le tableau d'abord",
+          "Une recherche binaire sur k",
+          "Utiliser deux pointeurs (ne fonctionne qu'avec des nombres positifs)"
+        ],
+        "answerIndex": 0,
+        "explanation": "La somme de t[i..j] vaut prefixe[j] - prefixe[i-1]. On compte, dans un dict, combien de fois chaque somme préfixe est apparue. Les deux pointeurs échouent dès qu'il y a des nombres négatifs.",
+        "difficulty": 3
+      },
+      {
+        "type": "fill",
+        "id": "algo-defi3-q4",
+        "prompt": "Cas pratique 3/3 — Complète la version en O(n).",
+        "code": "def nb_sous_tableaux(t, k):\n    compte = {0: 1}\n    somme = n = 0\n    for x in t:\n        somme += x\n        n += compte.get(somme - ___, 0)\n        compte[somme] = compte.get(___, 0) + 1\n    return n",
+        "answers": [
+          "k",
+          "somme"
+        ],
+        "distractors": [
+          "x",
+          "n",
+          "1"
+        ],
+        "explanation": "Chaque somme préfixe égale à somme - k marque le début d'un sous-tableau de somme k. {0: 1} représente le préfixe vide, pour les sous-tableaux qui commencent au début.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "algo-defi3-q5",
+        "prompt": "Lesquelles peuvent servir de clé de dict ?",
+        "choices": [
+          "Le tuple (1, 2)",
+          "frozenset({1, 2})",
+          "La liste [1, 2]",
+          "La chaîne \"12\""
+        ],
+        "answerIndices": [
+          0,
+          1,
+          3
+        ],
+        "explanation": "Les objets immuables sont hachables. Pour utiliser une liste comme clé, on la convertit en tuple.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi3-q6",
+        "prompt": "En entretien : quand une table de hachage peut-elle dégénérer en O(n) par opération ?",
+        "choices": [
+          "Quand toutes les clés tombent dans le même compartiment (mauvaise fonction de hachage ou attaque)",
+          "Quand les clés sont des chaînes",
+          "Quand la table contient plus de 1 000 éléments",
+          "Jamais"
+        ],
+        "answerIndex": 0,
+        "explanation": "La performance repose sur une bonne répartition des clés. D'où l'importance d'un hashCode bien écrit et de la randomisation des hash contre les attaques.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

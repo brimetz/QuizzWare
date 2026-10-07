@@ -7,19 +7,430 @@
       "id": "algo-tableaux",
       "title": "Tableaux dynamiques",
       "summary": "Accès, insertion et redimensionnement.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des cases contiguës",
+          "body": "Un tableau range ses éléments côte à côte en mémoire. L'adresse de l'élément i se calcule directement (début + i × taille) : l'accès par indice est en O(1). Le parcours profite en plus des caches du processeur."
+        },
+        {
+          "title": "Insérer et supprimer",
+          "body": "Ajouter ou retirer à la fin est rapide. Au milieu ou au début, il faut décaler tous les éléments suivants : O(n). C'est le coût de liste.insert(0, x) ou liste.pop(0) en Python."
+        },
+        {
+          "title": "Le redimensionnement",
+          "body": "Un tableau dynamique (list en Python, ArrayList en Java, vector en C++) réserve plus de place que nécessaire. Quand il est plein, il alloue un bloc plus grand et y recopie tout. Comme la capacité grandit proportionnellement, l'ajout en fin reste en O(1) amorti."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-tableaux-q1",
+          "prompt": "Pourquoi t[i] est-il en O(1) dans un tableau ?",
+          "choices": [
+            "L'adresse de la case se calcule directement à partir de i",
+            "Le tableau est trié",
+            "Le processeur met tout le tableau en cache",
+            "Les tableaux utilisent une table de hachage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les éléments étant contigus et de même taille, l'adresse vaut début + i × taille : aucun parcours n'est nécessaire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-tableaux-q2",
+          "prompt": "Quel est le coût d'une insertion au début d'un tableau de n éléments ?",
+          "choices": [
+            "O(n) : tous les éléments sont décalés",
+            "O(1)",
+            "O(log n)",
+            "O(n²)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque élément doit avancer d'une case. Pour insérer souvent au début, une deque est adaptée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-tableaux-q3",
+          "prompt": "Un tableau dynamique double sa capacité quand il est plein. Combien de copies d'éléments au total pour n ajouts, environ ?",
+          "choices": [
+            "Moins de 2n",
+            "n²",
+            "n log n",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les recopies coûtent 1 + 2 + 4 + ... jusqu'à n, soit moins de 2n : O(1) amorti par ajout.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "algo-tableaux-q4",
+          "prompt": "Avec [-1, -2, 3], la fonction laisse un nombre négatif. Touche la ligne fautive.",
+          "code": "def retirer_negatifs(t):\n    i = 0\n    while i < len(t):\n        if t[i] < 0:\n            t.pop(i)\n        i += 1",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Après pop(i), l'élément suivant prend la place i : l'incrémenter le saute. Il ne faut avancer que si rien n'a été retiré (else). En prime, chaque pop coûte O(n) : t[:] = [x for x in t if x >= 0] est en O(n) au total.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-tableaux-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "t = [1, 2, 3, 4, 5]\ni, j = 0, len(t) - 1\nwhile i < j:\n    t[i], t[j] = t[j], t[i]\n    i += 1\n    j -= 1\nprint(t)",
+          "choices": [
+            "[5, 4, 3, 2, 1]",
+            "[1, 2, 3, 4, 5]",
+            "[5, 2, 3, 4, 1]",
+            "[2, 1, 4, 3, 5]"
+          ],
+          "answerIndex": 0,
+          "explanation": "Deux indices se rapprochent en échangeant les extrémités : le tableau est inversé sur place, en O(n) et O(1) mémoire.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "algo-tableaux-q6",
+          "prompt": "Quelles affirmations sur les tableaux dynamiques sont vraies ?",
+          "choices": [
+            "Leur parcours profite bien du cache du processeur",
+            "L'ajout à la fin est en O(1) amorti",
+            "L'insertion au milieu est en O(1)",
+            "Ils réservent souvent plus de mémoire que nécessaire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "L'insertion au milieu décale les éléments suivants : O(n). La capacité réservée en plus est le prix de l'ajout en O(1) amorti.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "algo-listes",
       "title": "Listes chaînées",
       "summary": "Simples, doubles et leurs pièges.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des nœuds reliés",
+          "body": "Chaque nœud contient une valeur et un pointeur vers le suivant (et vers le précédent dans une liste doublement chaînée). Insérer ou retirer un nœud dont on connaît la position est en O(1) ; mais atteindre le k-ième nœud impose de parcourir la liste : O(k).",
+          "code": "class Noeud:\n    def __init__(self, valeur, suivant=None):\n        self.valeur = valeur\n        self.suivant = suivant"
+        },
+        {
+          "title": "Inverser une liste",
+          "body": "Le grand classique d'entretien : on parcourt la liste en retournant chaque pointeur, avec trois variables. L'ordre des affectations est crucial.",
+          "code": "def inverser(tete):\n    precedent = None\n    courant = tete\n    while courant:\n        suivant = courant.suivant\n        courant.suivant = precedent\n        precedent = courant\n        courant = suivant\n    return precedent"
+        },
+        {
+          "title": "Deux pointeurs : lent et rapide",
+          "body": "Un pointeur avance d'un nœud, l'autre de deux. Quand le rapide atteint la fin, le lent est au milieu. Et s'il y a un cycle, les deux finissent par se rencontrer (algorithme de Floyd), avec une mémoire en O(1)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-listes-q1",
+          "prompt": "Quel est le coût pour lire le k-ième élément d'une liste chaînée ?",
+          "choices": [
+            "O(k) : il faut suivre les pointeurs depuis la tête",
+            "O(1)",
+            "O(log k)",
+            "O(k²)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les nœuds sont dispersés en mémoire : aucun calcul d'adresse direct n'est possible.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "algo-listes-q2",
+          "prompt": "Cette inversion perd tout le reste de la liste. Touche la ligne mal placée.",
+          "code": "def inverser(tete):\n    precedent = None\n    courant = tete\n    while courant:\n        courant.suivant = precedent\n        suivant = courant.suivant\n        precedent = courant\n        courant = suivant\n    return precedent",
+          "bugLines": [
+            5,
+            6
+          ],
+          "explanation": "Il faut sauvegarder courant.suivant avant de l'écraser. Ici, suivant reçoit precedent (None au premier tour) : la boucle s'arrête et le reste de la liste est perdu.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-listes-q3",
+          "prompt": "Comment détecter un cycle dans une liste chaînée avec une mémoire en O(1) ?",
+          "choices": [
+            "Un pointeur avance d'un pas, l'autre de deux : ils se rencontrent s'il y a un cycle",
+            "Mémoriser tous les nœuds visités dans un set",
+            "Compter les nœuds jusqu'à 1 000 000",
+            "Trier la liste puis chercher des doublons"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'algorithme du lièvre et de la tortue (Floyd). Le set fonctionne aussi, mais consomme O(n) mémoire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-listes-q4",
+          "prompt": "La liste contient 1 → 2 → 3 → 4 → 5. Que renvoie milieu(tete) ?",
+          "code": "def milieu(tete):\n    lent = rapide = tete\n    while rapide and rapide.suivant:\n        lent = lent.suivant\n        rapide = rapide.suivant.suivant\n    return lent.valeur",
+          "choices": [
+            "3",
+            "2",
+            "4",
+            "5"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le rapide va deux fois plus vite : quand il atteint le dernier nœud (5), le lent est à mi-chemin (3).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "algo-listes-q5",
+          "prompt": "Complète : retirer un nœud d'une liste doublement chaînée.",
+          "code": "def retirer(noeud):\n    noeud.precedent.suivant = noeud.___\n    noeud.suivant.___ = noeud.precedent",
+          "answers": [
+            "suivant",
+            "precedent"
+          ],
+          "distractors": [
+            "tete",
+            "queue",
+            "valeur"
+          ],
+          "explanation": "On relie directement les deux voisins entre eux : O(1). (Des nœuds sentinelles en tête et en queue évitent de traiter à part les extrémités.)",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "algo-listes-q6",
+          "prompt": "Par rapport à un tableau, quelles affirmations sur une liste chaînée sont vraies ?",
+          "choices": [
+            "L'insertion en tête est en O(1)",
+            "L'accès par indice est en O(1)",
+            "Le parcours profite moins du cache",
+            "Chaque élément coûte de la mémoire en plus pour ses pointeurs"
+          ],
+          "answerIndices": [
+            0,
+            2,
+            3
+          ],
+          "explanation": "Les nœuds dispersés provoquent des défauts de cache : en pratique, un tableau dynamique est souvent plus rapide, même pour des insertions.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "algo-piles-files",
       "title": "Piles et files",
       "summary": "LIFO, FIFO et usages.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La pile (LIFO)",
+          "body": "Dernier entré, premier sorti : on empile (push) et on dépile (pop) au sommet. Usages : annuler une action, vérifier des parenthèses, la pile d'appels des fonctions, le parcours en profondeur. En Python, une list suffit (append et pop)."
+        },
+        {
+          "title": "La file (FIFO)",
+          "body": "Premier entré, premier sorti : on ajoute à la fin, on retire au début. Usages : file de tâches, parcours en largeur. En Python, on utilise collections.deque, dont popleft est en O(1)."
+        },
+        {
+          "title": "La pile monotone",
+          "body": "Une pile dont les éléments restent triés permet de trouver, pour chaque élément, le prochain plus grand en un seul passage : chaque indice est empilé et dépilé au plus une fois, d'où O(n).",
+          "code": "def suivants_plus_grands(t):\n    res = [-1] * len(t)\n    pile = []                # des indices\n    for i, x in enumerate(t):\n        while pile and t[pile[-1]] < x:\n            res[pile.pop()] = x\n        pile.append(i)\n    return res"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-piles-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "p = []\np.append(1)\np.append(2)\np.pop()\np.append(3)\nprint(p)",
+          "choices": [
+            "[1, 3]",
+            "[2, 3]",
+            "[1, 2, 3]",
+            "[3]"
+          ],
+          "answerIndex": 0,
+          "explanation": "pop retire le dernier élément empilé (2) ; 3 est ensuite empilé par-dessus 1.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "algo-piles-q2",
+          "prompt": "Complète la vérification des parenthèses.",
+          "code": "def equilibre(s):\n    paires = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    pile = []\n    for c in s:\n        if c in \"([{\":\n            pile.___(c)\n        elif not pile or pile.___() != paires[c]:\n            return False\n    return ___ pile",
+          "answers": [
+            "append",
+            "pop",
+            "not"
+          ],
+          "distractors": [
+            "push",
+            "shift",
+            "len"
+          ],
+          "explanation": "On empile les ouvrantes ; chaque fermante doit correspondre au sommet. À la fin, la pile doit être vide : not pile.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-piles-q3",
+          "prompt": "Avec la fonction equilibre complétée, que valent equilibre(\"([)]\") et equilibre(\"([])\") ?",
+          "choices": [
+            "False puis True",
+            "True puis True",
+            "False puis False",
+            "True puis False"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans \"([)]\", le ) arrive alors que le sommet est [ : mauvais imbriquement. \"([])\" est correctement imbriquée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-piles-q4",
+          "prompt": "Quelle structure utiliser en Python pour une file d'attente ?",
+          "choices": [
+            "collections.deque, avec append et popleft en O(1)",
+            "list, avec append et pop(0)",
+            "set",
+            "str"
+          ],
+          "answerIndex": 0,
+          "explanation": "pop(0) sur une list décale tous les éléments : O(n). deque est conçue pour les deux extrémités.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-piles-q5",
+          "prompt": "Quelle structure pour implémenter « annuler » dans un éditeur ?",
+          "choices": [
+            "Une pile : on annule d'abord la dernière action",
+            "Une file",
+            "Un set",
+            "Un tableau trié"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque action est empilée ; annuler dépile la plus récente. « Rétablir » utilise une seconde pile.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-piles-q6",
+          "prompt": "Avec la fonction suivants_plus_grands de la leçon, que renvoie suivants_plus_grands([2, 1, 3, 2, 5]) ?",
+          "choices": [
+            "[3, 3, 5, 5, -1]",
+            "[3, 3, 5, 5, 5]",
+            "[1, 3, 2, 5, -1]",
+            "[5, 5, 5, 5, -1]"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le prochain élément plus grand que 2 est 3, que 1 est 3, que 3 est 5, que 2 est 5 ; rien après 5.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "algo-defi-lineaires",
+    "title": "Défi entretien : structures linéaires",
+    "summary": "Files, piles et listes chaînées.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "algo-defi2-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "from collections import deque\nf = deque([1, 2, 3])\nf.append(f.popleft())\nf.append(f.popleft())\nprint(list(f))",
+        "choices": [
+          "[3, 1, 2]",
+          "[1, 2, 3]",
+          "[2, 3, 1]",
+          "[3, 2, 1]"
+        ],
+        "answerIndex": 0,
+        "explanation": "On retire la tête pour la remettre en queue, deux fois : une rotation de deux crans (deque.rotate(-2) ferait de même).",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "algo-defi2-q2",
+        "prompt": "Cas pratique 1/3 — Avec un million d'éléments, defiler devient le goulot d'étranglement. Touche la ligne en cause.",
+        "code": "class File:\n    def __init__(self):\n        self.t = []\n    def enfiler(self, x):\n        self.t.append(x)\n    def defiler(self):\n        return self.t.pop(0)",
+        "bugLines": [
+          7
+        ],
+        "explanation": "pop(0) décale tous les éléments restants : chaque retrait est en O(n).",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi2-q3",
+        "prompt": "Cas pratique 2/3 — En entretien, on interdit deque. Quelle solution classique donne un retrait en O(1) amorti ?",
+        "choices": [
+          "Deux piles : une d'entrée, une de sortie qu'on remplit en vidant l'entrée quand elle est vide",
+          "Trier la liste après chaque ajout",
+          "Insérer au début avec insert(0, x)",
+          "Utiliser un dict"
+        ],
+        "answerIndex": 0,
+        "explanation": "Transvaser l'entrée dans la sortie inverse l'ordre : le plus ancien se retrouve au sommet. Chaque élément est déplacé une seule fois.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "algo-defi2-q4",
+        "prompt": "Cas pratique 3/3 — Complète defiler avec deux piles.",
+        "code": "def defiler(self):\n    if not self.sortie:\n        while self.entree:\n            self.sortie.append(self.entree.___())\n    return self.sortie.___()",
+        "answers": [
+          "pop",
+          "pop"
+        ],
+        "distractors": [
+          "popleft",
+          "peek",
+          "shift"
+        ],
+        "explanation": "On ne dépile qu'au sommet des listes : toutes les opérations sont en O(1), et le transvasement est amorti.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "algo-defi2-q5",
+        "prompt": "Quelles méthodes détectent correctement un cycle dans une liste chaînée ?",
+        "choices": [
+          "Deux pointeurs, lent et rapide (Floyd), en O(1) mémoire",
+          "Un set des nœuds déjà visités, en O(n) mémoire",
+          "Parcourir la liste et s'arrêter après 1 000 nœuds",
+          "Comparer les valeurs des nœuds"
+        ],
+        "answerIndices": [
+          0,
+          1
+        ],
+        "explanation": "Une limite arbitraire échoue sur les longues listes, et deux nœuds différents peuvent porter la même valeur : il faut comparer les nœuds eux-mêmes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi2-q6",
+        "prompt": "En entretien : tableau dynamique ou liste chaînée ?",
+        "choices": [
+          "Le tableau dans la grande majorité des cas, grâce à la localité mémoire ; la liste pour des insertions fréquentes à des positions déjà connues",
+          "Toujours la liste chaînée, car elle insère en O(1)",
+          "Toujours le tableau, la liste chaînée n'a aucun usage",
+          "Ils sont équivalents"
+        ],
+        "answerIndex": 0,
+        "explanation": "La liste chaînée garde des usages (cache LRU avec une table de hachage, listes intrusives des noyaux), mais son O(1) théorique suppose qu'on tient déjà le bon nœud.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

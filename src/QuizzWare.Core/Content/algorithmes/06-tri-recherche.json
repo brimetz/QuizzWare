@@ -7,13 +7,320 @@
       "id": "algo-tris",
       "title": "Algorithmes de tri",
       "summary": "Tri fusion, tri rapide, tri par tas.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La barrière des O(n log n)",
+          "body": "Un tri qui ne fait que comparer des éléments ne peut pas faire mieux que O(n log n) dans le pire cas. Les tris simples (sélection, insertion, bulles) sont en O(n²) ; le tri par insertion reste excellent sur de petits tableaux ou des tableaux presque triés."
+        },
+        {
+          "title": "Tri fusion",
+          "body": "On coupe en deux, on trie chaque moitié récursivement, puis on fusionne deux listes triées en O(n). Toujours O(n log n), stable, mais demande O(n) de mémoire supplémentaire.",
+          "code": "def fusion(a, b):\n    res, i, j = [], 0, 0\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            res.append(a[i]); i += 1\n        else:\n            res.append(b[j]); j += 1\n    return res + a[i:] + b[j:]"
+        },
+        {
+          "title": "Tri rapide et tri par tas",
+          "body": "Le tri rapide partitionne autour d'un pivot : O(n log n) en moyenne, très rapide en pratique et en place, mais O(n²) avec un mauvais pivot (le premier élément d'un tableau déjà trié). Le tri par tas est en place et toujours O(n log n), mais non stable."
+        },
+        {
+          "title": "La stabilité",
+          "body": "Un tri est stable s'il conserve l'ordre initial des éléments égaux. Indispensable pour trier sur plusieurs critères en plusieurs passes. sorted en Python (Timsort, un hybride fusion + insertion) est stable."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-tris-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "print(fusion([1, 4, 9], [2, 3, 10, 12]))",
+          "choices": [
+            "[1, 2, 3, 4, 9, 10, 12]",
+            "[1, 4, 9, 2, 3, 10, 12]",
+            "[1, 2, 3, 4, 9]",
+            "[12, 10, 9, 4, 3, 2, 1]"
+          ],
+          "answerIndex": 0,
+          "explanation": "fusion est la fonction de la leçon : elle prend à chaque tour le plus petit des deux éléments en tête, puis ajoute ce qui reste (ici 10 et 12).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algo-tris-q2",
+          "prompt": "Quand le tri rapide dégénère-t-il en O(n²) ?",
+          "choices": [
+            "Quand le pivot est toujours le plus petit ou le plus grand élément, par exemple le premier élément d'un tableau déjà trié",
+            "Quand le tableau contient des nombres négatifs",
+            "Jamais",
+            "Quand le tableau est de taille impaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les partitions sont alors complètement déséquilibrées : n - 1 éléments d'un côté, aucun de l'autre. Choisir un pivot aléatoire rend ce cas improbable.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-tris-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "gens = [(\"Bob\", 30), (\"Ana\", 25), (\"Cy\", 30)]\ngens.sort(key=lambda p: p[1])\nprint([nom for nom, _ in gens])",
+          "choices": [
+            "['Ana', 'Bob', 'Cy']",
+            "['Ana', 'Cy', 'Bob']",
+            "['Bob', 'Cy', 'Ana']",
+            "L'ordre de Bob et Cy est imprévisible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le tri de Python est stable : Bob et Cy ont le même âge et gardent leur ordre initial.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "algo-tris-q4",
+          "prompt": "Quels tris garantissent O(n log n) dans le pire cas ?",
+          "choices": [
+            "Tri fusion",
+            "Tri par tas",
+            "Tri rapide",
+            "Tri par insertion"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "Le tri rapide est O(n²) dans le pire cas, et le tri par insertion O(n²) en général (mais O(n) sur un tableau déjà trié).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "algo-tris-q5",
+          "prompt": "Cette fusion perd des éléments. Touche la ligne fautive.",
+          "code": "def fusion(a, b):\n    res, i, j = [], 0, 0\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            res.append(a[i]); i += 1\n        else:\n            res.append(b[j]); j += 1\n    return res",
+          "bugLines": [
+            8
+          ],
+          "explanation": "La boucle s'arrête dès qu'une des listes est épuisée : il faut ajouter ce qui reste dans l'autre, avec res + a[i:] + b[j:].",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-tris-q6",
+          "prompt": "Il faut trier 10 millions de notes d'examen, des entiers entre 0 et 20. Quelle approche est la plus rapide ?",
+          "choices": [
+            "Un tri par comptage : compter les occurrences de chaque note, en O(n)",
+            "Un tri rapide",
+            "Un tri fusion",
+            "Un tri par insertion"
+          ],
+          "answerIndex": 0,
+          "explanation": "La barrière O(n log n) ne vaut que pour les tris par comparaison. Avec seulement 21 valeurs possibles, on compte chaque note puis on reconstruit le tableau.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "algo-recherche-binaire",
       "title": "Recherche binaire",
       "summary": "Et ses nombreuses variantes.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Diviser l'espace par deux",
+          "body": "Dans un tableau trié, on compare la cible au milieu et on élimine la moitié qui ne peut pas la contenir. Un million d'éléments se fouillent en 20 comparaisons : O(log n).",
+          "code": "def chercher(t, x):\n    g, d = 0, len(t) - 1\n    while g <= d:\n        m = (g + d) // 2\n        if t[m] == x:\n            return m\n        if t[m] < x:\n            g = m + 1\n        else:\n            d = m - 1\n    return -1"
+        },
+        {
+          "title": "Les pièges",
+          "body": "Les bornes : g <= d ou g < d, m + 1 ou m, une erreur et la boucle tourne à l'infini ou rate un élément. En C, C++ ou Java, (g + d) / 2 peut déborder sur de très grands tableaux ; on écrit g + (d - g) / 2."
+        },
+        {
+          "title": "Chercher une frontière",
+          "body": "La variante la plus utile : trouver la première position où une condition devient vraie (premier élément ≥ x, première version qui bogue, plus petite capacité suffisante). Le module bisect de Python le fait sur des listes triées : bisect_left renvoie la première position où insérer x."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algo-bin-q1",
+          "prompt": "Combien de comparaisons faut-il au plus pour trouver un élément parmi un milliard de valeurs triées ?",
+          "choices": [
+            "Environ 30",
+            "Environ 1 000",
+            "Environ 500 millions",
+            "Environ 1 million"
+          ],
+          "answerIndex": 0,
+          "explanation": "2³⁰ vaut environ un milliard : 30 divisions par deux suffisent pour réduire l'espace à un seul élément.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "algo-bin-q2",
+          "prompt": "Cette recherche boucle à l'infini sur chercher([1, 3], 3). Touche la ligne fautive.",
+          "code": "def chercher(t, x):\n    g, d = 0, len(t) - 1\n    while g <= d:\n        m = (g + d) // 2\n        if t[m] == x:\n            return m\n        if t[m] < x:\n            g = m\n        else:\n            d = m - 1\n    return -1",
+          "bugLines": [
+            8
+          ],
+          "explanation": "Avec g = 0 et d = 1, m vaut 0 et g reste à 0 : rien ne change. t[m] étant trop petit, il faut exclure m avec g = m + 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-bin-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from bisect import bisect_left\nt = [1, 3, 3, 3, 7]\nprint(bisect_left(t, 3), bisect_left(t, 5))",
+          "choices": [
+            "1 4",
+            "2 4",
+            "3 5",
+            "1 -1"
+          ],
+          "answerIndex": 0,
+          "explanation": "bisect_left renvoie la première position où insérer la valeur en gardant le tableau trié : avant le premier 3 (indice 1), et avant le 7 pour 5 (indice 4).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algo-bin-q4",
+          "prompt": "Sur 1 000 commits, un bug est apparu à un moment. Comment trouver le premier commit fautif en une dizaine d'essais ?",
+          "choices": [
+            "Une recherche binaire sur l'historique, c'est ce que fait git bisect",
+            "Tester chaque commit dans l'ordre",
+            "Tester les commits au hasard",
+            "C'est impossible sans lire tout le code"
+          ],
+          "answerIndex": 0,
+          "explanation": "La condition « le bug est présent » passe de faux à vrai une seule fois : c'est une recherche de frontière. log₂(1 000) vaut environ 10.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "algo-bin-q5",
+          "prompt": "Complète la recherche du premier indice où t[i] >= x.",
+          "code": "def premier(t, x):\n    g, d = 0, len(t)\n    while g ___ d:\n        m = (g + d) // 2\n        if t[m] < x:\n            g = m + 1\n        else:\n            d = ___\n    return g",
+          "answers": [
+            "<",
+            "m"
+          ],
+          "distractors": [
+            "<=",
+            "m - 1",
+            "m + 1"
+          ],
+          "explanation": "t[m] >= x : m est peut-être la réponse, on le garde avec d = m. La boucle s'arrête quand g et d se rejoignent sur la frontière ; avec <=, elle tournerait sans fin.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "algo-bin-q6",
+          "prompt": "Quels problèmes se résolvent par recherche binaire ?",
+          "choices": [
+            "Trouver la racine carrée entière de n",
+            "Trouver la plus petite capacité de camion permettant de livrer en k jours",
+            "Trouver un élément dans un tableau non trié",
+            "Trouver un mot dans un dictionnaire trié"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Il faut une propriété monotone : si une capacité suffit, toute capacité plus grande suffit aussi. Un tableau non trié n'offre aucune telle propriété.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "algo-defi-tri-recherche",
+    "title": "Défi entretien : tri et recherche",
+    "summary": "Choisir et adapter.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "algo-defi6-q1",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "def racine(n):\n    g, d = 0, n\n    while g < d:\n        m = (g + d + 1) // 2\n        if m * m <= n:\n            g = m\n        else:\n            d = m - 1\n    return g\nprint(racine(50), racine(64))",
+        "choices": [
+          "7 8",
+          "8 8",
+          "7 7",
+          "50 64"
+        ],
+        "answerIndex": 0,
+        "explanation": "On cherche le plus grand m tel que m² ≤ n : 7² = 49 ≤ 50 < 64, et 8² = 64. Le + 1 dans le milieu évite de boucler quand g = m.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi6-q2",
+        "prompt": "Cas pratique 1/3 — Un tableau trié a été « tourné » : [4, 5, 6, 7, 0, 1, 2]. On veut y chercher une valeur. Que remarquer ?",
+        "choices": [
+          "Quand on coupe au milieu, une des deux moitiés est toujours triée",
+          "Le tableau n'est plus du tout exploitable",
+          "Il faut d'abord le trier en O(n log n)",
+          "La recherche binaire classique fonctionne telle quelle"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le point de rotation n'est que d'un côté du milieu. L'autre côté est trié, et on peut tester si la cible est dans son intervalle.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi6-q3",
+        "prompt": "Cas pratique 2/3 — t[g] <= t[m] : la moitié gauche est triée. Quand chercher à gauche ?",
+        "choices": [
+          "Si t[g] <= cible < t[m]",
+          "Si cible > t[m]",
+          "Toujours",
+          "Si cible < t[g]"
+        ],
+        "answerIndex": 0,
+        "explanation": "La cible est à gauche seulement si elle tombe dans l'intervalle de la moitié triée ; sinon, on cherche dans l'autre moitié.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi6-q4",
+        "prompt": "Cas pratique 3/3 — Quelle est la complexité de cette recherche ?",
+        "choices": [
+          "O(log n), on élimine toujours la moitié",
+          "O(n)",
+          "O(n log n)",
+          "O(1)"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque tour élimine une moitié, comme une recherche binaire classique. (Avec des doublons, le pire cas redevient O(n).)",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "algo-defi6-q5",
+        "prompt": "Trier 50 Go de logs avec 4 Go de mémoire : quelle approche ?",
+        "choices": [
+          "Un tri externe : trier des morceaux qui tiennent en mémoire, puis les fusionner",
+          "Un tri rapide en mémoire",
+          "C'est impossible",
+          "Un tri par insertion directement sur disque"
+        ],
+        "answerIndex": 0,
+        "explanation": "On écrit des fichiers triés de 4 Go, puis on les fusionne en lisant leurs têtes avec un tas : c'est la fusion du tri fusion, généralisée à k listes.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "algo-defi6-q6",
+        "prompt": "Remets le tri fusion dans l'ordre.",
+        "lines": [
+          "def tri_fusion(t):",
+          "    if len(t) <= 1:",
+          "        return t",
+          "    m = len(t) // 2",
+          "    a = tri_fusion(t[:m])",
+          "    b = tri_fusion(t[m:])",
+          "    return fusion(a, b)"
+        ],
+        "explanation": "Cas de base, découpage, deux appels récursifs, fusion. log n niveaux de récursion, chacun en O(n) : O(n log n).",
+        "difficulty": 2
+      }
+    ]
+  }
 }
