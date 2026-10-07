@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (95 écrits) | 341 (249 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (100 écrits) | 341 (261 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -825,23 +825,23 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Les bases de Git
-   - Le modèle de Git
-   - Commandes essentielles
-2. 🕓 Branches et fusions
-   - Branches
-   - merge ou rebase
-   - Résoudre les conflits
-3. 🕓 Travail à distance
-   - Remotes
-   - Pull requests et revue de code
-4. 🕓 Git avancé
-   - reset, revert et reflog
-   - Rebase interactif
-   - bisect
-5. 🕓 Workflows d'équipe
-   - Stratégies de branches
-   - Conventions
+1. ✅ Les bases de Git
+   - ✅ Le modèle de Git
+   - ✅ Commandes essentielles
+2. ✅ Branches et fusions
+   - ✅ Branches
+   - ✅ merge ou rebase
+   - ✅ Résoudre les conflits
+3. ✅ Travail à distance
+   - ✅ Remotes
+   - ✅ Pull requests et revue de code
+4. ✅ Git avancé
+   - ✅ reset, revert et reflog
+   - ✅ Rebase interactif
+   - ✅ bisect
+5. ✅ Workflows d'équipe
+   - ✅ Stratégies de branches
+   - ✅ Conventions
 
 **Spécialisations**
 

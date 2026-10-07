@@ -7,19 +7,435 @@
       "id": "git-reset-revert",
       "title": "reset, revert et reflog",
       "summary": "Annuler proprement.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "revert : annuler en ajoutant",
+          "body": "git revert crée un nouveau commit qui applique l'inverse d'un commit existant. L'historique n'est pas réécrit : c'est la bonne façon d'annuler un commit déjà partagé, par exemple un déploiement fautif sur main."
+        },
+        {
+          "title": "reset : déplacer la branche",
+          "body": "git reset déplace la branche courante vers un autre commit. --soft garde les modifications dans l'index, --mixed (par défaut) les garde dans le répertoire de travail, --hard les efface. À réserver aux commits locaux, jamais partagés.",
+          "code": "# défait le dernier commit...\ngit reset --soft HEAD~1   # ... garde l'index\ngit reset HEAD~1          # ... garde les fichiers\ngit reset --hard HEAD~1   # ... efface tout"
+        },
+        {
+          "title": "Le reflog, filet de sécurité",
+          "body": "Git note dans le reflog chaque déplacement de HEAD : commits, reset, rebase, changements de branche. Un commit « perdu » après un reset --hard ou un rebase raté y reste visible pendant des semaines, et on peut le récupérer.",
+          "code": "git reflog\n# a1b2c3d HEAD@{0}: reset: moving to HEAD~1\n# 9f8e7d6 HEAD@{1}: commit: Ajoute l'export CSV\ngit reset --hard 9f8e7d6"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-reset-q1",
+          "prompt": "Un commit défectueux est déjà sur main, partagé par toute l'équipe. Comment l'annuler ?",
+          "choices": [
+            "git revert de ce commit, puis push",
+            "git reset --hard puis push --force",
+            "Supprimer la branche main",
+            "Modifier le commit avec --amend"
+          ],
+          "answerIndex": 0,
+          "explanation": "revert ajoute un commit d'annulation sans réécrire l'historique : les copies des collègues restent compatibles.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-reset-q2",
+          "prompt": "Vous voulez refaire votre dernier commit local en gardant ses modifications prêtes à être commitées. Quelle commande ?",
+          "choices": [
+            "git reset --soft HEAD~1",
+            "git reset --hard HEAD~1",
+            "git revert HEAD",
+            "git clean -fd"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le commit disparaît de la branche, mais son contenu reste dans l'index.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-reset-q3",
+          "prompt": "Après un git reset --hard malheureux, un commit important a disparu de la branche. Comment le retrouver ?",
+          "choices": [
+            "Avec git reflog, qui garde la trace des positions précédentes de HEAD",
+            "Il est perdu définitivement",
+            "En contactant GitHub",
+            "Avec git status"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les commits non référencés restent dans le dépôt jusqu'au nettoyage automatique (souvent après 30 jours ou plus).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-reset-q4",
+          "prompt": "Qu'est-ce qui est réellement perdu avec git reset --hard ?",
+          "choices": [
+            "Les modifications non commitées du répertoire de travail et de l'index",
+            "Tous les commits du dépôt",
+            "Les branches distantes",
+            "Rien, tout est dans le reflog"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les commits restent récupérables via le reflog, mais ce qui n'a jamais été commité n'est enregistré nulle part.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-reset-q5",
+          "prompt": "Qu'affiche ce script ?",
+          "code": "echo v1 > f; git add f; git commit -qm v1\necho v2 > f; git commit -qam v2\ngit revert --no-edit HEAD >/dev/null\ncat f; git log --oneline | wc -l",
+          "choices": [
+            "v1 puis 3",
+            "v2 puis 2",
+            "v1 puis 1",
+            "v2 puis 3"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le revert restaure le contenu v1 en ajoutant un troisième commit. Les commits v1 et v2 restent dans l'historique.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "git-reset-q6",
+          "prompt": "Quelles affirmations sur reset et revert sont vraies ?",
+          "choices": [
+            "revert est sûr sur un historique partagé",
+            "reset réécrit la position de la branche, à réserver au travail local",
+            "reset --mixed garde les modifications dans le répertoire de travail",
+            "revert supprime le commit de l'historique"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "revert ajoute un commit inverse ; le commit d'origine reste visible dans l'historique.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "git-rebase-interactif",
       "title": "Rebase interactif",
       "summary": "Nettoyer une branche.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Réécrire ses commits locaux",
+          "body": "git rebase -i ouvre la liste des commits à rejouer, dans un éditeur. Pour chacun, on choisit une action : pick (garder), reword (changer le message), edit (s'arrêter pour le modifier), squash ou fixup (fusionner avec le précédent), drop (supprimer). On peut aussi réordonner les lignes.",
+          "code": "git rebase -i HEAD~4\n\npick a1b2c3d Ajoute l'export CSV\nfixup 4d5e6f7 corrige typo\nfixup 8a9b0c1 oups\nreword 2c3d4e5 Ajoute des tests"
+        },
+        {
+          "title": "fixup automatique",
+          "body": "Pendant le développement, git commit --fixup=a1b2c3d crée un commit marqué comme correction de a1b2c3d. Ensuite, git rebase -i --autosquash place et marque automatiquement ces corrections : la branche se nettoie en une commande."
+        },
+        {
+          "title": "Les limites",
+          "body": "Comme tout rebase, il réécrit les commits : seulement sur une branche qui n'est pas partagée, ou en prévenant (push --force-with-lease sur sa propre branche de PR). En cas de problème, git rebase --abort revient au point de départ, et le reflog garde l'ancien état."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-rebase-i-q1",
+          "prompt": "Dans un rebase interactif, quelle action fusionne un commit avec le précédent en abandonnant son message ?",
+          "choices": [
+            "fixup",
+            "squash",
+            "pick",
+            "drop"
+          ],
+          "answerIndex": 0,
+          "explanation": "squash fusionne aussi, mais propose de combiner les deux messages. drop supprime le commit.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-rebase-i-q2",
+          "prompt": "Avec la liste de la leçon, combien de commits restent après le rebase ?",
+          "choices": [
+            "2",
+            "4",
+            "3",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux fixup sont absorbés par l'export CSV ; le commit de tests est gardé avec un nouveau message.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-rebase-i-q3",
+          "prompt": "Quand nettoyer ses commits avec un rebase interactif ?",
+          "choices": [
+            "Avant de demander la revue, sur sa propre branche",
+            "Sur main après la fusion",
+            "Sur la branche d'un collègue, sans le prévenir",
+            "Jamais, c'est interdit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le relecteur reçoit une suite de commits cohérents, sans les « oups » intermédiaires.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-rebase-i-q4",
+          "prompt": "Que fait git commit --fixup=a1b2c3d ?",
+          "choices": [
+            "Il crée un commit marqué comme correction de a1b2c3d, que rebase --autosquash fusionnera automatiquement",
+            "Il modifie directement a1b2c3d",
+            "Il supprime a1b2c3d",
+            "Il crée une branche"
+          ],
+          "answerIndex": 0,
+          "explanation": "Son message commence par « fixup! » suivi du message du commit visé.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "git-rebase-i-q5",
+          "prompt": "Le rebase interactif tourne mal au milieu. Comment revenir à l'état de départ ?",
+          "choices": [
+            "git rebase --abort",
+            "git reset --hard HEAD",
+            "Supprimer le dépôt",
+            "git commit --amend"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si le rebase est déjà terminé, le reflog permet encore de retrouver la position d'avant (ORIG_HEAD aussi).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "git-rebase-i-q6",
+          "prompt": "Que peut-on faire avec un rebase interactif ?",
+          "choices": [
+            "Changer le message d'un ancien commit",
+            "Réordonner des commits",
+            "Fusionner plusieurs commits en un seul",
+            "Récupérer des commits d'un autre dépôt distant non configuré"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le rebase ne travaille que sur des commits déjà présents dans le dépôt local.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "git-bisect",
       "title": "bisect",
       "summary": "Trouver le commit fautif.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Une recherche binaire dans l'historique",
+          "body": "On sait qu'une version récente est cassée et qu'une ancienne fonctionnait. git bisect bascule sur le commit du milieu ; on teste et on répond good ou bad ; il coupe à nouveau en deux. Parmi 1 000 commits, une dizaine d'étapes suffisent à trouver le premier commit fautif.",
+          "code": "git bisect start\ngit bisect bad           # l'actuelle est cassée\ngit bisect good v2.3.0   # celle-ci marchait\n# ... tester, puis good ou bad ...\ngit bisect reset"
+        },
+        {
+          "title": "L'automatiser",
+          "body": "git bisect run lance un script à chaque étape : code de sortie 0 pour good, 1 à 127 pour bad (125 pour « impossible à tester », qui saute le commit). Un test qui reproduit le bug suffit à trouver le coupable sans intervention.",
+          "code": "git bisect run ./test_regression.sh"
+        },
+        {
+          "title": "Pourquoi les petits commits aident",
+          "body": "bisect désigne un commit. S'il contient une seule modification cohérente, la cause est évidente. S'il contient 2 000 lignes mêlant dix sujets, on n'est guère avancé. Et des commits qui ne compilent pas gênent la recherche."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-bisect-q1",
+          "prompt": "Combien d'étapes faut-il environ à git bisect pour trouver le fautif parmi 1 000 commits ?",
+          "choices": [
+            "10",
+            "500",
+            "100",
+            "1 000"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque étape divise l'intervalle par deux : log₂(1 000) ≈ 10.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-bisect-q2",
+          "prompt": "Avec git bisect run, que doit renvoyer le script pour un commit où le bug est présent ?",
+          "choices": [
+            "Un code de sortie entre 1 et 127, sauf 125",
+            "0",
+            "125",
+            "Rien de particulier"
+          ],
+          "answerIndex": 0,
+          "explanation": "0 signifie good ; 125 signifie que le commit ne peut pas être testé (il est sauté).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-bisect-q3",
+          "prompt": "Que faut-il faire à la fin d'une session bisect ?",
+          "choices": [
+            "git bisect reset, pour revenir sur la branche de départ",
+            "git push",
+            "Supprimer le commit fautif immédiatement",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pendant la recherche, HEAD est détaché sur des commits intermédiaires.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-bisect-q4",
+          "prompt": "Pourquoi des commits qui ne compilent pas gênent-ils git bisect ?",
+          "choices": [
+            "On ne peut pas les tester : il faut les sauter, ce qui rend la recherche plus longue et moins précise",
+            "bisect les supprime",
+            "bisect refuse de démarrer",
+            "Ils ne gênent pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une bonne raison de garder chaque commit dans un état qui compile et passe les tests.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "git-bisect-q5",
+          "prompt": "Complète le démarrage d'une recherche : la version actuelle est cassée, l'étiquette v2.3.0 fonctionnait.",
+          "code": "git bisect start\ngit bisect ___\ngit bisect ___ v2.3.0",
+          "answers": [
+            "bad",
+            "good"
+          ],
+          "distractors": [
+            "skip",
+            "reset",
+            "run"
+          ],
+          "explanation": "Sans argument, bad désigne le commit courant. bisect choisit ensuite le commit du milieu.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "git-bisect-q6",
+          "prompt": "Qu'est-ce qui rend git bisect efficace ?",
+          "choices": [
+            "Des commits petits et cohérents",
+            "Un test automatisé qui reproduit le bug",
+            "Des commits qui compilent tous",
+            "Des commits regroupant des semaines de travail"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un commit énorme trouvé par bisect laisse encore tout à chercher.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "git-defi-avance",
+    "title": "Défi entretien : réparer l'historique",
+    "summary": "Une régression en production.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "git-defi4-q1",
+        "prompt": "Cas pratique 1/3 — Le calcul des remises est faux en production, alors qu'il marchait dans la version v4.1 il y a trois semaines. 240 commits ont été fusionnés depuis. Comment trouver la cause ?",
+        "choices": [
+          "git bisect entre v4.1 (good) et main (bad), idéalement avec git bisect run et un test qui reproduit le bug",
+          "Relire les 240 commits",
+          "Revenir à v4.1 définitivement",
+          "Réécrire le calcul des remises"
+        ],
+        "answerIndex": 0,
+        "explanation": "Environ 8 étapes suffisent pour 240 commits.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi4-q2",
+        "prompt": "Cas pratique 2/3 — Le commit fautif est trouvé. Il est sur main depuis deux semaines. Comment corriger en urgence ?",
+        "choices": [
+          "git revert de ce commit (ou un correctif ciblé), via une PR rapide, puis déploiement",
+          "git reset --hard sur main et push --force",
+          "Supprimer le commit avec un rebase interactif sur main",
+          "Attendre la prochaine version"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sur une branche partagée, on ajoute des commits plutôt que de réécrire l'historique.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi4-q3",
+        "prompt": "Cas pratique 3/3 — Comment éviter que ce bug revienne ?",
+        "choices": [
+          "Ajouter le test qui le reproduit à la suite de tests automatisés",
+          "Interdire toute modification du calcul des remises",
+          "Garder le commit fautif en mémoire",
+          "Désactiver la CI"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque bug corrigé devient un test de non-régression.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi4-q4",
+        "prompt": "Un mot de passe a été commité il y a 3 commits sur une branche jamais poussée. Que faire ?",
+        "choices": [
+          "Réécrire la branche (rebase interactif) pour retirer le secret, et changer le mot de passe par prudence",
+          "git revert suffit",
+          "Le supprimer dans un nouveau commit suffit",
+          "Rien, la branche n'est pas poussée"
+        ],
+        "answerIndex": 0,
+        "explanation": "revert ou un nouveau commit laisseraient le secret dans l'historique, qui sera poussé un jour. S'il avait été poussé, il faudrait le considérer comme compromis.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "git-defi4-q5",
+        "prompt": "Quelles commandes réécrivent l'historique ?",
+        "choices": [
+          "git commit --amend",
+          "git rebase",
+          "git reset vers un commit antérieur",
+          "git revert"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "revert est la seule à ajouter un commit sans rien réécrire.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi4-q6",
+        "prompt": "En entretien : « Avez-vous déjà perdu du travail avec Git ? Comment le récupérer ? »",
+        "choices": [
+          "Les commits survivent dans le reflog ; seul ce qui n'a jamais été commité est vraiment fragile, d'où l'intérêt de committer souvent",
+          "Une fois perdu, rien ne se récupère",
+          "Il faut toujours restaurer une sauvegarde du disque",
+          "Git ne perd jamais rien, même les fichiers non commités"
+        ],
+        "answerIndex": 0,
+        "explanation": "git stash et des commits fréquents, même provisoires, protègent le travail en cours.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

@@ -7,19 +7,436 @@
       "id": "git-branches",
       "title": "Branches",
       "summary": "Créer, basculer et supprimer.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Une branche est une étiquette",
+          "body": "Une branche n'est qu'un pointeur mobile vers un commit : créer une branche est instantané et ne copie rien. HEAD indique la branche courante. À chaque commit, la branche courante avance sur le nouveau commit."
+        },
+        {
+          "title": "Les commandes",
+          "body": "git switch bascule de branche (git checkout faisait la même chose, parmi beaucoup d'autres choses). git branch -d supprime une branche déjà fusionnée ; -D force la suppression.",
+          "code": "git switch -c correction-tva   # crée et bascule\ngit branch                     # liste\ngit switch main\ngit branch -d correction-tva"
+        },
+        {
+          "title": "HEAD détaché",
+          "body": "En basculant directement sur un commit (git switch --detach a1b2c3d), HEAD pointe sur ce commit, pas sur une branche. On peut explorer, mais les commits créés ne sont rattachés à aucune branche : il faut en créer une (git switch -c) pour les garder."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-branches-q1",
+          "prompt": "Que se passe-t-il concrètement quand on crée une branche ?",
+          "choices": [
+            "Git crée un petit fichier contenant l'identifiant d'un commit : rien n'est copié",
+            "Git copie tout le projet",
+            "Git crée un nouveau dépôt",
+            "Git envoie la branche sur le serveur"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est pourquoi les branches Git sont si légères qu'on en crée une par fonctionnalité, voire par expérience.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-branches-q2",
+          "prompt": "Que désigne HEAD ?",
+          "choices": [
+            "La position actuelle : en général la branche courante, donc le commit sur lequel on travaille",
+            "Le premier commit du dépôt",
+            "La branche main du serveur",
+            "Le dernier commit de toutes les branches"
+          ],
+          "answerIndex": 0,
+          "explanation": "HEAD~1 désigne le parent du commit courant, HEAD~2 le grand-parent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-branches-q3",
+          "prompt": "git branch -d experience répond « not fully merged ». Que signifie ce refus ?",
+          "choices": [
+            "La branche contient des commits absents de la branche courante : les supprimer les rendrait difficiles à retrouver",
+            "La branche n'existe pas",
+            "On est sur cette branche",
+            "Le serveur est injoignable"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une protection. -D force la suppression si l'on est sûr de vouloir abandonner ces commits.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-branches-q4",
+          "prompt": "En HEAD détaché, vous faites deux commits puis basculez sur main. Que deviennent-ils ?",
+          "choices": [
+            "Ils ne sont plus référencés par aucune branche ; on peut encore les retrouver avec git reflog, avant le ménage automatique",
+            "Ils sont ajoutés à main",
+            "Ils sont poussés sur le serveur",
+            "Ils sont fusionnés automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Git avertit d'ailleurs au moment de quitter ces commits. git switch -c sauvetage <id> les rattache à une branche.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "git-branches-q5",
+          "prompt": "Complète : créer la branche fonctionnalite-export et basculer dessus.",
+          "code": "git ___ -___ fonctionnalite-export",
+          "answers": [
+            "switch",
+            "c"
+          ],
+          "distractors": [
+            "branch",
+            "d",
+            "push"
+          ],
+          "explanation": "git switch -c crée et bascule en une commande. git checkout -b fait la même chose.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "git-branches-q6",
+          "prompt": "Pourquoi travailler sur une branche dédiée pour chaque fonctionnalité ?",
+          "choices": [
+            "Isoler les changements en cours de la branche principale",
+            "Faciliter la revue de code via une pull request",
+            "Pouvoir abandonner une piste sans impact",
+            "Accélérer l'exécution du programme"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les branches organisent le travail ; elles n'ont aucun effet sur le programme lui-même.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "git-merge-rebase",
       "title": "merge ou rebase",
       "summary": "Deux façons d'intégrer.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "merge",
+          "body": "git merge intègre une branche dans la branche courante. Si la branche courante n'a pas bougé, Git avance simplement son pointeur (fast-forward). Sinon, il crée un commit de fusion à deux parents. L'historique est conservé tel qu'il s'est déroulé.",
+          "code": "git switch main\ngit merge correction-tva"
+        },
+        {
+          "title": "rebase",
+          "body": "git rebase rejoue les commits de la branche courante au-dessus d'une autre branche : on obtient un historique linéaire, comme si le travail avait commencé après les derniers changements. Les commits rejoués sont de nouveaux commits, avec de nouveaux identifiants.",
+          "code": "git switch correction-tva\ngit rebase main"
+        },
+        {
+          "title": "La règle d'or",
+          "body": "Ne jamais rebaser des commits déjà partagés sur lesquels d'autres travaillent : leurs copies divergeraient de la vôtre. On rebase sa branche personnelle pour la mettre à jour ou la nettoyer avant la revue ; on fusionne ce qui est partagé."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-merge-q1",
+          "prompt": "main n'a reçu aucun commit depuis la création de la branche correction. Que fait git merge correction depuis main ?",
+          "choices": [
+            "Un fast-forward : main avance simplement jusqu'au dernier commit de correction",
+            "Un commit de fusion",
+            "Un rebase",
+            "Un conflit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Aucune divergence, donc rien à fusionner : le pointeur avance. --no-ff force quand même un commit de fusion.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-merge-q2",
+          "prompt": "Que produit un rebase de la branche sur main ?",
+          "choices": [
+            "De nouveaux commits, aux nouveaux identifiants, rejoués au-dessus de main",
+            "Les mêmes commits, déplacés sans changement",
+            "Un commit de fusion",
+            "Une copie de main"
+          ],
+          "answerIndex": 0,
+          "explanation": "Leur parent a changé, donc leur contenu, donc leur empreinte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-merge-q3",
+          "prompt": "Pourquoi ne pas rebaser une branche partagée avec des collègues ?",
+          "choices": [
+            "Leurs copies contiennent les anciens commits : l'historique diverge, et les réconcilier crée doublons et conflits",
+            "Parce que rebase supprime le code",
+            "Parce que rebase ne fonctionne qu'en local",
+            "Il n'y a aucun problème"
+          ],
+          "answerIndex": 0,
+          "explanation": "Après un rebase, il faudrait forcer le push et chaque collègue devrait se resynchroniser à la main.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-merge-q4",
+          "prompt": "Qu'affiche ce script, lancé sur main dans un dépôt qui a déjà un commit ?",
+          "code": "git switch -qc f\necho 1 > a; git add a; git commit -qm a\ngit switch -q main\necho 2 > b; git add b; git commit -qm b\ngit merge -q --no-edit f\ngit log --oneline | wc -l",
+          "choices": [
+            "4",
+            "3",
+            "2",
+            "5"
+          ],
+          "answerIndex": 0,
+          "explanation": "On part d'un dépôt avec un commit initial. main et f ont chacun un commit : la fusion crée un commit à deux parents. Initial + a + b + fusion = 4.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "git-merge-q5",
+          "prompt": "Quel est l'avantage principal du merge par rapport au rebase ?",
+          "choices": [
+            "Il conserve l'historique réel et ne réécrit aucun commit existant",
+            "Il produit un historique linéaire",
+            "Il évite tous les conflits",
+            "Il est plus rapide"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le rebase donne un historique plus lisible ; le merge est plus sûr pour ce qui est partagé. Les équipes choisissent souvent le squash ou le rebase à l'intégration de la pull request.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "git-merge-q6",
+          "prompt": "Quand le rebase est-il approprié ?",
+          "choices": [
+            "Mettre à jour sa branche personnelle avec les derniers changements de main",
+            "Nettoyer ses commits locaux avant de demander une revue",
+            "Obtenir un historique linéaire sur sa propre branche",
+            "Réécrire la branche main partagée par toute l'équipe"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Réécrire main casserait les copies de toute l'équipe. Les plateformes protègent d'ailleurs cette branche contre le push forcé.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "git-conflits",
       "title": "Résoudre les conflits",
       "summary": "Méthode et outils.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "D'où viennent les conflits",
+          "body": "Git fusionne automatiquement les modifications de zones différentes d'un fichier. Quand deux branches modifient les mêmes lignes, il ne peut pas choisir : il marque le conflit dans le fichier et attend une décision humaine.",
+          "code": "<<<<<<< HEAD\ntaux = 0.20\n=======\ntaux = TAUX_TVA_NORMAL\n>>>>>>> correction-tva"
+        },
+        {
+          "title": "La méthode",
+          "body": "git status liste les fichiers en conflit. Pour chacun, on comprend l'intention des deux côtés, on écrit la version qui les respecte (souvent une combinaison), on retire les marqueurs, on teste, puis git add pour marquer le conflit résolu. On termine avec git commit (ou git rebase --continue). En cas de doute, git merge --abort revient à l'état précédent."
+        },
+        {
+          "title": "Les éviter",
+          "body": "Des branches courtes, intégrées souvent, divergent peu. Les gros reformatages se font à part, annoncés à l'équipe. Intégrer régulièrement main dans sa branche fait apparaître les conflits petit à petit plutôt qu'en bloc à la fin."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-conflits-q1",
+          "prompt": "Dans les marqueurs de conflit de la leçon, que représente la partie entre <<<<<<< HEAD et ======= ?",
+          "choices": [
+            "La version de la branche courante",
+            "La version de la branche fusionnée",
+            "La version d'origine commune",
+            "Une proposition automatique de Git"
+          ],
+          "answerIndex": 0,
+          "explanation": "Après ======= vient la version de l'autre branche, jusqu'à >>>>>>>. L'option merge.conflictStyle=diff3 affiche aussi la version d'origine.",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "git-conflits-q2",
+          "prompt": "Remets dans l'ordre la résolution d'un conflit lors d'un merge.",
+          "language": "text",
+          "lines": [
+            "git status pour lister les fichiers en conflit",
+            "Éditer chaque fichier et retirer les marqueurs",
+            "Lancer les tests",
+            "git add des fichiers résolus",
+            "git commit pour terminer la fusion"
+          ],
+          "explanation": "Le git add signale à Git que le conflit est résolu ; le commit enregistre la fusion.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-conflits-q3",
+          "prompt": "La fusion tourne mal et vous voulez revenir à l'état d'avant. Quelle commande ?",
+          "choices": [
+            "git merge --abort",
+            "git reset --hard origin/main",
+            "rm -rf .git",
+            "git commit -m annule"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle annule la fusion en cours et restaure les fichiers. Pour un rebase, c'est git rebase --abort.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-conflits-q4",
+          "prompt": "Les deux côtés d'un conflit sont « taux = 0.20 » et « taux = TAUX_TVA_NORMAL ». Quelle résolution est la bonne ?",
+          "choices": [
+            "Comprendre l'intention : si la constante vaut 0.20, garder la version qui l'utilise, et vérifier par les tests",
+            "Toujours garder la version de HEAD",
+            "Toujours garder l'autre version",
+            "Garder les deux lignes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il n'existe pas de règle mécanique : on résout selon le sens du code. Garder les deux lignes produit souvent du code incohérent.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-conflits-q5",
+          "prompt": "Pourquoi les branches de longue durée génèrent-elles plus de conflits ?",
+          "choices": [
+            "Plus elles s'écartent de main longtemps, plus les mêmes zones de code ont été modifiées des deux côtés",
+            "Git fusionne moins bien les vieux commits",
+            "Les vieilles branches sont corrompues",
+            "Ce n'est pas le cas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Intégrer petit et souvent rend chaque fusion triviale.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "git-conflits-q6",
+          "prompt": "Quelles pratiques réduisent les conflits ?",
+          "choices": [
+            "Des branches courtes, fusionnées rapidement",
+            "Intégrer régulièrement main dans sa branche",
+            "Faire les reformatages massifs dans des commits séparés, en prévenant l'équipe",
+            "Travailler deux mois sur une branche sans jamais la synchroniser"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un formateur automatique appliqué à tout le projet évite aussi les conflits de style.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "git-defi-branches",
+    "title": "Défi entretien : branches",
+    "summary": "Mettre à jour une branche de fonctionnalité.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "git-defi2-q1",
+        "prompt": "Cas pratique 1/3 — Votre branche personnelle a 3 commits ; main a avancé de 10 commits. Vous voulez un historique linéaire avant la revue. Que faire ?",
+        "choices": [
+          "git fetch, puis git rebase origin/main depuis votre branche",
+          "git merge de votre branche dans main",
+          "Supprimer votre branche et recommencer",
+          "git push --force sur main"
+        ],
+        "answerIndex": 0,
+        "explanation": "Vos 3 commits sont rejoués au-dessus de la dernière version de main.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Un conflit apparaît au deuxième commit rejoué. Une fois le fichier corrigé et ajouté, quelle commande ?",
+        "choices": [
+          "git rebase --continue",
+          "git commit -m conflit",
+          "git merge --continue",
+          "git push"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le rebase reprend avec le commit suivant. git rebase --abort revient à l'état d'avant le rebase.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi2-q3",
+        "prompt": "Cas pratique 3/3 — La branche avait déjà été poussée pour une pull request. Le push est refusé. Que faire ?",
+        "choices": [
+          "git push --force-with-lease, qui refuse d'écraser des commits distants que vous n'avez pas vus",
+          "git push --force sans précaution",
+          "Créer une nouvelle pull request à chaque rebase",
+          "Abandonner le rebase"
+        ],
+        "answerIndex": 0,
+        "explanation": "Si un collègue a poussé sur votre branche entre-temps, --force-with-lease échoue au lieu d'effacer son travail.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "git-defi2-q4",
+        "prompt": "Qu'affiche ce script, lancé sur main dans un dépôt qui a déjà un commit ?",
+        "code": "git switch -qc f\necho 1 > a; git add a; git commit -qm a\ngit switch -q main\ngit merge -q f\ngit log --oneline --merges | wc -l",
+        "choices": [
+          "0",
+          "1",
+          "2",
+          "Une erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "main n'a pas bougé : la fusion est un fast-forward, sans commit de fusion.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "git-defi2-q5",
+        "prompt": "Quelles affirmations sur le fast-forward sont vraies ?",
+        "choices": [
+          "Il n'est possible que si la branche cible n'a pas divergé",
+          "Il ne crée pas de commit de fusion",
+          "--no-ff force la création d'un commit de fusion",
+          "Il réécrit les commits de la branche fusionnée"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le fast-forward ne réécrit rien : il déplace seulement le pointeur de branche.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi2-q6",
+        "prompt": "En entretien : « merge ou rebase ? »",
+        "choices": [
+          "Rebase pour garder sa branche personnelle à jour et lisible ; merge pour intégrer ce qui est partagé, sans réécrire l'historique",
+          "Toujours rebase",
+          "Toujours merge",
+          "Ni l'un ni l'autre"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le plus important est que l'équipe adopte une convention commune.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

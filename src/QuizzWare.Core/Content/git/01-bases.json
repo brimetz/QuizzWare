@@ -7,13 +7,324 @@
       "id": "git-modele",
       "title": "Le modèle de Git",
       "summary": "Commits, arbres et blobs.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des instantanés, pas des différences",
+          "body": "Chaque commit enregistre un instantané complet du projet, plus des métadonnées : auteur, date, message, et le ou les commits parents. Les fichiers inchangés ne sont pas dupliqués : Git réutilise les objets existants. L'historique forme un graphe de commits reliés à leurs parents."
+        },
+        {
+          "title": "Des objets identifiés par leur contenu",
+          "body": "Git stocke des blobs (contenu des fichiers), des arbres (dossiers : noms et références vers blobs et sous-arbres) et des commits (un arbre racine et des parents). Chaque objet est identifié par l'empreinte SHA de son contenu : modifier un seul octet d'un ancien commit changerait son identifiant et celui de tous ses descendants.",
+          "code": "$ git cat-file -p HEAD\ntree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\nparent 9fceb02d0ae598e95dc970b74767f19372d61af8\nauthor Ada <ada@exemple.fr> 1767225600 +0100\n\nAjoute le calcul de TVA"
+        },
+        {
+          "title": "Trois zones",
+          "body": "Le répertoire de travail contient vos fichiers. L'index (staging area) prépare le prochain commit : git add y place une version d'un fichier. Le dépôt (.git) conserve les commits. git status montre les différences entre ces trois zones."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-modele-q1",
+          "prompt": "Que contient un commit Git ?",
+          "choices": [
+            "Un instantané de tout le projet (via un arbre), ses parents, l'auteur, la date et le message",
+            "Uniquement les lignes modifiées",
+            "Uniquement le message",
+            "Une copie de tout le dépôt distant"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les différences (diffs) sont calculées à la demande, en comparant deux instantanés.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-modele-q2",
+          "prompt": "Pourquoi modifier un vieux commit change-t-il l'identifiant de tous les commits suivants ?",
+          "choices": [
+            "Chaque commit inclut l'identifiant de son parent dans son contenu, donc dans son empreinte",
+            "Parce que Git renumérote tout",
+            "Parce que les dates changent",
+            "Ce n'est pas le cas"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui rend l'historique infalsifiable discrètement, et ce qui fait qu'une réécriture d'historique crée de nouveaux commits.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-modele-q3",
+          "prompt": "À quoi sert l'index (staging area) ?",
+          "choices": [
+            "À préparer précisément le contenu du prochain commit",
+            "À sauvegarder le dépôt distant",
+            "À stocker les branches",
+            "À lister les fichiers ignorés"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut ainsi committer une partie des modifications seulement, voire une partie d'un fichier (git add -p).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-modele-q4",
+          "prompt": "Deux fichiers différents du projet ont exactement le même contenu. Combien de blobs Git stocke-t-il ?",
+          "choices": [
+            "Un seul : même contenu, même empreinte, même objet",
+            "Deux",
+            "Zéro",
+            "Un par commit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le stockage est adressé par contenu : les doublons sont naturellement dédupliqués. Les noms de fichiers sont dans les arbres.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-modele-q5",
+          "prompt": "Combien de parents a un commit de fusion (merge) ?",
+          "choices": [
+            "Deux (ou plus)",
+            "Un",
+            "Zéro",
+            "Toujours trois"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le tout premier commit d'un dépôt n'a aucun parent ; un commit ordinaire en a un ; une fusion en a au moins deux.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "git-modele-q6",
+          "prompt": "Quels types d'objets Git stocke-t-il ?",
+          "choices": [
+            "Les blobs, pour le contenu des fichiers",
+            "Les arbres, pour les dossiers",
+            "Les commits",
+            "Les diffs ligne à ligne de chaque modification"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il existe aussi les étiquettes annotées. Les fichiers de paquets compressent ensuite les objets par différences, mais c'est une optimisation de stockage.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "git-commandes",
       "title": "Commandes essentielles",
       "summary": "add, commit, log et diff.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le cycle quotidien",
+          "body": "On modifie des fichiers, on vérifie avec git status et git diff, on ajoute à l'index ce qui doit partir ensemble, puis on committe avec un message qui explique pourquoi.",
+          "code": "git status\ngit diff                 # travail vs index\ngit add src/tva.py\ngit diff --staged        # index vs dernier commit\ngit commit -m \"Corrige l'arrondi de la TVA\""
+        },
+        {
+          "title": "Explorer l'historique",
+          "body": "git log liste les commits ; --oneline les résume en une ligne, --graph dessine les branches. git show affiche un commit et ses modifications. git blame indique, ligne par ligne, quel commit l'a modifiée en dernier.",
+          "code": "git log --oneline --graph -10\ngit show a1b2c3d\ngit log -p -- src/tva.py\ngit blame src/tva.py"
+        },
+        {
+          "title": "Ignorer des fichiers",
+          "body": "Le fichier .gitignore liste ce que Git ne doit pas suivre : dépendances, fichiers compilés, secrets locaux. Il n'agit que sur les fichiers non suivis : un fichier déjà commité doit être retiré de l'index avec git rm --cached."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-commandes-q1",
+          "prompt": "Après git add tva.py, git diff n'affiche plus rien. Pourquoi ?",
+          "choices": [
+            "git diff compare le répertoire de travail à l'index, désormais identiques ; git diff --staged montre ce qui sera commité",
+            "Les modifications ont été perdues",
+            "Le fichier a déjà été commité",
+            "git diff ne fonctionne qu'avant le premier commit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux commandes répondent à deux questions différentes : « qu'est-ce que je n'ai pas encore ajouté ? » et « qu'est-ce que je m'apprête à committer ? ».",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-commandes-q2",
+          "prompt": "Quelle commande montre qui a modifié en dernier chaque ligne d'un fichier ?",
+          "choices": [
+            "git blame",
+            "git log --oneline",
+            "git status",
+            "git show"
+          ],
+          "answerIndex": 0,
+          "explanation": "Utile pour retrouver le commit, et donc le contexte, d'une ligne surprenante. Malgré son nom, il ne sert pas à blâmer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-commandes-q3",
+          "prompt": "On ajoute .env au .gitignore, mais il apparaît toujours dans les modifications. Pourquoi ?",
+          "choices": [
+            "Il était déjà suivi : .gitignore n'agit que sur les fichiers non suivis ; il faut git rm --cached .env",
+            "Le .gitignore doit être dans .git",
+            "Il faut redémarrer Git",
+            "Les fichiers commençant par un point ne peuvent pas être ignorés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Et s'il contenait des secrets, ils restent dans l'historique : il faut les changer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-commandes-q4",
+          "prompt": "Qu'affiche ce script ?",
+          "code": "git init -q depot && cd depot\necho a > f.txt\ngit add f.txt\necho b >> f.txt\ngit status --short",
+          "choices": [
+            "AM f.txt",
+            "A  f.txt",
+            "?? f.txt",
+            " M f.txt"
+          ],
+          "answerIndex": 0,
+          "explanation": "Première colonne : l'index (A, ajouté). Seconde colonne : le répertoire de travail (M, modifié depuis l'ajout). Un commit maintenant n'inclurait que la ligne « a ».",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "git-commandes-q5",
+          "prompt": "Complète : afficher les 5 derniers commits, une ligne chacun, avec le graphe des branches.",
+          "code": "git log --___ --graph -___",
+          "answers": [
+            "oneline",
+            "5"
+          ],
+          "distractors": [
+            "short",
+            "all",
+            "10"
+          ],
+          "explanation": "--all ajouterait les commits de toutes les branches, pas seulement ceux de la branche courante.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "git-commandes-q6",
+          "prompt": "Que mettre dans un .gitignore ?",
+          "choices": [
+            "Les dossiers de dépendances (node_modules)",
+            "Les fichiers compilés (bin, obj, *.o)",
+            "Les fichiers de configuration locale contenant des secrets",
+            "Le code source de l'application"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Tout ce qui peut être régénéré ou qui est propre à un poste reste hors du dépôt.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "git-defi-bases",
+    "title": "Défi entretien : bases de Git",
+    "summary": "Un commit bien construit.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "git-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Vous avez corrigé un bug et, dans le même fichier, renommé des variables sans rapport. Que faire avant de committer ?",
+        "choices": [
+          "Séparer en deux commits avec git add -p : un commit, une intention",
+          "Tout committer avec le message « modifs »",
+          "Annuler le renommage",
+          "Créer une nouvelle branche pour chaque ligne"
+        ],
+        "answerIndex": 0,
+        "explanation": "Des commits atomiques sont plus faciles à relire, à annuler et à retrouver avec bisect.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Quel message de commit est le plus utile ?",
+        "choices": [
+          "Corrige l'arrondi de la TVA sur les montants négatifs",
+          "fix",
+          "modifications diverses",
+          "commit du 12 mars"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le message dit quoi et, si besoin dans le corps, pourquoi. Le diff montre déjà comment.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Vous venez de committer, mais avez oublié un fichier. Le commit n'est pas encore poussé. Que faire ?",
+        "choices": [
+          "git add du fichier, puis git commit --amend",
+          "Supprimer le dépôt et recommencer",
+          "Créer obligatoirement un commit « oubli »",
+          "C'est impossible"
+        ],
+        "answerIndex": 0,
+        "explanation": "--amend remplace le dernier commit par un nouveau. À éviter sur un commit déjà partagé, car son identifiant change.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi1-q4",
+        "prompt": "Qu'affiche ce script ?",
+        "code": "git init -q d && cd d\necho x > a; echo x > b\ngit add a b\ngit commit -qm init\ngit count-objects -v | grep '^count'",
+        "choices": [
+          "count: 3",
+          "count: 4",
+          "count: 2",
+          "count: 1"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un seul blob (a et b ont le même contenu), un arbre et un commit : 3 objets.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "git-defi1-q5",
+        "prompt": "Que montre git status ?",
+        "choices": [
+          "Les fichiers modifiés mais pas encore ajoutés à l'index",
+          "Les fichiers ajoutés à l'index et prêts à être commités",
+          "Les fichiers non suivis",
+          "Le contenu complet de chaque commit"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Il indique aussi la branche courante et son avance ou son retard sur la branche distante suivie.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi1-q6",
+        "prompt": "En entretien : « Pourquoi Git est-il dit distribué ? »",
+        "choices": [
+          "Chaque clone contient tout l'historique : on peut committer, consulter et créer des branches sans serveur",
+          "Parce qu'il est hébergé sur plusieurs serveurs",
+          "Parce qu'il répartit les fichiers entre développeurs",
+          "Parce qu'il est gratuit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le dépôt central (GitHub, GitLab) est une convention d'équipe, pas une nécessité technique.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

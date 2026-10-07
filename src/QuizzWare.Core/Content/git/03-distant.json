@@ -7,13 +7,317 @@
       "id": "git-remotes",
       "title": "Remotes",
       "summary": "fetch, pull et push.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les dépôts distants",
+          "body": "Un remote est un autre dépôt, désigné par un nom (origin par défaut après un clone). Git garde une copie locale de ses branches, les branches de suivi : origin/main reflète l'état de main sur le serveur lors de la dernière synchronisation.",
+          "code": "git remote -v\ngit fetch origin    # télécharge seulement\ngit log main..origin/main   # nouveautés\ngit pull            # fetch + intégration\ngit push origin ma-branche"
+        },
+        {
+          "title": "fetch ou pull",
+          "body": "git fetch télécharge les nouveaux commits et met à jour origin/*, sans modifier vos branches ni vos fichiers. git pull fait un fetch puis intègre la branche distante dans la branche courante, par merge ou par rebase selon la configuration (pull.rebase)."
+        },
+        {
+          "title": "push",
+          "body": "git push envoie vos commits et met à jour la branche distante, seulement si c'est une avance rapide : si le serveur contient des commits que vous n'avez pas, il refuse. Il faut d'abord intégrer ces commits. git push -u origin ma-branche associe la branche locale à la distante pour les fois suivantes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-remotes-q1",
+          "prompt": "Quelle différence entre git fetch et git pull ?",
+          "choices": [
+            "fetch télécharge sans rien modifier localement ; pull télécharge puis intègre dans la branche courante",
+            "Ce sont des synonymes",
+            "fetch envoie, pull reçoit",
+            "pull ne fonctionne qu'avec GitHub"
+          ],
+          "answerIndex": 0,
+          "explanation": "fetch est toujours sans risque : on peut ensuite examiner ce qui est arrivé avant de l'intégrer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-remotes-q2",
+          "prompt": "git push est refusé avec « rejected (fetch first) ». Que se passe-t-il ?",
+          "choices": [
+            "Le serveur contient des commits que vous n'avez pas : il faut les récupérer et les intégrer avant de pousser",
+            "Le serveur est en panne",
+            "Vous n'avez pas les droits",
+            "Votre branche est vide"
+          ],
+          "answerIndex": 0,
+          "explanation": "Git refuse d'écraser le travail des autres. git pull (ou fetch puis rebase) puis push.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-remotes-q3",
+          "prompt": "Que représente origin/main ?",
+          "choices": [
+            "La copie locale de l'état de main sur le serveur, au dernier fetch",
+            "La branche main du serveur, consultée en direct",
+            "Une branche créée par erreur",
+            "Le premier commit du dépôt"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle ne bouge qu'au fetch ou au pull : sans synchronisation, elle peut être en retard sur le serveur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-remotes-q4",
+          "prompt": "Que liste git log main..origin/main ?",
+          "choices": [
+            "Les commits présents dans origin/main mais pas encore dans main",
+            "Les commits de main absents du serveur",
+            "Tous les commits des deux branches",
+            "Les commits en conflit"
+          ],
+          "answerIndex": 0,
+          "explanation": "A..B signifie « accessible depuis B mais pas depuis A ». origin/main..main liste à l'inverse ce que vous n'avez pas encore poussé.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "git-remotes-q5",
+          "prompt": "À quoi sert l'option -u de git push -u origin ma-branche ?",
+          "choices": [
+            "À associer la branche locale à la distante, pour que git push et git pull fonctionnent ensuite sans arguments",
+            "À forcer le push",
+            "À supprimer la branche distante",
+            "À pousser toutes les branches"
+          ],
+          "answerIndex": 0,
+          "explanation": "git status indique ensuite l'avance ou le retard par rapport à la branche suivie.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "git-remotes-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "git clone crée automatiquement un remote nommé origin",
+            "Un dépôt peut avoir plusieurs remotes (par exemple origin et upstream pour un fork)",
+            "git fetch ne modifie jamais vos fichiers de travail",
+            "git push envoie aussi les fichiers non commités"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Seuls les commits sont envoyés : les modifications non commitées restent sur votre poste.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "git-pull-requests",
       "title": "Pull requests et revue de code",
       "summary": "Collaborer sur GitHub ou GitLab.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La pull request",
+          "body": "Une pull request (merge request sur GitLab) propose d'intégrer une branche dans une autre. Elle réunit le diff, la discussion, les commentaires ligne par ligne et les résultats de la CI. La branche principale est protégée : on n'y pousse pas directement, tout passe par une PR approuvée et verte."
+        },
+        {
+          "title": "Une bonne PR",
+          "body": "Petite et centrée sur un sujet : une PR de 200 lignes est relue sérieusement, une de 3 000 lignes est survolée. Sa description explique le pourquoi, comment tester, et signale les points délicats. Les commits de correction issus de la revue peuvent être regroupés à l'intégration (squash)."
+        },
+        {
+          "title": "Les forks",
+          "body": "Sur un projet open source, on n'a pas le droit de pousser sur le dépôt. On crée un fork (une copie sous son compte), on y pousse sa branche, et on ouvre une PR vers le dépôt d'origine. On garde le fork à jour en ajoutant le dépôt d'origine comme remote upstream."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-pr-q1",
+          "prompt": "Pourquoi protéger la branche main ?",
+          "choices": [
+            "Pour que tout changement passe par une revue et une CI réussie avant d'y entrer",
+            "Pour empêcher toute modification à jamais",
+            "Pour accélérer les clones",
+            "Pour cacher le code"
+          ],
+          "answerIndex": 0,
+          "explanation": "main reste ainsi toujours déployable. Les protections interdisent aussi le push forcé et la suppression.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-pr-q2",
+          "prompt": "Une PR modifie 60 fichiers et 3 000 lignes pour trois fonctionnalités. Que conseiller ?",
+          "choices": [
+            "La découper en plusieurs PR plus petites, une par sujet",
+            "L'approuver sans la lire",
+            "Ajouter une quatrième fonctionnalité",
+            "Désactiver la CI pour aller plus vite"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les petites PR sont relues plus vite et mieux, et posent moins de conflits.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-pr-q3",
+          "prompt": "Que fait « Squash and merge » à l'intégration d'une PR ?",
+          "choices": [
+            "Il regroupe tous les commits de la branche en un seul commit sur la branche cible",
+            "Il supprime les commits",
+            "Il crée un commit par fichier",
+            "Il annule la PR"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les « corrige la revue » et « oups » disparaissent de l'historique de main, qui garde un commit par fonctionnalité.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-pr-q4",
+          "prompt": "Comment mettre à jour son fork avec les derniers changements du projet d'origine ?",
+          "choices": [
+            "Ajouter le dépôt d'origine comme remote upstream, puis git fetch upstream et intégrer upstream/main",
+            "Supprimer et recréer le fork à chaque fois",
+            "Copier les fichiers à la main",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "git remote add upstream <url> une fois, puis la synchronisation devient routinière.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-pr-q5",
+          "prompt": "Que doit contenir la description d'une PR ?",
+          "choices": [
+            "Le problème résolu, l'approche choisie, comment tester et les points à surveiller",
+            "Uniquement le numéro du ticket",
+            "Le code complet",
+            "Rien, le diff suffit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le relecteur doit comprendre l'intention pour juger la solution.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "git-pr-q6",
+          "prompt": "Quelles règles de protection de branche sont courantes ?",
+          "choices": [
+            "Au moins une approbation obligatoire",
+            "Une CI réussie avant fusion",
+            "L'interdiction du push forcé",
+            "L'obligation de committer directement sur main"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On peut aussi exiger une branche à jour avec main, des commits signés ou la résolution de toutes les discussions.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "git-defi-distant",
+    "title": "Défi entretien : collaboration",
+    "summary": "Un push refusé un vendredi.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "git-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Vous avez 2 commits locaux sur main ; un collègue a poussé 3 commits entre-temps. Votre push est refusé. Que faire pour un historique linéaire ?",
+        "choices": [
+          "git pull --rebase, puis git push",
+          "git push --force",
+          "Supprimer vos commits",
+          "Créer un nouveau dépôt"
+        ],
+        "answerIndex": 0,
+        "explanation": "Vos 2 commits, encore jamais partagés, sont rejoués au-dessus des 3 commits du collègue.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi3-q2",
+        "prompt": "Cas pratique 2/3 — Pourquoi git push --force serait-il une faute ici ?",
+        "choices": [
+          "Il écraserait les 3 commits du collègue sur le serveur",
+          "Il est plus lent",
+          "Il ne fonctionne pas sur main",
+          "Il supprimerait vos commits"
+        ],
+        "answerIndex": 0,
+        "explanation": "Leur travail disparaîtrait du serveur. D'où la protection de main contre le push forcé.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Comment éviter ce genre de situation à l'avenir ?",
+        "choices": [
+          "Travailler sur des branches et intégrer via des pull requests, main étant protégée",
+          "Pousser plus souvent sur main sans vérifier",
+          "N'avoir qu'un seul développeur",
+          "Désactiver Git"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chacun pousse sur sa branche ; l'intégration sur main est contrôlée.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi3-q4",
+        "prompt": "Qu'affiche git status juste après un git fetch, si le serveur a 2 nouveaux commits et vous 1 commit local non poussé ?",
+        "choices": [
+          "Your branch and 'origin/main' have diverged, and have 1 and 2 different commits each",
+          "Your branch is up to date",
+          "Your branch is ahead by 3 commits",
+          "Nothing to commit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les deux historiques ont divergé : il faudra fusionner ou rebaser.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "git-defi3-q5",
+        "prompt": "Que vérifier avant de demander la revue d'une PR ?",
+        "choices": [
+          "La CI passe",
+          "La branche est à jour avec main",
+          "Le diff ne contient que des changements liés au sujet",
+          "Le nombre d'emojis dans la description"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Relire soi-même son diff avant de le soumettre évite beaucoup d'allers-retours.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi3-q6",
+        "prompt": "En entretien : « Que fait git pull exactement ? »",
+        "choices": [
+          "Un git fetch suivi d'une intégration (merge ou rebase) de la branche distante suivie dans la branche courante",
+          "Il télécharge tout le dépôt à nouveau",
+          "Il envoie vos commits",
+          "Il réinitialise vos fichiers"
+        ],
+        "answerIndex": 0,
+        "explanation": "Comprendre cette décomposition aide à résoudre les situations où pull produit un résultat inattendu.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

@@ -7,13 +7,319 @@
       "id": "git-strategies",
       "title": "Stratégies de branches",
       "summary": "Git flow et trunk-based development.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Git flow",
+          "body": "Git flow utilise une branche main (les versions publiées), une branche develop (l'intégration), des branches feature/*, release/* et hotfix/*. Adapté aux logiciels livrés par versions espacées (applications installées, bibliothèques), il est lourd pour un service web déployé plusieurs fois par jour."
+        },
+        {
+          "title": "GitHub flow",
+          "body": "Une seule branche principale toujours déployable. Chaque changement part d'une branche courte, passe par une pull request revue et testée, puis est fusionné et déployé. Simple et adapté à la livraison continue."
+        },
+        {
+          "title": "Trunk-based development",
+          "body": "Tout le monde intègre dans la branche principale (le tronc) au moins une fois par jour, avec des branches qui vivent quelques heures. Les fonctionnalités inachevées sont cachées derrière des feature flags. Les études DORA associent cette pratique aux équipes les plus performantes, mais elle exige une CI rapide et fiable."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-strategies-q1",
+          "prompt": "Une équipe déploie son API plusieurs fois par jour. Quelle stratégie est la plus adaptée ?",
+          "choices": [
+            "GitHub flow ou trunk-based : branches courtes et une branche principale toujours déployable",
+            "Git flow avec des branches de release mensuelles",
+            "Une branche par développeur, fusionnée une fois par trimestre",
+            "Pas de branches, ni de revue"
+          ],
+          "answerIndex": 0,
+          "explanation": "Git flow ajoute des étapes qui n'ont de sens que pour des versions espacées.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-strategies-q2",
+          "prompt": "En trunk-based development, comment livrer une fonctionnalité qui demandera trois semaines de travail ?",
+          "choices": [
+            "Par petits incréments intégrés chaque jour, cachés derrière un feature flag jusqu'à ce qu'elle soit prête",
+            "Sur une branche de trois semaines",
+            "En attendant la fin pour tout committer",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le code est intégré en continu, mais la fonctionnalité n'est activée qu'une fois terminée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-strategies-q3",
+          "prompt": "À quoi sert une branche hotfix dans Git flow ?",
+          "choices": [
+            "À corriger en urgence la version en production, à partir de main, puis à reporter la correction dans develop",
+            "À développer de nouvelles fonctionnalités",
+            "À stocker les anciennes versions",
+            "À tester la CI"
+          ],
+          "answerIndex": 0,
+          "explanation": "La correction part de ce qui est réellement en production, sans embarquer le travail en cours de develop.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-strategies-q4",
+          "prompt": "Quel prérequis le trunk-based development impose-t-il ?",
+          "choices": [
+            "Une suite de tests automatisés rapide et fiable, qui protège la branche principale",
+            "Une équipe d'une seule personne",
+            "L'absence de revue de code",
+            "Des déploiements annuels"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans bons tests, intégrer souvent revient à casser souvent.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-strategies-q5",
+          "prompt": "Pour quel type de projet Git flow reste-t-il pertinent ?",
+          "choices": [
+            "Un logiciel publié en versions numérotées, avec plusieurs versions maintenues en parallèle",
+            "Un site web déployé en continu",
+            "Un prototype personnel",
+            "Un script d'une page"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une bibliothèque qui maintient les versions 3.x et 4.x a besoin de branches de version.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "git-strategies-q6",
+          "prompt": "Quels sont les avantages des branches courtes ?",
+          "choices": [
+            "Moins de conflits de fusion",
+            "Des revues plus rapides et plus faciles",
+            "Des retours plus rapides sur l'intégration avec le reste du code",
+            "Plus de temps passé à résoudre des conflits"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Ce sont précisément les branches longues qui accumulent les conflits.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "git-conventions",
       "title": "Conventions",
       "summary": "Messages de commit et versioning sémantique.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des messages de commit utiles",
+          "body": "Une première ligne courte (une cinquantaine de caractères) à l'impératif, qui résume le changement. Puis, si besoin, une ligne vide et un corps qui explique le pourquoi : le contexte, le problème, les alternatives écartées. Le diff dit déjà comment."
+        },
+        {
+          "title": "Conventional Commits",
+          "body": "Une convention répandue préfixe chaque message par un type : feat (fonctionnalité), fix (correction), docs, refactor, test, chore... avec un ! ou BREAKING CHANGE pour un changement incompatible. Des outils en déduisent le numéro de version et le journal des modifications.",
+          "code": "feat(export): ajoute l'export CSV des factures\nfix(tva): corrige l'arrondi des montants négatifs\nfeat(api)!: supprime le champ prix de /produits",
+          "language": "text"
+        },
+        {
+          "title": "Le versioning sémantique",
+          "body": "Une version MAJEUR.MINEUR.CORRECTIF : on incrémente le correctif pour une correction compatible, le mineur pour une fonctionnalité compatible, le majeur pour un changement incompatible. Les étiquettes Git (git tag v2.4.1) marquent les versions publiées."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-conventions-q1",
+          "prompt": "La version 2.4.1 reçoit une nouvelle fonctionnalité compatible. Quelle est la version suivante ?",
+          "choices": [
+            "2.5.0",
+            "2.4.2",
+            "3.0.0",
+            "2.5.1"
+          ],
+          "answerIndex": 0,
+          "explanation": "On incrémente le mineur et on remet le correctif à zéro.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-conventions-q2",
+          "prompt": "Une API supprime un champ utilisé par ses clients. Quelle partie de la version change ?",
+          "choices": [
+            "Le majeur",
+            "Le mineur",
+            "Le correctif",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est un changement incompatible : les clients doivent savoir qu'une migration est nécessaire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-conventions-q3",
+          "prompt": "Que signifie le ! dans « feat(api)!: supprime le champ prix » ?",
+          "choices": [
+            "Un changement incompatible (breaking change), qui entraîne une version majeure",
+            "Une correction urgente",
+            "Un commit important à relire",
+            "Une erreur de syntaxe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les outils comme semantic-release en déduisent automatiquement le prochain numéro de version.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-conventions-q4",
+          "prompt": "Quel message de commit est le plus utile ?",
+          "choices": [
+            "fix(panier): empêche une quantité négative",
+            "Modifs",
+            "WIP",
+            "Correction du bug de jeudi"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il dit ce qui change et où. Dans six mois, « bug de jeudi » ne voudra plus rien dire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-conventions-q5",
+          "prompt": "Que doit expliquer le corps d'un message de commit ?",
+          "choices": [
+            "Le pourquoi : le contexte, le problème et les choix faits",
+            "Le détail ligne à ligne du diff",
+            "Le nom de tous les fichiers modifiés",
+            "La météo du jour"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le diff montre le comment ; seule la personne qui committe connaît le pourquoi.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "git-conventions-q6",
+          "prompt": "Quels préfixes Conventional Commits sont correctement décrits ?",
+          "choices": [
+            "feat : une nouvelle fonctionnalité",
+            "fix : une correction de bug",
+            "refactor : une restructuration sans changement de comportement",
+            "docs : un changement de comportement de l'API"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "docs concerne uniquement la documentation.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "git-defi-workflows",
+    "title": "Défi entretien : workflow d'équipe",
+    "summary": "Choisir une organisation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "git-defi5-q1",
+        "prompt": "Cas pratique 1/3 — Une équipe de 8 développeurs utilise Git flow pour une application web. Les fusions de develop vers main sont pénibles et les déploiements mensuels. Que proposer ?",
+        "choices": [
+          "Passer à des branches courtes et une branche principale toujours déployable, avec CI et déploiements fréquents",
+          "Ajouter une branche develop2",
+          "Déployer tous les six mois",
+          "Supprimer la revue de code"
+        ],
+        "answerIndex": 0,
+        "explanation": "Moins de branches longues, c'est moins de grosses fusions et des livraisons plus petites et moins risquées.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi5-q2",
+        "prompt": "Cas pratique 2/3 — Une fonctionnalité de paiement prendra un mois. Comment l'intégrer sans branche longue ?",
+        "choices": [
+          "La développer par petits incréments fusionnés régulièrement, désactivée par un feature flag",
+          "Une branche d'un mois",
+          "Tout développer hors de Git",
+          "La livrer activée mais inachevée"
+        ],
+        "answerIndex": 0,
+        "explanation": "On peut même l'activer pour l'équipe interne avant tout le monde.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Comment générer automatiquement les notes de version ?",
+        "choices": [
+          "Adopter Conventional Commits : un outil regroupe feat, fix et breaking changes par version",
+          "Les écrire de mémoire avant chaque version",
+          "Copier tout le git log",
+          "Ne pas en faire"
+        ],
+        "answerIndex": 0,
+        "explanation": "La convention rend l'historique exploitable par des outils, et lisible par les humains.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi5-q4",
+        "prompt": "Qu'affiche ce script ?",
+        "code": "git tag v1.0.0\necho x > f; git add f; git commit -qm fix\ngit tag v1.0.1\ngit describe --tags",
+        "choices": [
+          "v1.0.1",
+          "v1.0.0",
+          "v1.0.0-1",
+          "Une erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "HEAD porte exactement l'étiquette v1.0.1. Un commit de plus donnerait v1.0.1-1-g<hash>.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "git-defi5-q5",
+        "prompt": "Que peut-on automatiser dans le workflow Git d'une équipe ?",
+        "choices": [
+          "La vérification du format des messages de commit",
+          "Les tests et l'analyse à chaque pull request",
+          "La création des versions et des notes de version",
+          "La compréhension du besoin métier"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Comprendre le besoin reste un travail humain, en discussion avec les utilisateurs.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi5-q6",
+        "prompt": "En entretien : « Quel workflow Git recommandez-vous ? »",
+        "choices": [
+          "Cela dépend du mode de livraison : branches courtes et déploiement continu pour un service, branches de version pour un logiciel maintenu en plusieurs versions",
+          "Toujours Git flow",
+          "Toujours tout sur main sans revue",
+          "Le workflow n'a aucune importance"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'intervieweur attend une justification par le contexte, pas un dogme.",
+        "difficulty": 1
+      }
+    ]
+  }
 }
