@@ -68,15 +68,15 @@
           "type": "fill",
           "id": "os-sc-q4",
           "prompt": "Complète la protection du compteur par un mutex.",
-          "code": "pthread_mutex_t verrou = PTHREAD_MUTEX_INITIALIZER;\n\npthread_mutex____(&verrou);\ncompteur++;\npthread_mutex____(&verrou);",
+          "code": "pthread_mutex_t verrou = PTHREAD_MUTEX_INITIALIZER;\n\n___(&verrou);\ncompteur++;\n___(&verrou);",
           "answers": [
-            "lock",
-            "unlock"
+            "pthread_mutex_lock",
+            "pthread_mutex_unlock"
           ],
           "distractors": [
-            "wait",
-            "signal",
-            "join"
+            "pthread_cond_wait",
+            "pthread_join",
+            "sem_post"
           ],
           "explanation": "Chaque lock doit avoir son unlock, sur tous les chemins, y compris en cas d'erreur.",
           "difficulty": 1

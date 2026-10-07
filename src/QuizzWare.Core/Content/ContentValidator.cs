@@ -144,6 +144,8 @@ public static class ContentValidator
                     yield return "aucun trou ___ dans le code.";
                 if (blanks != q.Answers.Count)
                     yield return $"{blanks} trou(s) dans le code mais {q.Answers.Count} réponse(s).";
+                if (q.Code.Contains(FillQuestion.Blank + "_"))
+                    yield return "un trou ___ est collé à un « _ » : le découpage serait ambigu, mettre le « _ » dans la réponse.";
                 if (q.Distractors.Any(q.Answers.Contains))
                     yield return "un leurre est identique à une réponse.";
                 break;

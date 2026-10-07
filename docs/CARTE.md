@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (110 écrits) | 341 (287 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (115 écrits) | 341 (300 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -859,24 +859,24 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Fondamentaux des tests
-   - La pyramide des tests
-   - Un bon test
-2. 🕓 Tests unitaires
-   - Arrange, Act, Assert
-   - Doublures de test
-   - TDD
-3. 🕓 Tests d'intégration et de bout en bout
-   - Tests d'intégration
-   - Tests de bout en bout
-4. 🕓 Qualité du code
-   - Code lisible
-   - Revue de code
-   - Refactoring
-5. 🕓 Tests avancés
-   - Tests par propriétés
-   - Tests de mutation
-   - Tests de charge
+1. ✅ Fondamentaux des tests
+   - ✅ La pyramide des tests
+   - ✅ Un bon test
+2. ✅ Tests unitaires
+   - ✅ Arrange, Act, Assert
+   - ✅ Doublures de test
+   - ✅ TDD
+3. ✅ Tests d'intégration et de bout en bout
+   - ✅ Tests d'intégration
+   - ✅ Tests de bout en bout
+4. ✅ Qualité du code
+   - ✅ Code lisible
+   - ✅ Revue de code
+   - ✅ Refactoring
+5. ✅ Tests avancés
+   - ✅ Tests par propriétés
+   - ✅ Tests de mutation
+   - ✅ Tests de charge
 
 **Spécialisations**
 

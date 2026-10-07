@@ -7,19 +7,428 @@
       "id": "qa-code-lisible",
       "title": "Code lisible",
       "summary": "Nommage, fonctions et duplication.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le code est lu bien plus qu'il n'est écrit",
+          "body": "Un code lisible se comprend sans son auteur. Les noms disent l'intention (delai_expiration_s plutôt que d), les fonctions font une seule chose à un seul niveau d'abstraction, et les nombres magiques deviennent des constantes nommées.",
+          "code": "# Avant\nif u.t == 2 and (time.time() - u.d) > 2592000:\n    envoyer(u)\n\n# Après\nTRENTE_JOURS = 30 * 24 * 3600\nif utilisateur.est_premium() and \\\n        utilisateur.inactif_depuis() > TRENTE_JOURS:\n    envoyer_relance(utilisateur)"
+        },
+        {
+          "title": "Des fonctions courtes et plates",
+          "body": "Une fonction de 300 lignes mélange plusieurs responsabilités. On extrait des fonctions bien nommées : le code se lit comme une suite d'étapes. Les retours anticipés (clauses de garde) évitent les if imbriqués sur six niveaux.",
+          "code": "def expedier(commande):\n    if commande is None:\n        return Erreur(\"commande absente\")\n    if not commande.payee:\n        return Erreur(\"commande non payée\")\n    return transporteur.envoyer(commande)"
+        },
+        {
+          "title": "Les commentaires",
+          "body": "Un bon commentaire explique le pourquoi : une contrainte métier, un contournement, un choix non évident. Un commentaire qui paraphrase le code (« incrémente i ») est du bruit, et un commentaire obsolète trompe. Souvent, un meilleur nom rend le commentaire inutile."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-lisible-q1",
+          "prompt": "Quel nom de variable est le meilleur ?",
+          "choices": [
+            "delai_expiration_session_s",
+            "d",
+            "tmp2",
+            "data"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il dit ce que c'est, et même l'unité. Un nom long mais clair vaut mieux qu'un nom court qu'il faut deviner.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-lisible-q2",
+          "prompt": "Quel commentaire apporte vraiment quelque chose ?",
+          "choices": [
+            "# L'API du transporteur refuse les poids nuls : on envoie 1 g minimum",
+            "# incrémente le compteur",
+            "# boucle sur les commandes",
+            "# fonction de calcul"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il explique une contrainte invisible dans le code. Les autres paraphrasent ce que le code dit déjà.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-lisible-q3",
+          "prompt": "Que gagne-t-on avec des clauses de garde (retours anticipés) ?",
+          "choices": [
+            "Les cas d'erreur sont traités d'abord, et le cas normal se lit sans imbrication",
+            "Le code s'exécute plus vite",
+            "On évite d'écrire des tests",
+            "On supprime les erreurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Moins d'indentation, c'est moins d'état à garder en tête en lisant.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-lisible-q4",
+          "prompt": "Que signifie 2592000 dans le code « avant » de la leçon, et quel est le problème ?",
+          "choices": [
+            "30 jours en secondes ; c'est un nombre magique dont le sens est invisible sans calcul",
+            "Un identifiant d'utilisateur",
+            "Un prix",
+            "Une erreur de frappe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une constante nommée (TRENTE_JOURS = 30 * 24 * 3600) se lit et se modifie sans risque.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-lisible-q5",
+          "prompt": "Deux fonctions contiennent 15 lignes identiques qui calculent les frais de port. Que faire ?",
+          "choices": [
+            "Extraire une fonction commune, si c'est bien la même règle métier",
+            "Laisser tel quel",
+            "Ajouter un commentaire « dupliqué »",
+            "Supprimer une des deux fonctions"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sinon, la prochaine modification de la règle risque de n'être faite qu'à un seul endroit.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "qa-lisible-q6",
+          "prompt": "Quels signes indiquent qu'une fonction doit être découpée ?",
+          "choices": [
+            "Elle fait plusieurs choses, qu'on décrit avec des « et »",
+            "Elle comporte de nombreux niveaux d'imbrication",
+            "Des commentaires séparent des « sections » à l'intérieur",
+            "Elle a un nom clair et fait 8 lignes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une section commentée à l'intérieur d'une fonction est souvent une fonction qui attend d'être extraite.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "qa-revue",
       "title": "Revue de code",
       "summary": "Donner et recevoir des retours.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "À quoi sert la revue",
+          "body": "Trouver des bugs, mais pas seulement : partager la connaissance du code dans l'équipe, maintenir la cohérence, transmettre les bonnes pratiques. Un second regard voit ce que l'auteur ne voit plus."
+        },
+        {
+          "title": "Quoi regarder",
+          "body": "D'abord le fond : le changement résout-il le bon problème ? Est-il correct, testé, sûr ? Est-il compréhensible et maintenable ? Le style (indentation, guillemets) est laissé aux formateurs et linters automatiques : la revue humaine ne doit pas s'y épuiser."
+        },
+        {
+          "title": "Des retours bienveillants",
+          "body": "On commente le code, pas la personne. On explique le pourquoi d'une remarque, on pose des questions plutôt que d'imposer, et on distingue les points bloquants des simples suggestions (« nit: »). Côté auteur, on accueille les retours comme une aide, et on fournit des PR petites et bien décrites pour faciliter la relecture."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-revue-q1",
+          "prompt": "Quel commentaire de revue est le plus constructif ?",
+          "choices": [
+            "Si la liste est vide, la division ligne 12 plante. On pourrait renvoyer 0 ou lever une erreur explicite ?",
+            "C'est n'importe quoi",
+            "Je n'aurais pas fait comme ça",
+            "Refais tout"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il est précis, explique le problème et propose des pistes, sous forme de question.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-revue-q2",
+          "prompt": "La moitié des commentaires de revue portent sur l'indentation et les guillemets. Que faire ?",
+          "choices": [
+            "Adopter un formateur automatique (Black, Prettier, dotnet format) vérifié en CI",
+            "Continuer ainsi",
+            "Supprimer la revue de code",
+            "Écrire un guide de style de 80 pages"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les machines tranchent les questions de style ; les humains se concentrent sur ce qu'elles ne voient pas.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-revue-q3",
+          "prompt": "Que signifie le préfixe « nit: » dans un commentaire de revue ?",
+          "choices": [
+            "Une suggestion mineure, non bloquante",
+            "Un bug critique",
+            "Une demande de suppression",
+            "Un commentaire hors sujet"
+          ],
+          "answerIndex": 0,
+          "explanation": "Distinguer bloquant et facultatif évite des allers-retours inutiles.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-revue-q4",
+          "prompt": "Que regarder en priorité dans une revue ?",
+          "choices": [
+            "La justesse, les cas limites, la sécurité et la clarté du changement",
+            "Le nombre de lignes",
+            "La police de caractères de l'éditeur",
+            "L'heure du commit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un changement correct, testé et compréhensible : c'est l'essentiel.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-revue-q5",
+          "prompt": "Pourquoi les revues sont-elles utiles même quand le relecteur ne trouve aucun bug ?",
+          "choices": [
+            "Elles diffusent la connaissance du code dans l'équipe : plus d'une personne comprend chaque partie",
+            "Elles ne le sont pas",
+            "Pour occuper le relecteur",
+            "Pour retarder la livraison"
+          ],
+          "answerIndex": 0,
+          "explanation": "Moins de dépendance à une seule personne, c'est moins de risque quand elle est absente.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "qa-revue-q6",
+          "prompt": "Comment faciliter la revue de ses propres changements ?",
+          "choices": [
+            "Des pull requests petites et centrées sur un sujet",
+            "Une description qui explique le contexte et comment tester",
+            "Relire soi-même son diff avant de demander la revue",
+            "Regrouper trois semaines de travail dans une seule PR"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une PR énorme est survolée ; une petite est réellement relue.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "qa-refactoring",
       "title": "Refactoring",
       "summary": "Améliorer sans casser.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Changer la structure, pas le comportement",
+          "body": "Refactorer, c'est améliorer la structure du code sans changer ce qu'il fait : renommer, extraire une fonction, déplacer une méthode, remplacer une condition par du polymorphisme. On avance par petits pas, en relançant les tests à chacun. Sans tests, ce n'est plus du refactoring, c'est un pari."
+        },
+        {
+          "title": "Les odeurs de code",
+          "body": "Certains symptômes signalent un besoin de refactoring : fonction trop longue, classe qui fait tout, longue liste de paramètres, duplication, switch répété sur le même type, modification qui oblige à toucher dix fichiers. Ce sont des indices, pas des règles absolues."
+        },
+        {
+          "title": "La dette technique",
+          "body": "Chaque raccourci pris pour livrer plus vite est une dette : il faudra la rembourser, et en attendant elle coûte des intérêts (chaque évolution est plus lente et plus risquée). Une part de dette est acceptable si elle est choisie et suivie. La règle du boy-scout : laisser le code un peu plus propre qu'on ne l'a trouvé, à chaque passage."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-refacto-q1",
+          "prompt": "Qu'est-ce qui distingue un refactoring d'une réécriture ?",
+          "choices": [
+            "Le comportement observable ne change pas, et on avance par petits pas vérifiés par les tests",
+            "Le refactoring change les fonctionnalités",
+            "Le refactoring se fait sans tests",
+            "Aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "À chaque étape, le programme fonctionne : on peut s'arrêter ou livrer à tout moment.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-refacto-q2",
+          "prompt": "Que faut-il avant de refactorer un code critique ?",
+          "choices": [
+            "Des tests qui couvrent son comportement actuel",
+            "Une réunion de toute l'entreprise",
+            "Un nouveau langage",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans tests, impossible de savoir si le comportement a changé.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-refacto-q3",
+          "prompt": "Le même switch sur le type de client se retrouve dans six méthodes. Quel refactoring ?",
+          "choices": [
+            "Remplacer la condition par du polymorphisme : une classe par type de client",
+            "Ajouter un septième switch",
+            "Transformer le switch en if",
+            "Ajouter des commentaires"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ajouter un type ne demandera plus de modifier six endroits, au risque d'en oublier un.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-refacto-q4",
+          "prompt": "Une fonction reçoit 9 paramètres. Que proposer ?",
+          "choices": [
+            "Regrouper ceux qui vont ensemble dans un objet (par exemple une Adresse ou des Options)",
+            "Ajouter un dixième paramètre",
+            "Passer tous les paramètres par des variables globales",
+            "Rien, c'est normal"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les appels deviennent lisibles, et les données qui vont ensemble restent ensemble.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-refacto-q5",
+          "prompt": "Le chef de projet demande pourquoi l'équipe consacre du temps à la dette technique. Quelle réponse ?",
+          "choices": [
+            "La dette ralentit chaque nouvelle fonctionnalité et augmente les bugs : la réduire, c'est livrer plus vite et plus sûrement ensuite",
+            "Parce que le code doit être beau",
+            "Pour faire plaisir aux développeurs",
+            "Il n'y a pas de raison"
+          ],
+          "answerIndex": 0,
+          "explanation": "Parler en délais et en risques, pas en esthétique, aide à faire comprendre l'enjeu.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "qa-refacto-q6",
+          "prompt": "Quelles sont des odeurs de code classiques ?",
+          "choices": [
+            "Une classe qui fait tout (god class)",
+            "Une longue liste de paramètres",
+            "Une modification qui oblige à toucher de nombreux fichiers",
+            "Une fonction courte avec un nom clair"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La dernière modification dispersée s'appelle la « chirurgie au fusil de chasse » (shotgun surgery).",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "qa-defi-qualite",
+    "title": "Défi entretien : qualité",
+    "summary": "Une fonction de 400 lignes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "qa-defi4-q1",
+        "prompt": "Cas pratique 1/3 — Vous devez modifier une fonction de 400 lignes sans tests, qui calcule des primes. Première étape ?",
+        "choices": [
+          "Écrire des tests de caractérisation qui capturent ses résultats actuels sur des cas variés",
+          "La réécrire entièrement de mémoire",
+          "La modifier directement et espérer",
+          "Ajouter un commentaire en tête"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ces tests figent le comportement actuel, même s'il contient des bizarreries : on ne les change qu'en connaissance de cause.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi4-q2",
+        "prompt": "Cas pratique 2/3 — Les tests sont en place. Comment avancer ?",
+        "choices": [
+          "Par petits refactorings successifs (extraire une fonction, renommer), en relançant les tests à chaque étape",
+          "En une seule grande modification",
+          "En supprimant les tests pour aller plus vite",
+          "En attendant une réécriture complète"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque petit pas vérifié réduit le risque ; on peut livrer à tout moment.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi4-q3",
+        "prompt": "Cas pratique 3/3 — Pendant le refactoring, un test révèle que la fonction calcule mal les primes des temps partiels depuis deux ans. Que faire ?",
+        "choices": [
+          "Ne pas le corriger en silence : signaler le problème au métier, décider ensemble, puis corriger dans un changement séparé",
+          "Le corriger discrètement dans le refactoring",
+          "Supprimer le test",
+          "Ignorer le problème"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un refactoring ne change pas le comportement ; une correction de règle métier mérite son propre changement, visible et validé.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi4-q4",
+        "prompt": "Qu'est-ce que la complexité cyclomatique ?",
+        "choices": [
+          "Le nombre de chemins indépendants dans une fonction : plus elle est élevée, plus la fonction est difficile à tester et comprendre",
+          "La durée d'exécution d'une fonction",
+          "Le nombre de lignes",
+          "Le nombre d'auteurs du fichier"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque if, boucle ou cas ajoute un chemin. Les linters peuvent alerter au-delà d'un seuil.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "qa-defi4-q5",
+        "prompt": "Quels outils automatiques améliorent la qualité au quotidien ?",
+        "choices": [
+          "Un formateur (Black, Prettier, dotnet format)",
+          "Un linter (Ruff, ESLint, analyseurs Roslyn)",
+          "Les tests en CI à chaque pull request",
+          "Un compteur de lignes écrites par développeur"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Mesurer les lignes écrites encourage le volume, pas la qualité.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi4-q6",
+        "prompt": "En entretien : « Comment gérez-vous la dette technique ? »",
+        "choices": [
+          "La rendre visible (tickets, estimation de son coût), la rembourser en continu, et la traiter en priorité là où le code change souvent",
+          "La rembourser entièrement avant toute fonctionnalité",
+          "L'ignorer",
+          "Tout réécrire tous les deux ans"
+        ],
+        "answerIndex": 0,
+        "explanation": "La dette dans un code qu'on ne touche jamais coûte peu ; celle du code modifié chaque semaine coûte cher.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

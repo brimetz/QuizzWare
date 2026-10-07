@@ -7,13 +7,316 @@
       "id": "qa-integration",
       "title": "Tests d'intégration",
       "summary": "Bases de données et conteneurs de test.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Ce que les unitaires ne voient pas",
+          "body": "Une requête SQL mal écrite, une migration oubliée, une sérialisation JSON inattendue, une configuration d'injection erronée : ces bugs n'apparaissent qu'en faisant travailler les composants ensemble. Les tests d'intégration vérifient ces jonctions avec de vraies dépendances."
+        },
+        {
+          "title": "Une vraie base, jetable",
+          "body": "Remplacer PostgreSQL par SQLite en mémoire cache des différences de comportement. Testcontainers démarre une vraie base dans un conteneur Docker pour la durée des tests, identique à la production. Chaque test part d'un état connu : transaction annulée à la fin, ou tables vidées.",
+          "code": "from testcontainers.postgres import PostgresContainer\n\ndef test_enregistre_et_relit_commande():\n    with PostgresContainer(\"postgres:17\") as pg:\n        depot = DepotCommandes(pg.get_connection_url())\n        depot.migrer()\n        depot.enregistrer(Commande(id=1, total=42))\n        assert depot.trouver(1).total == 42"
+        },
+        {
+          "title": "Tester une API",
+          "body": "Les frameworks web fournissent un client de test qui appelle l'application en mémoire, sans serveur réseau : on vérifie routes, sérialisation, validation et codes de statut. En ASP.NET Core, WebApplicationFactory ; en FastAPI, TestClient.",
+          "code": "def test_creation_produit():\n    client = TestClient(app)\n    r = client.post(\"/produits\", json={\"nom\": \"stylo\"})\n    assert r.status_code == 201\n    assert r.json()[\"nom\"] == \"stylo\""
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-integ-q1",
+          "prompt": "Quel bug un test unitaire avec un dépôt simulé ne détecte-t-il pas ?",
+          "choices": [
+            "Une requête SQL qui échoue sur la vraie base (colonne renommée par une migration)",
+            "Une erreur de calcul dans le service",
+            "Une condition mal écrite dans la logique métier",
+            "Un cas limite sur une liste vide"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le faux dépôt ne parle jamais à la base : seul un test d'intégration exerce le vrai SQL.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-integ-q2",
+          "prompt": "Pourquoi préférer Testcontainers à SQLite en mémoire pour tester une application PostgreSQL ?",
+          "choices": [
+            "SQLite diffère de PostgreSQL (types, fonctions, verrous) : les tests pourraient passer avec un code qui échoue en production",
+            "SQLite est plus lent",
+            "SQLite ne supporte pas SQL",
+            "Il n'y a aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "On teste contre la même technologie, dans la même version qu'en production.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-integ-q3",
+          "prompt": "Les tests d'intégration partagent une base et échouent selon leur ordre d'exécution. Que faire ?",
+          "choices": [
+            "Donner à chaque test un état de départ connu : transaction annulée à la fin, ou données propres créées par le test",
+            "Les exécuter toujours dans le même ordre",
+            "Les désactiver",
+            "Ajouter des pauses"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'isolation vaut aussi pour les tests d'intégration ; on peut aussi utiliser une base par worker de test.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-integ-q4",
+          "prompt": "Que vérifie un test d'API avec un client de test en mémoire ?",
+          "choices": [
+            "Le routage, la validation, la sérialisation et les codes de statut, sans démarrer de serveur réseau",
+            "Uniquement la logique métier",
+            "Uniquement l'interface graphique",
+            "Les performances en production"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est rapide et réaliste : toute la pile HTTP de l'application est exercée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-integ-q5",
+          "prompt": "Un service appelle une API de paiement externe. Comment le tester en intégration sans dépendre de sa disponibilité ?",
+          "choices": [
+            "Simuler l'API avec un serveur HTTP de test (WireMock) qui renvoie des réponses enregistrées, et vérifier séparément le contrat avec le vrai service",
+            "Appeler la vraie API de production",
+            "Ne pas tester les appels HTTP",
+            "Désactiver le réseau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les tests de contrat (Pact) vérifient que la simulation reste fidèle à la vraie API.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "qa-integ-q6",
+          "prompt": "Quels bugs les tests d'intégration attrapent-ils typiquement ?",
+          "choices": [
+            "Une migration de base oubliée",
+            "Une mauvaise configuration de l'injection de dépendances",
+            "Un champ JSON mal nommé dans la réponse d'une API",
+            "Une erreur dans une fonction pure de calcul déjà couverte par des tests unitaires"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les erreurs de logique pure relèvent des tests unitaires, plus rapides et plus précis.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "qa-e2e",
       "title": "Tests de bout en bout",
       "summary": "Des navigateurs automatisés.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Comme un utilisateur",
+          "body": "Un test de bout en bout pilote l'application complète, par un vrai navigateur : il clique, remplit des formulaires et vérifie ce qui s'affiche. Playwright et Cypress sont les outils actuels. Ils vérifient les parcours critiques : inscription, achat, paiement."
+        },
+        {
+          "title": "Des sélecteurs robustes",
+          "body": "Un test qui cible « div:nth-child(3) > span » casse au moindre changement de mise en page. On cible les éléments comme l'utilisateur les voit : par rôle et nom accessible, par libellé, ou par un attribut dédié aux tests.",
+          "code": "page.goto(\"/connexion\")\npage.get_by_label(\"E-mail\").fill(\"ana@exemple.fr\")\npage.get_by_label(\"Mot de passe\").fill(\"secret\")\npage.get_by_role(\"button\", name=\"Se connecter\").click()\nexpect(page.get_by_text(\"Bonjour Ana\")).to_be_visible()"
+        },
+        {
+          "title": "Le piège des attentes",
+          "body": "Les pages se chargent de façon asynchrone. Les pauses fixes (sleep(2)) rendent les tests lents et instables. Les outils modernes attendent automatiquement qu'un élément soit visible et actionnable, jusqu'à un délai maximal. On garde peu de tests de bout en bout, centrés sur les parcours qui comptent."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-e2e-q1",
+          "prompt": "Quel sélecteur est le plus robuste ?",
+          "choices": [
+            "page.get_by_role(\"button\", name=\"Payer\")",
+            "page.locator(\"div > div:nth-child(4) > button\")",
+            "page.locator(\".btn-x7f3\")",
+            "page.locator(\"//body/div[2]/form/button[1]\")"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il cible ce que voit l'utilisateur, et survit aux changements de structure et de classes CSS. Il vérifie aussi au passage l'accessibilité.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "qa-e2e-q2",
+          "prompt": "Ce test échoue de temps en temps sur la CI. Touche la ligne en cause.",
+          "code": "page.get_by_role(\"button\", name=\"Valider\").click()\ntime.sleep(2)\nassert page.locator(\"#confirmation\").inner_text() \\\n    == \"Commande validée\"",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Si le serveur met 2,5 s à répondre, le test échoue ; s'il répond en 100 ms, on perd 1,9 s. expect(...).to_have_text(...) attend exactement le temps nécessaire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-e2e-q3",
+          "prompt": "Que tester de bout en bout ?",
+          "choices": [
+            "Les quelques parcours critiques : inscription, connexion, achat",
+            "Chaque règle de validation de chaque champ",
+            "Tous les cas limites du calcul de TVA",
+            "Rien, c'est inutile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les cas détaillés sont mieux couverts par des tests unitaires et d'intégration, rapides et précis.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-e2e-q4",
+          "prompt": "Un test de bout en bout échoue en CI mais pas en local. Que fournit Playwright pour comprendre ?",
+          "choices": [
+            "Des traces avec captures d'écran, réseau et DOM à chaque étape, consultables après coup",
+            "Rien de particulier",
+            "Un appel au développeur",
+            "Une relance automatique infinie"
+          ],
+          "answerIndex": 0,
+          "explanation": "La trace permet de rejouer pas à pas ce qu'a vu le navigateur sur la machine de CI.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-e2e-q5",
+          "prompt": "Les tests de bout en bout créent des comptes dans une base de recette partagée et se gênent entre eux. Que faire ?",
+          "choices": [
+            "Générer des données uniques par test (adresse e-mail aléatoire) et nettoyer après, ou utiliser un environnement éphémère",
+            "Utiliser toujours le même compte",
+            "Lancer un seul test par jour",
+            "Désactiver la base"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'isolation des données est aussi importante en bout en bout qu'en unitaire.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "qa-e2e-q6",
+          "prompt": "Quels sont les défauts des tests de bout en bout ?",
+          "choices": [
+            "Ils sont lents",
+            "Ils sont plus sujets à l'instabilité",
+            "Un échec localise mal la cause",
+            "Ils ne vérifient pas ce que voit l'utilisateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Leur grande qualité est justement de vérifier l'application telle que l'utilisateur la voit.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "qa-defi-integration",
+    "title": "Défi entretien : tester une API",
+    "summary": "Une API de réservation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "qa-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Une API de réservation de salles : règle « pas deux réservations qui se chevauchent ». Où tester cette règle en détail ?",
+        "choices": [
+          "En tests unitaires sur le domaine : tous les cas de chevauchement, rapides et précis",
+          "Uniquement en bout en bout",
+          "Manuellement avant chaque version",
+          "Nulle part, la base s'en charge"
+        ],
+        "answerIndex": 0,
+        "explanation": "Début identique, fin identique, inclusion, réservations contiguës : de nombreux cas, idéals pour des tests paramétrés.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi3-q2",
+        "prompt": "Cas pratique 2/3 — Deux requêtes simultanées pourraient réserver la même salle. Quel test le vérifie ?",
+        "choices": [
+          "Un test d'intégration avec la vraie base, qui lance les deux réservations en parallèle et vérifie qu'une seule réussit",
+          "Un test unitaire avec un mock du dépôt",
+          "Un test de l'interface graphique",
+          "Ce n'est pas testable"
+        ],
+        "answerIndex": 0,
+        "explanation": "Seule la vraie base (contrainte, verrou, transaction) garantit l'exclusion sous concurrence.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Qu'ajouter en bout en bout ?",
+        "choices": [
+          "Un seul parcours : se connecter, réserver une salle libre, voir la réservation confirmée",
+          "Tous les cas de chevauchement",
+          "Un test par champ du formulaire",
+          "Aucun test"
+        ],
+        "answerIndex": 0,
+        "explanation": "Il prouve que tout est bien branché ; le détail est vérifié plus bas dans la pyramide.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi3-q4",
+        "prompt": "Qu'est-ce qu'un test de contrat entre deux services ?",
+        "choices": [
+          "Un test qui vérifie que le fournisseur d'une API respecte ce que ses consommateurs attendent (champs, types, codes)",
+          "Un contrat juridique",
+          "Un test de performance",
+          "Un test d'interface graphique"
+        ],
+        "answerIndex": 0,
+        "explanation": "Il détecte une rupture de compatibilité avant le déploiement, sans monter tout le système.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "qa-defi3-q5",
+        "prompt": "Que vérifier dans un test d'intégration d'API ?",
+        "choices": [
+          "Le code de statut",
+          "Le format et le contenu de la réponse",
+          "L'effet en base de données",
+          "La couleur des boutons"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'apparence relève des tests visuels, à part.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi3-q6",
+        "prompt": "En entretien : « Votre suite de tests prend 45 minutes. Que faites-vous ? »",
+        "choices": [
+          "Mesurer les tests les plus lents, déplacer la vérification de détail vers les tests unitaires, paralléliser, et réserver la suite complète à certaines étapes",
+          "Supprimer les tests lents",
+          "Ne lancer les tests qu'une fois par mois",
+          "Acheter une machine plus rapide uniquement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un retour lent pousse les développeurs à contourner les tests ; viser quelques minutes pour la suite principale.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

@@ -7,13 +7,314 @@
       "id": "qa-pyramide",
       "title": "La pyramide des tests",
       "summary": "Unitaires, intégration, bout en bout.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Pourquoi tester",
+          "body": "Les tests automatisés détectent les régressions en quelques secondes, permettent de modifier le code sans crainte, et documentent le comportement attendu. Ils ne prouvent pas l'absence de bugs, mais rendent les changements sûrs et rapides."
+        },
+        {
+          "title": "Trois niveaux",
+          "body": "Les tests unitaires vérifient une fonction ou une classe isolée : très rapides, très nombreux. Les tests d'intégration vérifient que plusieurs composants fonctionnent ensemble (le code et une vraie base de données). Les tests de bout en bout pilotent l'application entière comme un utilisateur : les plus réalistes, mais lents et plus fragiles."
+        },
+        {
+          "title": "La forme de la pyramide",
+          "body": "Beaucoup de tests unitaires à la base, moins de tests d'intégration, quelques tests de bout en bout au sommet. L'inverse, le « cornet de glace » (surtout des tests manuels et de bout en bout), donne des suites lentes, instables et coûteuses à maintenir. Certaines équipes préfèrent un « trophée » qui met l'accent sur l'intégration : l'essentiel est d'équilibrer confiance et rapidité."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-pyramide-q1",
+          "prompt": "Quel type de test doit être le plus nombreux selon la pyramide ?",
+          "choices": [
+            "Les tests unitaires",
+            "Les tests de bout en bout",
+            "Les tests manuels",
+            "Les tests de charge"
+          ],
+          "answerIndex": 0,
+          "explanation": "Rapides et ciblés, ils donnent un retour en secondes et pointent précisément le problème.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-pyramide-q2",
+          "prompt": "Pourquoi ne pas tout tester de bout en bout, puisque c'est le plus réaliste ?",
+          "choices": [
+            "Ces tests sont lents, fragiles et indiquent mal où se trouve le problème",
+            "Parce qu'ils ne trouvent jamais de bugs",
+            "Parce qu'ils sont interdits en CI",
+            "Parce qu'ils ne testent pas l'interface"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une suite de 2 000 tests de bout en bout peut durer des heures et échouer pour des raisons sans lien avec le code (réseau, délais).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-pyramide-q3",
+          "prompt": "On vérifie qu'un dépôt écrit et relit correctement des commandes dans une vraie base PostgreSQL. Quel type de test ?",
+          "choices": [
+            "Un test d'intégration",
+            "Un test unitaire",
+            "Un test de bout en bout",
+            "Un test de charge"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il vérifie l'intégration entre le code et un composant externe réel.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-pyramide-q4",
+          "prompt": "Que garantit une suite de tests qui passe ?",
+          "choices": [
+            "Que les comportements testés fonctionnent ; pas l'absence de bugs ailleurs",
+            "Qu'il n'y a aucun bug",
+            "Que le code est rapide",
+            "Que le code est sécurisé"
+          ],
+          "answerIndex": 0,
+          "explanation": "« Les tests peuvent montrer la présence de bugs, jamais leur absence » (Dijkstra).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-pyramide-q5",
+          "prompt": "Une équipe a 30 tests unitaires et 400 tests de bout en bout qui durent 3 heures. Comment s'appelle cette situation ?",
+          "choices": [
+            "Le cornet de glace, la pyramide inversée",
+            "La pyramide idéale",
+            "Le trophée des tests",
+            "Le TDD"
+          ],
+          "answerIndex": 0,
+          "explanation": "On rééquilibre en déplaçant la vérification de la logique vers des tests unitaires et d'intégration.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "qa-pyramide-q6",
+          "prompt": "Quels bénéfices apportent les tests automatisés ?",
+          "choices": [
+            "Détecter rapidement les régressions",
+            "Permettre de refactorer en confiance",
+            "Documenter le comportement attendu",
+            "Rendre le code plus rapide à l'exécution"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les tests n'accélèrent pas le programme : ils accélèrent son évolution.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "qa-bons-tests",
       "title": "Un bon test",
       "summary": "Rapide, isolé, lisible, déterministe.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les qualités",
+          "body": "Un bon test est rapide (on le lance sans hésiter), isolé (il ne dépend ni de l'ordre ni des autres tests), déterministe (même résultat à chaque exécution), lisible (son nom dit ce qui est vérifié) et ciblé (il échoue pour une seule raison)."
+        },
+        {
+          "title": "Tester le comportement",
+          "body": "On teste ce que fait le code, par son interface publique, pas comment il le fait. Un test lié aux détails internes casse à chaque refactoring, même quand le comportement reste correct.",
+          "code": "def test_remise_de_10_pourcent_au_dela_de_100_euros():\n    panier = Panier()\n    panier.ajouter(Article(\"clavier\", 120))\n    assert panier.total() == 108"
+        },
+        {
+          "title": "Les ennemis du déterminisme",
+          "body": "L'heure courante, l'aléatoire, le réseau, l'ordre des dictionnaires ou des threads, une base partagée entre tests. On injecte l'horloge et le générateur aléatoire pour les contrôler, et chaque test prépare ses propres données. Un test instable (flaky) qui échoue « parfois » ruine la confiance dans toute la suite."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-bons-q1",
+          "prompt": "Un test échoue une fois sur vingt sans modification du code. Comment l'appelle-t-on ?",
+          "choices": [
+            "Un test instable (flaky)",
+            "Un test unitaire",
+            "Un test de mutation",
+            "Un test de charge"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il faut en trouver la cause (temps, ordre, concurrence, dépendance externe) plutôt que de relancer la CI.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "qa-bons-q2",
+          "prompt": "Ce test échouera certains jours. Touche la ligne qui le rend non déterministe.",
+          "code": "def test_offre_du_week_end():\n    commande = Commande(montant=50)\n    commande.date = datetime.now()\n    assert commande.remise() == 5",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La remise dépend du jour : le test ne passe que le week-end. On fixe une date précise, par exemple datetime(2026, 3, 7).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-bons-q3",
+          "prompt": "Quel nom de test est le plus utile ?",
+          "choices": [
+            "test_refuse_une_quantite_negative",
+            "test1",
+            "test_panier",
+            "test_ca_marche"
+          ],
+          "answerIndex": 0,
+          "explanation": "Quand il échoue, son nom dit déjà ce qui est cassé.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-bons-q4",
+          "prompt": "Un test passe seul mais échoue quand toute la suite est lancée. Quelle est la cause probable ?",
+          "choices": [
+            "Il dépend d'un état laissé par un autre test (base partagée, variable globale) : les tests ne sont pas isolés",
+            "Le processeur est trop lent",
+            "La suite est trop longue",
+            "C'est normal"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque test doit préparer et nettoyer ses propres données. Lancer les tests dans un ordre aléatoire révèle ces dépendances.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-bons-q5",
+          "prompt": "Pourquoi éviter de tester les méthodes privées et les détails d'implémentation ?",
+          "choices": [
+            "Les tests casseraient à chaque refactoring, même quand le comportement reste correct",
+            "Parce que c'est impossible",
+            "Parce que les méthodes privées n'ont pas de bugs",
+            "Pour que les tests soient plus rapides"
+          ],
+          "answerIndex": 0,
+          "explanation": "On les teste à travers l'interface publique qui les utilise.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "qa-bons-q6",
+          "prompt": "Qu'est-ce qui rend un test non déterministe ?",
+          "choices": [
+            "L'utilisation de l'heure courante",
+            "Un appel réseau à un service externe",
+            "Des données partagées avec d'autres tests",
+            "Une valeur constante écrite dans le test"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les valeurs fixes sont au contraire ce qui rend un test reproductible.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "qa-defi-fondamentaux",
+    "title": "Défi entretien : stratégie de test",
+    "summary": "Une application sans tests.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "qa-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Vous héritez d'une application sans aucun test, qu'il faut faire évoluer. Par où commencer ?",
+        "choices": [
+          "Par des tests de caractérisation autour des parties que vous allez modifier, qui figent le comportement actuel",
+          "Écrire des tests pour 100 % du code avant toute modification",
+          "Tout réécrire",
+          "Ne pas tester, l'application fonctionne"
+        ],
+        "answerIndex": 0,
+        "explanation": "On protège d'abord la zone de travail, puis on étend la couverture au fil des modifications.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Le code mélange calculs et accès à la base, et rien n'est testable unitairement. Que faire ?",
+        "choices": [
+          "Extraire la logique de calcul dans des fonctions pures, testables sans base de données",
+          "Tester uniquement de bout en bout",
+          "Abandonner les tests",
+          "Copier la base de production sur chaque poste"
+        ],
+        "answerIndex": 0,
+        "explanation": "Séparer la logique des effets de bord rend le code à la fois plus testable et plus clair.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Un bug est signalé en production. Quelle première étape avant de le corriger ?",
+        "choices": [
+          "Écrire un test qui reproduit le bug et échoue",
+          "Corriger directement",
+          "Ajouter un log",
+          "Redémarrer le serveur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le test prouve que la correction fonctionne, et que le bug ne reviendra pas sans être détecté.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi1-q4",
+        "prompt": "Que mesure la couverture de code ?",
+        "choices": [
+          "La part du code exécutée par les tests, pas la qualité de leurs vérifications",
+          "Le nombre de bugs",
+          "La qualité des tests",
+          "La vitesse des tests"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un test sans assertion peut exécuter 100 % du code sans rien vérifier. Les tests de mutation mesurent mieux leur efficacité.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "qa-defi1-q5",
+        "prompt": "Que tester en priorité dans une application ?",
+        "choices": [
+          "Les règles métier critiques (calculs de prix, droits d'accès)",
+          "Le code qui change souvent",
+          "Les cas limites qui ont déjà causé des bugs",
+          "Les accesseurs triviaux (get/set)"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "On concentre l'effort là où une erreur coûte cher ou a le plus de chances d'arriver.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi1-q6",
+        "prompt": "En entretien : « Faut-il viser 100 % de couverture ? »",
+        "choices": [
+          "Non, c'est un indicateur, pas un objectif : une couverture élevée sur le code important et des tests pertinents valent mieux",
+          "Oui, toujours",
+          "Non, 10 % suffisent toujours",
+          "La couverture n'a aucun intérêt"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un objectif chiffré imposé pousse à écrire des tests creux pour atteindre le chiffre.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

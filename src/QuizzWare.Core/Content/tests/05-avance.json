@@ -7,19 +7,430 @@
       "id": "qa-proprietes",
       "title": "Tests par propriétés",
       "summary": "Générer des cas de test.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des propriétés plutôt que des exemples",
+          "body": "Un test classique vérifie quelques exemples choisis à la main. Un test par propriétés énonce une règle vraie pour toutes les entrées, et la bibliothèque génère des centaines de cas, y compris des cas limites auxquels on n'aurait pas pensé : liste vide, très grands nombres, caractères Unicode exotiques.",
+          "code": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers()))\ndef test_trier_deux_fois_ne_change_rien(xs):\n    assert trier(trier(xs)) == trier(xs)\n\n@given(st.text())\ndef test_aller_retour_json(s):\n    assert json.loads(json.dumps(s)) == s"
+        },
+        {
+          "title": "Trouver des propriétés",
+          "body": "Les aller-retours : décoder(encoder(x)) == x. L'idempotence : appliquer deux fois revient à appliquer une fois. Les invariants : un tri conserve les éléments et produit une suite croissante. La comparaison à une version simple : l'algorithme optimisé donne le même résultat que la version naïve."
+        },
+        {
+          "title": "La réduction",
+          "body": "Quand un cas échoue, la bibliothèque le réduit automatiquement au plus petit contre-exemple qui échoue encore : au lieu d'une liste de 87 nombres, elle montre [0, -1]. Elle mémorise les échecs pour les rejouer aux exécutions suivantes. Hypothesis (Python), FsCheck (.NET) et QuickCheck (Haskell, l'original) en sont des exemples."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-props-q1",
+          "prompt": "Quelle propriété décrit correctement un tri ?",
+          "choices": [
+            "Le résultat est croissant et contient exactement les mêmes éléments que l'entrée",
+            "Le résultat est croissant",
+            "Le résultat a la même longueur que l'entrée",
+            "Le premier élément est le plus petit"
+          ],
+          "answerIndex": 0,
+          "explanation": "« Le résultat est croissant » seul serait satisfait par une fonction qui renvoie toujours une liste vide.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-props-q2",
+          "prompt": "Que fait la réduction (shrinking) quand un cas généré échoue ?",
+          "choices": [
+            "Elle cherche le plus petit contre-exemple qui échoue encore, pour faciliter le diagnostic",
+            "Elle supprime le test",
+            "Elle compresse les données",
+            "Elle relance le test jusqu'à ce qu'il passe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un contre-exemple minimal révèle souvent directement la cause du bug.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-props-q3",
+          "prompt": "Quelle propriété d'aller-retour tester pour une fonction de sérialisation ?",
+          "choices": [
+            "deserialiser(serialiser(x)) == x pour tout x",
+            "serialiser(x) n'est jamais vide",
+            "serialiser(x) est plus court que x",
+            "serialiser est rapide"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ce test simple trouve très souvent des bugs d'échappement, d'encodage ou de précision des nombres.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-props-q4",
+          "prompt": "On a écrit une version optimisée et complexe d'un algorithme. Quelle propriété tester ?",
+          "choices": [
+            "Pour toute entrée, elle donne le même résultat que la version simple et évidente",
+            "Elle est plus rapide",
+            "Elle ne plante jamais",
+            "Elle a moins de lignes"
+          ],
+          "answerIndex": 0,
+          "explanation": "La version naïve sert d'oracle : c'est le test différentiel.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "qa-props-q5",
+          "prompt": "Quels cas Hypothesis génère-t-il volontiers pour st.text() ?",
+          "choices": [
+            "La chaîne vide, des caractères Unicode inhabituels, des caractères de contrôle",
+            "Uniquement des mots français",
+            "Uniquement des chaînes de 10 caractères",
+            "Uniquement des chiffres"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ce sont précisément les cas que les tests écrits à la main oublient.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "qa-props-q6",
+          "prompt": "Quelles propriétés sont de bons candidats ?",
+          "choices": [
+            "Idempotence : normaliser(normaliser(x)) == normaliser(x)",
+            "Aller-retour : decompresser(compresser(x)) == x",
+            "Invariant : un virement ne change pas la somme totale des deux comptes",
+            "Résultat exact : calculer(3) == 42, pour une seule entrée"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le dernier est un test par exemple classique, utile aussi, mais ce n'est pas une propriété générale.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "qa-mutation",
       "title": "Tests de mutation",
       "summary": "Tester les tests.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Qui teste les tests ?",
+          "body": "La couverture dit quelles lignes sont exécutées, pas si les tests vérifient vraiment leur résultat. Les tests de mutation introduisent volontairement de petites erreurs dans le code (des mutants) et relancent les tests : un bon jeu de tests doit échouer, c'est-à-dire « tuer » chaque mutant."
+        },
+        {
+          "title": "Des mutations typiques",
+          "body": "Remplacer > par >=, + par -, true par false, supprimer un appel, renvoyer une valeur constante. Un mutant qui survit révèle un comportement que personne ne vérifie : une condition aux bornes non testée, une assertion trop faible.",
+          "code": "# Code d'origine\ndef est_majeur(age):\n    return age >= 18\n\n# Mutant : >= devient >\ndef est_majeur(age):\n    return age > 18\n\n# Ce test laisse survivre le mutant :\nassert est_majeur(30) and not est_majeur(10)"
+        },
+        {
+          "title": "En pratique",
+          "body": "mutmut (Python), Stryker (JavaScript, C#), PIT (Java). L'exécution est coûteuse (une suite de tests par mutant) : on la lance sur le code modifié ou la nuit, et on regarde les mutants survivants dans le code critique. Le score de mutation est un meilleur indicateur de la qualité des tests que la couverture."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-mutation-q1",
+          "prompt": "Que signifie qu'un mutant « survit » ?",
+          "choices": [
+            "Les tests passent encore alors que le code a été modifié : ce comportement n'est pas vérifié",
+            "Le mutant a fait planter le programme",
+            "Le mutant a été corrigé automatiquement",
+            "Les tests ont détecté la modification"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque mutant survivant indique un test manquant ou une assertion trop faible.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-mutation-q2",
+          "prompt": "Quel test ajouter pour tuer le mutant de la leçon (>= devient >) ?",
+          "choices": [
+            "assert est_majeur(18)",
+            "assert est_majeur(40)",
+            "assert not est_majeur(5)",
+            "assert est_majeur(30)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Seule la valeur à la frontière distingue >= de > : c'est un test aux bornes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-mutation-q3",
+          "prompt": "Une suite a 95 % de couverture mais un score de mutation de 40 %. Qu'en conclure ?",
+          "choices": [
+            "Les tests exécutent presque tout le code mais vérifient peu de choses : beaucoup d'assertions manquent ou sont faibles",
+            "Les tests sont excellents",
+            "Le code n'a pas de bugs",
+            "La couverture est fausse"
+          ],
+          "answerIndex": 0,
+          "explanation": "Exécuter une ligne ne prouve pas qu'on vérifie ce qu'elle produit.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-mutation-q4",
+          "prompt": "Pourquoi ne pas lancer les tests de mutation à chaque commit sur tout le projet ?",
+          "choices": [
+            "C'est très coûteux : il faut relancer la suite de tests pour chaque mutant",
+            "Parce qu'ils sont inutiles",
+            "Parce qu'ils modifient le code de production définitivement",
+            "Parce qu'ils exigent une base de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "On les limite au code modifié, ou on les exécute la nuit.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-mutation-q5",
+          "prompt": "Un mutant remplace une ligne de log par rien, et survit. Faut-il ajouter un test ?",
+          "choices": [
+            "Pas forcément : certains mutants touchent du code sans effet métier ; on juge selon l'importance du comportement",
+            "Oui, toujours, chaque mutant doit être tué",
+            "Non, il faut supprimer l'outil",
+            "Oui, en vérifiant le texte exact de chaque log"
+          ],
+          "answerIndex": 0,
+          "explanation": "Viser 100 % de mutants tués mène à des tests fragiles sur des détails sans importance.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "qa-mutation-q6",
+          "prompt": "Quelles mutations un outil applique-t-il typiquement ?",
+          "choices": [
+            "Changer un opérateur de comparaison (< devient <=)",
+            "Changer un opérateur arithmétique (+ devient -)",
+            "Remplacer une valeur de retour par une constante",
+            "Renommer le dépôt Git"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les mutations imitent les petites erreurs qu'un développeur pourrait faire.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "qa-charge",
       "title": "Tests de charge",
       "summary": "Mesurer sous pression.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Plusieurs types de tests de performance",
+          "body": "Test de charge : le système tient-il la charge attendue avec des temps de réponse acceptables ? Test de stress : où est le point de rupture, et comment se dégrade-t-il ? Test d'endurance : tient-il des heures (fuites mémoire, connexions qui s'accumulent) ? Test de pic : supporte-t-il une montée brutale ?"
+        },
+        {
+          "title": "Un scénario réaliste",
+          "body": "On simule des utilisateurs virtuels qui enchaînent des parcours réalistes, avec des temps de pause, sur un environnement proche de la production. On mesure les percentiles de latence (p95, p99), le débit et le taux d'erreur, et on compare à des objectifs fixés à l'avance.",
+          "code": "from locust import HttpUser, task, between\n\nclass Acheteur(HttpUser):\n    wait_time = between(1, 3)\n\n    @task(3)\n    def consulter(self):\n        self.client.get(\"/produits\")\n\n    @task(1)\n    def commander(self):\n        self.client.post(\"/commandes\", json={\"id\": 7})"
+        },
+        {
+          "title": "Interpréter",
+          "body": "La moyenne cache les lenteurs : on suit les percentiles. Quand la latence explose, on cherche le goulot d'étranglement : processeur, base de données, pool de connexions, verrou, service externe. Un générateur de charge saturé fausse lui-même les résultats : il faut le surveiller aussi."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-charge-q1",
+          "prompt": "Quel test révèle une fuite mémoire qui fait planter le service après 6 heures ?",
+          "choices": [
+            "Un test d'endurance, sous charge modérée pendant plusieurs heures",
+            "Un test unitaire",
+            "Un test de pic de 2 minutes",
+            "Un test de mutation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les fuites et accumulations n'apparaissent qu'avec la durée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-charge-q2",
+          "prompt": "Dans le scénario Locust de la leçon, quelle part des actions est une consultation ?",
+          "choices": [
+            "Environ 75 % : les poids sont 3 contre 1",
+            "50 %",
+            "100 %",
+            "25 %"
+          ],
+          "answerIndex": 0,
+          "explanation": "@task(3) et @task(1) : trois consultations pour une commande, comme sur un vrai site marchand.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-charge-q3",
+          "prompt": "Pourquoi ajouter des temps de pause (wait_time) entre les actions des utilisateurs virtuels ?",
+          "choices": [
+            "Pour imiter de vrais utilisateurs, qui lisent et réfléchissent entre deux clics",
+            "Pour ralentir le serveur",
+            "Pour économiser la batterie",
+            "Ce n'est pas utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans pause, 100 utilisateurs virtuels génèrent autant de requêtes que des milliers de vrais utilisateurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-charge-q4",
+          "prompt": "À 500 utilisateurs, la latence p99 passe de 200 ms à 8 s, mais le processeur des serveurs reste à 30 %. Où chercher ?",
+          "choices": [
+            "Un goulot ailleurs : pool de connexions à la base saturé, verrou, service externe lent",
+            "Le processeur est la cause",
+            "Il faut ajouter des serveurs web",
+            "Il n'y a pas de problème"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des requêtes qui attendent une ressource rare n'utilisent pas le processeur : il faut observer les files d'attente.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "qa-charge-q5",
+          "prompt": "Pourquoi éviter de lancer un test de charge contre la production sans précaution ?",
+          "choices": [
+            "Il peut dégrader le service pour les vrais utilisateurs, et polluer les données et les statistiques",
+            "Parce que la production est trop rapide",
+            "Parce que c'est techniquement impossible",
+            "Il n'y a aucun risque"
+          ],
+          "answerIndex": 0,
+          "explanation": "On utilise un environnement dédié, dimensionné comme la production, ou des créneaux et des volumes contrôlés.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "qa-charge-q6",
+          "prompt": "Que mesurer pendant un test de charge ?",
+          "choices": [
+            "Les percentiles de latence (p95, p99)",
+            "Le débit de requêtes traitées",
+            "Le taux d'erreur",
+            "La moyenne de latence seule"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La moyenne seule masque les utilisateurs qui attendent plusieurs secondes.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "qa-defi-avance",
+    "title": "Défi entretien : confiance dans les tests",
+    "summary": "Des tests qui ne protègent pas.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "qa-defi5-q1",
+        "prompt": "Cas pratique 1/3 — Un bug en production a franchi une suite de tests à 92 % de couverture. Comment évaluer la qualité réelle des tests ?",
+        "choices": [
+          "Lancer des tests de mutation sur le module concerné pour voir quels changements passent inaperçus",
+          "Augmenter la couverture à 100 %",
+          "Supprimer les tests",
+          "Ajouter des logs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les mutants survivants montrent où les assertions manquent.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi5-q2",
+        "prompt": "Cas pratique 2/3 — Le bug venait d'une chaîne contenant un emoji, mal découpée. Quel type de test l'aurait sans doute trouvé ?",
+        "choices": [
+          "Un test par propriétés avec des chaînes Unicode générées",
+          "Un test de charge",
+          "Un test de bout en bout avec « bonjour »",
+          "Un test unitaire avec « abc »"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les générateurs explorent des entrées qu'on n'écrit jamais à la main.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Une fois le bug corrigé, que garder ?",
+        "choices": [
+          "Le contre-exemple minimal comme test de non-régression explicite, en plus du test par propriétés",
+          "Rien, le bug est corrigé",
+          "Uniquement le test par propriétés",
+          "Une capture d'écran"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le test explicite documente le cas et échoue de façon déterministe si le bug revient.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi5-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "def est_majeur(age):\n    return age > 18     # mutant\n\ncas = [30, 10, 18]\nprint([est_majeur(a) for a in cas])",
+        "choices": [
+          "[True, False, False]",
+          "[True, False, True]",
+          "[True, True, True]",
+          "[False, False, False]"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec le mutant, 18 n'est plus majeur : un test qui attend True pour 18 tue ce mutant.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "qa-defi5-q5",
+        "prompt": "Quelles techniques renforcent la confiance dans une suite de tests ?",
+        "choices": [
+          "Les tests de mutation",
+          "Les tests par propriétés",
+          "Un test de non-régression pour chaque bug corrigé",
+          "Un objectif de couverture atteint avec des tests sans assertion"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Des tests sans assertion gonflent la couverture sans rien protéger.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi5-q6",
+        "prompt": "En entretien : « Comment savoir si vos tests sont bons ? »",
+        "choices": [
+          "Ils échouent quand le code est cassé (mutation), passent de façon fiable quand il est correct, et s'exécutent assez vite pour être lancés en permanence",
+          "Ils atteignent 100 % de couverture",
+          "Ils sont nombreux",
+          "Ils n'échouent jamais"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un test qui n'échoue jamais, même quand le code est faux, ne protège rien.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

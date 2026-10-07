@@ -7,19 +7,434 @@
       "id": "qa-aaa",
       "title": "Arrange, Act, Assert",
       "summary": "Structurer un test.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Trois temps",
+          "body": "Arrange : préparer les données et les objets. Act : exécuter l'action testée, une seule. Assert : vérifier le résultat. Séparer visuellement les trois parties rend le test lisible d'un coup d'œil.",
+          "code": "def test_retrait_diminue_le_solde():\n    # Arrange\n    compte = Compte(solde=100)\n    # Act\n    compte.retirer(30)\n    # Assert\n    assert compte.solde == 70"
+        },
+        {
+          "title": "Tester les erreurs et les cas limites",
+          "body": "On vérifie aussi que les erreurs attendues se produisent, et les cas aux bornes : zéro, valeur négative, liste vide, valeur maximale. C'est souvent là que les bugs se cachent.",
+          "code": "def test_retrait_superieur_au_solde_refuse():\n    compte = Compte(solde=100)\n    with pytest.raises(SoldeInsuffisant):\n        compte.retirer(150)"
+        },
+        {
+          "title": "Paramétrer",
+          "body": "Quand plusieurs cas suivent le même schéma, un test paramétré évite la duplication : chaque jeu de valeurs devient un test distinct dans le rapport.",
+          "code": "@pytest.mark.parametrize(\"annee, bissextile\", [\n    (2024, True), (2023, False),\n    (1900, False), (2000, True),\n])\ndef test_bissextile(annee, bissextile):\n    assert est_bissextile(annee) == bissextile"
+        }
+      ],
+      "questions": [
+        {
+          "type": "order",
+          "id": "qa-aaa-q1",
+          "prompt": "Remets ce test dans l'ordre Arrange, Act, Assert.",
+          "lines": [
+            "def test_ajout_au_panier():",
+            "    panier = Panier()",
+            "    panier.ajouter(\"stylo\", 2)",
+            "    assert panier.quantite(\"stylo\") == 2"
+          ],
+          "explanation": "Préparer, agir une fois, vérifier.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-aaa-q2",
+          "prompt": "Combien de tests le test paramétré de la leçon produit-il ?",
+          "choices": [
+            "4",
+            "1",
+            "2",
+            "8"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un par jeu de valeurs : si 1900 échoue, le rapport l'indique précisément.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "qa-aaa-q3",
+          "prompt": "Ce test passe toujours, même si le code est faux. Touche la ligne en cause.",
+          "code": "def test_calcul_tva():\n    facture = Facture(ht=100)\n    ttc = facture.ttc()\n    print(ttc)",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Il n'y a aucune assertion : le test vérifie seulement que le code ne plante pas. Il faut assert ttc == 120.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-aaa-q4",
+          "prompt": "Quelle année teste un cas limite important de la règle des années bissextiles ?",
+          "choices": [
+            "1900 : divisible par 4 et par 100, mais pas par 400, donc non bissextile",
+            "2023",
+            "2021",
+            "2025"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les implémentations naïves (« divisible par 4 ») se trompent sur 1900 et 2100.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "qa-aaa-q5",
+          "prompt": "Complète le test qui vérifie qu'une division par zéro lève une erreur.",
+          "code": "def test_division_par_zero():\n    with pytest.___(ZeroDivisionError):\n        diviser(10, ___)",
+          "answers": [
+            "raises",
+            "0"
+          ],
+          "distractors": [
+            "catch",
+            "1",
+            "warns"
+          ],
+          "explanation": "pytest.raises échoue si l'exception attendue n'est pas levée dans le bloc.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "qa-aaa-q6",
+          "prompt": "Quels cas limites tester pour une fonction qui calcule la moyenne d'une liste ?",
+          "choices": [
+            "Une liste vide",
+            "Une liste d'un seul élément",
+            "Des valeurs négatives",
+            "Une liste de 5 nombres positifs ordinaires uniquement"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le cas ordinaire est utile, mais les bugs se cachent plutôt aux bornes : la liste vide provoque souvent une division par zéro.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "qa-doublures",
       "title": "Doublures de test",
       "summary": "Stubs, mocks et fakes.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Remplacer les dépendances",
+          "body": "Pour tester une classe sans sa base de données, son service de paiement ou son horloge, on lui fournit des doublures. Un stub renvoie des réponses préparées. Un fake est une implémentation simplifiée qui fonctionne vraiment (un dépôt en mémoire). Un mock enregistre les appels pour vérifier qu'ils ont eu lieu."
+        },
+        {
+          "title": "Avec unittest.mock",
+          "body": "Mock crée un objet qui accepte n'importe quel appel et le mémorise. On fixe la valeur renvoyée, puis on vérifie les appels reçus.",
+          "code": "from unittest.mock import Mock\n\ndef test_confirmation_envoyee():\n    emails = Mock()\n    service = Commandes(emails=emails)\n    service.valider(commande_id=42)\n    emails.envoyer.assert_called_once_with(\n        \"confirmation\", 42)"
+        },
+        {
+          "title": "Avec modération",
+          "body": "Trop de mocks couplent les tests aux détails internes : chaque refactoring casse des dizaines de tests sans changer le comportement. On réserve les doublures aux frontières du système (réseau, base, horloge, aléatoire), et on préfère les fakes et les vrais objets à l'intérieur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-doublures-q1",
+          "prompt": "Un dépôt en mémoire, basé sur un dictionnaire, remplace la base de données dans les tests. Quel type de doublure ?",
+          "choices": [
+            "Un fake",
+            "Un mock",
+            "Un stub",
+            "Un spy"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un fake a un vrai comportement, simplifié : on peut y enregistrer puis relire des données.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-doublures-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "from unittest.mock import Mock\n\nmeteo = Mock()\nmeteo.temperature.return_value = 21\nprint(meteo.temperature(\"Lyon\"),\n      meteo.temperature.call_count)",
+          "choices": [
+            "21 1",
+            "21 0",
+            "None 1",
+            "Une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le mock renvoie la valeur configurée et compte les appels.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-doublures-q3",
+          "prompt": "Pourquoi remplacer le service de paiement par une doublure dans les tests unitaires ?",
+          "choices": [
+            "Pour des tests rapides, déterministes et sans débiter de vraie carte",
+            "Parce que le service de paiement n'a pas de bugs",
+            "Pour tester le service de paiement lui-même",
+            "Parce que c'est obligatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le vrai service est vérifié séparément, par des tests d'intégration sur son environnement de test (sandbox).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-doublures-q4",
+          "prompt": "Un refactoring interne, sans changement de comportement, casse 60 tests. Quelle est la cause probable ?",
+          "choices": [
+            "Les tests utilisent trop de mocks et vérifient des détails internes plutôt que le résultat",
+            "Le refactoring a forcément introduit des bugs",
+            "Les tests sont trop rapides",
+            "Il n'y a pas assez de mocks"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des tests qui vérifient « qui appelle qui » figent l'implémentation. On vérifie plutôt les résultats observables.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-doublures-q5",
+          "prompt": "Comment tester une fonction qui dépend de la date du jour ?",
+          "choices": [
+            "Lui injecter une horloge (ou la date) que le test peut fixer",
+            "Lancer le test le bon jour",
+            "Changer l'heure de la machine de CI",
+            "Ne pas la tester"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'horloge est une dépendance comme une autre. En .NET, TimeProvider ; en Python, un paramètre ou freezegun.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "qa-doublures-q6",
+          "prompt": "Quelles dépendances justifient une doublure dans un test unitaire ?",
+          "choices": [
+            "Un appel réseau à une API externe",
+            "L'horloge système",
+            "Un générateur de nombres aléatoires",
+            "Une simple fonction pure de calcul"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une fonction pure est rapide et déterministe : on l'utilise telle quelle.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "qa-tdd",
       "title": "TDD",
       "summary": "Écrire le test d'abord.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Rouge, vert, refactor",
+          "body": "Le développement piloté par les tests procède en cycles très courts. Rouge : écrire un petit test qui échoue. Vert : écrire le code le plus simple qui le fait passer. Refactor : améliorer le code (et les tests) sans changer le comportement, tous les tests restant verts."
+        },
+        {
+          "title": "Ce que le TDD apporte",
+          "body": "Écrire le test d'abord oblige à penser l'interface du point de vue de l'appelant, et produit naturellement du code testable et faiblement couplé. Chaque comportement a son test. Le cycle court donne un retour immédiat : on sait toujours où l'on en est."
+        },
+        {
+          "title": "Un exemple",
+          "body": "On commence par le cas le plus simple, puis on ajoute un cas à la fois, en généralisant le code seulement quand un test l'exige.",
+          "code": "def test_romain_1():\n    assert romain(1) == \"I\"\n\ndef test_romain_4():\n    assert romain(4) == \"IV\"\n\ndef test_romain_1994():\n    assert romain(1994) == \"MCMXCIV\""
+        }
+      ],
+      "questions": [
+        {
+          "type": "order",
+          "id": "qa-tdd-q1",
+          "prompt": "Remets dans l'ordre le cycle du TDD.",
+          "language": "text",
+          "lines": [
+            "Écrire un test qui échoue (rouge)",
+            "Écrire le code minimal qui le fait passer (vert)",
+            "Améliorer le code sans casser les tests (refactor)",
+            "Recommencer avec le test suivant"
+          ],
+          "explanation": "Des cycles de quelques minutes, pas de quelques jours.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-tdd-q2",
+          "prompt": "Pourquoi vérifier que le nouveau test échoue avant d'écrire le code ?",
+          "choices": [
+            "Pour s'assurer qu'il teste vraiment quelque chose : un test qui passe d'emblée peut être mal écrit",
+            "Pour perdre du temps",
+            "Parce que pytest l'exige",
+            "Pour tester le compilateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un test qui n'a jamais échoué n'a jamais prouvé qu'il détecte une erreur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-tdd-q3",
+          "prompt": "Pendant l'étape « vert », quel code écrire ?",
+          "choices": [
+            "Le plus simple qui fait passer le test, même s'il semble naïf",
+            "La solution complète et générale",
+            "Le code le plus optimisé possible",
+            "Aucun code"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les tests suivants forceront la généralisation ; le refactoring nettoiera.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-tdd-q4",
+          "prompt": "Que se passe-t-il pendant l'étape « refactor » ?",
+          "choices": [
+            "On améliore la structure du code, tous les tests restant verts",
+            "On ajoute de nouvelles fonctionnalités",
+            "On supprime les tests",
+            "On écrit le test suivant"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les tests servent de filet : le moindre écart de comportement est détecté immédiatement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-tdd-q5",
+          "prompt": "Quel bénéfice de conception le TDD apporte-t-il ?",
+          "choices": [
+            "Le code est pensé du point de vue de son utilisation et reste testable, donc faiblement couplé",
+            "Le code est plus rapide",
+            "Le code n'a plus besoin de revue",
+            "Le code est plus court"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une classe difficile à tester est souvent mal conçue : le TDD le révèle dès le départ.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "qa-tdd-q6",
+          "prompt": "Quelles affirmations sur le TDD sont justes ?",
+          "choices": [
+            "Il procède par très petits pas",
+            "Chaque comportement est couvert par au moins un test",
+            "Il facilite le refactoring",
+            "Il dispense de tests d'intégration"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le TDD produit surtout des tests unitaires ; les tests d'intégration restent nécessaires.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "qa-defi-unitaires",
+    "title": "Défi entretien : tests unitaires",
+    "summary": "Tester un service de commandes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "qa-defi2-q1",
+        "prompt": "Cas pratique 1/3 — Un service valide une commande : il vérifie le stock en base, débite via un prestataire de paiement et envoie un e-mail. Comment le tester unitairement ?",
+        "choices": [
+          "Injecter un faux dépôt de stock, une doublure du paiement et une doublure de l'envoi d'e-mails",
+          "Utiliser la vraie base, le vrai paiement et le vrai serveur d'e-mails",
+          "Ne tester que l'interface graphique",
+          "Ce n'est pas testable"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les dépendances externes sont remplacées ; la logique du service est testée seule, en quelques millisecondes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Que vérifier quand le paiement est refusé ?",
+        "choices": [
+          "Que la commande n'est pas validée, que le stock n'est pas décrémenté, et qu'aucun e-mail de confirmation n'est envoyé",
+          "Uniquement qu'une exception est levée",
+          "Rien, c'est un cas rare",
+          "Que l'e-mail est envoyé quand même"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les chemins d'erreur sont souvent les moins testés, et les plus coûteux quand ils sont faux.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "qa-defi2-q3",
+        "prompt": "Cas pratique 3/3 — Complète la vérification qu'aucun e-mail n'est parti.",
+        "code": "paiement.debiter.side_effect = PaiementRefuse()\nwith pytest.raises(PaiementRefuse):\n    service.valider(commande)\nemails.envoyer.___()",
+        "answers": [
+          "assert_not_called"
+        ],
+        "distractors": [
+          "assert_called",
+          "assert_not_raised",
+          "assert_awaited"
+        ],
+        "explanation": "side_effect fait lever une exception par la doublure ; assert_not_called vérifie que l'e-mail n'a jamais été envoyé.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi2-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "from unittest.mock import Mock\n\nm = Mock(side_effect=[1, 2, ValueError(\"x\")])\nprint(m(), m())\ntry:\n    m()\nexcept ValueError:\n    print(\"erreur\")",
+        "choices": [
+          "1 2 puis erreur",
+          "1 1 puis erreur",
+          "[1, 2] puis erreur",
+          "Une erreur dès le premier appel"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une liste en side_effect fournit une valeur par appel ; une exception de la liste est levée au lieu d'être renvoyée.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "qa-defi2-q5",
+        "prompt": "Quels signes indiquent qu'une classe est difficile à tester ?",
+        "choices": [
+          "Elle crée elle-même ses dépendances avec des appels directs (new, constructeurs, singletons)",
+          "Elle lit l'heure ou des variables globales directement",
+          "Elle mélange calcul métier et accès réseau",
+          "Elle reçoit ses dépendances par son constructeur"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Recevoir ses dépendances (injection) est précisément ce qui rend une classe testable.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi2-q6",
+        "prompt": "En entretien : « Mock ou fake ? »",
+        "choices": [
+          "Un fake pour des dépendances avec état (un dépôt), qui donne des tests plus robustes ; un mock quand on veut vérifier une interaction précise (un e-mail envoyé)",
+          "Toujours des mocks",
+          "Toujours des fakes",
+          "Ni l'un ni l'autre, toujours les vraies dépendances"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les tests à base de fakes vérifient le résultat ; ceux à base de mocks vérifient le chemin, plus fragile.",
+        "difficulty": 2
+      }
+    ]
+  }
 }
