@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (83 écrits) | 339 (215 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (90 écrits) | 341 (235 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -352,35 +352,37 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Bases du langage
-   - Types et tailles
-   - Opérateurs et promotions
-   - Contrôle et fonctions
+1. ✅ Bases du langage
+   - ✅ Types et tailles
+   - ✅ Opérateurs et promotions
+   - ✅ Contrôle et fonctions
 2. ✅ Pointeurs et mémoire
    - ✅ Pointeurs et mémoire
+   - ✅ Tableaux, pointeurs et const
 3. ✅ Chaînes, préprocesseur et mots-clés
    - ✅ Chaînes, préprocesseur et mots-clés
-4. 🕓 Mémoire dynamique
-   - Allouer et libérer
-   - realloc et tableaux dynamiques
-   - Fuites et double free
-5. 🕓 Structures de données
-   - Structures
-   - Unions et énumérations
-   - Listes chaînées
-6. 🕓 Compilation et modules
-   - Headers et unités de compilation
-   - static, extern et linkage
-   - Make
-7. 🕓 Entrées / sorties
-   - stdio
-   - Fichiers
-8. 🕓 Comportements indéfinis et sécurité
-   - Comportements indéfinis courants
-   - Débordements de tampon
-9. 🕓 Bas niveau
-   - Opérations bit à bit
-   - Endianness
+   - ✅ Manipuler des chaînes
+4. ✅ Mémoire dynamique
+   - ✅ Allouer et libérer
+   - ✅ realloc et tableaux dynamiques
+   - ✅ Fuites et double free
+5. ✅ Structures de données
+   - ✅ Structures
+   - ✅ Unions et énumérations
+   - ✅ Listes chaînées
+6. ✅ Compilation et modules
+   - ✅ Headers et unités de compilation
+   - ✅ static, extern et linkage
+   - ✅ Make
+7. ✅ Entrées / sorties
+   - ✅ stdio
+   - ✅ Fichiers
+8. ✅ Comportements indéfinis et sécurité
+   - ✅ Comportements indéfinis courants
+   - ✅ Débordements de tampon
+9. ✅ Bas niveau
+   - ✅ Opérations bit à bit
+   - ✅ Endianness
 
 **Spécialisations**
 

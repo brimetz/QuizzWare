@@ -7,13 +7,311 @@
       "id": "c-ub-courants",
       "title": "Comportements indéfinis courants",
       "summary": "Débordements et pointeurs invalides.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Ce que « indéfini » veut dire",
+          "body": "Un comportement indéfini (UB) n'est pas une erreur détectée : le standard n'impose plus rien au programme. Il peut sembler marcher, planter, ou faire autre chose, et changer de comportement avec le niveau d'optimisation. Le compilateur part du principe qu'il n'arrive jamais, et optimise en conséquence."
+        },
+        {
+          "title": "Les grands classiques",
+          "body": "Débordement d'un entier signé, accès hors limites d'un tableau, déréférencement d'un pointeur nul ou pendant, lecture d'une variable non initialisée, décalage d'une valeur par un nombre de bits négatif ou supérieur à sa taille, modification d'un littéral de chaîne, et deux modifications d'une même variable sans point de séquence (i = i++)."
+        },
+        {
+          "title": "L'optimiseur s'en sert",
+          "body": "Ici, le compilateur peut raisonner : « x + 1 < x ne peut être vrai que si x + 1 déborde ; or le débordement signé n'arrive jamais ; donc la condition est toujours fausse ». Le test de sécurité disparaît du binaire.",
+          "code": "int ajouter_un(int x)\n{\n    if (x + 1 < x)          /* « détection »   */\n        return -1;           /* supprimée en -O2 */\n    return x + 1;\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-ub-q1",
+          "prompt": "Un programme avec un comportement indéfini fonctionne en -O0 et plante en -O2. Que faut-il en conclure ?",
+          "choices": [
+            "Le bug est dans le programme : l'optimiseur a seulement exploité une hypothèse que le code viole",
+            "Le compilateur est bogué",
+            "Il faut livrer en -O0",
+            "Il faut désactiver les avertissements"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les bugs de compilateur existent mais sont rares. Un sanitizer (-fsanitize=undefined) localise généralement le vrai problème.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-ub-q2",
+          "prompt": "Comment tester correctement qu'une addition a + b de deux int positifs va déborder ?",
+          "choices": [
+            "if (a > INT_MAX - b) avant de calculer",
+            "if (a + b < a) après le calcul",
+            "if (a + b < 0) après le calcul",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "On vérifie avant de faire l'opération, sans jamais provoquer le débordement. gcc et clang proposent aussi __builtin_add_overflow, et C23 ckd_add.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "c-ub-q3",
+          "prompt": "Lesquels sont des comportements indéfinis ?",
+          "choices": [
+            "Lire une variable locale non initialisée",
+            "Décaler un int de 32 bits avec x << 32",
+            "i = i++ + 1;",
+            "Le débordement d'un unsigned int"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le débordement des non signés est parfaitement défini : arithmétique modulo 2ⁿ.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "c-ub-q4",
+          "prompt": "Ce code lit une valeur indéterminée sur un chemin. Touche la ligne en cause.",
+          "code": "int statut;\nif (connecte)\n    statut = 1;\nelse if (en_attente)\n    statut = 2;\nprintf(\"%d\\n\", statut);",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Si ni connecte ni en_attente, statut n'a jamais reçu de valeur. Initialiser à la déclaration (int statut = 0;) supprime le problème.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-ub-q5",
+          "prompt": "Pourquoi la vérification x + 1 < x de la leçon peut-elle disparaître du programme compilé ?",
+          "choices": [
+            "Le compilateur suppose qu'un débordement signé n'arrive jamais, donc que la condition est toujours fausse",
+            "Parce qu'elle est mal indentée",
+            "Parce que le compilateur supprime tous les if",
+            "Elle ne disparaît jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des failles réelles du noyau Linux sont venues de vérifications supprimées ainsi. Le noyau compile d'ailleurs avec -fwrapv pour rendre le débordement signé défini.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "c-ub-q6",
+          "prompt": "Quel outil détecte à l'exécution les débordements signés et les décalages invalides ?",
+          "choices": [
+            "UndefinedBehaviorSanitizer (-fsanitize=undefined)",
+            "gdb",
+            "make",
+            "strip"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il affiche un message précis avec le fichier et la ligne. On le combine souvent avec AddressSanitizer dans les tests.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "c-buffer-overflow",
       "title": "Débordements de tampon",
       "summary": "Comprendre et prévenir.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Écrire au-delà du tableau",
+          "body": "Le C ne vérifie pas les indices. Écrire au-delà d'un tableau local écrase les variables voisines sur la pile, et parfois l'adresse de retour de la fonction. Un attaquant qui contrôle les données écrites peut alors détourner l'exécution du programme : c'est la faille la plus célèbre de l'histoire de la sécurité.",
+          "code": "void saluer(const char *nom)\n{\n    char tampon[16];\n    strcpy(tampon, nom);   /* nom de 100 caractères ? */\n    printf(\"Bonjour %s\\n\", tampon);\n}"
+        },
+        {
+          "title": "Les protections",
+          "body": "Les systèmes ajoutent des défenses : le canari de pile (une valeur vérifiée avant le retour de la fonction), la pile non exécutable, et l'ASLR (adresses aléatoires à chaque lancement). Elles compliquent l'exploitation, mais ne corrigent pas le bug."
+        },
+        {
+          "title": "Prévenir",
+          "body": "Toujours connaître et passer la taille des tampons, utiliser les fonctions bornées (snprintf, fgets), vérifier les indices venant de l'extérieur, compiler avec les avertissements, tester avec AddressSanitizer et le fuzzing. Pour du code exposé, des langages sûrs pour la mémoire (Rust, Go) éliminent cette classe de failles."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-overflow-q1",
+          "prompt": "Dans la fonction saluer de la leçon, que se passe-t-il avec un nom de 100 caractères ?",
+          "choices": [
+            "strcpy écrit 101 octets dans un tampon de 16 : la pile est écrasée, et l'adresse de retour peut être détournée",
+            "Le nom est tronqué à 16 caractères",
+            "strcpy renvoie une erreur",
+            "Le tampon s'agrandit automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le schéma de base d'un exploit par débordement de pile.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "c-overflow-q2",
+          "prompt": "Cette boucle écrit un octet de trop. Touche la ligne fautive.",
+          "code": "char t[8];\nfor (int i = 0; i <= 8; i++)\n    t[i] = 'x';",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Les indices valides vont de 0 à 7 : avec <=, on écrit t[8]. C'est l'erreur « off-by-one », source de nombreuses failles.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-overflow-q3",
+          "prompt": "Que fait le canari de pile ?",
+          "choices": [
+            "Une valeur secrète placée avant l'adresse de retour est vérifiée en sortie de fonction ; si elle a changé, le programme s'arrête",
+            "Il empêche toute écriture sur la pile",
+            "Il chiffre la pile",
+            "Il agrandit les tampons"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le message « stack smashing detected ». Il s'active avec -fstack-protector, souvent activé par défaut.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-overflow-q4",
+          "prompt": "Quel est le rôle de l'ASLR ?",
+          "choices": [
+            "Placer la pile, le tas et les bibliothèques à des adresses aléatoires, pour que l'attaquant ne sache pas où sauter",
+            "Vérifier les indices des tableaux",
+            "Chiffrer les fichiers",
+            "Accélérer les allocations"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une fuite d'adresse (via un bug de format, par exemple) peut la contourner : les protections se cumulent.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-overflow-q5",
+          "prompt": "Un serveur lit une longueur dans un paquet réseau, puis copie autant d'octets. Que faut-il vérifier ?",
+          "choices": [
+            "Que la longueur annoncée ne dépasse ni la taille du tampon de destination ni celle des données reçues",
+            "Rien, le client est de confiance",
+            "Seulement qu'elle est positive",
+            "Que le paquet est chiffré"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est exactement la faille Heartbleed (2014) : OpenSSL faisait confiance à une longueur annoncée et renvoyait jusqu'à 64 Ko de sa mémoire.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "c-overflow-q6",
+          "prompt": "Quelles pratiques préviennent les débordements de tampon ?",
+          "choices": [
+            "Passer systématiquement la taille des tampons aux fonctions",
+            "Utiliser snprintf et fgets plutôt que sprintf et gets",
+            "Tester avec AddressSanitizer et du fuzzing",
+            "Augmenter la taille de tous les tampons à 1 Mo"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Agrandir les tampons repousse le problème sans le corriger : un attaquant enverra simplement plus de données.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "c-defi-ub",
+    "title": "Défi entretien : C sûr",
+    "summary": "Revue de sécurité d'une fonction.",
+    "questions": [
+      {
+        "type": "bug",
+        "id": "c-defi8-q1",
+        "prompt": "Cas pratique 1/3 — Cette fonction lit un nom dans un message réseau. Touche la ligne la plus dangereuse.",
+        "code": "void lire_nom(const uint8_t *msg, size_t taille)\n{\n    char nom[32];\n    uint8_t n = msg[0];\n    memcpy(nom, msg + 1, n);\n    nom[n] = '\\0';\n    enregistrer(nom);\n}",
+        "bugLines": [
+          5
+        ],
+        "explanation": "n vient du message et peut valoir jusqu'à 255 : memcpy déborde de nom. Il faut aussi vérifier que n + 1 ≤ taille, sinon on lit au-delà du message.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi8-q2",
+        "prompt": "Cas pratique 2/3 — Quelle vérification ajouter avant le memcpy ?",
+        "code": "if (taille < 1 || n > taille - 1 || n >= sizeof nom)\n    return;",
+        "choices": [
+          "Celle-ci : elle borne n par la taille du message et par celle du tampon, terminateur compris",
+          "if (n > 0) suffit",
+          "if (taille > 0) suffit",
+          "Aucune, memcpy vérifie lui-même"
+        ],
+        "answerIndex": 0,
+        "explanation": "On écrit taille - 1 après avoir vérifié taille ≥ 1, pour éviter un débordement non signé. n >= sizeof nom réserve la place du '\\0'.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi8-q3",
+        "prompt": "Cas pratique 3/3 — Comment trouver ce genre de bug automatiquement ?",
+        "choices": [
+          "Avec un fuzzer (libFuzzer, AFL++) qui envoie des millions de messages mutés, combiné à AddressSanitizer",
+          "En relisant le code une fois",
+          "En compilant en -O3",
+          "En ajoutant des printf"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le fuzzing a révélé des milliers de failles dans des logiciels très utilisés. OSS-Fuzz l'applique en continu aux projets open source majeurs.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi8-q4",
+        "prompt": "Qu'affiche ce code compilé avec -fsanitize=undefined ?",
+        "code": "#include <limits.h>\n\nint main(void)\n{\n    int x = INT_MAX;\n    x++;\n    return 0;\n}",
+        "choices": [
+          "Un message runtime error: signed integer overflow, avec le fichier et la ligne",
+          "Rien",
+          "Une erreur de compilation",
+          "-2147483648"
+        ],
+        "answerIndex": 0,
+        "explanation": "Par défaut, le programme continue après le message ; -fno-sanitize-recover le fait s'arrêter, ce qui est préférable dans les tests.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "c-defi8-q5",
+        "prompt": "Quelles options de compilation renforcent un binaire C en production ?",
+        "choices": [
+          "-fstack-protector-strong",
+          "-D_FORTIFY_SOURCE=2 (avec optimisation), qui vérifie certains appels à memcpy ou strcpy",
+          "-fPIE -pie, pour profiter pleinement de l'ASLR",
+          "-fno-stack-protector"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "-fno-stack-protector désactive au contraire les canaris. Les distributions Linux activent ces protections par défaut.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi8-q6",
+        "prompt": "En entretien : « Faut-il réécrire tout le code C en Rust ? »",
+        "choices": [
+          "Pas forcément tout : on priorise le code exposé aux entrées non fiables (parseurs, réseau), et on durcit le reste avec tests, sanitizers et fuzzing",
+          "Oui, immédiatement",
+          "Non, le C est parfaitement sûr",
+          "Non, Rust est plus lent"
+        ],
+        "answerIndex": 0,
+        "explanation": "Environ 70 % des failles graves de Chrome et Windows sont des erreurs de mémoire : c'est l'argument des réécritures ciblées.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

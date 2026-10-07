@@ -7,13 +7,314 @@
       "id": "c-stdio",
       "title": "stdio",
       "summary": "printf, scanf et leurs pièges.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "printf et ses formats",
+          "body": "Le format doit correspondre exactement au type de l'argument, sans quoi le comportement est indéfini. Largeur et précision se règlent dans le format : %5d aligne sur 5 caractères, %.2f arrondit à deux décimales, %-10s aligne une chaîne à gauche. On ne passe jamais une chaîne venant de l'utilisateur comme format.",
+          "code": "printf(\"[%5d]\\n\", 42);     // [   42]\nprintf(\"[%-5d]\\n\", 42);    // [42   ]\nprintf(\"%.2f\\n\", 3.14159);  // 3.14\nprintf(\"%s\", saisie);        // et non printf(saisie)"
+        },
+        {
+          "title": "Lire une ligne",
+          "body": "scanf(\"%s\") ne limite pas la longueur lue : c'est un débordement de tampon assuré. On lit une ligne avec fgets, qui respecte la taille du tampon, puis on l'analyse (strtol, sscanf). fgets conserve le '\\n' final.",
+          "code": "char ligne[64];\nif (fgets(ligne, sizeof ligne, stdin)) {\n    ligne[strcspn(ligne, \"\\n\")] = '\\0';\n    long n = strtol(ligne, NULL, 10);\n}"
+        },
+        {
+          "title": "Les tampons",
+          "body": "stdout est mis en tampon : vers un terminal, il est vidé à chaque fin de ligne ; vers un fichier ou un pipe, seulement quand le tampon est plein. stderr n'a pas de tampon. Un programme qui plante peut donc perdre ses derniers printf ; fflush(stdout) force l'écriture."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-stdio-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "printf(\"[%4d|%-4d|%.1f]\\n\", 7, 7, 2.26);",
+          "choices": [
+            "[   7|7   |2.3]",
+            "[7   |   7|2.3]",
+            "[7|7|2.26]",
+            "[   7|7   |2.2]"
+          ],
+          "answerIndex": 0,
+          "explanation": "%4d aligne à droite sur 4 caractères, %-4d à gauche, et %.1f arrondit à une décimale.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "c-stdio-q2",
+          "prompt": "Cette lecture peut déborder du tampon. Touche la ligne fautive.",
+          "code": "char nom[16];\nprintf(\"Votre nom : \");\nscanf(\"%s\", nom);\nprintf(\"Bonjour %s\\n\", nom);",
+          "bugLines": [
+            3
+          ],
+          "explanation": "%s lit autant de caractères que l'utilisateur en tape. Il faut au minimum %15s, ou mieux, fgets.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "c-stdio-q3",
+          "prompt": "Cette ligne est une faille de sécurité si message vient de l'utilisateur. Touche-la.",
+          "code": "void journaliser(const char *message)\n{\n    fprintf(stderr, \"[log] \");\n    fprintf(stderr, message);\n    fputc('\\n', stderr);\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Un message contenant %s ou %n est interprété comme format : lecture de la pile, voire écriture en mémoire. Il faut fprintf(stderr, \"%s\", message).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-stdio-q4",
+          "prompt": "Que contient ligne après fgets(ligne, sizeof ligne, stdin) si l'utilisateur tape « abc » puis Entrée ?",
+          "choices": [
+            "\"abc\\n\"",
+            "\"abc\"",
+            "\"\\nabc\"",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "fgets garde le retour à la ligne ; ligne[strcspn(ligne, \"\\n\")] = '\\0' le retire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-stdio-q5",
+          "prompt": "./prog > sortie.txt plante juste après plusieurs printf. Le fichier est vide. Pourquoi ?",
+          "choices": [
+            "Vers un fichier, stdout est vidé seulement quand son tampon est plein : les données étaient encore en mémoire",
+            "printf n'écrit jamais dans les fichiers",
+            "Le fichier a été effacé par le plantage",
+            "La redirection ne fonctionne qu'avec stderr"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans un terminal, chaque fin de ligne vide le tampon, d'où des comportements différents. Les messages de diagnostic vont sur stderr, non mis en tampon.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "c-stdio-q6",
+          "prompt": "Pourquoi strtol plutôt que atoi pour convertir une saisie ?",
+          "choices": [
+            "strtol permet de détecter les erreurs (texte non numérique, dépassement) ; atoi renvoie 0 sans prévenir",
+            "atoi est plus lent",
+            "strtol accepte les nombres à virgule",
+            "atoi n'existe plus"
+          ],
+          "answerIndex": 0,
+          "explanation": "atoi(\"abc\") vaut 0, comme atoi(\"0\") : impossible de distinguer une erreur. strtol indique où s'est arrêtée la conversion et positionne errno.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "c-fichiers",
       "title": "Fichiers",
       "summary": "fopen, fread et fwrite.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Ouvrir et fermer",
+          "body": "fopen renvoie un FILE *, ou NULL en cas d'échec (fichier absent, droits) : on vérifie toujours, et perror explique la cause. Les modes : \"r\" lecture, \"w\" écriture (le fichier est vidé !), \"a\" ajout en fin. Ajouter \"b\" (\"rb\") ouvre en binaire, ce qui compte sous Windows. Chaque fopen réussi appelle un fclose.",
+          "code": "FILE *f = fopen(\"notes.txt\", \"r\");\nif (f == NULL) {\n    perror(\"notes.txt\");\n    return 1;\n}\nchar ligne[256];\nwhile (fgets(ligne, sizeof ligne, f))\n    traiter(ligne);\nfclose(f);"
+        },
+        {
+          "title": "Binaire : fread et fwrite",
+          "body": "fread et fwrite lisent ou écrivent des blocs d'octets bruts et renvoient le nombre d'éléments réellement traités. Écrire une struct telle quelle est simple, mais le fichier dépend du padding, de la taille des types et de l'ordre des octets de la machine : il n'est pas portable.",
+          "code": "size_t n = fread(tampon, 1, sizeof tampon, f);\nif (n < sizeof tampon && ferror(f))\n    perror(\"lecture\");"
+        },
+        {
+          "title": "Détecter la fin",
+          "body": "feof ne devient vrai qu'après une lecture qui a échoué : boucler sur while (!feof(f)) traite la dernière ligne deux fois. On boucle sur le résultat de la fonction de lecture elle-même."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-fichiers-q1",
+          "prompt": "Que fait fopen(\"rapport.txt\", \"w\") si le fichier existe déjà ?",
+          "choices": [
+            "Il le vide entièrement avant d'écrire",
+            "Il ajoute à la fin",
+            "Il échoue",
+            "Il crée une copie"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour ajouter, c'est \"a\". Pour échouer si le fichier existe, C11 propose \"wx\".",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "c-fichiers-q2",
+          "prompt": "Cette boucle traite la dernière ligne deux fois. Touche la ligne fautive.",
+          "code": "char ligne[256];\nwhile (!feof(f)) {\n    fgets(ligne, sizeof ligne, f);\n    traiter(ligne);\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "feof ne devient vrai qu'après l'échec de la lecture suivante ; ligne contient alors encore l'ancienne valeur. On écrit while (fgets(ligne, sizeof ligne, f)).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-fichiers-q3",
+          "prompt": "Que renvoie fread(t, sizeof(int), 100, f) si le fichier ne contient que 40 entiers ?",
+          "choices": [
+            "40, le nombre d'éléments réellement lus",
+            "100",
+            "-1",
+            "160, le nombre d'octets lus"
+          ],
+          "answerIndex": 0,
+          "explanation": "fread compte en éléments, pas en octets. On distingue ensuite la fin de fichier (feof) d'une erreur (ferror).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-fichiers-q4",
+          "prompt": "Un programme écrit ses struct avec fwrite. Pourquoi le fichier peut-il être illisible sur une autre machine ?",
+          "choices": [
+            "Le padding, la taille des types et l'ordre des octets peuvent différer d'une plateforme à l'autre",
+            "fwrite chiffre les données",
+            "Les fichiers binaires ne peuvent pas être copiés",
+            "Il sera toujours lisible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un format portable fixe la taille et l'ordre de chaque champ (sérialisation explicite), ou utilise un format texte comme JSON.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "c-fichiers-q5",
+          "prompt": "Complète la copie d'un fichier binaire par blocs.",
+          "code": "char buf[4096];\nsize_t n;\nwhile ((n = fread(buf, 1, sizeof buf, src)) ___ 0)\n    fwrite(buf, 1, ___, dst);",
+          "answers": [
+            ">",
+            "n"
+          ],
+          "distractors": [
+            "<",
+            "sizeof buf",
+            "=="
+          ],
+          "explanation": "On n'écrit que les n octets réellement lus : le dernier bloc est souvent incomplet. Écrire sizeof buf ajouterait des octets parasites.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "c-fichiers-q6",
+          "prompt": "Quelles bonnes pratiques s'appliquent aux fichiers ?",
+          "choices": [
+            "Vérifier le résultat de fopen",
+            "Fermer chaque fichier ouvert avec fclose",
+            "Vérifier aussi le résultat de fclose quand on a écrit, car il peut échouer en vidant le tampon",
+            "Boucler sur while (!feof(f))"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un disque plein peut n'être détecté qu'au fclose, quand les dernières données sont réellement écrites.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "c-defi-es",
+    "title": "Défi entretien : entrées / sorties",
+    "summary": "Compter les lignes d'un fichier.",
+    "questions": [
+      {
+        "type": "order",
+        "id": "c-defi7-q1",
+        "prompt": "Cas pratique 1/3 — Remets dans l'ordre un programme qui compte les lignes d'un fichier.",
+        "lines": [
+          "FILE *f = fopen(chemin, \"r\");",
+          "if (f == NULL) { perror(chemin); return -1; }",
+          "long n = 0;",
+          "int c;",
+          "while ((c = fgetc(f)) != EOF)",
+          "    if (c == '\\n') n++;",
+          "fclose(f);"
+        ],
+        "explanation": "On ouvre et vérifie, on compte les '\\n' caractère par caractère, puis on ferme.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi7-q2",
+        "prompt": "Cas pratique 2/3 — Pourquoi c est-il un int et non un char ?",
+        "choices": [
+          "fgetc renvoie un int pour pouvoir distinguer EOF (-1) de tous les octets possibles (0 à 255)",
+          "Par habitude",
+          "Parce que char est trop grand",
+          "Pour aller plus vite"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec un char, l'octet 0xFF se confondrait avec EOF (char signé), ou EOF ne serait jamais détecté (char non signé) : boucle infinie.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi7-q3",
+        "prompt": "Cas pratique 3/3 — Le fichier se termine par « fin » sans retour à la ligne final. Que renvoie le compteur pour « a\\nb\\nfin » ?",
+        "choices": [
+          "2, alors que le fichier a 3 lignes visibles",
+          "3",
+          "0",
+          "1"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est le comportement de wc -l. Pour compter la dernière ligne, il faut vérifier si le dernier caractère lu n'était pas un '\\n'.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi7-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "char *fin;\nlong v = strtol(\"42abc\", &fin, 10);\nprintf(\"%ld %s\\n\", v, fin);",
+        "choices": [
+          "42 abc",
+          "0 42abc",
+          "42",
+          "Erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "strtol s'arrête au premier caractère non numérique et indique où dans fin. Si fin pointe sur autre chose que '\\0', la saisie n'était pas un nombre pur.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "c-defi7-q5",
+        "prompt": "Quelles fonctions sont dangereuses ou à éviter pour lire une saisie ?",
+        "choices": [
+          "gets, retirée du langage",
+          "scanf(\"%s\") sans largeur",
+          "atoi, qui ne signale pas les erreurs",
+          "fgets avec la taille du tampon"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "fgets limitée à la taille du tampon est la base d'une lecture sûre.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "c-defi7-q6",
+        "prompt": "En entretien : comment écrire un fichier de façon sûre pour qu'une coupure de courant ne laisse jamais un fichier à moitié écrit ?",
+        "choices": [
+          "Écrire dans un fichier temporaire, le synchroniser sur le disque, puis le renommer à la place de l'original",
+          "Écrire plus vite",
+          "Ouvrir le fichier en mode \"a\"",
+          "Utiliser un tampon plus grand"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le renommage est atomique sur un même système de fichiers : on obtient soit l'ancien fichier, soit le nouveau complet.",
+        "difficulty": 3
+      }
+    ]
+  }
 }

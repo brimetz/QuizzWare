@@ -7,19 +7,427 @@
       "id": "c-headers",
       "title": "Headers et unités de compilation",
       "summary": "Déclarations et définitions.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les étapes",
+          "body": "Le préprocesseur traite les #include et les macros. Le compilateur transforme chaque fichier .c (une unité de compilation) en fichier objet .o, indépendamment des autres. L'éditeur de liens (linker) assemble les .o et les bibliothèques en un exécutable, en reliant chaque appel à la définition correspondante."
+        },
+        {
+          "title": "Déclarer dans le .h, définir dans le .c",
+          "body": "Le header contient les déclarations : prototypes, types, constantes. Le .c contient les définitions. Chaque fichier qui utilise le module inclut le header. Une garde d'inclusion évite les définitions en double si le header est inclus deux fois.",
+          "code": "/* pile.h */\n#ifndef PILE_H\n#define PILE_H\n#include <stddef.h>\n\ntypedef struct Pile Pile;\nPile *pile_creer(size_t capacite);\nvoid pile_detruire(Pile *p);\n\n#endif"
+        },
+        {
+          "title": "Les types opaques",
+          "body": "typedef struct Pile Pile; déclare le type sans révéler ses champs : les utilisateurs ne manipulent que des pointeurs, et seul pile.c connaît la structure. C'est l'encapsulation à la manière du C : on peut changer l'implémentation sans recompiler les utilisateurs."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-headers-q1",
+          "prompt": "À quoi servent #ifndef PILE_H / #define PILE_H / #endif ?",
+          "choices": [
+            "À éviter que le contenu du header soit inclus deux fois dans la même unité de compilation",
+            "À accélérer l'exécution",
+            "À rendre les fonctions privées",
+            "À déclarer une constante"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans garde, un header inclus via deux chemins redéfinirait ses types : erreur de compilation. #pragma once fait de même, de façon non standard mais très répandue.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-headers-q2",
+          "prompt": "Le message « undefined reference to `pile_creer' » vient de quelle étape ?",
+          "choices": [
+            "De l'édition de liens : la fonction est déclarée, mais aucun fichier objet ne la définit",
+            "Du préprocesseur",
+            "Du compilateur, qui ne trouve pas le header",
+            "De l'exécution"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le plus souvent, on a oublié de compiler ou de lier pile.c, ou une bibliothèque (-lm pour les fonctions mathématiques).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-headers-q3",
+          "prompt": "Que doit-on mettre dans un header ?",
+          "choices": [
+            "Les déclarations (prototypes, types, macros) dont les utilisateurs ont besoin",
+            "Le corps de toutes les fonctions",
+            "Les variables globales initialisées",
+            "La fonction main"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une définition de fonction ou de variable dans un header, inclus par deux .c, provoque une définition multiple à l'édition de liens.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-headers-q4",
+          "prompt": "Avec le type opaque Pile de la leçon, que peut faire un fichier qui inclut seulement pile.h ?",
+          "choices": [
+            "Manipuler des Pile * et appeler les fonctions du module, mais pas accéder aux champs ni déclarer une Pile sur la pile",
+            "Accéder librement aux champs",
+            "Rien du tout",
+            "Modifier la structure"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le type est incomplet : sa taille est inconnue hors de pile.c. C'est ce que fait FILE dans stdio.h.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "c-headers-q5",
+          "prompt": "Remets dans l'ordre les étapes de la construction d'un exécutable.",
+          "language": "text",
+          "lines": [
+            "Préprocesseur : #include et macros",
+            "Compilation de chaque .c en fichier objet .o",
+            "Édition de liens des .o et des bibliothèques",
+            "Exécutable"
+          ],
+          "explanation": "gcc enchaîne tout ; -E s'arrête après le préprocesseur, -c après la compilation.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "c-headers-q6",
+          "prompt": "Pourquoi compiler chaque .c séparément ?",
+          "choices": [
+            "Seuls les fichiers modifiés sont recompilés",
+            "Les fichiers peuvent être compilés en parallèle",
+            "Les modules restent indépendants, reliés par leurs headers",
+            "Pour que le programme s'exécute plus vite"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La compilation séparée accélère le développement, pas l'exécution. L'optimisation à l'édition de liens (-flto) compense ses limites.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "c-linkage",
       "title": "static, extern et linkage",
       "summary": "Visibilité des symboles.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le linkage",
+          "body": "Par défaut, une fonction ou une variable globale a un linkage externe : son nom est visible depuis les autres unités de compilation. Placé devant une fonction ou une variable globale, static lui donne un linkage interne : elle devient privée au fichier. C'est le principal outil d'encapsulation du C."
+        },
+        {
+          "title": "extern",
+          "body": "extern déclare une variable définie ailleurs, sans la créer. La variable est définie une seule fois dans un .c, et déclarée extern dans le header.",
+          "code": "/* config.h */\nextern int niveau_log;\n\n/* config.c */\nint niveau_log = 1;\n\n/* utilitaires.c */\nstatic int compteur = 0;  /* privé au fichier */\nstatic void aide(void) { }"
+        },
+        {
+          "title": "Les conflits de noms",
+          "body": "Le C n'a pas d'espaces de noms : deux fonctions externes portant le même nom dans deux modules provoquent une erreur de définition multiple. D'où les préfixes (pile_creer, http_envoyer) et l'habitude de déclarer static tout ce qui n'a pas à être exporté."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-linkage-q1",
+          "prompt": "Quel est l'effet de static devant une fonction définie dans un .c ?",
+          "choices": [
+            "Elle n'est visible que dans ce fichier",
+            "Elle conserve ses variables entre les appels",
+            "Elle s'exécute plus vite",
+            "Elle devient accessible partout"
+          ],
+          "answerIndex": 0,
+          "explanation": "static a deux sens en C : sur une variable locale, durée de vie prolongée ; sur un symbole global, linkage interne.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-linkage-q2",
+          "prompt": "Deux fichiers définissent chacun int compteur = 0; au niveau global. Que se passe-t-il ?",
+          "choices": [
+            "Une erreur de définition multiple à l'édition de liens",
+            "Les deux variables sont fusionnées",
+            "Le compilateur choisit au hasard",
+            "Tout fonctionne, chaque fichier a la sienne"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour que chaque fichier ait sa variable privée, il faut static. Pour la partager, une définition et des déclarations extern.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-linkage-q3",
+          "prompt": "Que fait extern int niveau_log; dans un header ?",
+          "choices": [
+            "Il déclare la variable sans la définir : elle est créée une seule fois, dans un .c",
+            "Il crée une nouvelle variable dans chaque fichier",
+            "Il rend la variable constante",
+            "Il l'initialise à zéro"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une déclaration annonce qu'un objet existe ; une définition le crée. On peut déclarer plusieurs fois, mais définir une seule fois.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-linkage-q4",
+          "prompt": "Pourquoi les bibliothèques C préfixent-elles leurs fonctions (sqlite3_open, curl_easy_init) ?",
+          "choices": [
+            "Le C n'a pas d'espaces de noms : le préfixe évite les conflits avec les autres symboles du programme",
+            "Pour accélérer l'édition de liens",
+            "C'est imposé par le standard",
+            "Pour des raisons de licence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une fonction init() exportée par deux bibliothèques ferait échouer l'édition de liens du programme qui les utilise ensemble.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "c-linkage-q5",
+          "prompt": "Ce header, inclus par trois fichiers .c, provoque une erreur de définition multiple. Touche la ligne fautive.",
+          "code": "#ifndef CONFIG_H\n#define CONFIG_H\nint niveau_log = 1;\nvoid configurer(void);\n#endif",
+          "bugLines": [
+            3
+          ],
+          "explanation": "C'est une définition : chaque .c qui inclut le header crée la variable. La garde d'inclusion ne protège qu'au sein d'une même unité. Il faut extern int niveau_log; ici, et la définition dans config.c.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "c-linkage-q6",
+          "prompt": "Quels avantages à déclarer static les fonctions internes d'un module ?",
+          "choices": [
+            "Elles ne peuvent pas entrer en conflit avec d'autres modules",
+            "On peut les modifier sans risquer de casser d'autres fichiers",
+            "Le compilateur peut mieux les optimiser (mise en ligne, suppression si inutilisées)",
+            "Elles deviennent thread-safe"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "static ne change rien à la concurrence : c'est une question de visibilité, pas de synchronisation.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "c-make",
       "title": "Make",
       "summary": "Construire un projet.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des règles et des dépendances",
+          "body": "Un Makefile décrit des cibles, leurs dépendances et la commande pour les produire. make ne reconstruit une cible que si l'une de ses dépendances est plus récente qu'elle : modifier un .c ne recompile que lui, puis refait l'édition de liens. Les commandes doivent commencer par une tabulation.",
+          "code": "CC = gcc\nCFLAGS = -std=c17 -Wall -Wextra -O2\n\nappli: main.o pile.o\n\t$(CC) -o $@ $^\n\n%.o: %.c pile.h\n\t$(CC) $(CFLAGS) -c $<\n\nclean:\n\trm -f appli *.o\n.PHONY: clean",
+          "language": "text"
+        },
+        {
+          "title": "Les variables automatiques",
+          "body": "$@ désigne la cible, $< la première dépendance, $^ toutes les dépendances. La règle %.o: %.c s'applique à tous les fichiers objets. .PHONY indique qu'une cible n'est pas un fichier (sinon, un fichier nommé clean bloquerait la règle)."
+        },
+        {
+          "title": "Au-delà de Make",
+          "body": "Pour les projets plus importants ou multiplateformes, CMake génère les fichiers de construction (Makefiles, Ninja, projets Visual Studio). Meson est une alternative plus récente. Make reste omniprésent pour les petits projets et l'automatisation."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-make-q1",
+          "prompt": "On modifie seulement pile.c. Que reconstruit make avec le Makefile de la leçon ?",
+          "choices": [
+            "pile.o, puis l'exécutable appli",
+            "Tout le projet",
+            "Rien",
+            "Seulement main.o"
+          ],
+          "answerIndex": 0,
+          "explanation": "main.o est plus récent que main.c et pile.h : il n'a pas besoin d'être refait.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-make-q2",
+          "prompt": "make affiche « missing separator ». Quelle est la cause la plus probable ?",
+          "choices": [
+            "Une commande est indentée avec des espaces au lieu d'une tabulation",
+            "Il manque un point-virgule",
+            "gcc n'est pas installé",
+            "Le fichier s'appelle makefile en minuscules"
+          ],
+          "answerIndex": 0,
+          "explanation": "Make exige une tabulation devant chaque commande, une contrainte historique bien connue.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-make-q3",
+          "prompt": "Dans la règle « appli: main.o pile.o », que vaut $^ ?",
+          "choices": [
+            "main.o pile.o",
+            "appli",
+            "main.o",
+            "pile.o"
+          ],
+          "answerIndex": 0,
+          "explanation": "$^ liste toutes les dépendances, $< seulement la première, $@ la cible.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-make-q4",
+          "prompt": "Pourquoi la règle %.o: %.c dépend-elle aussi de pile.h ?",
+          "choices": [
+            "Pour recompiler les fichiers objets quand le header change",
+            "Pour inclure le header automatiquement",
+            "C'est inutile",
+            "Pour lier la bibliothèque"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans cela, modifier une struct dans pile.h laisserait des .o compilés avec l'ancienne définition : des bugs très déroutants. gcc -MMD génère ces dépendances automatiquement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-make-q5",
+          "prompt": "À quoi sert .PHONY: clean ?",
+          "choices": [
+            "À indiquer que clean n'est pas un fichier : la règle s'exécute même si un fichier nommé clean existe",
+            "À rendre la règle silencieuse",
+            "À supprimer le Makefile",
+            "À exécuter clean avant chaque build"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans .PHONY, si un fichier clean existe et n'a pas de dépendances, make le juge à jour et ne fait rien.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "c-make-q6",
+          "prompt": "Quelles options mettre dans CFLAGS pendant le développement ?",
+          "choices": [
+            "-Wall -Wextra",
+            "-g pour les informations de débogage",
+            "-fsanitize=address,undefined",
+            "-w pour masquer les avertissements"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "-w fait taire tous les avertissements, c'est-à-dire précisément ce qui aide à trouver les bugs.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "c-defi-compilation",
+    "title": "Défi entretien : modules",
+    "summary": "Découper un programme en modules.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "c-defi6-q1",
+        "prompt": "Cas pratique 1/3 — Un programme de 5 000 lignes tient dans un seul main.c, avec 80 variables globales. Première étape pour le découper ?",
+        "choices": [
+          "Identifier des modules cohérents (lecture, calcul, affichage), chacun avec son .h et son .c",
+          "Tout passer en macros",
+          "Le réécrire en assembleur",
+          "Rendre toutes les fonctions extern"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque module expose une petite interface dans son header et cache le reste.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "c-defi6-q2",
+        "prompt": "Cas pratique 2/3 — Que faire des 80 variables globales ?",
+        "choices": [
+          "Les rendre static dans le module qui les utilise, ou les regrouper dans des struct passées en paramètre",
+          "Les déclarer toutes extern dans un header commun",
+          "Les dupliquer dans chaque fichier",
+          "Les laisser telles quelles"
+        ],
+        "answerIndex": 0,
+        "explanation": "Moins de globales, c'est moins de couplage caché, et du code testable et réentrant.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi6-q3",
+        "prompt": "Cas pratique 3/3 — Comment construire le projet découpé ?",
+        "choices": [
+          "Un Makefile (ou CMake) qui compile chaque .c séparément et lie les .o",
+          "gcc *.c à la main à chaque modification",
+          "Inclure tous les .c dans main.c",
+          "Copier-coller le code dans un seul fichier avant de compiler"
+        ],
+        "answerIndex": 0,
+        "explanation": "Inclure les .c annule tout l'intérêt de la compilation séparée et mélange à nouveau les symboles static.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "c-defi6-q4",
+        "prompt": "« undefined reference to `sqrt' » alors que math.h est inclus. Que manque-t-il ?",
+        "choices": [
+          "L'option -lm, pour lier la bibliothèque mathématique",
+          "Un second #include <math.h>",
+          "Le mot-clé extern",
+          "Une garde d'inclusion"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le header fournit la déclaration, pas le code : sous Linux, libm doit être liée explicitement.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "c-defi6-q5",
+        "prompt": "Quelles erreurs viennent de l'édition de liens plutôt que de la compilation ?",
+        "choices": [
+          "undefined reference",
+          "multiple definition",
+          "Une bibliothèque introuvable (cannot find -lfoo)",
+          "expected ';' before '}' token"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une erreur de syntaxe est détectée par le compilateur, bien avant l'édition de liens.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi6-q6",
+        "prompt": "En entretien : quelle différence entre une bibliothèque statique (.a) et dynamique (.so) ?",
+        "choices": [
+          "La statique est copiée dans l'exécutable ; la dynamique est chargée à l'exécution et partagée entre programmes",
+          "La dynamique est plus lente à compiler",
+          "La statique ne fonctionne que sous Windows",
+          "Aucune différence"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une bibliothèque dynamique se met à jour sans recompiler les programmes (correctif de sécurité), au prix d'une dépendance à l'exécution.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

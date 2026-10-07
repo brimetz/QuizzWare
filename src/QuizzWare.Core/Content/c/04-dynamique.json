@@ -7,19 +7,418 @@
       "id": "c-malloc",
       "title": "Allouer et libérer",
       "summary": "malloc, calloc et free.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Pile et tas",
+          "body": "Les variables locales vivent sur la pile : leur taille est fixe et elles disparaissent à la fin de leur bloc. Le tas accueille ce dont la taille n'est connue qu'à l'exécution, ou qui doit survivre à la fonction qui l'a créé. Ce qui est alloué sur le tas doit être libéré explicitement."
+        },
+        {
+          "title": "malloc et calloc",
+          "body": "malloc(taille) renvoie une zone non initialisée, ou NULL en cas d'échec. calloc(n, taille) renvoie une zone remise à zéro, et vérifie que n × taille ne déborde pas. On écrit la taille avec sizeof *p : elle reste juste si le type de p change.",
+          "code": "int *t = malloc(n * sizeof *t);\nif (t == NULL) {\n    perror(\"malloc\");\n    return -1;\n}\n/* ... */\nfree(t);\nt = NULL;"
+        },
+        {
+          "title": "free",
+          "body": "free rend la zone à l'allocateur. Le pointeur, lui, garde son ancienne valeur : il pointe dans le vide (pointeur pendant). Le remettre à NULL évite de le réutiliser par erreur. free(NULL) est autorisé et ne fait rien."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-malloc-q1",
+          "prompt": "Que contient une zone fraîchement allouée par malloc ?",
+          "choices": [
+            "Des valeurs indéterminées : il faut l'initialiser avant de la lire",
+            "Des zéros",
+            "Des valeurs aléatoires sécurisées",
+            "Le contenu de la zone précédente, toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "calloc renvoie une zone remise à zéro ; malloc ne garantit rien.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-malloc-q2",
+          "prompt": "Pourquoi écrire malloc(n * sizeof *t) plutôt que malloc(n * sizeof(int)) ?",
+          "choices": [
+            "La taille suit automatiquement le type de t si on le change plus tard",
+            "C'est plus rapide",
+            "sizeof(int) est interdit",
+            "Pour allouer plus de mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si t devient un long *, sizeof(int) donnerait une zone trop petite sans aucun avertissement.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "c-malloc-q3",
+          "prompt": "Ce code peut planter quand la mémoire manque. Touche la ligne où il manque une vérification.",
+          "code": "char *copie = malloc(strlen(src) + 1);\nstrcpy(copie, src);\nreturn copie;",
+          "bugLines": [
+            2
+          ],
+          "explanation": "malloc peut renvoyer NULL ; strcpy écrirait alors à l'adresse nulle. Il faut tester le résultat avant de l'utiliser.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-malloc-q4",
+          "prompt": "Pourquoi strlen(src) + 1 dans l'exercice précédent ?",
+          "choices": [
+            "Pour réserver la place du '\\0' final",
+            "Par sécurité, au cas où",
+            "Parce que strlen compte mal",
+            "Pour aligner la mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "strlen ne compte pas le terminateur, que strcpy copie pourtant : sans + 1, on déborde d'un octet.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-malloc-q5",
+          "prompt": "Que fait free(NULL) ?",
+          "choices": [
+            "Rien : c'est explicitement autorisé",
+            "Le programme plante",
+            "Comportement indéfini",
+            "Libère toute la mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui rend sûr le motif « free(p); p = NULL; » : un second free(p) ne fait plus rien.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "c-malloc-q6",
+          "prompt": "Quand faut-il allouer sur le tas plutôt que sur la pile ?",
+          "choices": [
+            "Quand la taille n'est connue qu'à l'exécution et peut être grande",
+            "Quand la donnée doit survivre à la fonction qui la crée",
+            "Pour un très gros tableau qui ferait déborder la pile",
+            "Pour un compteur de boucle"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La pile est limitée (souvent 1 à 8 Mo) : un tableau local de 100 Mo provoque un dépassement de pile.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "c-realloc",
       "title": "realloc et tableaux dynamiques",
       "summary": "Faire grandir un tableau.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "realloc",
+          "body": "realloc(p, nouvelle_taille) agrandit ou réduit une zone. Si elle ne peut pas l'étendre sur place, elle alloue ailleurs, copie le contenu et libère l'ancienne zone : l'adresse peut changer. En cas d'échec, elle renvoie NULL et l'ancienne zone reste valide."
+        },
+        {
+          "title": "Le piège de l'affectation directe",
+          "body": "Écrire p = realloc(p, n) perd l'adresse de l'ancienne zone si realloc échoue : c'est une fuite. On passe par une variable temporaire.",
+          "code": "int *tmp = realloc(t, nouvelle * sizeof *t);\nif (tmp == NULL) {\n    free(t);\n    return -1;\n}\nt = tmp;"
+        },
+        {
+          "title": "Doubler la capacité",
+          "body": "Un tableau dynamique garde une taille (éléments utilisés) et une capacité (place allouée). Quand il est plein, on double la capacité : l'ajout coûte O(1) en moyenne. Agrandir d'un seul élément à chaque fois coûterait une copie complète par ajout, soit O(n²) au total.",
+          "code": "typedef struct {\n    int *data;\n    size_t taille, capacite;\n} Vecteur;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "c-realloc-q1",
+          "prompt": "Ce code fuit si realloc échoue. Touche la ligne fautive.",
+          "code": "int *t = malloc(10 * sizeof *t);\nif (!t) return -1;\nt = realloc(t, 20 * sizeof *t);\nif (!t) return -1;",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Si realloc renvoie NULL, t est écrasé et l'ancienne zone, toujours allouée, n'est plus accessible. Il faut une variable temporaire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-realloc-q2",
+          "prompt": "Après un realloc réussi, que valent les anciens pointeurs vers l'intérieur de la zone ?",
+          "choices": [
+            "Ils peuvent être invalides : la zone a pu être déplacée",
+            "Ils restent toujours valides",
+            "Ils sont automatiquement mis à jour",
+            "Ils valent NULL"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le même piège qu'avec un std::vector en C++ : un agrandissement invalide les pointeurs et itérateurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "c-realloc-q3",
+          "prompt": "Complète l'ajout dans le Vecteur de la leçon.",
+          "code": "int ajouter(Vecteur *v, int x)\n{\n    if (v->taille == v->capacite) {\n        size_t c = v->capacite ? v->capacite ___ 2 : 4;\n        int *d = realloc(v->data, c * sizeof *d);\n        if (!d) return -1;\n        v->data = d;\n        v->capacite = c;\n    }\n    v->data[v->taille___] = x;\n    return 0;\n}",
+          "answers": [
+            "*",
+            "++"
+          ],
+          "distractors": [
+            "+",
+            "--",
+            "/"
+          ],
+          "explanation": "On double la capacité (en partant de 4 si elle est nulle), puis on écrit à la position taille avant de l'incrémenter.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-realloc-q4",
+          "prompt": "Pourquoi doubler la capacité plutôt que l'augmenter d'un élément à chaque ajout ?",
+          "choices": [
+            "Les copies deviennent rares : n ajouts coûtent O(n) au total au lieu de O(n²)",
+            "Pour économiser de la mémoire",
+            "Parce que realloc ne sait qu'agrandir par deux",
+            "Pour que les adresses ne changent jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'analyse amortie : chaque élément n'est copié qu'un nombre constant de fois en moyenne.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-realloc-q5",
+          "prompt": "Que fait realloc(NULL, 100) ?",
+          "choices": [
+            "La même chose que malloc(100)",
+            "Il plante",
+            "Il renvoie toujours NULL",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est pratique : un tableau vide (data == NULL) peut être agrandi par le même code.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-realloc-q6",
+          "prompt": "Après 10 ajouts dans un Vecteur vide, avec la fonction ajouter ci-dessus, quelle est sa capacité ?",
+          "choices": [
+            "16",
+            "10",
+            "20",
+            "32"
+          ],
+          "answerIndex": 0,
+          "explanation": "4, puis 8 au 5e ajout, puis 16 au 9e ajout.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "c-fuites",
       "title": "Fuites et double free",
       "summary": "Les erreurs classiques.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les quatre erreurs",
+          "body": "La fuite : une zone n'est jamais libérée. Le use-after-free : on utilise une zone déjà libérée. Le double free : on libère deux fois la même zone, ce qui corrompt l'allocateur. Le free invalide : on libère une adresse qui ne vient pas de malloc (une variable locale, le milieu d'une zone)."
+        },
+        {
+          "title": "Un propriétaire, un point de sortie",
+          "body": "Pour chaque allocation, on décide qui est responsable de la libérer. Dans une fonction qui alloue plusieurs ressources, un unique bloc de nettoyage en fin de fonction évite d'en oublier une sur un chemin d'erreur.",
+          "code": "int traiter(void)\n{\n    int ret = -1;\n    char *a = malloc(100), *b = NULL;\n    if (!a) goto fin;\n    b = malloc(200);\n    if (!b) goto fin;\n    /* ... */\n    ret = 0;\nfin:\n    free(b);\n    free(a);\n    return ret;\n}"
+        },
+        {
+          "title": "Les outils",
+          "body": "AddressSanitizer (gcc -fsanitize=address) détecte à l'exécution les accès hors limites, use-after-free et double free, et signale les fuites à la sortie. Valgrind fait un travail similaire sans recompiler, mais beaucoup plus lentement."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "c-fuites-q1",
+          "prompt": "Ce code utilise une zone déjà libérée. Touche la ligne fautive.",
+          "code": "char *nom = malloc(32);\nstrcpy(nom, \"Ada\");\nfree(nom);\nprintf(\"%s\\n\", nom);",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Après free, la zone peut être réutilisée par l'allocateur : la lire est un use-after-free, une vulnérabilité grave.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "c-fuites-q2",
+          "prompt": "Cette fonction fuit sur un chemin. Touche la ligne en cause.",
+          "code": "int charger(const char *chemin)\n{\n    char *buf = malloc(4096);\n    if (!buf) return -1;\n    FILE *f = fopen(chemin, \"r\");\n    if (!f) return -1;\n    /* ... */\n    fclose(f);\n    free(buf);\n    return 0;\n}",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Si fopen échoue, on sort sans libérer buf. Le motif « goto fin » centralise le nettoyage.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-fuites-q3",
+          "prompt": "Pourquoi le double free est-il dangereux ?",
+          "choices": [
+            "Il corrompt les structures internes de l'allocateur, ce qu'un attaquant peut exploiter pour exécuter du code",
+            "Il libère deux fois plus de mémoire",
+            "Il est sans conséquence",
+            "Il provoque toujours une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les allocateurs modernes détectent certains cas et arrêtent le programme, mais pas tous.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-fuites-q4",
+          "prompt": "Quelle option de gcc détecte les use-after-free à l'exécution ?",
+          "choices": [
+            "-fsanitize=address",
+            "-O2",
+            "-std=c17",
+            "-lm"
+          ],
+          "answerIndex": 0,
+          "explanation": "AddressSanitizer instrumente chaque accès mémoire. Le programme est environ deux fois plus lent : on l'utilise en test et en CI.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "c-fuites-q5",
+          "prompt": "Ce free est invalide. Touche la ligne fautive.",
+          "code": "int *t = malloc(10 * sizeof *t);\nif (!t) return;\nt++;\n/* ... */\nfree(t);",
+          "bugLines": [
+            5
+          ],
+          "explanation": "free doit recevoir exactement l'adresse renvoyée par malloc. t a été déplacé : il faut garder l'adresse d'origine dans une autre variable.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "c-fuites-q6",
+          "prompt": "Quelles pratiques limitent les erreurs de mémoire ?",
+          "choices": [
+            "Mettre le pointeur à NULL après free",
+            "Définir clairement qui possède chaque allocation",
+            "Lancer les tests avec AddressSanitizer",
+            "Ne jamais appeler free pour éviter les doubles libérations"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Ne jamais libérer, c'est fuir : un serveur qui tourne des semaines finit par épuiser la mémoire.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "c-defi-dynamique",
+    "title": "Défi entretien : mémoire dynamique",
+    "summary": "Dupliquer une chaîne.",
+    "questions": [
+      {
+        "type": "order",
+        "id": "c-defi4-q1",
+        "prompt": "Cas pratique 1/3 — Remets dans l'ordre une implémentation de strdup.",
+        "lines": [
+          "char *dupliquer(const char *s)",
+          "{",
+          "    size_t n = strlen(s) + 1;",
+          "    char *copie = malloc(n);",
+          "    if (copie == NULL) return NULL;",
+          "    memcpy(copie, s, n);",
+          "    return copie;",
+          "}"
+        ],
+        "explanation": "On mesure (terminateur compris), on alloue, on vérifie, on copie. memcpy suffit puisque la longueur est connue.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi4-q2",
+        "prompt": "Cas pratique 2/3 — Qui doit libérer la chaîne renvoyée par dupliquer ?",
+        "choices": [
+          "L'appelant : la fonction lui transfère la propriété de la zone, ce que sa documentation doit préciser",
+          "La fonction dupliquer elle-même",
+          "Personne, elle est libérée automatiquement",
+          "Le système d'exploitation, à chaque appel"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est un contrat implicite très fréquent en C, et une source majeure de fuites quand il est mal compris.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "c-defi4-q3",
+        "prompt": "Cas pratique 3/3 — Qu'affiche ce code ?",
+        "code": "char *a = dupliquer(\"abc\");\nchar *b = a;\na[0] = 'x';\nprintf(\"%s \", b);\nfree(a);\nb = NULL;\nprintf(\"%d\\n\", b == NULL);",
+        "choices": [
+          "xbc 1",
+          "abc 1",
+          "xbc 0",
+          "Comportement indéfini"
+        ],
+        "answerIndex": 0,
+        "explanation": "b désigne la même zone que a. Après free(a), b serait pendant : le remettre à NULL évite tout usage accidentel.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi4-q4",
+        "prompt": "malloc(n * taille) avec des valeurs fournies par l'utilisateur : quel danger ?",
+        "choices": [
+          "La multiplication peut déborder et produire une petite allocation, suivie d'écritures hors limites",
+          "Aucun",
+          "malloc refuse les grandes tailles",
+          "La mémoire est allouée deux fois"
+        ],
+        "answerIndex": 0,
+        "explanation": "calloc(n, taille) vérifie ce débordement, ou on teste n > SIZE_MAX / taille avant de multiplier.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "c-defi4-q5",
+        "prompt": "Que signale AddressSanitizer ?",
+        "choices": [
+          "Les débordements de tampon sur le tas et la pile",
+          "Les use-after-free",
+          "Les doubles libérations",
+          "Les erreurs de logique métier"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Il détecte aussi les fuites à la sortie du programme (LeakSanitizer), mais pas les erreurs de logique.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "c-defi4-q6",
+        "prompt": "En entretien : comment le C++ et le Rust évitent-ils ces erreurs ?",
+        "choices": [
+          "En liant la libération à la durée de vie d'un objet (RAII en C++, possession vérifiée à la compilation en Rust)",
+          "Avec un ramasse-miettes obligatoire",
+          "En interdisant le tas",
+          "Ils ne les évitent pas"
+        ],
+        "answerIndex": 0,
+        "explanation": "std::unique_ptr libère automatiquement ; le compilateur Rust refuse le use-after-free et le double free.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

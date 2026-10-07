@@ -7,19 +7,437 @@
       "id": "c-struct",
       "title": "Structures",
       "summary": "Déclaration, alignement et padding.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Déclarer et utiliser",
+          "body": "Une struct regroupe des champs. On accède à un champ avec . sur une valeur et -> sur un pointeur (p->x équivaut à (*p).x). Les struct se copient par affectation, champ par champ : passer une grosse struct par valeur copie tout, on passe donc plutôt un pointeur (const si la fonction ne modifie rien).",
+          "code": "typedef struct {\n    double x, y;\n} Point;\n\nPoint a = {.x = 1.0, .y = 2.0};\nPoint *p = &a;\np->x = 3.0;"
+        },
+        {
+          "title": "Alignement et padding",
+          "body": "Le processeur accède plus vite (ou uniquement) aux données alignées : un int de 4 octets est placé à une adresse multiple de 4. Le compilateur insère donc des octets de remplissage (padding) entre les champs, et à la fin pour que les tableaux de struct restent alignés. Ranger les champs du plus grand au plus petit réduit ce gaspillage.",
+          "code": "struct A { char c; int i; char d; };  // 12\nstruct B { int i; char c; char d; };  // 8"
+        },
+        {
+          "title": "Comparer",
+          "body": "On ne peut pas comparer deux struct avec ==. memcmp est risqué : les octets de padding ont des valeurs indéterminées. On compare champ par champ."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-struct-q1",
+          "prompt": "Que vaut sizeof(struct A) sur une plateforme où int fait 4 octets aligné sur 4 ?",
+          "code": "struct A {\n    char c;\n    int i;\n    char d;\n};",
+          "choices": [
+            "12",
+            "6",
+            "9",
+            "8"
+          ],
+          "answerIndex": 0,
+          "explanation": "c (1) + 3 de padding pour aligner i, i (4), d (1) + 3 de padding final pour que la taille soit un multiple de 4.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "c-struct-q2",
+          "prompt": "Que vaut p->x si p est un pointeur vers une struct ?",
+          "choices": [
+            "(*p).x",
+            "*p.x",
+            "&p.x",
+            "p.x"
+          ],
+          "answerIndex": 0,
+          "explanation": "*p.x se lirait *(p.x), car . est prioritaire sur * : d'où l'opérateur -> pour plus de lisibilité.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-struct-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "typedef struct { int v; } Boite;\n\nvoid changer(Boite b) { b.v = 9; }\n\nint main(void)\n{\n    Boite x = {1};\n    Boite y = x;\n    y.v = 2;\n    changer(x);\n    printf(\"%d %d\\n\", x.v, y.v);\n}",
+          "choices": [
+            "1 2",
+            "9 2",
+            "2 2",
+            "9 9"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les struct sont copiées par affectation et par passage de paramètre : ni y = x ni changer(x) ne touchent x.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "c-struct-q4",
+          "prompt": "Cette comparaison ne compile pas. Touche la ligne fautive.",
+          "code": "Point a = {1, 2};\nPoint b = {1, 2};\nif (a == b)\n    puts(\"égaux\");",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Le C ne définit pas == pour les struct. On écrit une fonction qui compare les champs.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-struct-q5",
+          "prompt": "Comment réduire la taille d'une struct sans changer ses champs ?",
+          "choices": [
+            "Ordonner les champs du plus grand au plus petit pour limiter le padding",
+            "Ajouter des champs char",
+            "Utiliser des pointeurs partout",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un million d'éléments, passer de 12 à 8 octets économise 4 Mo et améliore l'utilisation du cache.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "c-struct-q6",
+          "prompt": "Quelles affirmations sur les struct sont vraies ?",
+          "choices": [
+            "Elles peuvent être copiées par simple affectation",
+            "Les initialiseurs désignés (.x = 1) permettent de nommer les champs",
+            "Le compilateur peut ajouter des octets de remplissage",
+            "On peut les comparer avec memcmp sans risque"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les octets de padding ont un contenu indéterminé : memcmp peut déclarer différentes deux struct aux champs égaux.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "c-union-enum",
       "title": "Unions et énumérations",
       "summary": "Partager la mémoire.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les énumérations",
+          "body": "Une enum donne des noms à des constantes entières, numérotées à partir de 0 par défaut. Elle rend le code lisible et permet au compilateur d'avertir quand un switch oublie un cas (-Wswitch). Ce n'est qu'un int : rien n'empêche d'y stocker une valeur hors liste.",
+          "code": "enum Couleur { ROUGE, VERT = 5, BLEU };\n// ROUGE = 0, VERT = 5, BLEU = 6"
+        },
+        {
+          "title": "Les unions",
+          "body": "Tous les champs d'une union partagent la même mémoire : sa taille est celle du plus grand champ. Un seul champ est valide à la fois. Associée à une enum qui indique lequel, elle forme une union étiquetée (tagged union) : une valeur qui peut avoir plusieurs formes.",
+          "code": "typedef struct {\n    enum { ENTIER, TEXTE } type;\n    union {\n        int entier;\n        const char *texte;\n    };\n} Valeur;"
+        },
+        {
+          "title": "Pourquoi",
+          "body": "Les unions économisent la mémoire quand plusieurs formes s'excluent (messages réseau, nœuds d'un interpréteur, événements). Le langage Rust en a fait un concept central avec ses enum, en garantissant à la compilation qu'on lit la bonne variante."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-union-q1",
+          "prompt": "Que vaut BLEU ?",
+          "code": "enum Couleur { ROUGE, VERT = 5, BLEU };",
+          "choices": [
+            "6",
+            "2",
+            "5",
+            "0"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque énumérateur vaut le précédent plus un, sauf valeur explicite.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-union-q2",
+          "prompt": "Quelle est la taille d'une union contenant un char, un int et un double de 8 octets ?",
+          "choices": [
+            "8",
+            "13",
+            "16",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les champs se superposent : la taille est celle du plus grand, arrondie à l'alignement.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "c-union-q3",
+          "prompt": "Cet affichage d'une Valeur peut lire le mauvais champ. Touche la ligne fautive.",
+          "code": "void afficher(const Valeur *v)\n{\n    if (v->type == ENTIER)\n        printf(\"%d\\n\", v->entier);\n    printf(\"%s\\n\", v->texte);\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Il manque un else : pour un ENTIER, on lit aussi le champ texte, qui interprète l'entier comme une adresse. Le programme plante.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-union-q4",
+          "prompt": "À quoi sert le champ type d'une union étiquetée ?",
+          "choices": [
+            "À savoir quel champ de l'union est actuellement valide",
+            "À choisir la taille de l'union",
+            "À chiffrer les données",
+            "Il ne sert à rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le C ne mémorise pas quel champ a été écrit : c'est au programme de le suivre.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-union-q5",
+          "prompt": "Quel avertissement gcc aide quand on ajoute une valeur à une enum ?",
+          "choices": [
+            "-Wswitch : un switch sur l'enum ne traite pas tous ses cas",
+            "-Wunused",
+            "-Wshadow",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il est activé par -Wall, à condition de ne pas mettre de default qui masque les cas oubliés.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "c-union-q6",
+          "prompt": "Quelles affirmations sur les enum en C sont vraies ?",
+          "choices": [
+            "Les valeurs sont des constantes entières",
+            "La numérotation commence à 0 par défaut",
+            "Une variable enum peut contenir une valeur hors de la liste",
+            "Le compilateur empêche toute conversion depuis un int"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "En C, enum et int se convertissent librement. Les enum class du C++ et les enum de Rust sont bien plus strictes.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "c-listes",
       "title": "Listes chaînées",
       "summary": "Implémenter une structure dynamique.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des nœuds reliés",
+          "body": "Chaque nœud contient une valeur et un pointeur vers le suivant ; le dernier pointe vers NULL. Insérer en tête est en O(1), accéder au i-ème élément en O(n). Une struct peut contenir un pointeur vers son propre type.",
+          "code": "typedef struct Noeud {\n    int valeur;\n    struct Noeud *suivant;\n} Noeud;"
+        },
+        {
+          "title": "Insérer en tête",
+          "body": "Pour modifier la tête de liste depuis une fonction, on passe l'adresse du pointeur de tête : un Noeud **.",
+          "code": "int empiler(Noeud **tete, int v)\n{\n    Noeud *n = malloc(sizeof *n);\n    if (!n) return -1;\n    n->valeur = v;\n    n->suivant = *tete;\n    *tete = n;\n    return 0;\n}"
+        },
+        {
+          "title": "Libérer",
+          "body": "Pour libérer une liste, on sauvegarde le suivant avant de libérer le nœud courant : après free, lire n->suivant serait un use-after-free."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-listes-q1",
+          "prompt": "Avec la fonction empiler de la leçon, qu'affiche ce code ?",
+          "code": "Noeud *l = NULL;\nfor (int i = 1; i <= 3; i++)\n    empiler(&l, i);\nfor (Noeud *n = l; n; n = n->suivant)\n    printf(\"%d\", n->valeur);",
+          "choices": [
+            "321",
+            "123",
+            "3",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque insertion se fait en tête : le dernier ajouté est le premier de la liste.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-listes-q2",
+          "prompt": "Pourquoi empiler prend-il un Noeud ** ?",
+          "choices": [
+            "Pour pouvoir modifier le pointeur de tête de l'appelant",
+            "Pour allouer deux nœuds",
+            "Parce qu'une liste est un tableau à deux dimensions",
+            "C'est une convention sans effet"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un simple Noeud *, la fonction modifierait sa copie locale du pointeur, et l'appelant ne verrait pas le nouveau nœud.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "c-listes-q3",
+          "prompt": "Cette libération utilise un nœud déjà libéré. Touche la ligne fautive.",
+          "code": "void liberer(Noeud *n)\n{\n    while (n) {\n        free(n);\n        n = n->suivant;\n    }\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "n->suivant est lu après free(n). Il faut d'abord sauvegarder : Noeud *s = n->suivant; free(n); n = s;",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-listes-q4",
+          "prompt": "Pourquoi un tableau dynamique est-il souvent plus rapide qu'une liste chaînée, même pour des insertions ?",
+          "choices": [
+            "Ses éléments sont contigus en mémoire : le cache du processeur les charge par blocs, alors qu'une liste éparpille ses nœuds",
+            "Les listes chaînées sont interdites en C",
+            "Les tableaux n'utilisent pas la mémoire",
+            "Ce n'est jamais le cas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque nœud de liste est un défaut de cache potentiel, et une allocation séparée. La complexité théorique ne dit pas tout.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "c-listes-q5",
+          "prompt": "Complète la fonction qui compte les éléments d'une liste.",
+          "code": "size_t longueur(const Noeud *n)\n{\n    size_t k = 0;\n    for (; n != ___; n = n->___)\n        k++;\n    return k;\n}",
+          "answers": [
+            "NULL",
+            "suivant"
+          ],
+          "distractors": [
+            "0x0",
+            "valeur",
+            "precedent"
+          ],
+          "explanation": "On suit les pointeurs jusqu'à la fin de la liste, marquée par NULL.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "c-listes-q6",
+          "prompt": "Quelles opérations sont en O(1) sur une liste simplement chaînée ?",
+          "choices": [
+            "Insérer en tête",
+            "Retirer la tête",
+            "Insérer après un nœud dont on a l'adresse",
+            "Accéder au dernier élément sans pointeur de queue"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Sans pointeur vers la queue, trouver le dernier élément oblige à parcourir toute la liste.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "c-defi-structures",
+    "title": "Défi entretien : listes chaînées",
+    "summary": "Inverser une liste.",
+    "questions": [
+      {
+        "type": "order",
+        "id": "c-defi5-q1",
+        "prompt": "Cas pratique 1/3 — Remets dans l'ordre l'inversion d'une liste en place.",
+        "lines": [
+          "Noeud *inverser(Noeud *n)",
+          "{",
+          "    Noeud *prec = NULL;",
+          "    while (n) {",
+          "        Noeud *suiv = n->suivant;",
+          "        n->suivant = prec;",
+          "        prec = n;",
+          "        n = suiv;",
+          "    }",
+          "    return prec;",
+          "}"
+        ],
+        "explanation": "On retourne chaque lien vers le nœud précédent, en sauvegardant le suivant avant de l'écraser.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi5-q2",
+        "prompt": "Cas pratique 2/3 — Quelle est la complexité de cette inversion ?",
+        "choices": [
+          "O(n) en temps, O(1) en mémoire",
+          "O(n²) en temps",
+          "O(n) en mémoire",
+          "O(log n)"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un seul parcours, et seulement trois pointeurs auxiliaires, quelle que soit la taille.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Que renvoie inverser(NULL) ?",
+        "choices": [
+          "NULL : la boucle ne s'exécute pas et prec vaut NULL",
+          "Un plantage",
+          "Un nœud vide alloué",
+          "Comportement indéfini"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le cas de la liste vide est géré sans test particulier.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "c-defi5-q4",
+        "prompt": "Comment détecter qu'une liste chaînée boucle sur elle-même, en O(1) de mémoire ?",
+        "choices": [
+          "Deux pointeurs, l'un avançant d'un nœud et l'autre de deux : s'il y a un cycle, ils finissent par se rencontrer",
+          "Compter jusqu'à un million",
+          "Stocker toutes les adresses visitées",
+          "C'est impossible"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est l'algorithme du lièvre et de la tortue (Floyd). Stocker les adresses fonctionne aussi, mais en O(n) de mémoire.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi5-q5",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "union {\n    uint32_t mot;\n    uint8_t octets[4];\n} u = {.mot = 0x11223344};\nprintf(\"%x\\n\", u.octets[0]);",
+        "choices": [
+          "44 sur une machine little-endian (x86, ARM), 11 sur une machine big-endian",
+          "Toujours 11",
+          "Toujours 44",
+          "Erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'union permet de voir les octets d'un entier : un little-endian stocke l'octet de poids faible en premier.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "c-defi5-q6",
+        "prompt": "En entretien, quels cas tester sur une fonction de liste chaînée ?",
+        "choices": [
+          "La liste vide",
+          "Une liste d'un seul élément",
+          "Une opération sur la tête ou sur le dernier élément",
+          "Uniquement une liste de dix éléments"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les bugs de listes se cachent presque toujours aux extrémités.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

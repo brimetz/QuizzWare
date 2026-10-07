@@ -7,19 +7,429 @@
       "id": "c-types",
       "title": "Types et tailles",
       "summary": "int, char et stdint.h.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des tailles minimales, pas exactes",
+          "body": "Le C ne fixe que des minimums : char fait au moins 8 bits, short et int au moins 16, long au moins 32, long long au moins 64. En pratique, int fait 32 bits partout aujourd'hui, mais long fait 32 bits sous Windows 64 bits et 64 bits sous Linux 64 bits. sizeof(char) vaut toujours 1."
+        },
+        {
+          "title": "Signé ou non signé",
+          "body": "Un unsigned ne stocke que des valeurs positives, et son débordement est défini : il repart à zéro (arithmétique modulo 2ⁿ). Le débordement d'un entier signé, lui, est un comportement indéfini. Que char soit signé ou non dépend de la plateforme.",
+          "code": "unsigned char c = 255;\nc++;               // c vaut 0\nint i = 7 / 2;     // 3 : division entière\ndouble d = 7 / 2;  // 3.0 ! la division est entière"
+        },
+        {
+          "title": "stdint.h et les formats",
+          "body": "Pour une taille exacte, on utilise int8_t, int32_t, uint64_t... de <stdint.h>. size_t est le type des tailles (résultat de sizeof). Chaque type a son format printf : %d pour int, %u pour unsigned, %ld pour long, %zu pour size_t, %f pour double.",
+          "code": "#include <stdint.h>\nuint8_t octet = 200;\nint64_t grand = 9000000000;\nprintf(\"%zu\\n\", sizeof grand);  // 8"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-types-q1",
+          "prompt": "Que vaut sizeof(long) sur un système 64 bits ?",
+          "choices": [
+            "Cela dépend : 4 sous Windows, 8 sous Linux et macOS",
+            "Toujours 8",
+            "Toujours 4",
+            "Toujours 16"
+          ],
+          "answerIndex": 0,
+          "explanation": "Windows utilise le modèle LLP64 (long sur 32 bits), Linux et macOS le modèle LP64. Pour une taille garantie, on utilise int64_t.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-types-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "unsigned char c = 255;\nc++;\nprintf(\"%d\\n\", c);",
+          "choices": [
+            "0",
+            "256",
+            "-1",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un unsigned char de 8 bits va de 0 à 255 ; le débordement d'un non signé est défini et repart à 0.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-types-q3",
+          "prompt": "Quel type garantit exactement 32 bits signés ?",
+          "choices": [
+            "int32_t",
+            "int",
+            "long",
+            "short"
+          ],
+          "answerIndex": 0,
+          "explanation": "int fait 32 bits en pratique, mais le standard ne garantit que 16. int32_t est exactement 32 bits.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-types-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "double d = 7 / 2;\nprintf(\"%.1f\\n\", d);",
+          "choices": [
+            "3.0",
+            "3.5",
+            "4.0",
+            "3"
+          ],
+          "answerIndex": 0,
+          "explanation": "7 / 2 est une division entière, qui donne 3, converti ensuite en double. Il faut écrire 7.0 / 2.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "c-types-q5",
+          "prompt": "Complète les formats printf.",
+          "code": "size_t n = sizeof(int);\nunsigned int u = 42;\nprintf(\"%___ %___\\n\", n, u);",
+          "answers": [
+            "zu",
+            "u"
+          ],
+          "distractors": [
+            "d",
+            "lf",
+            "s"
+          ],
+          "explanation": "%zu pour size_t, %u pour unsigned int. Un mauvais format est un comportement indéfini, et gcc le signale avec -Wall.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "c-types-q6",
+          "prompt": "Que garantit le standard C ?",
+          "choices": [
+            "sizeof(char) vaut 1",
+            "int fait au moins 16 bits",
+            "long long fait au moins 64 bits",
+            "int fait exactement 32 bits"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "32 bits est l'usage, pas une garantie : certains microcontrôleurs ont des int de 16 bits.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "c-operateurs",
       "title": "Opérateurs et promotions",
       "summary": "Promotions entières et conversions.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les promotions entières",
+          "body": "Dans un calcul, les types plus petits que int (char, short) sont d'abord convertis en int. Deux char de valeur 100 s'additionnent donc sans déborder : le résultat est l'int 200."
+        },
+        {
+          "title": "Signé contre non signé",
+          "body": "Quand un int rencontre un unsigned int, l'int est converti en unsigned. -1 devient alors 4 294 967 295, et la comparaison -1 < 1u est fausse. C'est une source de bugs classique, notamment avec size_t.",
+          "code": "if (-1 < 1u)\n    puts(\"logique\");\nelse\n    puts(\"surprise\");   // affiché"
+        },
+        {
+          "title": "Priorités",
+          "body": "== est prioritaire sur & et | : x & 1 == 0 se lit x & (1 == 0). En cas de doute, on met des parenthèses. Et i++ + i++ est un comportement indéfini : une variable ne doit pas être modifiée deux fois sans point de séquence."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-operateurs-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "unsigned int x = 0;\nx--;\nprintf(\"%u\\n\", x);",
+          "choices": [
+            "4294967295",
+            "-1",
+            "0",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un unsigned de 32 bits, 0 - 1 repart au maximum : 2³² − 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-operateurs-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "char a = 100, b = 100;\nint s = a + b;\nprintf(\"%d\\n\", s);",
+          "choices": [
+            "200",
+            "-56",
+            "Comportement indéfini",
+            "0"
+          ],
+          "answerIndex": 0,
+          "explanation": "a et b sont promus en int avant l'addition : pas de débordement. Stocker 200 dans un char signé, en revanche, donnerait -56 sur la plupart des plateformes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-operateurs-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int x = 4;\nif (x & 1 == 0)\n    puts(\"pair\");\nelse\n    puts(\"impair\");",
+          "choices": [
+            "impair",
+            "pair",
+            "Erreur de compilation",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "== passe avant & : on calcule x & (1 == 0), soit x & 0, qui vaut 0. Il faut écrire (x & 1) == 0.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "c-operateurs-q4",
+          "prompt": "Cette boucle doit parcourir un tableau à l'envers, mais ne s'arrête jamais. Touche la ligne fautive.",
+          "code": "void afficher(int *t, size_t n)\n{\n    for (size_t i = n - 1; i >= 0; i--)\n        printf(\"%d\\n\", t[i]);\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "size_t est non signé : i >= 0 est toujours vrai, et i-- après 0 repart au maximum. On écrit par exemple for (size_t i = n; i-- > 0;).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "c-operateurs-q5",
+          "prompt": "Que se passe-t-il quand on calcule INT_MAX + 1 avec des int ?",
+          "choices": [
+            "Comportement indéfini : le compilateur peut supposer que cela n'arrive jamais",
+            "Le résultat vaut INT_MIN, toujours",
+            "Le résultat vaut 0",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le débordement signé n'est pas défini. Les optimiseurs en profitent : une boucle « for (int i = 0; i >= 0; i++) » peut devenir infinie.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "c-operateurs-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "printf(\"%d %d\\n\", -7 / 2, -7 % 2);",
+          "choices": [
+            "-3 -1",
+            "-4 1",
+            "-3 1",
+            "-4 -1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Depuis C99, la division entière tronque vers zéro, et le reste a le signe du dividende : -7 = 2 × (-3) + (-1).",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "c-controle",
       "title": "Contrôle et fonctions",
       "summary": "Boucles, fonctions et portée.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Conditions et boucles",
+          "body": "En C, 0 est faux et toute autre valeur est vraie. for, while et do-while (qui s'exécute au moins une fois) ressemblent aux autres langages. Dans un switch, l'exécution continue dans le case suivant sans break : c'est le fall-through.",
+          "code": "switch (code) {\ncase 1:\n    puts(\"un\");\n    break;\ncase 2:\ncase 3:\n    puts(\"deux ou trois\");\n    break;\ndefault:\n    puts(\"autre\");\n}"
+        },
+        {
+          "title": "Passage par valeur",
+          "body": "Les arguments sont toujours copiés. Pour qu'une fonction modifie une variable de l'appelant, on lui passe son adresse. Une fonction doit être déclarée (prototype) avant d'être appelée.",
+          "code": "void incrementer(int *x)\n{\n    (*x)++;\n}\n\nint n = 5;\nincrementer(&n);   // n vaut 6"
+        },
+        {
+          "title": "Portée et durée de vie",
+          "body": "Une variable locale n'existe que dans son bloc ; elle est détruite à la sortie. Renvoyer l'adresse d'une variable locale donne donc un pointeur vers une zone qui n'existe plus."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-controle-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int n = 1;\nswitch (n) {\ncase 1: printf(\"a\");\ncase 2: printf(\"b\"); break;\ndefault: printf(\"c\");\n}",
+          "choices": [
+            "ab",
+            "a",
+            "abc",
+            "b"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans break après le case 1, l'exécution continue dans le case 2, jusqu'au break.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-controle-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "void inc(int x) { x++; }\n\nint main(void)\n{\n    int a = 5;\n    inc(a);\n    printf(\"%d\\n\", a);\n}",
+          "choices": [
+            "5",
+            "6",
+            "0",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "inc reçoit une copie de a. Pour modifier a, il faut passer &a et un paramètre int *.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "c-controle-q3",
+          "prompt": "Ce code affiche toujours « non nul », même quand x vaut 0. Touche la ligne fautive.",
+          "code": "int x = lire_valeur();\nif (x = 0)\n    puts(\"nul\");\nelse\n    puts(\"non nul\");",
+          "bugLines": [
+            2
+          ],
+          "explanation": "x = 0 est une affectation, qui vaut 0, donc faux : on passe toujours dans le else, et x est écrasé. Il faut ==. gcc -Wall le signale.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-controle-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int i = 10;\ndo {\n    printf(\"%d \", i);\n    i++;\n} while (i < 5);",
+          "choices": [
+            "10",
+            "Rien",
+            "10 11 12 13 14",
+            "5 6 7 8 9"
+          ],
+          "answerIndex": 0,
+          "explanation": "do-while exécute son corps une fois avant de tester la condition.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-controle-q5",
+          "prompt": "Combien de « x » ce code affiche-t-il ?",
+          "code": "for (int i = 0; i < 3; i++);\n    printf(\"x\");",
+          "choices": [
+            "1",
+            "3",
+            "0",
+            "Erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le point-virgule après le for est une instruction vide : la boucle ne fait rien trois fois, puis printf s'exécute une fois. L'indentation trompe.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "c-controle-q6",
+          "prompt": "Cette fonction renvoie un pointeur invalide. Touche la ligne en cause.",
+          "code": "int *creer_tableau(void)\n{\n    int t[3] = {1, 2, 3};\n    return t;\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "t est une variable locale, détruite à la sortie de la fonction. Il faut allouer avec malloc, ou laisser l'appelant fournir le tableau.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "c-defi-bases",
+    "title": "Défi entretien : bases du C",
+    "summary": "Une moyenne pas si simple.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "c-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Que renvoie moyenne(t, 4) avec t = {1, 2, 3, 4} ?",
+        "code": "int moyenne(const int *t, int n)\n{\n    int s = 0;\n    for (int i = 0; i < n; i++)\n        s += t[i];\n    return s / n;\n}",
+        "choices": [
+          "2",
+          "2.5",
+          "3",
+          "10"
+        ],
+        "answerIndex": 0,
+        "explanation": "10 / 4 est une division entière : 2. Il faut renvoyer un double et diviser par (double)n.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "c-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Que se passe-t-il avec moyenne(t, 0) ?",
+        "choices": [
+          "Une division entière par zéro : comportement indéfini, souvent un plantage",
+          "Elle renvoie 0",
+          "Elle renvoie l'infini",
+          "Une erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "La division entière par zéro n'a pas de résultat défini (sur x86, le programme reçoit SIGFPE). En double, elle donnerait NaN ou l'infini.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Le tableau contient un million de valeurs proches de 10 000. Quel autre problème guette ?",
+        "choices": [
+          "La somme dépasse INT_MAX : débordement signé, comportement indéfini. Il faut un accumulateur long long ou double",
+          "Aucun",
+          "La boucle est trop lente",
+          "Le tableau ne peut pas contenir un million de valeurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "10⁶ × 10⁴ = 10¹⁰, bien au-delà de 2³¹ − 1 ≈ 2,1 × 10⁹.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi1-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "int a = 5, b = 2;\nprintf(\"%d %.1f\\n\", a / b, (double)a / b);",
+        "choices": [
+          "2 2.5",
+          "2.5 2.5",
+          "2 2.0",
+          "3 2.5"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le cast s'applique à a avant la division : b est alors converti en double, et la division devient réelle.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "c-defi1-q5",
+        "prompt": "Quelles options de gcc aident à détecter ces erreurs ?",
+        "choices": [
+          "-Wall -Wextra : avertissements sur les erreurs courantes",
+          "-fsanitize=undefined : détecte à l'exécution les débordements signés et divisions par zéro",
+          "-Wconversion : signale les conversions implicites qui perdent de l'information",
+          "-O3 : corrige automatiquement les bugs"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "-O3 optimise : il peut au contraire rendre visibles des comportements indéfinis qui passaient inaperçus.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi1-q6",
+        "prompt": "En entretien : pourquoi le C laisse-t-il autant de comportements indéfinis ?",
+        "choices": [
+          "Pour permettre au compilateur de générer le code le plus efficace sur toutes les architectures, sans vérifications coûteuses",
+          "Par oubli des concepteurs",
+          "Pour rendre le langage plus sûr",
+          "Il n'y en a pas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le C fait confiance au programmeur. Le prix : c'est à lui d'éviter ces situations, avec l'aide des avertissements et des sanitizers.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

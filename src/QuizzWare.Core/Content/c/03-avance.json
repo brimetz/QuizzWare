@@ -94,8 +94,234 @@
           "answerIndex": 1,
           "explanation": "Chaque lecture/écriture est réellement effectuée en mémoire. Attention : volatile ne garantit pas l'atomicité.",
           "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "c-avance-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int compteur(void)\n{\n    static int n = 0;\n    return ++n;\n}\n\nint main(void)\n{\n    compteur();\n    compteur();\n    printf(\"%d\\n\", compteur());\n}",
+          "choices": [
+            "3",
+            "1",
+            "0",
+            "2"
+          ],
+          "answerIndex": 0,
+          "explanation": "n est initialisée une seule fois et conserve sa valeur entre les appels.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "c-chaines",
+      "title": "Manipuler des chaînes",
+      "summary": "string.h sans débordement.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Comparer et copier",
+          "body": "== compare deux adresses, pas deux contenus : on utilise strcmp, qui renvoie 0 si les chaînes sont égales. On ne peut pas non plus affecter un tableau : on copie son contenu. strcpy et strcat ne vérifient pas la taille de la destination : ce sont des débordements de tampon en puissance.",
+          "code": "char nom[16];\nif (strcmp(a, b) == 0)\n    puts(\"égales\");\nsnprintf(nom, sizeof nom, \"%s\", source);"
+        },
+        {
+          "title": "snprintf, le choix sûr",
+          "body": "snprintf écrit au plus taille − 1 caractères puis le '\\0', et renvoie la longueur qu'aurait eue la chaîne complète : on détecte ainsi une troncature. strncpy, malgré son nom, ne garantit pas le '\\0' final si la source est trop longue."
+        },
+        {
+          "title": "Littéraux et tableaux",
+          "body": "char s[] = \"abc\" crée un tableau modifiable de 4 octets. char *p = \"abc\" pointe vers un littéral, souvent en mémoire en lecture seule : le modifier est un comportement indéfini. On l'écrit donc const char *p."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "c-chaines-q1",
+          "prompt": "Ce test ne détecte jamais le mot de passe correct. Touche la ligne fautive.",
+          "code": "char saisie[64];\nlire(saisie, sizeof saisie);\nif (saisie == \"secret\")\n    puts(\"Accès autorisé\");",
+          "bugLines": [
+            3
+          ],
+          "explanation": "== compare l'adresse du tableau à celle du littéral : toujours différentes. Il faut strcmp(saisie, \"secret\") == 0.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-chaines-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "char buf[8];\nint n = snprintf(buf, sizeof buf,\n                 \"%s\", \"bonjour tout\");\nprintf(\"%s %d\\n\", buf, n);",
+          "choices": [
+            "bonjour 12",
+            "bonjour tout 12",
+            "bonjour  8",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "snprintf écrit 7 caractères et le '\\0', et renvoie 12, la longueur complète : n >= sizeof buf signale une troncature.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "c-chaines-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "char s[] = \"chat\";\nprintf(\"%zu %zu\\n\", sizeof s, strlen(s));",
+          "choices": [
+            "5 4",
+            "4 4",
+            "8 4",
+            "4 5"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le tableau contient les 4 lettres et le '\\0' final ; strlen ne compte pas le terminateur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-chaines-q4",
+          "prompt": "Que se passe-t-il avec ce code ?",
+          "code": "char *p = \"abc\";\np[0] = 'x';",
+          "choices": [
+            "Comportement indéfini : le littéral est souvent en mémoire en lecture seule, et le programme plante",
+            "p vaut « xbc »",
+            "Erreur de compilation",
+            "Rien, l'affectation est ignorée"
+          ],
+          "answerIndex": 0,
+          "explanation": "char s[] = \"abc\" aurait créé une copie modifiable. Déclarer const char *p fait détecter l'erreur à la compilation.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-chaines-q5",
+          "prompt": "Pourquoi strncpy(dst, src, sizeof dst) est-il un piège ?",
+          "choices": [
+            "Si src est trop longue, dst n'est pas terminée par '\\0'",
+            "Il est plus lent que strcpy",
+            "Il n'existe pas en C",
+            "Il alloue de la mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Lire ensuite dst avec printf ou strlen déborde. snprintf garantit toujours le terminateur.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "c-chaines-q6",
+          "prompt": "Quelles fonctions ne vérifient pas la taille de la destination ?",
+          "choices": [
+            "strcpy",
+            "strcat",
+            "sprintf",
+            "snprintf"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "gets était pire encore : impossible à utiliser sans risque, elle a été retirée du langage en C11.",
+          "difficulty": 2
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "c-defi-avance",
+    "title": "Défi entretien : chaînes",
+    "summary": "Réécrire strlen et inverser un mot.",
+    "questions": [
+      {
+        "type": "fill",
+        "id": "c-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Complète une implémentation de strlen.",
+        "code": "size_t longueur(const char *s)\n{\n    const char *p = s;\n    while (*p != ___)\n        p++;\n    return p ___ s;\n}",
+        "answers": [
+          "'\\0'",
+          "-"
+        ],
+        "distractors": [
+          "'0'",
+          "+",
+          "NULL"
+        ],
+        "explanation": "On avance jusqu'au terminateur ; la différence de deux pointeurs donne le nombre d'éléments entre eux. '0' est le chiffre zéro, pas le caractère nul.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi3-q2",
+        "prompt": "Cas pratique 2/3 — Que se passe-t-il si on appelle longueur(NULL) ?",
+        "choices": [
+          "Le programme déréférence un pointeur nul : comportement indéfini, en pratique un plantage",
+          "La fonction renvoie 0",
+          "La fonction renvoie -1",
+          "Erreur de compilation"
+        ],
+        "answerIndex": 0,
+        "explanation": "Comme le vrai strlen, la fonction suppose une chaîne valide : c'est un contrat à documenter.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Qu'affiche ce code ?",
+        "code": "char s[] = \"radar et kayak\";\nchar *mot = strtok(s, \" \");\nint n = 0;\nwhile (mot) {\n    n++;\n    mot = strtok(NULL, \" \");\n}\nprintf(\"%d %s\\n\", n, s);",
+        "choices": [
+          "3 radar",
+          "3 radar et kayak",
+          "2 radar",
+          "14 radar et kayak"
+        ],
+        "answerIndex": 0,
+        "explanation": "strtok découpe en écrivant des '\\0' dans la chaîne elle-même : après le découpage, s ne contient plus que « radar ». Elle n'est pas non plus réentrante (strtok_r existe).",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi3-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "#define MAX(a, b) ((a) > (b) ? (a) : (b))\n\nint i = 5, j = 3;\nint m = MAX(i++, j);\nprintf(\"%d %d\\n\", m, i);",
+        "choices": [
+          "6 7",
+          "5 6",
+          "6 6",
+          "5 7"
+        ],
+        "answerIndex": 0,
+        "explanation": "La macro évalue a deux fois : i++ est exécuté dans le test (5 > 3, i passe à 6), puis à nouveau dans le résultat (renvoie 6, i passe à 7). Une fonction static inline n'a pas ce défaut.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "c-defi3-q5",
+        "prompt": "Quelles bonnes pratiques s'appliquent aux macros ?",
+        "choices": [
+          "Parenthéser chaque paramètre et l'expression entière",
+          "Éviter de passer des arguments avec effets de bord",
+          "Préférer une fonction static inline ou une constante quand c'est possible",
+          "Écrire les macros en minuscules pour qu'elles ressemblent à des fonctions"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La convention des majuscules signale au lecteur qu'il s'agit d'une macro, avec ses pièges.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi3-q6",
+        "prompt": "En entretien : pourquoi les chaînes terminées par '\\0' sont-elles critiquées ?",
+        "choices": [
+          "Calculer la longueur est en O(n), et un terminateur manquant fait lire hors du tampon",
+          "Elles prennent moins de mémoire",
+          "Elles ne supportent pas l'ASCII",
+          "Elles sont toujours en lecture seule"
+        ],
+        "answerIndex": 0,
+        "explanation": "La plupart des langages modernes stockent la longueur avec la chaîne. Beaucoup de failles historiques viennent de ce choix du C.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

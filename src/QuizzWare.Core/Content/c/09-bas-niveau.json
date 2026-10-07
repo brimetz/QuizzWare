@@ -7,13 +7,316 @@
       "id": "c-bits",
       "title": "Opérations bit à bit",
       "summary": "Masques et décalages.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les opérateurs",
+          "body": "& (et), | (ou), ^ (ou exclusif), ~ (négation), << et >> (décalages). Décaler à gauche de n multiplie par 2ⁿ, à droite divise par 2ⁿ (pour des non signés). On les utilise sur des types non signés : décaler un signé négatif est indéfini ou dépend de l'implémentation."
+        },
+        {
+          "title": "Les masques",
+          "body": "Un entier peut stocker une série d'options indépendantes, une par bit. On active un bit avec |, on le désactive avec & ~, on l'inverse avec ^, on le teste avec &.",
+          "code": "#define LECTURE  (1u << 0)\n#define ECRITURE (1u << 1)\n#define EXEC     (1u << 2)\n\nunsigned droits = LECTURE | ECRITURE;\ndroits &= ~ECRITURE;        /* retire */\nif (droits & LECTURE)       /* teste  */\n    puts(\"lisible\");"
+        },
+        {
+          "title": "Quelques astuces",
+          "body": "x & (x - 1) efface le bit à 1 le plus faible : il vaut 0 si x est une puissance de deux (x non nul). x & 1 teste la parité. Extraire un champ : (x >> decalage) & masque. Les compilateurs fournissent __builtin_popcount pour compter les bits à 1."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-bits-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "unsigned a = 0xC;  /* 1100 */\nunsigned b = 0xA;  /* 1010 */\nprintf(\"%u %u %u\\n\", a & b, a | b, a ^ b);",
+          "choices": [
+            "8 14 6",
+            "12 10 2",
+            "8 6 14",
+            "4 14 6"
+          ],
+          "answerIndex": 0,
+          "explanation": "1100 & 1010 = 1000 (8), 1100 | 1010 = 1110 (14), 1100 ^ 1010 = 0110 (6).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "c-bits-q2",
+          "prompt": "Complète : activer le bit EXEC, puis désactiver le bit ECRITURE.",
+          "code": "droits ___ EXEC;\ndroits &= ___ECRITURE;",
+          "answers": [
+            "|=",
+            "~"
+          ],
+          "distractors": [
+            "&=",
+            "!",
+            "^="
+          ],
+          "explanation": "| met le bit à 1 sans toucher aux autres. & ~masque met le bit à 0. ! est une négation logique, qui donnerait 0 ou 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-bits-q3",
+          "prompt": "Que vaut 5u << 3 ?",
+          "choices": [
+            "40",
+            "8",
+            "15",
+            "125"
+          ],
+          "answerIndex": 0,
+          "explanation": "Décaler de 3 à gauche multiplie par 2³ = 8.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-bits-q4",
+          "prompt": "Que teste l'expression x && !(x & (x - 1)) ?",
+          "choices": [
+            "Que x est une puissance de deux",
+            "Que x est pair",
+            "Que x est nul",
+            "Que x est négatif"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une puissance de deux n'a qu'un bit à 1 ; x - 1 a tous les bits inférieurs à 1 et celui-là à 0, donc x & (x - 1) vaut 0.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "c-bits-q5",
+          "prompt": "Une couleur est codée 0xRRGGBB. Comment extraire la composante verte ?",
+          "choices": [
+            "(c >> 8) & 0xFF",
+            "c & 0xFF",
+            "(c >> 16) & 0xFF",
+            "c >> 8"
+          ],
+          "answerIndex": 0,
+          "explanation": "On décale pour amener les bits GG en position basse, puis on masque les 8 bits. Sans le masque, le rouge resterait au-dessus.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "c-bits-q6",
+          "prompt": "Ce test de bit ne fonctionne pas comme prévu. Touche la ligne fautive.",
+          "code": "if (droits & LECTURE == LECTURE)\n    puts(\"lisible\");",
+          "bugLines": [
+            1
+          ],
+          "explanation": "== est prioritaire sur & : on calcule droits & (LECTURE == LECTURE), soit droits & 1. Il faut des parenthèses, ou simplement if (droits & LECTURE).",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "c-endianness",
       "title": "Endianness",
       "summary": "L'ordre des octets.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Petit-boutiste ou gros-boutiste",
+          "body": "Un entier de 4 octets 0x11223344 peut être rangé en mémoire de deux façons. Little-endian (x86, la plupart des ARM) : l'octet de poids faible d'abord, 44 33 22 11. Big-endian : l'octet de poids fort d'abord, 11 22 33 44. Le réseau utilise le big-endian : c'est l'« ordre réseau »."
+        },
+        {
+          "title": "Convertir",
+          "body": "htonl et htons (host to network, long et short) convertissent vers l'ordre réseau ; ntohl et ntohs font l'inverse. Sur une machine big-endian, elles ne font rien ; sur une little-endian, elles inversent les octets.",
+          "code": "#include <arpa/inet.h>\nuint16_t port = htons(8080);\nuint32_t ip = ntohl(entete->adresse);"
+        },
+        {
+          "title": "Écrire du code portable",
+          "body": "Plutôt que de copier un entier tel quel dans un tampon, on le compose octet par octet avec des décalages : le résultat est le même sur toutes les machines, quel que soit leur ordre natif.",
+          "code": "uint32_t lire_be32(const uint8_t *p)\n{\n    return (uint32_t)p[0] << 24 | (uint32_t)p[1] << 16\n         | (uint32_t)p[2] << 8  | p[3];\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-endian-q1",
+          "prompt": "Comment l'entier 0x0A0B0C0D est-il rangé en mémoire sur une machine x86 ?",
+          "choices": [
+            "0D 0C 0B 0A",
+            "0A 0B 0C 0D",
+            "0B 0A 0D 0C",
+            "Cela dépend du compilateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "x86 est little-endian : l'octet de poids faible est à l'adresse la plus basse.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-endian-q2",
+          "prompt": "Qu'appelle-t-on « l'ordre réseau » ?",
+          "choices": [
+            "Le big-endian, utilisé par les en-têtes des protocoles Internet",
+            "Le little-endian",
+            "L'ordre alphabétique des adresses",
+            "L'ordre d'arrivée des paquets"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ports et adresses IP sont transmis octet de poids fort en premier.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-endian-q3",
+          "prompt": "Avec la fonction lire_be32 de la leçon, que renvoie l'appel sur les octets {0x00, 0x00, 0x01, 0x02} ?",
+          "choices": [
+            "258",
+            "33619968",
+            "3",
+            "513"
+          ],
+          "answerIndex": 0,
+          "explanation": "0x00000102 = 1 × 256 + 2 = 258. Le résultat est identique quelle que soit la machine.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "c-endian-q4",
+          "prompt": "Ce serveur écoute sur le port 36895 au lieu de 8080, sur un PC x86. Touche la ligne fautive.",
+          "code": "struct sockaddr_in a = {0};\na.sin_family = AF_INET;\na.sin_port = 8080;\na.sin_addr.s_addr = htonl(INADDR_ANY);",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Le port doit être en ordre réseau : htons(8080). Sans conversion, les deux octets sont inversés : 0x1F90 devient 0x901F, soit 36895.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-endian-q5",
+          "prompt": "Pourquoi caster le premier octet en uint32_t avant p[0] << 24 dans lire_be32 ?",
+          "choices": [
+            "Sans cast, p[0] est promu en int signé ; un octet ≥ 0x80 décalé de 24 déborderait l'int, ce qui est indéfini",
+            "Pour accélérer le calcul",
+            "C'est inutile",
+            "Pour changer l'endianness"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les promotions entières transforment uint8_t en int, pas en unsigned : 0x80 << 24 dépasse INT_MAX.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "c-endian-q6",
+          "prompt": "Quand l'endianness compte-t-elle ?",
+          "choices": [
+            "Pour lire ou écrire un format binaire de fichier",
+            "Pour construire des en-têtes réseau",
+            "Pour examiner les octets d'un entier via un pointeur char *",
+            "Pour additionner deux int dans un programme"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les calculs sur des valeurs ne dépendent pas de l'ordre des octets : seule la représentation en mémoire en dépend.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "c-defi-bas-niveau",
+    "title": "Défi entretien : bas niveau",
+    "summary": "Manipuler des bits comme en entretien.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "c-defi9-q1",
+        "prompt": "Cas pratique 1/3 — Qu'affiche ce code ?",
+        "code": "int compter(unsigned x)\n{\n    int n = 0;\n    while (x) {\n        x &= x - 1;\n        n++;\n    }\n    return n;\n}\n\nprintf(\"%d\\n\", compter(0xF1));",
+        "choices": [
+          "5",
+          "8",
+          "4",
+          "241"
+        ],
+        "answerIndex": 0,
+        "explanation": "0xF1 = 1111 0001 : cinq bits à 1. Chaque tour efface le bit à 1 le plus faible (algorithme de Kernighan).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi9-q2",
+        "prompt": "Cas pratique 2/3 — Combien de tours fait cette boucle pour un nombre de 32 bits ?",
+        "choices": [
+          "Autant que de bits à 1, au plus 32",
+          "Toujours 32",
+          "Toujours 1",
+          "Autant que la valeur de x"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une boucle qui teste chaque bit ferait toujours 32 tours. En pratique, __builtin_popcount utilise une instruction dédiée du processeur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi9-q3",
+        "prompt": "Cas pratique 3/3 — Qu'affiche ce code ?",
+        "code": "unsigned x = 6;\nprintf(\"%u %u\\n\", x & -x, x | (x + 1));",
+        "choices": [
+          "2 7",
+          "6 7",
+          "2 6",
+          "1 13"
+        ],
+        "answerIndex": 0,
+        "explanation": "x & -x isole le bit à 1 le plus faible (110 → 010). x | (x + 1) allume le bit à 0 le plus faible (110 → 111).",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi9-q4",
+        "prompt": "Comment échanger deux variables entières sans variable temporaire, avec XOR ?",
+        "code": "a ^= b;\nb ^= a;\na ^= b;",
+        "choices": [
+          "Ce code fonctionne, sauf si a et b désignent la même variable : elle vaudrait alors 0",
+          "Ce code ne fonctionne jamais",
+          "Ce code fonctionne toujours, c'est la méthode recommandée",
+          "Il faut utiliser + et -"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une curiosité d'entretien. En pratique, une variable temporaire est plus lisible, et tout aussi rapide après optimisation.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "c-defi9-q5",
+        "prompt": "Que garantit volatile, et que ne garantit-il pas ?",
+        "choices": [
+          "Chaque accès est réellement effectué en mémoire",
+          "Il convient aux registres matériels et aux variables modifiées par un gestionnaire de signal",
+          "Il ne rend pas les accès atomiques entre threads",
+          "Il remplace un mutex"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Pour partager des données entre threads, on utilise <stdatomic.h> ou des verrous, pas volatile.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi9-q6",
+        "prompt": "En entretien : pourquoi utiliser des champs de bits dans un entier plutôt qu'une struct de booléens ?",
+        "choices": [
+          "Pour la compacité et des tests groupés (une seule opération teste plusieurs options), utiles en embarqué, en réseau ou dans les API système",
+          "Parce que les struct sont interdites",
+          "Parce que bool n'existe pas en C",
+          "Pour rendre le code plus lisible dans tous les cas"
+        ],
+        "answerIndex": 0,
+        "explanation": "open(chemin, O_CREAT | O_WRONLY) en est un exemple. bool existe depuis C99 (<stdbool.h>), et c'est un mot-clé depuis C23.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

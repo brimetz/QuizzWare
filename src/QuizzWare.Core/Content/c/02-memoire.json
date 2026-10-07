@@ -94,8 +94,235 @@
           "answerIndex": 1,
           "explanation": "L'arithmétique de pointeurs se fait en éléments : p + 1 avance de sizeof(int) octets.",
           "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-pointeurs-q6",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int x = 10;\nint *p = &x;\n*p = 20;\nprintf(\"%d\\n\", x);",
+          "choices": [
+            "20",
+            "10",
+            "L'adresse de x",
+            "Comportement indéfini"
+          ],
+          "answerIndex": 0,
+          "explanation": "p pointe sur x : écrire dans *p, c'est écrire dans x.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "c-tableaux-pointeurs",
+      "title": "Tableaux, pointeurs et const",
+      "summary": "Ce qui se cache derrière t[i].",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le tableau se dégrade en pointeur",
+          "body": "Dans la plupart des expressions, le nom d'un tableau est converti en pointeur vers son premier élément. t[i] est défini comme *(t + i). Mais un tableau n'est pas un pointeur : sizeof(t) donne la taille de tout le tableau, alors que sizeof d'un pointeur donne la taille d'une adresse."
+        },
+        {
+          "title": "Passer un tableau à une fonction",
+          "body": "Une fonction ne reçoit jamais un tableau, seulement un pointeur vers son premier élément : elle ne connaît pas sa taille. On passe donc toujours la taille en paramètre. La fonction peut modifier les éléments, puisqu'elle a leur adresse.",
+          "code": "void doubler(int *t, size_t n)\n{\n    for (size_t i = 0; i < n; i++)\n        t[i] *= 2;\n}\n\nint v[4] = {1, 2, 3, 4};\ndoubler(v, sizeof v / sizeof v[0]);"
+        },
+        {
+          "title": "const et les pointeurs",
+          "body": "const int *p : on ne peut pas modifier la valeur pointée via p (mais p peut pointer ailleurs). int *const p : p ne peut pas changer de cible (mais la valeur pointée peut changer). Une fonction qui ne fait que lire un tableau prend un const int * : c'est une documentation vérifiée par le compilateur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "c-tabptr-q1",
+          "prompt": "Qu'affiche ce code sur un système 64 bits, avec des int de 4 octets ?",
+          "code": "void f(int t[10])\n{\n    printf(\"%zu \", sizeof t);\n}\n\nint main(void)\n{\n    int t[10];\n    printf(\"%zu \", sizeof t);\n    f(t);\n}",
+          "choices": [
+            "40 8",
+            "40 40",
+            "8 8",
+            "10 10"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans main, t est un vrai tableau de 10 int. En paramètre, int t[10] est en réalité un int * : sizeof donne la taille d'un pointeur. gcc avertit d'ailleurs de ce piège.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-tabptr-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "int t[] = {10, 20, 30, 40};\nint *p = t + 1;\nprintf(\"%d %d\\n\", *p, p[2]);",
+          "choices": [
+            "20 40",
+            "10 30",
+            "20 30",
+            "11 12"
+          ],
+          "answerIndex": 0,
+          "explanation": "p pointe sur t[1]. p[2] vaut *(p + 2), c'est-à-dire t[3].",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "c-tabptr-q3",
+          "prompt": "Pourquoi une fonction qui reçoit un tableau doit-elle aussi recevoir sa taille ?",
+          "choices": [
+            "Elle ne reçoit qu'un pointeur vers le premier élément, sans information sur la longueur",
+            "Pour des raisons de performance uniquement",
+            "Ce n'est pas nécessaire, sizeof suffit",
+            "Parce que les tableaux sont copiés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les chaînes s'en passent grâce à leur terminateur '\\0' ; tous les autres tableaux ont besoin de leur taille.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-tabptr-q4",
+          "prompt": "Avec const int *p = &x;, quelle instruction est refusée par le compilateur ?",
+          "choices": [
+            "*p = 5;",
+            "p = &y;",
+            "int v = *p;",
+            "p++;"
+          ],
+          "answerIndex": 0,
+          "explanation": "const porte sur la valeur pointée : on peut lire *p et changer de cible, mais pas écrire via p.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "c-tabptr-q5",
+          "prompt": "Complète cette fonction d'échange de deux entiers.",
+          "code": "void echanger(int *a, int *b)\n{\n    int tmp = ___;\n    *a = *b;\n    ___ = tmp;\n}",
+          "answers": [
+            "*a",
+            "*b"
+          ],
+          "distractors": [
+            "a",
+            "b",
+            "&a"
+          ],
+          "explanation": "On manipule les valeurs pointées. Échanger a et b eux-mêmes ne changerait que les copies locales des pointeurs.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "c-tabptr-q6",
+          "prompt": "Que calcule sizeof v / sizeof v[0] ?",
+          "choices": [
+            "Le nombre d'éléments du tableau v, s'il s'agit d'un vrai tableau",
+            "La taille d'un élément",
+            "La taille de v en octets",
+            "Toujours 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Attention : sur un pointeur (par exemple un paramètre de fonction), le calcul donne un résultat faux sans erreur.",
+          "difficulty": 2
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "c-defi-memoire",
+    "title": "Défi entretien : pointeurs",
+    "summary": "Inverser un tableau en place.",
+    "questions": [
+      {
+        "type": "order",
+        "id": "c-defi2-q1",
+        "prompt": "Cas pratique 1/3 — Remets dans l'ordre la fonction qui inverse un tableau en place.",
+        "lines": [
+          "void inverser(int *t, size_t n)",
+          "{",
+          "    for (size_t i = 0; i < n / 2; i++) {",
+          "        int tmp = t[i];",
+          "        t[i] = t[n - 1 - i];",
+          "        t[n - 1 - i] = tmp;",
+          "    }",
+          "}"
+        ],
+        "explanation": "On échange les éléments symétriques jusqu'au milieu. Aller jusqu'à n remettrait le tableau dans son ordre d'origine.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "c-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Que se passe-t-il si on appelle inverser(t, 0) ?",
+        "choices": [
+          "Rien : n / 2 vaut 0, la boucle ne s'exécute pas",
+          "Un accès à t[-1]",
+          "Une boucle infinie",
+          "Une division par zéro"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le cas limite est bien géré. Avec une boucle « for (i = 0, j = n - 1; i < j; ...) », n - 1 vaudrait SIZE_MAX : il faudrait tester n à part.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi2-q3",
+        "prompt": "Cas pratique 3/3 — Qu'affiche ce code, avec la fonction inverser ?",
+        "code": "int t[] = {1, 2, 3, 4, 5};\ninverser(t + 1, 3);\nfor (int i = 0; i < 5; i++)\n    printf(\"%d\", t[i]);",
+        "choices": [
+          "14325",
+          "54321",
+          "12345",
+          "43215"
+        ],
+        "answerIndex": 0,
+        "explanation": "t + 1 désigne le sous-tableau {2, 3, 4} : seuls ces trois éléments sont inversés.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi2-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "int a = 1, b = 2;\nint *p = &a, *q = &b;\np = q;\n*p = 3;\nprintf(\"%d %d\\n\", a, b);",
+        "choices": [
+          "1 3",
+          "3 2",
+          "3 3",
+          "1 2"
+        ],
+        "answerIndex": 0,
+        "explanation": "p = q copie l'adresse : p pointe désormais sur b. Écrire dans *p modifie b.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "c-defi2-q5",
+        "prompt": "Quelles déclarations sont correctement décrites ?",
+        "choices": [
+          "const int *p : la valeur pointée ne peut pas être modifiée via p",
+          "int *const p : p ne peut pas changer de cible",
+          "const int *const p : ni l'un ni l'autre",
+          "int *p, q : p et q sont deux pointeurs"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Dans int *p, q, l'étoile ne s'applique qu'à p : q est un simple int. D'où la règle d'une déclaration par ligne.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "c-defi2-q6",
+        "prompt": "En entretien : quelle différence entre int t[10] et int *t = malloc(10 * sizeof(int)) ?",
+        "choices": [
+          "Le premier est un tableau de taille fixe (pile ou mémoire statique), libéré automatiquement ; le second une zone sur le tas, à libérer avec free",
+          "Aucune différence",
+          "Le premier est plus lent",
+          "Le second ne peut pas être indexé avec []"
+        ],
+        "answerIndex": 0,
+        "explanation": "sizeof aussi diffère : 40 octets pour le tableau, la taille d'un pointeur pour le second.",
+        "difficulty": 2
+      }
+    ]
+  }
 }
