@@ -7,19 +7,424 @@
       "id": "sec-injections",
       "title": "Injections",
       "summary": "SQL, commandes système et autres.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des données prises pour du code",
+          "body": "Une injection survient quand une entrée utilisateur est insérée dans une commande interprétée (SQL, shell, LDAP...) : l'attaquant peut alors changer le sens de la commande. Avec l'entrée « ' OR '1'='1 », la requête ci-dessous renvoie tous les utilisateurs.",
+          "code": "# DANGEREUX\nsql = f\"SELECT * FROM users WHERE nom = '{nom}'\"\ncur.execute(sql)\n\n# SÛR : requête paramétrée\ncur.execute(\"SELECT * FROM users WHERE nom = ?\",\n            (nom,))"
+        },
+        {
+          "title": "La parade : séparer code et données",
+          "body": "Avec une requête paramétrée, la base reçoit la requête et les valeurs séparément : une valeur ne peut jamais être interprétée comme du SQL. Les ORM le font automatiquement, sauf quand on écrit du SQL brut avec des chaînes formatées. Échapper à la main est fragile ; filtrer les mots-clés l'est encore plus."
+        },
+        {
+          "title": "Les commandes système",
+          "body": "Construire une commande shell avec une entrée utilisateur permet d'y glisser « ; rm -rf / » ou « $(curl ...) ». On appelle le programme directement avec une liste d'arguments, sans passer par un shell, et on valide les entrées par liste blanche.",
+          "code": "# DANGEREUX\nos.system(f\"convert {fichier} sortie.png\")\n\n# SÛR : pas de shell, arguments séparés\nsubprocess.run([\"convert\", fichier, \"sortie.png\"])"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-injections-q1",
+          "prompt": "Avec la requête dangereuse de la leçon, que renvoie la saisie ' OR '1'='1 ?",
+          "choices": [
+            "Tous les utilisateurs : la condition devient toujours vraie",
+            "Aucun utilisateur",
+            "Une erreur systématique",
+            "L'utilisateur nommé « OR »"
+          ],
+          "answerIndex": 0,
+          "explanation": "La requête devient WHERE nom = '' OR '1'='1' : la seconde condition est vraie pour toutes les lignes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-injections-q2",
+          "prompt": "Quelle est la protection fiable contre l'injection SQL ?",
+          "choices": [
+            "Les requêtes paramétrées (ou un ORM utilisé sans SQL brut concaténé)",
+            "Supprimer les apostrophes des saisies",
+            "Interdire les mots SELECT et DROP",
+            "Limiter la longueur des champs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les filtres maison se contournent (encodages, commentaires, autres syntaxes). Les paramètres éliminent le problème à la racine.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-injections-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "import sqlite3\n\ndb = sqlite3.connect(\":memory:\")\ndb.execute(\"CREATE TABLE u (nom TEXT)\")\ndb.executemany(\"INSERT INTO u VALUES (?)\",\n               [(\"ana\",), (\"bob\",)])\nnom = \"x' OR '1'='1\"\nq1 = f\"SELECT * FROM u WHERE nom = '{nom}'\"\nq2 = \"SELECT * FROM u WHERE nom = ?\"\nprint(len(db.execute(q1).fetchall()),\n      len(db.execute(q2, (nom,)).fetchall()))",
+          "choices": [
+            "2 0",
+            "0 0",
+            "2 2",
+            "Une erreur SQL"
+          ],
+          "answerIndex": 0,
+          "explanation": "La requête concaténée renvoie toute la table ; la requête paramétrée cherche littéralement un utilisateur nommé « x' OR '1'='1 », qui n'existe pas.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sec-injections-q4",
+          "prompt": "Cette fonction permet d'exécuter n'importe quelle commande sur le serveur. Touche la ligne fautive.",
+          "code": "def ping(hote):\n    if not hote:\n        return \"hôte manquant\"\n    return os.popen(f\"ping -c 1 {hote}\").read()",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Avec hote = « exemple.fr; cat /etc/passwd », le shell exécute les deux commandes. Il faut subprocess.run([\"ping\", \"-c\", \"1\", hote]) et valider le format de l'hôte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-injections-q5",
+          "prompt": "Le nom de la colonne de tri vient d'un paramètre d'URL (?tri=prix). Les paramètres SQL ne s'appliquent pas aux noms de colonnes. Que faire ?",
+          "choices": [
+            "Comparer la valeur à une liste blanche de colonnes autorisées",
+            "L'insérer directement dans la requête",
+            "Retirer les espaces",
+            "Encoder la valeur en base64"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour les identifiants (colonnes, tables, ordre ASC/DESC), seule une liste fermée de valeurs connues est sûre.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "sec-injections-q6",
+          "prompt": "Quelles mesures limitent l'impact d'une injection SQL qui aurait échappé aux contrôles ?",
+          "choices": [
+            "Un compte de base de données aux droits minimaux",
+            "Des messages d'erreur génériques, sans le SQL ni la pile d'appels",
+            "Le chiffrement des données les plus sensibles",
+            "Un compte administrateur pour l'application"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "C'est la défense en profondeur : la requête paramétrée prévient, les autres mesures limitent les dégâts.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "sec-xss",
       "title": "XSS",
       "summary": "Des scripts injectés dans les pages.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Exécuter du code chez les autres",
+          "body": "Le cross-site scripting (XSS) consiste à faire exécuter un script malveillant dans le navigateur d'autres utilisateurs, via le site vulnérable. Stocké : le script est enregistré (un commentaire) et servi à chaque visiteur. Réfléchi : il est dans un paramètre d'URL renvoyé dans la page. Le script agit alors avec les droits de la victime sur le site."
+        },
+        {
+          "title": "Échapper selon le contexte",
+          "body": "Avant d'insérer une donnée dans du HTML, on échappe les caractères spéciaux (< devient &lt;). Les moteurs de templates modernes (Razor, Jinja2, React) le font par défaut ; les failles arrivent quand on le contourne (innerHTML, |safe, dangerouslySetInnerHTML, Html.Raw).",
+          "code": "// DANGEREUX\nzone.innerHTML = commentaire;\n\n// SÛR : le texte reste du texte\nzone.textContent = commentaire;",
+          "language": "javascript"
+        },
+        {
+          "title": "Les protections supplémentaires",
+          "body": "La Content Security Policy (CSP) indique au navigateur quels scripts il peut exécuter : un script injecté dans la page est bloqué. Les cookies HttpOnly ne sont pas lisibles en JavaScript. Pour du HTML riche fourni par les utilisateurs, on passe par une bibliothèque d'assainissement éprouvée (DOMPurify)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-xss-q1",
+          "prompt": "Un commentaire contenant <script>...</script> s'exécute chez chaque visiteur de la page. Quel type de XSS ?",
+          "choices": [
+            "XSS stocké",
+            "XSS réfléchi",
+            "Injection SQL",
+            "CSRF"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le script est enregistré en base et servi à tous : c'est la forme la plus dangereuse.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sec-xss-q2",
+          "prompt": "Cet affichage du nom de l'utilisateur est vulnérable au XSS. Touche la ligne fautive.",
+          "code": "const params = new URLSearchParams(location.search);\nconst nom = params.get(\"nom\") ?? \"invité\";\ndocument.querySelector(\"#bienvenue\")\n    .innerHTML = `Bonjour ${nom}`;",
+          "language": "javascript",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Avec ?nom=<img src=x onerror=...>, le navigateur interprète le HTML injecté. textContent affiche le texte sans l'interpréter.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-xss-q3",
+          "prompt": "Que peut faire un attaquant avec un XSS sur un site de banque en ligne ?",
+          "choices": [
+            "Agir dans le navigateur de la victime comme si c'était elle : lire ses données, déclencher des actions",
+            "Rien, le script est isolé",
+            "Seulement afficher une alerte",
+            "Seulement changer la couleur de la page"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le script s'exécute dans l'origine du site, avec la session de la victime.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-xss-q4",
+          "prompt": "Qu'apporte une Content Security Policy stricte ?",
+          "choices": [
+            "Le navigateur refuse d'exécuter les scripts non autorisés, y compris ceux injectés dans la page",
+            "Elle chiffre la page",
+            "Elle bloque les injections SQL",
+            "Elle remplace l'échappement"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une seconde ligne de défense : l'échappement reste indispensable.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-xss-q5",
+          "prompt": "Pourquoi les frameworks modernes (React, Razor, Jinja2) limitent-ils fortement les XSS ?",
+          "choices": [
+            "Ils échappent automatiquement les données insérées dans les templates",
+            "Ils interdisent le JavaScript",
+            "Ils chiffrent toutes les données",
+            "Ils n'utilisent pas HTML"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les failles réapparaissent quand on contourne volontairement cet échappement : à réserver à du contenu assaini.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sec-xss-q6",
+          "prompt": "Quelles mesures protègent contre le XSS ?",
+          "choices": [
+            "Échapper les données selon le contexte d'insertion",
+            "Utiliser textContent plutôt qu'innerHTML pour du texte",
+            "Déployer une Content Security Policy",
+            "Valider les données uniquement côté client"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La validation côté client se contourne : elle ne protège personne.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "sec-csrf-ssrf",
       "title": "CSRF et SSRF",
       "summary": "Des requêtes falsifiées.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "CSRF : agir à la place de la victime",
+          "body": "La victime, connectée à sa banque, visite un site malveillant qui soumet en arrière-plan un formulaire vers la banque. Le navigateur joint automatiquement le cookie de session : la banque croit à une demande légitime. Parades : cookies SameSite (Lax par défaut dans les navigateurs récents), jetons anti-CSRF dans les formulaires, et ne jamais modifier l'état avec un GET.",
+          "code": "<!-- sur le site de l'attaquant -->\n<form action=\"https://banque.fr/virement\"\n      method=\"POST\" id=\"f\">\n  <input name=\"iban\" value=\"FR76...attaquant\">\n  <input name=\"montant\" value=\"5000\">\n</form>\n<script>f.submit()</script>",
+          "language": "text"
+        },
+        {
+          "title": "SSRF : faire parler le serveur",
+          "body": "Une fonctionnalité télécharge une URL fournie par l'utilisateur (aperçu de lien, import d'image). L'attaquant fournit une adresse interne : http://localhost:8080/admin, ou http://169.254.169.254/, le service de métadonnées du cloud qui peut délivrer des identifiants. Le serveur, situé à l'intérieur du réseau, va les chercher pour lui."
+        },
+        {
+          "title": "Se protéger de la SSRF",
+          "body": "Autoriser seulement les schémas et domaines nécessaires (liste blanche), résoudre le nom puis refuser les adresses privées, de bouclage ou locales au lien, ne pas suivre les redirections aveuglément, isoler le service qui télécharge dans un réseau sans accès interne, et activer IMDSv2 sur AWS."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-csrf-q1",
+          "prompt": "Pourquoi l'attaque CSRF de la leçon fonctionne-t-elle sans protection ?",
+          "choices": [
+            "Le navigateur joint automatiquement le cookie de session de la banque à la requête envoyée depuis l'autre site",
+            "Parce que l'attaquant connaît le mot de passe",
+            "Parce que la banque utilise HTTP",
+            "Parce que le formulaire est en JavaScript"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'attaquant ne voit jamais le cookie : il exploite le fait que le navigateur l'envoie pour lui.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-csrf-q2",
+          "prompt": "Quel attribut de cookie empêche son envoi lors d'un POST provenant d'un autre site ?",
+          "choices": [
+            "SameSite=Lax ou Strict",
+            "HttpOnly",
+            "Secure",
+            "Max-Age"
+          ],
+          "answerIndex": 0,
+          "explanation": "HttpOnly protège du vol par script (XSS), pas de l'envoi automatique (CSRF).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-csrf-q3",
+          "prompt": "Une fonctionnalité « aperçu de lien » télécharge l'URL fournie. Un attaquant soumet http://169.254.169.254/latest/meta-data/. Quel risque ?",
+          "choices": [
+            "Une SSRF : le serveur interroge le service de métadonnées du cloud et peut révéler des identifiants",
+            "Aucun, c'est une adresse invalide",
+            "Un XSS",
+            "Une injection SQL"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le scénario de la fuite de Capital One en 2019, qui a exposé les données de plus de 100 millions de clients.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "sec-csrf-q4",
+          "prompt": "Cette route est exploitable par un simple lien ou une image dans un e-mail. Touche la ligne en cause.",
+          "code": "@app.get(\"/compte/supprimer\")\ndef supprimer_compte(utilisateur=Depends(courant)):\n    depot.supprimer(utilisateur.id)\n    return {\"ok\": True}",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Une action qui modifie l'état ne doit jamais être un GET : un <img src=\".../compte/supprimer\"> la déclencherait. On utilise POST ou DELETE, protégé contre le CSRF.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-csrf-q5",
+          "prompt": "Pour contrer la SSRF, pourquoi ne suffit-il pas d'interdire le texte « localhost » dans l'URL ?",
+          "choices": [
+            "De nombreuses écritures mènent au même endroit (127.0.0.1, 0x7f000001, [::1], un domaine qui résout vers 127.0.0.1, une redirection)",
+            "Parce que localhost n'existe pas",
+            "Parce que les URL sont chiffrées",
+            "Cela suffit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il faut résoudre le nom, vérifier l'adresse IP obtenue, et refaire la vérification à chaque redirection.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "sec-csrf-q6",
+          "prompt": "Quelles mesures protègent contre le CSRF ?",
+          "choices": [
+            "Des cookies de session SameSite",
+            "Un jeton anti-CSRF vérifié sur chaque formulaire",
+            "Ne jamais modifier l'état sur une requête GET",
+            "Des mots de passe plus longs"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La longueur du mot de passe n'y change rien : l'attaque utilise la session déjà ouverte.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sec-defi-web",
+    "title": "Défi entretien : audit d'une page",
+    "summary": "Une page de recherche de produits.",
+    "questions": [
+      {
+        "type": "bug",
+        "id": "sec-defi2-q1",
+        "prompt": "Cas pratique 1/3 — Cette route de recherche a deux failles. Touche la ligne de la plus grave.",
+        "code": "@app.get(\"/recherche\")\ndef recherche(q: str):\n    sql = (\"SELECT nom FROM produits \"\n           f\"WHERE nom LIKE '%{q}%'\")\n    lignes = db.execute(sql).fetchall()\n    items = \"\".join(f\"<li>{n}</li>\" for (n,) in lignes)\n    titre = f\"<p>Résultats pour {q}</p>\"\n    return HTMLResponse(titre + items)",
+        "bugLines": [
+          4
+        ],
+        "explanation": "L'injection SQL permet de lire toute la base. La ligne 7 contient un XSS réfléchi (q affiché sans échappement), grave aussi, mais limité à la session de la victime.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Comment corriger la requête ?",
+        "code": "db.execute(\n    \"SELECT nom FROM produits WHERE nom LIKE ?\",\n    (f\"%{q}%\",))",
+        "choices": [
+          "Ainsi : la valeur, motifs % compris, est passée en paramètre",
+          "Ce n'est pas suffisant, il faut aussi retirer les apostrophes",
+          "Il faut interdire le mot LIKE",
+          "Il faut passer la requête en majuscules"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les % font partie de la valeur, pas du SQL : ils restent des jokers, sans possibilité d'injection.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi2-q3",
+        "prompt": "Cas pratique 3/3 — Comment corriger l'affichage de q dans la page ?",
+        "choices": [
+          "Utiliser un moteur de templates qui échappe automatiquement (ou html.escape), et ajouter une CSP",
+          "Retirer les espaces de q",
+          "Limiter q à 20 caractères",
+          "Afficher q en italique"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les noms de produits doivent aussi être échappés : ils peuvent avoir été saisis par un vendeur malveillant.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi2-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "import html\n\nprint(html.escape('<b onclick=\"x()\">'))",
+        "choices": [
+          "&lt;b onclick=&quot;x()&quot;&gt;",
+          "<b onclick=\"x()\">",
+          "b onclick x",
+          "&lt;b&gt;"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les chevrons et les guillemets sont échappés : le navigateur affiche le texte au lieu de créer un élément.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sec-defi2-q5",
+        "prompt": "Quelles catégories figurent dans le top 10 de l'OWASP ?",
+        "choices": [
+          "Contrôle d'accès défaillant",
+          "Injections",
+          "Défaillances cryptographiques",
+          "Code trop commenté"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le contrôle d'accès défaillant est en tête du classement depuis 2021.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi2-q6",
+        "prompt": "En entretien : « Quel est le point commun entre l'injection SQL et le XSS ? »",
+        "choices": [
+          "Dans les deux cas, une donnée non fiable est interprétée comme du code (SQL ou HTML/JavaScript) faute de séparation ou d'échappement",
+          "Les deux ciblent la base de données",
+          "Les deux nécessitent un mot de passe",
+          "Aucun"
+        ],
+        "answerIndex": 0,
+        "explanation": "La parade est la même idée : garder les données à leur place de données, selon le contexte.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

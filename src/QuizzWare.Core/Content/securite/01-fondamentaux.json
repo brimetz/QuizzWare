@@ -7,19 +7,424 @@
       "id": "sec-cia",
       "title": "Confidentialité, intégrité, disponibilité",
       "summary": "La triade CIA.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Trois propriétés à protéger",
+          "body": "La confidentialité : seules les personnes autorisées accèdent aux données. L'intégrité : les données ne sont pas modifiées sans autorisation, et toute altération est détectable. La disponibilité : le service et les données restent accessibles quand on en a besoin. Chaque attaque vise au moins l'une des trois."
+        },
+        {
+          "title": "Des exemples concrets",
+          "body": "Une fuite de base clients atteint la confidentialité. Un attaquant qui modifie le montant d'un virement atteint l'intégrité. Un rançongiciel qui chiffre les serveurs, ou un déni de service, atteint la disponibilité. Chiffrement, signatures, contrôle d'accès, sauvegardes et redondance répondent chacun à une partie de la triade."
+        },
+        {
+          "title": "Le risque",
+          "body": "On ne peut pas tout protéger au maximum. Le risque combine la probabilité d'une menace et son impact. On protège en priorité ce qui a le plus de valeur et le plus d'exposition, et on accepte consciemment certains risques résiduels."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-cia-q1",
+          "prompt": "Des dossiers médicaux sont publiés sur Internet après un piratage. Quelle propriété est atteinte ?",
+          "choices": [
+            "La confidentialité",
+            "L'intégrité",
+            "La disponibilité",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des personnes non autorisées ont accès à des données sensibles.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-cia-q2",
+          "prompt": "Un attaquant modifie le RIB d'un fournisseur dans le logiciel de comptabilité. Quelle propriété est atteinte ?",
+          "choices": [
+            "L'intégrité",
+            "La confidentialité",
+            "La disponibilité",
+            "L'authenticité du serveur uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les données ont été modifiées sans autorisation. La fraude au changement de RIB est très répandue.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-cia-q3",
+          "prompt": "Un rançongiciel chiffre tous les serveurs d'un hôpital. Quelle propriété est d'abord atteinte ?",
+          "choices": [
+            "La disponibilité",
+            "La confidentialité",
+            "L'intégrité uniquement",
+            "Aucune, les données sont toujours là"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les soignants ne peuvent plus accéder aux dossiers. Les rançongiciels modernes volent aussi les données avant de les chiffrer : la confidentialité est alors atteinte également.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-cia-q4",
+          "prompt": "Quelle mesure protège principalement la disponibilité ?",
+          "choices": [
+            "Des sauvegardes testées et une infrastructure redondante",
+            "Le chiffrement des données",
+            "La signature des documents",
+            "Un mot de passe complexe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des sauvegardes hors ligne, régulièrement restaurées en test, sont la meilleure parade aux rançongiciels.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-cia-q5",
+          "prompt": "Comment évaluer le risque lié à une menace ?",
+          "choices": [
+            "En combinant sa probabilité et son impact",
+            "En comptant le nombre de lignes de code",
+            "En regardant uniquement l'impact",
+            "En suivant l'actualité"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une menace très probable mais sans impact, ou catastrophique mais quasi impossible, ne se traitent pas de la même façon.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sec-cia-q6",
+          "prompt": "Quelles mesures protègent l'intégrité des données ?",
+          "choices": [
+            "Les signatures numériques",
+            "Le contrôle des droits d'écriture",
+            "Les journaux d'audit des modifications",
+            "La compression des fichiers"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La compression réduit la taille des fichiers, elle ne protège pas contre les modifications.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "sec-principes",
       "title": "Principes de conception sûre",
       "summary": "Moindre privilège et défense en profondeur.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le moindre privilège",
+          "body": "Chaque utilisateur, service ou processus ne reçoit que les droits nécessaires à sa tâche, et seulement pour la durée nécessaire. Si un composant est compromis, l'attaquant n'obtient que ces droits limités."
+        },
+        {
+          "title": "La défense en profondeur",
+          "body": "Aucune protection n'est parfaite : on en superpose plusieurs, indépendantes. Pare-feu, authentification, autorisation dans le code, requêtes paramétrées, chiffrement, surveillance. Franchir une couche ne suffit pas à tout compromettre."
+        },
+        {
+          "title": "Autres principes",
+          "body": "Échouer de façon sûre : en cas d'erreur, refuser l'accès plutôt que l'accorder. Ne jamais faire confiance aux entrées : tout ce qui vient de l'extérieur est validé côté serveur. Réduire la surface d'attaque : désactiver ce qui ne sert pas. Et pas de sécurité par l'obscurité : un système doit rester sûr même si son fonctionnement est connu.",
+          "code": "def peut_modifier(utilisateur, document):\n    try:\n        return document.proprietaire == utilisateur.id\n    except Exception:\n        return False   # en cas de doute, on refuse"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-principes-q1",
+          "prompt": "Un service qui lit des factures se connecte à la base avec le compte administrateur. Quel principe est violé ?",
+          "choices": [
+            "Le moindre privilège",
+            "La défense en profondeur",
+            "La disponibilité",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un compte en lecture seule sur les tables nécessaires suffit. Une injection dans ce service donnerait sinon tous les droits.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sec-principes-q2",
+          "prompt": "Cette vérification accorde l'accès en cas d'erreur. Touche la ligne fautive.",
+          "code": "def est_admin(utilisateur):\n    try:\n        return annuaire.a_le_role(utilisateur, \"admin\")\n    except ConnectionError:\n        return True",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Si l'annuaire est injoignable, tout le monde devient administrateur. Il faut échouer de façon sûre : return False.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-principes-q3",
+          "prompt": "Le formulaire limite déjà le champ « quantité » entre 1 et 10 en JavaScript. Faut-il le vérifier côté serveur ?",
+          "choices": [
+            "Oui : un attaquant envoie la requête qu'il veut, sans passer par le formulaire",
+            "Non, le navigateur s'en charge",
+            "Non, sauf en production",
+            "Seulement si le site est en HTTP"
+          ],
+          "answerIndex": 0,
+          "explanation": "La validation côté client améliore l'ergonomie ; seule la validation côté serveur protège.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-principes-q4",
+          "prompt": "Une API d'administration cachée à l'adresse /admin-x7k9q n'a pas d'authentification « puisque personne ne connaît l'URL ». Qu'en penser ?",
+          "choices": [
+            "C'est de la sécurité par l'obscurité : l'URL finira par fuiter (logs, historique, scan) et rien ne la protège",
+            "C'est suffisant",
+            "C'est la meilleure pratique",
+            "C'est sûr si l'URL est longue"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'obscurité peut s'ajouter à de vraies protections, jamais les remplacer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-principes-q5",
+          "prompt": "Qu'est-ce que la défense en profondeur ?",
+          "choices": [
+            "Superposer plusieurs protections indépendantes, pour qu'une seule faille ne suffise pas",
+            "Mettre toute la sécurité dans le pare-feu",
+            "Chiffrer deux fois les données",
+            "Cacher le serveur dans un sous-sol"
+          ],
+          "answerIndex": 0,
+          "explanation": "Par exemple : même si un attaquant contourne l'authentification, l'autorisation par objet l'empêche d'accéder aux données des autres.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sec-principes-q6",
+          "prompt": "Quelles actions réduisent la surface d'attaque d'un serveur ?",
+          "choices": [
+            "Désinstaller les services inutilisés",
+            "Fermer les ports non nécessaires",
+            "Retirer les comptes et fonctionnalités de démonstration",
+            "Activer toutes les options par défaut au cas où"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Chaque service actif est une porte d'entrée potentielle, même s'il ne sert à rien.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "sec-threat-modeling",
       "title": "Modélisation des menaces",
       "summary": "La méthode STRIDE.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Penser comme un attaquant, tôt",
+          "body": "La modélisation des menaces se fait pendant la conception, quand corriger ne coûte presque rien. Quatre questions : sur quoi travaille-t-on ? Qu'est-ce qui peut mal tourner ? Que fait-on pour y remédier ? A-t-on fait du bon travail ? On dessine les composants, les flux de données et les frontières de confiance (où des données passent d'une zone peu fiable à une zone fiable)."
+        },
+        {
+          "title": "STRIDE",
+          "body": "Une grille pour ne rien oublier. Spoofing (usurpation d'identité) : authentification. Tampering (altération) : intégrité. Repudiation (répudiation, nier une action) : journalisation. Information disclosure (fuite) : confidentialité. Denial of service : disponibilité. Elevation of privilege : autorisation."
+        },
+        {
+          "title": "Prioriser et suivre",
+          "body": "Chaque menace identifiée reçoit une décision : atténuer, éliminer, transférer (assurance, prestataire) ou accepter. Le modèle se met à jour quand l'architecture change : nouvelle API, nouveau fournisseur, nouvelles données sensibles."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-threat-q1",
+          "prompt": "Un utilisateur nie avoir passé une commande, et rien ne permet de prouver le contraire. Quelle catégorie STRIDE ?",
+          "choices": [
+            "Repudiation (répudiation)",
+            "Spoofing",
+            "Tampering",
+            "Denial of service"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des journaux d'audit fiables, horodatés et protégés contre la modification permettent de prouver qui a fait quoi.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-threat-q2",
+          "prompt": "Un utilisateur standard parvient à appeler une API réservée aux administrateurs. Quelle catégorie STRIDE ?",
+          "choices": [
+            "Elevation of privilege",
+            "Information disclosure",
+            "Repudiation",
+            "Spoofing"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il obtient des droits qu'il n'aurait pas dû avoir : c'est un défaut d'autorisation.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-threat-q3",
+          "prompt": "Quand faire la modélisation des menaces ?",
+          "choices": [
+            "Dès la conception, puis à chaque évolution importante de l'architecture",
+            "Uniquement après une attaque",
+            "La veille de la mise en production",
+            "Jamais, les tests d'intrusion suffisent"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un défaut de conception découvert en production peut obliger à tout reprendre.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-threat-q4",
+          "prompt": "Qu'est-ce qu'une frontière de confiance ?",
+          "choices": [
+            "Un point où des données passent d'une zone moins fiable à une zone plus fiable, et doivent être vérifiées",
+            "La limite géographique d'un datacenter",
+            "Le mur d'un bureau",
+            "Le nombre maximal d'utilisateurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Exemples : entre Internet et l'API, entre l'application et une bibliothèque tierce, entre un service et un autre.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-threat-q5",
+          "prompt": "Un risque de faible impact coûterait très cher à éliminer. Quelle décision est légitime ?",
+          "choices": [
+            "L'accepter de façon documentée et consciente",
+            "L'ignorer sans rien noter",
+            "Arrêter le projet",
+            "Le cacher"
+          ],
+          "answerIndex": 0,
+          "explanation": "Accepter un risque est une décision valable, à condition qu'elle soit prise et assumée par les bonnes personnes.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sec-threat-q6",
+          "prompt": "Quelles associations entre menace STRIDE et protection sont correctes ?",
+          "choices": [
+            "Spoofing : authentification forte",
+            "Tampering : signatures et contrôle d'intégrité",
+            "Information disclosure : chiffrement et contrôle d'accès",
+            "Denial of service : messages d'erreur détaillés"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Contre le déni de service : limitation de débit, redondance, mise à l'échelle. Les messages d'erreur détaillés favorisent plutôt la fuite d'informations.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sec-defi-fondamentaux",
+    "title": "Défi entretien : modéliser les menaces",
+    "summary": "Une application de prise de rendez-vous médicaux.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sec-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Une application permet de prendre rendez-vous chez un médecin. Quelles données sont les plus sensibles ?",
+        "choices": [
+          "Les motifs de consultation et l'identité des patients : des données de santé",
+          "Les horaires d'ouverture des cabinets",
+          "Les couleurs de l'interface",
+          "La liste des villes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les données de santé sont une catégorie particulière du RGPD, avec des obligations renforcées.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi1-q2",
+        "prompt": "Cas pratique 2/3 — En changeant l'identifiant dans l'URL /rendez-vous/1043, un patient voit le rendez-vous d'un autre. Quelle catégorie STRIDE, et quelle correction ?",
+        "choices": [
+          "Information disclosure : vérifier côté serveur que le rendez-vous appartient à l'utilisateur connecté",
+          "Denial of service : limiter le débit",
+          "Repudiation : ajouter des logs",
+          "Spoofing : changer le mot de passe"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est une IDOR (référence directe non sécurisée), l'une des failles les plus courantes. Chaque accès à un objet doit vérifier les droits.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Un médecin affirme n'avoir jamais annulé un rendez-vous. Comment le vérifier ?",
+        "choices": [
+          "Avec un journal d'audit horodaté de chaque action et de son auteur, protégé contre la modification",
+          "En demandant au patient",
+          "C'est impossible",
+          "En regardant le cache du navigateur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les journaux d'audit répondent à la menace de répudiation. Ils doivent eux-mêmes être protégés en intégrité.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi1-q4",
+        "prompt": "Où placer la vérification « ce patient peut-il voir ce rendez-vous ? » ?",
+        "choices": [
+          "Côté serveur, à chaque requête qui accède à un rendez-vous",
+          "Uniquement dans l'application mobile",
+          "Dans le menu, en cachant les boutons",
+          "Dans le CSS"
+        ],
+        "answerIndex": 0,
+        "explanation": "Cacher un bouton n'empêche pas d'appeler l'API directement.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "sec-defi1-q5",
+        "prompt": "Quelles mesures relèvent de la défense en profondeur pour cette application ?",
+        "choices": [
+          "Contrôle d'accès par objet dans l'API",
+          "Chiffrement des données en transit et au repos",
+          "Surveillance des accès anormaux (un compte qui consulte des milliers de dossiers)",
+          "Un seul mot de passe partagé pour tous les médecins"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un compte partagé rend impossible toute traçabilité et toute révocation individuelle.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi1-q6",
+        "prompt": "En entretien : « Comment intégrer la sécurité dans un projet ? »",
+        "choices": [
+          "Dès la conception (modélisation des menaces), puis dans le développement, les tests automatisés et la surveillance en production",
+          "Par un audit juste avant la mise en production",
+          "En confiant tout à l'équipe sécurité",
+          "En ajoutant un pare-feu à la fin"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est l'approche « shift left » : plus un problème est détecté tôt, moins il coûte à corriger.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

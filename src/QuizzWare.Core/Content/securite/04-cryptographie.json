@@ -7,13 +7,318 @@
       "id": "sec-chiffrement",
       "title": "Chiffrement symétrique et asymétrique",
       "summary": "AES, RSA et courbes elliptiques.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Symétrique : une seule clé",
+          "body": "La même clé chiffre et déchiffre. AES est le standard, très rapide (accéléré par le processeur). On l'utilise en mode authentifié, AES-GCM ou ChaCha20-Poly1305 : il garantit aussi l'intégrité, et un message modifié est rejeté. Le nonce ne doit jamais être réutilisé avec la même clé.",
+          "code": "from cryptography.hazmat.primitives.ciphers.aead \\\n    import AESGCM\n\ncle = AESGCM.generate_key(bit_length=256)\naes = AESGCM(cle)\nnonce = os.urandom(12)       # unique par message\nchiffre = aes.encrypt(nonce, b\"secret\", None)\nclair = aes.decrypt(nonce, chiffre, None)"
+        },
+        {
+          "title": "Asymétrique : une paire de clés",
+          "body": "Une clé publique, diffusable, et une clé privée, gardée secrète. Ce que l'une chiffre, seule l'autre déchiffre. RSA et les courbes elliptiques (ECDH, Ed25519) en sont les familles principales. Beaucoup plus lent que le symétrique, on s'en sert pour échanger une clé ou signer, pas pour chiffrer de gros volumes."
+        },
+        {
+          "title": "Ne pas inventer",
+          "body": "La règle d'or : ne jamais concevoir son propre algorithme ni son propre protocole. On utilise des bibliothèques de haut niveau éprouvées (libsodium, la bibliothèque cryptography, les API de la plateforme), avec leurs choix par défaut. Les erreurs classiques : mode ECB, nonce réutilisé, clé dans le code, chiffrement sans authentification."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-chiffrement-q1",
+          "prompt": "Pourquoi TLS combine-t-il chiffrement asymétrique et symétrique ?",
+          "choices": [
+            "L'asymétrique établit une clé de session en toute sécurité ; le symétrique, bien plus rapide, chiffre ensuite les données",
+            "Pour chiffrer deux fois",
+            "Parce que l'asymétrique est plus rapide",
+            "Par compatibilité avec les anciens navigateurs uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le schéma hybride, utilisé presque partout (TLS, PGP, Signal).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-chiffrement-q2",
+          "prompt": "Que se passe-t-il si on modifie un octet d'un message chiffré en AES-GCM avant de le déchiffrer ?",
+          "choices": [
+            "Le déchiffrement échoue : la vérification d'intégrité détecte la modification",
+            "On obtient un texte légèrement différent",
+            "On obtient le texte d'origine",
+            "La clé est révélée"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'avantage du chiffrement authentifié. Sans lui, un attaquant peut parfois modifier le message de façon contrôlée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-chiffrement-q3",
+          "prompt": "Que risque-t-on en réutilisant le même nonce avec la même clé AES-GCM ?",
+          "choices": [
+            "Une perte grave de sécurité : un attaquant peut combiner les messages et même forger des messages authentifiés",
+            "Rien, le nonce est décoratif",
+            "Un déchiffrement plus lent",
+            "Des messages plus longs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le nonce (« number used once ») porte bien son nom. Un nonce aléatoire de 96 bits par message convient pour un volume raisonnable.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sec-chiffrement-q4",
+          "prompt": "Pourquoi le mode ECB est-il à proscrire ?",
+          "choices": [
+            "Des blocs identiques donnent des blocs chiffrés identiques : la structure des données reste visible",
+            "Il est trop lent",
+            "Il n'existe que pour RSA",
+            "Il exige une clé de 4 096 bits"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'image du manchot Tux chiffrée en ECB reste parfaitement reconnaissable : l'exemple est célèbre.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-chiffrement-q5",
+          "prompt": "Pour chiffrer un message destiné à Bob, quelle clé utilise Alice ?",
+          "choices": [
+            "La clé publique de Bob : seul Bob, avec sa clé privée, pourra déchiffrer",
+            "La clé privée de Bob",
+            "Sa propre clé privée",
+            "Sa propre clé publique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour signer, c'est l'inverse : Alice utilise sa propre clé privée, et chacun vérifie avec sa clé publique.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sec-chiffrement-q6",
+          "prompt": "Quelles erreurs cryptographiques sont classiques ?",
+          "choices": [
+            "Une clé écrite en dur dans le code source",
+            "Le mode ECB",
+            "Un algorithme maison « que personne ne connaît »",
+            "L'utilisation d'AES-GCM via une bibliothèque reconnue"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "AES-GCM via une bibliothèque éprouvée est justement le bon choix.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "sec-hachage-signatures",
       "title": "Hachage et signatures",
       "summary": "SHA-256, HMAC et signatures numériques.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les fonctions de hachage",
+          "body": "Une fonction de hachage cryptographique produit une empreinte de taille fixe : la moindre modification de l'entrée change complètement le résultat, et il est impossible en pratique de retrouver l'entrée ou de trouver deux entrées de même empreinte. SHA-256 et SHA-3 sont sûrs ; MD5 et SHA-1 sont cassés pour cet usage.",
+          "code": "import hashlib\n\nhashlib.sha256(b\"bonjour\").hexdigest()[:16]\n# '2cb4b1431b84ec15'\nhashlib.sha256(b\"Bonjour\").hexdigest()[:16]\n# '9172e8eec99f144f'"
+        },
+        {
+          "title": "HMAC : authentifier avec une clé partagée",
+          "body": "Un hachage seul ne prouve rien : n'importe qui peut recalculer l'empreinte d'un message modifié. HMAC mélange une clé secrète au calcul : seul le détenteur de la clé peut produire une empreinte valide. C'est ce qu'utilisent les webhooks (Stripe, GitHub) pour prouver qu'une requête vient bien d'eux. La comparaison se fait en temps constant.",
+          "code": "import hmac, hashlib\n\nsig = hmac.new(cle, corps, hashlib.sha256).hexdigest()\nif not hmac.compare_digest(sig, sig_recue):\n    rejeter()"
+        },
+        {
+          "title": "Les signatures numériques",
+          "body": "Une signature est produite avec une clé privée et vérifiée avec la clé publique correspondante. Elle prouve l'origine et l'intégrité, sans secret partagé : n'importe qui peut vérifier, seul le détenteur de la clé privée peut signer. Certificats TLS, mises à jour logicielles, commits Git signés et JWT asymétriques reposent dessus."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-hachage-q1",
+          "prompt": "Une page de téléchargement affiche l'empreinte SHA-256 du fichier. À quoi sert-elle ?",
+          "choices": [
+            "À vérifier que le fichier reçu n'a pas été corrompu ou modifié",
+            "À déchiffrer le fichier",
+            "À compresser le fichier",
+            "À identifier l'auteur de façon certaine"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si l'empreinte est sur le même site que le fichier, un attaquant qui contrôle le site peut changer les deux : seule une signature prouve l'origine.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-hachage-q2",
+          "prompt": "Pourquoi un webhook est-il signé avec HMAC plutôt qu'accompagné d'un simple SHA-256 du corps ?",
+          "choices": [
+            "N'importe qui peut calculer le SHA-256 d'un corps modifié ; seul le détenteur de la clé peut produire un HMAC valide",
+            "HMAC est plus court",
+            "SHA-256 est cassé",
+            "Pour compresser le corps"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le hachage seul assure la détection d'erreurs, pas l'authenticité.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sec-hachage-q3",
+          "prompt": "Cette vérification de signature fuit des informations par sa durée. Touche la ligne fautive.",
+          "code": "def verifier(corps, sig_recue):\n    attendue = hmac.new(CLE, corps,\n                        hashlib.sha256).hexdigest()\n    return attendue == sig_recue",
+          "bugLines": [
+            4
+          ],
+          "explanation": "== s'arrête au premier caractère différent : en mesurant les temps de réponse, un attaquant peut deviner la signature caractère par caractère. hmac.compare_digest compare en temps constant.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sec-hachage-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "import hashlib\n\na = hashlib.sha256(b\"abc\").hexdigest()\nb = hashlib.sha256(b\"abd\").hexdigest()\nprint(len(a), a[:4] == b[:4])",
+          "choices": [
+            "64 False",
+            "3 False",
+            "64 True",
+            "32 True"
+          ],
+          "answerIndex": 0,
+          "explanation": "SHA-256 produit 256 bits, soit 64 caractères hexadécimaux, quelle que soit la taille de l'entrée. Une lettre de différence change toute l'empreinte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-hachage-q5",
+          "prompt": "Quelle différence entre un HMAC et une signature numérique ?",
+          "choices": [
+            "HMAC utilise une clé secrète partagée ; la signature, une paire de clés : tout le monde peut vérifier, seul le détenteur de la clé privée peut signer",
+            "Ce sont des synonymes",
+            "La signature est plus rapide",
+            "HMAC chiffre le message"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec HMAC, celui qui peut vérifier peut aussi produire des empreintes : il n'y a pas de non-répudiation.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sec-hachage-q6",
+          "prompt": "Où trouve-t-on des signatures numériques ?",
+          "choices": [
+            "Les certificats TLS",
+            "Les mises à jour de logiciels et de systèmes",
+            "Les commits et étiquettes Git signés",
+            "Les mots de passe stockés en base"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les mots de passe sont stockés sous forme d'empreintes Argon2 ou bcrypt, pas signés.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sec-defi-cryptographie",
+    "title": "Défi entretien : cryptographie",
+    "summary": "Protéger des données sensibles en base.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sec-defi4-q1",
+        "prompt": "Cas pratique 1/3 — Une application stocke des numéros de sécurité sociale. Comment les protéger en base, au-delà du chiffrement du disque ?",
+        "choices": [
+          "Les chiffrer au niveau applicatif avec AES-GCM, la clé étant gérée par un service de gestion de clés (KMS)",
+          "Les encoder en base64",
+          "Les hacher en MD5",
+          "Les stocker en clair dans une colonne cachée"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le chiffrement du disque ne protège pas contre une injection SQL ou un accès à la base : le chiffrement applicatif, si.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi4-q2",
+        "prompt": "Cas pratique 2/3 — Où ranger la clé de chiffrement ?",
+        "choices": [
+          "Dans un KMS ou un coffre-fort de secrets, jamais à côté des données ni dans le code",
+          "Dans une colonne de la même table",
+          "Dans le dépôt Git",
+          "Dans le nom de la base"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une clé stockée avec les données chiffrées les protège autant qu'une clé laissée sur la porte.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi4-q3",
+        "prompt": "Cas pratique 3/3 — Il faut rechercher un patient par son numéro, alors que la colonne est chiffrée avec un nonce aléatoire. Comment faire ?",
+        "choices": [
+          "Stocker en plus un HMAC du numéro (avec une clé dédiée) dans une colonne indexée, et chercher par ce HMAC",
+          "Déchiffrer toute la table à chaque recherche",
+          "Utiliser toujours le même nonce",
+          "Renoncer au chiffrement"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est l'index aveugle (blind index) : il permet une recherche exacte sans exposer la valeur. Le même nonce, lui, casserait la sécurité de GCM.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi4-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "import hmac, hashlib\n\ns1 = hmac.new(b\"k1\", b\"msg\", hashlib.sha256).digest()\ns2 = hmac.new(b\"k2\", b\"msg\", hashlib.sha256).digest()\nprint(len(s1), hmac.compare_digest(s1, s2))",
+        "choices": [
+          "32 False",
+          "64 False",
+          "32 True",
+          "3 False"
+        ],
+        "answerIndex": 0,
+        "explanation": "digest() renvoie 32 octets bruts (hexdigest en donnerait 64 caractères). Une autre clé donne un autre HMAC.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sec-defi4-q5",
+        "prompt": "Que doit permettre une bonne gestion des clés ?",
+        "choices": [
+          "La rotation des clés sans perte de données",
+          "La journalisation de chaque utilisation",
+          "Des droits d'accès limités aux services qui en ont besoin",
+          "La copie des clés sur les postes des développeurs"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le chiffrement par enveloppe (une clé de données chiffrée par une clé maîtresse du KMS) facilite la rotation.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi4-q6",
+        "prompt": "En entretien : « Chiffrer, hacher ou signer : que choisir ? »",
+        "choices": [
+          "Chiffrer pour la confidentialité (réversible avec la clé) ; hacher pour une empreinte non réversible ; signer pour prouver l'origine et l'intégrité",
+          "Toujours chiffrer",
+          "Toujours hacher",
+          "Ce sont trois noms de la même opération"
+        ],
+        "answerIndex": 0,
+        "explanation": "Confondre ces usages mène à des erreurs graves : mots de passe chiffrés au lieu d'être hachés, données « protégées » par un simple hachage réversible par force brute.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

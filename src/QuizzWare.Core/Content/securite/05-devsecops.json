@@ -7,13 +7,320 @@
       "id": "sec-dependances",
       "title": "Dépendances et supply chain",
       "summary": "CVE et SBOM.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le code des autres",
+          "body": "Une application typique compte bien plus de lignes de dépendances que de code écrit par l'équipe. Une faille dans l'une d'elles est une faille de l'application. Les vulnérabilités publiques reçoivent un identifiant CVE et un score de gravité (CVSS) ; les outils comparent vos dépendances à ces bases."
+        },
+        {
+          "title": "Les outils",
+          "body": "Dependabot ou Renovate proposent automatiquement des mises à jour. npm audit, pip-audit, dotnet list package --vulnerable ou Trivy signalent les versions vulnérables. Un SBOM (inventaire des composants) permet de savoir en quelques minutes si une nouvelle faille vous concerne.",
+          "code": "pip-audit -r requirements.txt\nnpm audit --omit=dev\ndotnet list package --vulnerable --include-transitive",
+          "language": "shell"
+        },
+        {
+          "title": "Les attaques de la chaîne d'approvisionnement",
+          "body": "Des attaquants publient des paquets aux noms trompeurs (typosquatting), piratent le compte d'un mainteneur ou s'imposent patiemment comme mainteneur (la porte dérobée de xz-utils en 2024). Fichiers de verrouillage, versions épinglées, mises à jour relues et registre interne limitent le risque."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-dep-q1",
+          "prompt": "Qu'est-ce qu'une CVE ?",
+          "choices": [
+            "Un identifiant public attribué à une vulnérabilité connue",
+            "Un type de chiffrement",
+            "Un outil de test",
+            "Un format de fichier"
+          ],
+          "answerIndex": 0,
+          "explanation": "Par exemple CVE-2021-44228 pour Log4Shell. Le score CVSS indique sa gravité de 0 à 10.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-dep-q2",
+          "prompt": "Pourquoi l'option --include-transitive est-elle importante ?",
+          "choices": [
+            "Les failles se cachent souvent dans les dépendances de vos dépendances, que vous n'avez pas choisies directement",
+            "Pour accélérer la commande",
+            "Pour n'afficher que les dépendances directes",
+            "Elle n'a pas d'effet"
+          ],
+          "answerIndex": 0,
+          "explanation": "Log4Shell touchait de nombreuses applications qui n'utilisaient log4j qu'indirectement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-dep-q3",
+          "prompt": "Une alerte signale une CVE critique dans une bibliothèque de parsing XML. L'application ne parse jamais de XML. Que faire ?",
+          "choices": [
+            "Vérifier que la fonction vulnérable est vraiment inaccessible, documenter l'analyse, et mettre à jour quand même dès que possible",
+            "Ignorer toutes les alertes de cette bibliothèque pour toujours",
+            "Arrêter la production immédiatement",
+            "Supprimer l'outil d'audit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une analyse d'exploitabilité permet de prioriser, mais le code évolue : une dépendance vulnérable inutilisée aujourd'hui peut servir demain.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-dep-q4",
+          "prompt": "Que protège un fichier de verrouillage (package-lock.json, poetry.lock) ?",
+          "choices": [
+            "Il fige les versions exactes et leurs empreintes : une version piégée publiée demain ne s'installe pas silencieusement",
+            "Il chiffre les dépendances",
+            "Il empêche toute mise à jour",
+            "Il supprime les dépendances inutiles"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les mises à jour deviennent des changements explicites, relus dans une pull request.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-dep-q5",
+          "prompt": "Quelle leçon tirer de l'affaire xz-utils ?",
+          "choices": [
+            "Un mainteneur de confiance peut être un attaquant patient : les projets critiques sous-financés sont un risque systémique",
+            "Les logiciels libres sont toujours dangereux",
+            "Il faut tout réécrire soi-même",
+            "Les compressions de fichiers sont interdites"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'attaquant a contribué pendant deux ans avant d'insérer sa porte dérobée, détectée par hasard grâce à une lenteur de 500 ms.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "sec-dep-q6",
+          "prompt": "Quelles pratiques réduisent le risque lié aux dépendances ?",
+          "choices": [
+            "Des mises à jour régulières, automatisées et relues",
+            "Un audit automatique dans la CI",
+            "Limiter le nombre de dépendances à celles qui apportent une vraie valeur",
+            "Installer toujours la dernière version publiée, sans fichier de verrouillage"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une dépendance de dix lignes (left-pad...) ajoute un risque pour un gain minime.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "sec-analyses",
       "title": "Analyses automatiques",
       "summary": "SAST, DAST et détection de secrets.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "SAST : lire le code",
+          "body": "L'analyse statique (SAST) examine le code source sans l'exécuter : flux de données d'une entrée utilisateur vers une requête SQL, fonctions dangereuses, configurations risquées. Semgrep, CodeQL ou SonarQube s'intègrent à la CI et commentent les pull requests. Ils produisent des faux positifs : il faut les régler pour que les alertes restent écoutées."
+        },
+        {
+          "title": "DAST : attaquer l'application",
+          "body": "L'analyse dynamique (DAST) teste l'application en fonctionnement, comme un attaquant : injections, en-têtes manquants, configurations faibles. OWASP ZAP peut tourner contre un environnement de recette dans le pipeline. Elle trouve ce que le code ne montre pas (configuration du serveur), mais pas l'endroit exact du bug."
+        },
+        {
+          "title": "Secrets et tests d'intrusion",
+          "body": "Les scanners de secrets (gitleaks, GitHub secret scanning) bloquent les clés avant qu'elles n'atteignent le dépôt. Les outils automatiques ne remplacent pas les humains : revues de code attentives à la sécurité, tests d'intrusion réguliers et programmes de bug bounty trouvent les failles de logique métier.",
+          "code": "# .pre-commit-config.yaml\nrepos:\n  - repo: https://github.com/gitleaks/gitleaks\n    rev: v8.21.2\n    hooks:\n      - id: gitleaks",
+          "language": "yaml"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-analyses-q1",
+          "prompt": "Quelle différence entre SAST et DAST ?",
+          "choices": [
+            "Le SAST analyse le code source sans l'exécuter ; le DAST teste l'application en fonctionnement, de l'extérieur",
+            "Ce sont des synonymes",
+            "Le SAST ne fonctionne qu'en production",
+            "Le DAST lit le code source"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ils sont complémentaires : le SAST pointe la ligne fautive, le DAST voit la configuration réelle.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-analyses-q2",
+          "prompt": "L'outil SAST produit 400 alertes, majoritairement des faux positifs, et l'équipe les ignore toutes. Que faire ?",
+          "choices": [
+            "Régler les règles, traiter d'abord les alertes graves, et bloquer seulement les nouvelles alertes sur le code modifié",
+            "Désactiver l'outil",
+            "Corriger les 400 avant toute nouvelle fonctionnalité",
+            "Ajouter un second outil qui produit encore plus d'alertes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un outil n'est utile que si ses alertes sont crues. Commencer par ne rien laisser entrer de nouveau est réaliste.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-analyses-q3",
+          "prompt": "Quel type de faille les outils automatiques détectent-ils mal ?",
+          "choices": [
+            "Les failles de logique métier, comme appliquer deux fois un code promo ou commander une quantité négative",
+            "Les injections SQL évidentes",
+            "Les secrets en clair dans le code",
+            "Les dépendances vulnérables connues"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elles dépendent des règles du métier, que l'outil ne connaît pas : revues, tests d'intrusion et bug bounty les trouvent.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-analyses-q4",
+          "prompt": "À quel moment un scanner de secrets est-il le plus utile ?",
+          "choices": [
+            "Avant le commit (hook pre-commit) et à chaque push : le secret n'entre jamais dans l'historique",
+            "Une fois par an",
+            "Après la fuite",
+            "Uniquement en production"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un secret commité, même supprimé ensuite, reste dans l'historique et doit être révoqué.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-analyses-q5",
+          "prompt": "Contre quel environnement lancer un DAST dans le pipeline ?",
+          "choices": [
+            "Un environnement de recette dédié, avec des données de test",
+            "La production, aux heures de pointe",
+            "Le poste d'un développeur",
+            "Le site d'un concurrent"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un DAST envoie des requêtes agressives : on ne l'exécute en production qu'avec précaution, et jamais sans autorisation sur un système tiers.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sec-analyses-q6",
+          "prompt": "Que peut contenir un pipeline DevSecOps ?",
+          "choices": [
+            "Une analyse statique du code",
+            "Un audit des dépendances",
+            "Une détection de secrets",
+            "Le déploiement automatique de tout code non relu en production"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On y ajoute souvent le scan des images de conteneurs et de l'infrastructure as code.",
+          "difficulty": 1
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sec-defi-devsecops",
+    "title": "Défi entretien : DevSecOps",
+    "summary": "Sécuriser un pipeline existant.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sec-defi5-q1",
+        "prompt": "Cas pratique 1/3 — Une équipe n'a aucun contrôle de sécurité automatisé. Par quoi commencer pour un effet rapide ?",
+        "choices": [
+          "Détection de secrets et audit des dépendances : peu de bruit, des risques majeurs couverts",
+          "Un test d'intrusion complet chaque semaine",
+          "Réécrire l'application",
+          "Former l'équipe pendant six mois avant toute action"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ces deux contrôles sont rapides à mettre en place et ciblent des causes fréquentes de compromission.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi5-q2",
+        "prompt": "Cas pratique 2/3 — L'audit révèle 60 dépendances vulnérables. Comment prioriser ?",
+        "choices": [
+          "Par gravité, exploitabilité réelle et exposition : d'abord les failles critiques des composants exposés à Internet",
+          "Par ordre alphabétique",
+          "Les plus récentes d'abord",
+          "Au hasard"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le catalogue KEV de la CISA liste les failles activement exploitées : une bonne aide pour prioriser.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Comment éviter que la dette se reconstitue ?",
+        "choices": [
+          "Des mises à jour automatiques proposées chaque semaine, et un pipeline qui bloque les nouvelles failles critiques",
+          "Une grande mise à jour une fois par an",
+          "Interdire toute nouvelle dépendance",
+          "Désactiver les alertes après le nettoyage"
+        ],
+        "answerIndex": 0,
+        "explanation": "De petites mises à jour fréquentes sont faciles à relire ; les grands sauts de version sont risqués et redoutés.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi5-q4",
+        "prompt": "Que signifie « shift left » en sécurité ?",
+        "choices": [
+          "Traiter la sécurité au plus tôt dans le cycle : conception, code, CI, plutôt qu'uniquement avant la mise en production",
+          "Déplacer les serveurs",
+          "Écrire le code de droite à gauche",
+          "Confier la sécurité à une autre équipe"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un défaut trouvé en revue de code coûte infiniment moins cher qu'un incident en production.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "sec-defi5-q5",
+        "prompt": "Quelles responsabilités relèvent des développeurs dans une démarche DevSecOps ?",
+        "choices": [
+          "Écrire du code qui valide les entrées et vérifie les droits",
+          "Traiter les alertes de sécurité de leurs pull requests",
+          "Maintenir les dépendances à jour",
+          "Aucune, c'est le rôle exclusif de l'équipe sécurité"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'équipe sécurité outille, forme et conseille ; la sécurité du code reste l'affaire de ceux qui l'écrivent.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi5-q6",
+        "prompt": "En entretien : « Un outil SAST suffit-il à rendre une application sûre ? »",
+        "choices": [
+          "Non : il trouve certaines catégories de failles, mais ne remplace ni la conception sûre, ni la revue humaine, ni les tests d'intrusion",
+          "Oui, entièrement",
+          "Non, ces outils ne trouvent jamais rien",
+          "Oui, s'il est payant"
+        ],
+        "answerIndex": 0,
+        "explanation": "La sécurité est une combinaison de pratiques ; aucun outil n'en couvre seul toutes les facettes.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

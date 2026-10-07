@@ -7,19 +7,428 @@
       "id": "sec-mots-de-passe",
       "title": "Mots de passe",
       "summary": "Hachage et authentification multifacteur.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Ne jamais stocker un mot de passe",
+          "body": "On stocke une empreinte du mot de passe, calculée par une fonction de hachage lente et conçue pour cela : Argon2, bcrypt ou scrypt. À la connexion, on recalcule l'empreinte et on compare. Un sel aléatoire, propre à chaque utilisateur, rend chaque empreinte unique même pour des mots de passe identiques, et empêche les tables précalculées."
+        },
+        {
+          "title": "Pourquoi pas SHA-256 ?",
+          "body": "SHA-256 est conçu pour être rapide : une carte graphique en calcule des milliards par seconde, et tester tous les mots de passe courants prend quelques secondes. Les fonctions dédiées sont volontairement lentes et gourmandes en mémoire, ce qui rend ces attaques des milliers de fois plus coûteuses.",
+          "code": "from argon2 import PasswordHasher\n\nph = PasswordHasher()\nempreinte = ph.hash(\"correct horse battery\")\nph.verify(empreinte, \"correct horse battery\")"
+        },
+        {
+          "title": "Au-delà du mot de passe",
+          "body": "Les mots de passe fuitent et sont réutilisés d'un site à l'autre. L'authentification multifacteur ajoute un second élément : une application TOTP, une clé de sécurité, une passkey. Les passkeys (WebAuthn) remplacent même le mot de passe par une paire de clés liée au site, qui résiste au phishing."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-mdp-q1",
+          "prompt": "Comment stocker les mots de passe des utilisateurs ?",
+          "choices": [
+            "Une empreinte calculée par Argon2, bcrypt ou scrypt, avec un sel unique par utilisateur",
+            "En clair, dans une table protégée",
+            "Chiffrés avec une clé stockée sur le serveur",
+            "Hachés avec MD5"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un chiffrement est réversible : celui qui vole la clé récupère tous les mots de passe. MD5 est bien trop rapide et cassé.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-mdp-q2",
+          "prompt": "À quoi sert le sel ?",
+          "choices": [
+            "À rendre chaque empreinte unique, pour qu'un même mot de passe ne donne pas la même empreinte chez deux utilisateurs",
+            "À chiffrer le mot de passe",
+            "À raccourcir l'empreinte",
+            "À remplacer le mot de passe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans sel, un attaquant casse d'un coup tous les comptes qui partagent un mot de passe, et peut utiliser des tables précalculées.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-mdp-q3",
+          "prompt": "Pourquoi une fonction de hachage rapide comme SHA-256 est-elle un mauvais choix pour les mots de passe ?",
+          "choices": [
+            "Sa rapidité permet de tester des milliards de candidats par seconde en cas de vol de la base",
+            "Elle produit des empreintes trop courtes",
+            "Elle est réversible",
+            "Elle n'existe pas en Python"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour les mots de passe, la lenteur est une qualité : quelques dizaines de millisecondes par vérification, c'est imperceptible pour l'utilisateur et ruineux pour l'attaquant.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-mdp-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "import hashlib, os\n\nmdp = b\"soleil123\"\ne1 = hashlib.sha256(mdp).hexdigest()\ne2 = hashlib.sha256(mdp).hexdigest()\nsel = os.urandom(16)\ne3 = hashlib.sha256(sel + mdp).hexdigest()\nprint(e1 == e2, e1 == e3)",
+          "choices": [
+            "True False",
+            "False False",
+            "True True",
+            "False True"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans sel, deux empreintes du même mot de passe sont identiques. Le sel change l'empreinte. (En pratique, on utilise Argon2, qui gère le sel lui-même.)",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-mdp-q5",
+          "prompt": "Pourquoi les passkeys résistent-elles au phishing ?",
+          "choices": [
+            "La clé est liée au domaine du site : sur un faux site, le navigateur ne la propose même pas",
+            "Elles sont plus longues qu'un mot de passe",
+            "Elles changent chaque jour",
+            "Elles sont envoyées par SMS"
+          ],
+          "answerIndex": 0,
+          "explanation": "Et aucun secret ne transite : le site ne stocke qu'une clé publique, inutile à un attaquant qui la volerait.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sec-mdp-q6",
+          "prompt": "Quelles pratiques renforcent l'authentification ?",
+          "choices": [
+            "Proposer l'authentification multifacteur",
+            "Limiter le nombre de tentatives de connexion",
+            "Refuser les mots de passe présents dans les listes de fuites connues",
+            "Imposer un changement de mot de passe tous les mois"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les recommandations actuelles (NIST, ANSSI) déconseillent les changements périodiques forcés, qui poussent à des mots de passe prévisibles.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "sec-sessions-jwt",
       "title": "Sessions et JWT",
       "summary": "Avantages et pièges.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les sessions côté serveur",
+          "body": "Après la connexion, le serveur crée une session et envoie au navigateur un identifiant aléatoire dans un cookie (HttpOnly, Secure, SameSite). Les données restent sur le serveur. Révoquer une session est immédiat : on la supprime. On régénère l'identifiant à la connexion, pour éviter la fixation de session."
+        },
+        {
+          "title": "Les JWT",
+          "body": "Un JSON Web Token contient lui-même les informations (identité, rôles, expiration), signées par le serveur. Il se compose de trois parties en base64 : en-tête, contenu et signature. Le contenu n'est pas chiffré : n'importe qui peut le lire. La signature garantit seulement qu'il n'a pas été modifié.",
+          "code": "eyJhbGciOiJIUzI1NiJ9      # en-tête\n.eyJzdWIiOiI0MiIsInJvbGUiOiJ1c2VyIn0\n.k3J8...                   # signature",
+          "language": "text"
+        },
+        {
+          "title": "Les pièges des JWT",
+          "body": "Toujours vérifier la signature avec un algorithme imposé côté serveur (jamais celui annoncé par le jeton, ni « none »). Un JWT ne peut pas être révoqué avant son expiration sans liste de révocation : on garde des durées courtes et des jetons de rafraîchissement. Les JWT conviennent bien entre services ; pour une application web classique, une session reste souvent plus simple."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-jwt-q1",
+          "prompt": "Le contenu d'un JWT signé est-il secret ?",
+          "choices": [
+            "Non : il est seulement encodé en base64, n'importe qui peut le lire ; la signature empêche juste de le modifier",
+            "Oui, il est chiffré par la signature",
+            "Oui, seul le serveur peut le décoder",
+            "Cela dépend du navigateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "On n'y met donc jamais de donnée sensible. Le format JWE existe pour les jetons chiffrés.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-jwt-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "import base64, json\n\ncontenu = \"eyJzdWIiOiI0MiIsInJvbGUiOiJ1c2VyIn0\"\ncontenu += \"=\" * (-len(contenu) % 4)\nprint(json.loads(base64.urlsafe_b64decode(contenu)))",
+          "choices": [
+            "{'sub': '42', 'role': 'user'}",
+            "Une erreur : le jeton est chiffré",
+            "eyJzdWIi...",
+            "None"
+          ],
+          "answerIndex": 0,
+          "explanation": "Décoder le contenu d'un JWT ne demande aucune clé. Il suffit de rétablir le remplissage base64.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-jwt-q3",
+          "prompt": "Un utilisateur change son rôle de « user » à « admin » dans le contenu de son JWT. Que doit-il se passer ?",
+          "choices": [
+            "Le serveur rejette le jeton : la signature ne correspond plus au contenu",
+            "Il devient administrateur",
+            "Le serveur met à jour la base",
+            "Rien de particulier"
+          ],
+          "answerIndex": 0,
+          "explanation": "À condition que le serveur vérifie toujours la signature, avec l'algorithme qu'il attend.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sec-jwt-q4",
+          "prompt": "Cette vérification de jeton est vulnérable. Touche la ligne fautive.",
+          "code": "def utilisateur_courant(jeton):\n    entete = jwt.get_unverified_header(jeton)\n    donnees = jwt.decode(jeton, CLE,\n                         algorithms=[entete[\"alg\"]])\n    return donnees[\"sub\"]",
+          "bugLines": [
+            4
+          ],
+          "explanation": "L'algorithme est choisi par le jeton lui-même : un attaquant peut imposer « none » ou détourner l'algorithme. Le serveur doit fixer la liste : algorithms=[\"HS256\"].",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sec-jwt-q5",
+          "prompt": "Un employé est licencié ; son JWT est valable encore 7 jours. Quel est le problème ?",
+          "choices": [
+            "Un JWT reste valide jusqu'à son expiration : sans liste de révocation, impossible de lui couper l'accès",
+            "Aucun, le serveur le détecte automatiquement",
+            "Le jeton s'efface tout seul",
+            "Il suffit de changer son mot de passe"
+          ],
+          "answerIndex": 0,
+          "explanation": "D'où des jetons d'accès de quelques minutes, renouvelés par un jeton de rafraîchissement que le serveur peut révoquer.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sec-jwt-q6",
+          "prompt": "Quelles bonnes pratiques pour un cookie de session ?",
+          "choices": [
+            "HttpOnly, Secure et SameSite",
+            "Un identifiant long et aléatoire",
+            "Régénérer l'identifiant après la connexion",
+            "Y stocker le mot de passe de l'utilisateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le cookie ne contient qu'un identifiant opaque ; les données de session restent sur le serveur.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "sec-oauth-oidc",
       "title": "OAuth 2 et OpenID Connect",
       "summary": "Déléguer l'authentification.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "OAuth 2 : déléguer un accès",
+          "body": "OAuth 2 permet à une application d'accéder à des ressources au nom d'un utilisateur, sans connaître son mot de passe. L'utilisateur s'authentifie auprès du serveur d'autorisation, consent à des permissions précises (scopes), et l'application reçoit un jeton d'accès limité. C'est un protocole d'autorisation, pas d'authentification."
+        },
+        {
+          "title": "OpenID Connect : savoir qui est l'utilisateur",
+          "body": "OIDC ajoute à OAuth 2 un jeton d'identité (ID token, un JWT) qui décrit l'utilisateur connecté. C'est ce qu'utilisent les boutons « Se connecter avec Google » ou l'authentification unique (SSO) en entreprise avec Entra ID, Okta ou Keycloak."
+        },
+        {
+          "title": "Le flux authorization code + PKCE",
+          "body": "Le flux recommandé : l'application redirige vers le serveur d'autorisation, qui renvoie un code à usage unique ; l'application l'échange contre les jetons. PKCE lie ce code à un secret généré par l'application, pour qu'un code intercepté soit inutilisable. Le paramètre state protège contre le CSRF. Le flux implicite, qui renvoyait le jeton dans l'URL, est abandonné."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-oauth-q1",
+          "prompt": "Une application de calendrier veut lire vos événements Google sans votre mot de passe Google. Quel protocole ?",
+          "choices": [
+            "OAuth 2, avec un scope limité à la lecture du calendrier",
+            "Donner votre mot de passe à l'application",
+            "Un JWT créé par l'application elle-même",
+            "Une injection SQL"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'application ne voit jamais votre mot de passe et n'obtient que les droits consentis, révocables à tout moment.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-oauth-q2",
+          "prompt": "Quelle différence entre OAuth 2 et OpenID Connect ?",
+          "choices": [
+            "OAuth 2 délègue un accès à des ressources ; OIDC ajoute l'authentification, avec un jeton d'identité décrivant l'utilisateur",
+            "Ce sont des synonymes",
+            "OIDC est plus ancien",
+            "OAuth 2 ne fonctionne qu'avec Google"
+          ],
+          "answerIndex": 0,
+          "explanation": "Utiliser un simple jeton d'accès OAuth comme preuve d'identité est une erreur classique : il n'est pas fait pour cela.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-oauth-q3",
+          "prompt": "À quoi sert PKCE dans le flux authorization code ?",
+          "choices": [
+            "À garantir que seule l'application qui a lancé le flux peut échanger le code contre des jetons",
+            "À chiffrer le mot de passe",
+            "À raccourcir la durée des jetons",
+            "À remplacer le consentement de l'utilisateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Indispensable pour les applications mobiles et les SPA, qui ne peuvent pas garder de secret client. Il est aujourd'hui recommandé pour tous les clients.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sec-oauth-q4",
+          "prompt": "Quel est le rôle du paramètre state dans la redirection OAuth ?",
+          "choices": [
+            "Lier la réponse à la requête initiale de l'utilisateur, pour empêcher une attaque CSRF sur la redirection",
+            "Indiquer le pays de l'utilisateur",
+            "Choisir la langue de la page de connexion",
+            "Stocker le jeton d'accès"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'application génère une valeur aléatoire, la mémorise et vérifie qu'elle revient identique.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sec-oauth-q5",
+          "prompt": "Quel avantage le SSO d'entreprise (OIDC avec Entra ID, Okta...) apporte-t-il à la sécurité ?",
+          "choices": [
+            "Un seul point pour imposer la MFA et désactiver tous les accès d'un employé qui part",
+            "Il supprime le besoin de mots de passe forts",
+            "Il rend les applications publiques",
+            "Il chiffre le code source"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans SSO, chaque application a ses comptes, et il faut penser à tous les désactiver un par un.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sec-oauth-q6",
+          "prompt": "Quelles pratiques OAuth sont recommandées aujourd'hui ?",
+          "choices": [
+            "Le flux authorization code avec PKCE",
+            "Des scopes limités au strict nécessaire",
+            "Vérifier la signature, l'émetteur, l'audience et l'expiration de l'ID token",
+            "Le flux implicite, qui renvoie le jeton dans l'URL"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le flux implicite exposait les jetons dans l'historique et les en-têtes Referer : il est déconseillé.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sec-defi-authentification",
+    "title": "Défi entretien : authentification",
+    "summary": "Une base d'utilisateurs a fuité.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sec-defi3-q1",
+        "prompt": "Cas pratique 1/3 — La table users a fuité. Les mots de passe y sont hachés en SHA-1 sans sel. Quel est le risque ?",
+        "choices": [
+          "La plupart des mots de passe seront retrouvés très vite par force brute ou tables précalculées",
+          "Aucun, ils sont hachés",
+          "Seuls les administrateurs sont concernés",
+          "Le risque est nul si la base est ancienne"
+        ],
+        "answerIndex": 0,
+        "explanation": "SHA-1 sans sel se casse à des milliards d'essais par seconde, et les mots de passe courants sont déjà dans des tables publiques.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi3-q2",
+        "prompt": "Cas pratique 2/3 — Comment migrer vers Argon2 sans connaître les mots de passe ?",
+        "choices": [
+          "Re-hacher à la prochaine connexion réussie de chaque utilisateur (ou envelopper l'ancienne empreinte dans Argon2 tout de suite)",
+          "Demander aux utilisateurs d'envoyer leur mot de passe par e-mail",
+          "Déchiffrer les SHA-1",
+          "C'est impossible"
+        ],
+        "answerIndex": 0,
+        "explanation": "Envelopper Argon2(SHA1(mdp)) protège immédiatement tous les comptes, y compris ceux qui ne se reconnectent pas.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Que faire vis-à-vis des utilisateurs ?",
+        "choices": [
+          "Les informer, forcer la réinitialisation des mots de passe, recommander de les changer ailleurs s'ils étaient réutilisés, et notifier l'autorité (la CNIL en France) dans les 72 heures",
+          "Ne rien dire pour éviter la panique",
+          "Supprimer tous les comptes",
+          "Attendre de voir si les données sont utilisées"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le RGPD impose la notification à l'autorité et, en cas de risque élevé, aux personnes concernées.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi3-q4",
+        "prompt": "Le formulaire de connexion répond « mot de passe incorrect » ou « utilisateur inconnu » selon le cas. Quel problème ?",
+        "choices": [
+          "Il permet de découvrir quelles adresses ont un compte (énumération) ; un message unique est préférable",
+          "Aucun, c'est plus clair",
+          "Les messages sont trop longs",
+          "Il faut afficher le mot de passe attendu"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le temps de réponse doit aussi être similaire dans les deux cas, sinon il trahit la même information.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sec-defi3-q5",
+        "prompt": "Comment limiter les attaques par bourrage d'identifiants (credential stuffing) ?",
+        "choices": [
+          "L'authentification multifacteur",
+          "La limitation de débit et la détection des connexions anormales",
+          "La vérification des mots de passe contre les listes de fuites connues",
+          "Afficher le nombre de tentatives restantes pour chaque adresse testée"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Ces attaques testent des couples identifiant / mot de passe volés ailleurs : la réutilisation des mots de passe est leur carburant.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi3-q6",
+        "prompt": "En entretien : « Authentification ou autorisation ? »",
+        "choices": [
+          "L'authentification vérifie qui est l'utilisateur ; l'autorisation décide de ce qu'il a le droit de faire",
+          "Ce sont des synonymes",
+          "L'autorisation vient toujours avant l'authentification",
+          "L'authentification ne concerne que les administrateurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une grande partie des failles réelles sont des défauts d'autorisation chez des utilisateurs parfaitement authentifiés.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

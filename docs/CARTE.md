@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (100 écrits) | 341 (261 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (105 écrits) | 341 (274 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -747,24 +747,24 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Tronc commun**
 
-1. 🕓 Fondamentaux
-   - Confidentialité, intégrité, disponibilité
-   - Principes de conception sûre
-   - Modélisation des menaces
-2. 🕓 Vulnérabilités web
-   - Injections
-   - XSS
-   - CSRF et SSRF
-3. 🕓 Authentification et autorisation
-   - Mots de passe
-   - Sessions et JWT
-   - OAuth 2 et OpenID Connect
-4. 🕓 Cryptographie appliquée
-   - Chiffrement symétrique et asymétrique
-   - Hachage et signatures
-5. 🕓 Sécurité dans le cycle de développement
-   - Dépendances et supply chain
-   - Analyses automatiques
+1. ✅ Fondamentaux
+   - ✅ Confidentialité, intégrité, disponibilité
+   - ✅ Principes de conception sûre
+   - ✅ Modélisation des menaces
+2. ✅ Vulnérabilités web
+   - ✅ Injections
+   - ✅ XSS
+   - ✅ CSRF et SSRF
+3. ✅ Authentification et autorisation
+   - ✅ Mots de passe
+   - ✅ Sessions et JWT
+   - ✅ OAuth 2 et OpenID Connect
+4. ✅ Cryptographie appliquée
+   - ✅ Chiffrement symétrique et asymétrique
+   - ✅ Hachage et signatures
+5. ✅ Sécurité dans le cycle de développement
+   - ✅ Dépendances et supply chain
+   - ✅ Analyses automatiques
 
 **Spécialisations**
 

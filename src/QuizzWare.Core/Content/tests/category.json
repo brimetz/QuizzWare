@@ -4,5 +4,6 @@
   "name": "Tests et qualité",
   "description": "Tester, relire et maintenir du code de qualité.",
   "icon": "QA",
-  "color": "#689F38"
+  "color": "#689F38",
+  "language": "python"
 }
