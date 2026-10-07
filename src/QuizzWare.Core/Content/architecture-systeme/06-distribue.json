@@ -96,8 +96,232 @@
           "answerIndex": 2,
           "explanation": "Closed = trafic normal, Open = appels bloqués, Half-Open = quelques appels d'essai avant de refermer ou rouvrir le circuit.",
           "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "archi-distrib-q6",
+          "prompt": "Quelles idées reçues font partie des « illusions de l'informatique distribuée » ?",
+          "choices": [
+            "Le réseau est fiable",
+            "La latence est nulle",
+            "La bande passante est infinie",
+            "Les pannes partielles sont fréquentes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les pannes partielles sont une réalité, pas une illusion : un appel peut échouer, être lent ou réussir sans que la réponse arrive. Tout code distribué doit le prévoir.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "archi-decoupage",
+      "title": "Découper en services",
+      "summary": "Frontières, données et sagas.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Où couper",
+          "body": "Un bon service correspond à une capacité métier (un contexte délimité du DDD) : catalogue, paiement, livraison. Découper par couche technique (un service « base de données », un service « validation ») crée des services qui doivent toujours changer ensemble. Commencer par un monolithe modulaire, bien découpé en modules, permet d'extraire des services plus tard, quand le besoin est réel."
+        },
+        {
+          "title": "Une base de données par service",
+          "body": "Chaque service possède ses données ; les autres y accèdent par son API ou ses événements. Une base partagée recouple tout : un changement de schéma casse plusieurs services, et on perd le déploiement indépendant. Le prix : plus de jointures entre services, et une cohérence à terme."
+        },
+        {
+          "title": "Sagas : orchestration ou chorégraphie",
+          "body": "Une saga enchaîne des transactions locales, chacune avec une compensation (rembourser, libérer le stock). En orchestration, un coordinateur dit à chaque service quoi faire : le flux est lisible à un seul endroit. En chorégraphie, chaque service réagit aux événements des autres : moins de couplage central, mais le flux global est plus difficile à suivre."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "archi-decoupage-q1",
+          "prompt": "Une équipe crée un service « Validation » appelé par tous les autres pour vérifier leurs données. Quel est le problème ?",
+          "choices": [
+            "C'est un découpage technique : chaque évolution métier oblige à modifier ce service en plus du service concerné",
+            "Aucun, c'est un bon découpage",
+            "Le service est trop petit",
+            "La validation doit se faire en base"
+          ],
+          "answerIndex": 0,
+          "explanation": "On découpe par capacité métier pour que les changements restent locaux à un service.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "archi-decoupage-q2",
+          "prompt": "Le service Commandes lit directement les tables du service Clients. Quel est le risque ?",
+          "choices": [
+            "Le schéma de Clients ne peut plus évoluer sans casser Commandes : les deux services sont couplés",
+            "Les requêtes sont trop rapides",
+            "Aucun risque, c'est recommandé",
+            "Le service Clients devient plus disponible"
+          ],
+          "answerIndex": 0,
+          "explanation": "La base devient un contrat caché. Commandes doit passer par l'API de Clients, ou garder une copie locale des données utiles, alimentée par événements.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "archi-decoupage-q3",
+          "prompt": "Une saga de commande échoue au paiement. Remets dans l'ordre les étapes.",
+          "language": "text",
+          "lines": [
+            "Créer la commande (en attente)",
+            "Réserver le stock",
+            "Débiter le client : échec",
+            "Libérer le stock réservé",
+            "Annuler la commande"
+          ],
+          "explanation": "Les compensations s'exécutent dans l'ordre inverse des étapes réussies.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "archi-decoupage-q4",
+          "prompt": "Une start-up de cinq développeurs lance son produit. Quelle architecture lui conseiller ?",
+          "choices": [
+            "Un monolithe modulaire, avec des frontières claires entre modules",
+            "Trente microservices dès le premier jour",
+            "Un microservice par développeur",
+            "Une base de données par table"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les microservices résolvent surtout des problèmes d'organisation (beaucoup d'équipes) et d'échelle. Trop tôt, ils coûtent cher et figent des frontières encore mal comprises.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "archi-decoupage-q5",
+          "prompt": "Quel est l'avantage d'une saga orchestrée par rapport à une saga chorégraphiée ?",
+          "choices": [
+            "Le déroulement du processus est décrit et suivi à un seul endroit",
+            "Il n'y a aucun couplage",
+            "Les compensations deviennent inutiles",
+            "Elle n'utilise pas le réseau"
+          ],
+          "answerIndex": 0,
+          "explanation": "En chorégraphie, il faut reconstituer le flux à partir des abonnements de chaque service : souple, mais difficile à comprendre et à déboguer quand les étapes se multiplient.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "archi-decoupage-q6",
+          "prompt": "Quels symptômes trahissent un « monolithe distribué » ?",
+          "choices": [
+            "Plusieurs services doivent être déployés ensemble pour chaque fonctionnalité",
+            "Les services partagent la même base de données",
+            "Une requête utilisateur traverse une longue chaîne d'appels synchrones",
+            "Chaque équipe déploie son service sans coordination"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On cumule alors les inconvénients des deux mondes : la complexité du distribué sans l'indépendance des services.",
+          "difficulty": 2
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "archi-defi-distribue",
+    "title": "Défi entretien : systèmes distribués",
+    "summary": "Migrer un monolithe.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "archi-defi6-q1",
+        "prompt": "Cas pratique 1/3 — Un monolithe e-commerce devient difficile à faire évoluer par 8 équipes. On veut extraire des services. Quelle stratégie ?",
+        "choices": [
+          "L'étrangleur (strangler fig) : extraire une fonctionnalité à la fois, en routant progressivement le trafic vers le nouveau service",
+          "Tout réécrire d'un coup et basculer un week-end",
+          "Geler les évolutions pendant deux ans",
+          "Dupliquer le monolithe pour chaque équipe"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le nouveau système « étrangle » l'ancien petit à petit. Chaque étape est réversible et livre de la valeur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "archi-defi6-q2",
+        "prompt": "Cas pratique 2/3 — Quel module extraire en premier ?",
+        "choices": [
+          "Un module aux frontières claires, qui évolue souvent ou a des besoins de charge propres (par exemple la recherche)",
+          "Le module le plus couplé au reste",
+          "Le cœur des commandes, le plus critique",
+          "Un module tiré au hasard"
+        ],
+        "answerIndex": 0,
+        "explanation": "On commence par un candidat qui apporte un bénéfice net avec un risque limité, pour apprendre avant de toucher au cœur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "archi-defi6-q3",
+        "prompt": "Cas pratique 3/3 — Le nouveau service Recherche a besoin des produits, qui restent dans le monolithe. Comment les obtenir ?",
+        "choices": [
+          "Le monolithe publie des événements « produit modifié » ; Recherche maintient sa propre copie indexée",
+          "Recherche lit directement les tables du monolithe",
+          "Recherche appelle le monolithe à chaque requête de l'utilisateur",
+          "On copie la base à la main chaque nuit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque service garde ses données ; la copie est à jour à quelques secondes près, ce qui convient parfaitement à une recherche.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "archi-defi6-q4",
+        "prompt": "Une requête traverse 5 services en série, chacun disponible à 99,9 %. Quelle est la disponibilité de l'ensemble ?",
+        "choices": [
+          "Environ 99,5 %",
+          "99,9 %",
+          "Environ 99,99 %",
+          "Environ 95 %"
+        ],
+        "answerIndex": 0,
+        "explanation": "0,999⁵ ≈ 0,995 : les indisponibilités s'additionnent. C'est un argument contre les longues chaînes d'appels synchrones.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "archi-defi6-q5",
+        "prompt": "Qu'apporte la distribution, et qu'est-ce qu'elle coûte ?",
+        "choices": [
+          "Elle permet des déploiements et une mise à l'échelle indépendants",
+          "Elle introduit la latence réseau et les pannes partielles",
+          "Elle rend la cohérence des données plus difficile",
+          "Elle simplifie le débogage"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le débogage devient plus difficile : il faut du traçage distribué pour suivre une requête d'un service à l'autre.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "archi-defi6-q6",
+        "prompt": "En entretien : « Pourquoi ne pas tout faire en microservices ? » Quelle réponse est la plus solide ?",
+        "choices": [
+          "Leur coût (réseau, données, observabilité, déploiement) ne se justifie que si l'organisation et l'échelle l'exigent",
+          "Parce qu'ils sont dépassés",
+          "Parce qu'ils sont toujours plus lents",
+          "Il faut toujours tout faire en microservices"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est un compromis : on échange de la complexité technique contre de l'autonomie des équipes et de la scalabilité ciblée.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

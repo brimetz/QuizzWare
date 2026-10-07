@@ -7,19 +7,419 @@
       "id": "sys-couches",
       "title": "Architecture en couches",
       "summary": "Présentation, métier, données : rôles et dépendances.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Trois couches classiques",
+          "body": "La présentation (API, interface) reçoit les demandes et affiche les résultats. La couche métier applique les règles. La couche d'accès aux données lit et écrit en base. Chaque couche n'appelle que celle du dessous."
+        },
+        {
+          "title": "Pourquoi séparer",
+          "body": "Une règle métier écrite dans un contrôleur ne peut pas être réutilisée par un traitement batch, ni testée sans HTTP. Une requête SQL dans la page d'affichage couple l'interface au schéma de la base."
+        },
+        {
+          "title": "Les dérives",
+          "body": "Le « modèle anémique » : des entités sans comportement, et toute la logique dans des services géants. Et les couches « passe-plat » qui ne font que relayer l'appel, ajoutant du code sans valeur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-couches-q1",
+          "prompt": "Où placer la règle « une commande de plus de 1 000 € nécessite une validation » ?",
+          "choices": [
+            "Dans la couche métier",
+            "Dans le contrôleur HTTP",
+            "Dans une procédure stockée",
+            "Dans le code JavaScript de la page"
+          ],
+          "answerIndex": 0,
+          "explanation": "La règle doit s'appliquer quel que soit le point d'entrée (API, batch, import), et se tester sans infrastructure.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sys-couches-q2",
+          "prompt": "Ce contrôleur mélange les couches. Touche la ligne qui n'a rien à faire ici.",
+          "code": "[HttpPost(\"commandes\")]\npublic IActionResult Creer(CommandeDto dto)\n{\n    var cmd = _service.Creer(dto.ClientId, dto.Lignes);\n    _db.Execute(\"UPDATE stock SET qte = qte - 1\");\n    return Created($\"/commandes/{cmd.Id}\", cmd);\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "La mise à jour du stock est une règle métier écrite en SQL dans la présentation. Elle appartient au service, via un dépôt.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-couches-q3",
+          "prompt": "Dans une architecture en couches stricte, la couche présentation peut appeler...",
+          "choices": [
+            "La couche métier uniquement",
+            "La couche données directement",
+            "N'importe quelle couche",
+            "Aucune couche"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque couche ne connaît que celle du dessous. Court-circuiter le métier contourne ses règles.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-couches-q4",
+          "prompt": "Qu'est-ce qu'un modèle anémique ?",
+          "choices": [
+            "Des entités réduites à des propriétés, toute la logique étant dans des services",
+            "Un modèle de données sans clé primaire",
+            "Une base de données trop petite",
+            "Un modèle sans interface graphique"
+          ],
+          "answerIndex": 0,
+          "explanation": "commande.Total = ... calculé partout dans les services, au lieu de commande.AjouterLigne() qui garantit lui-même la cohérence.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-couches-q5",
+          "prompt": "Dans l'architecture en couches classique, de quoi dépend la couche métier ?",
+          "choices": [
+            "De la couche d'accès aux données, ce qui la lie à la technologie de stockage",
+            "De la présentation",
+            "De rien du tout",
+            "Du navigateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la limite de ce modèle : le cœur métier dépend de l'infrastructure. L'architecture hexagonale inverse cette dépendance.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sys-couches-q6",
+          "prompt": "Quels sont les bénéfices d'une séparation en couches ?",
+          "choices": [
+            "Tester les règles métier sans HTTP ni base de données",
+            "Réutiliser le métier depuis plusieurs points d'entrée",
+            "Changer l'interface sans toucher aux règles",
+            "Rendre chaque requête plus rapide"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les couches servent la maintenabilité, pas la performance : chaque couche ajoute même un léger coût d'indirection.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "sys-hexagonale",
       "title": "Hexagonale et clean architecture",
       "summary": "Ports, adaptateurs et règle de dépendance.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le domaine au centre",
+          "body": "L'architecture hexagonale (ports et adaptateurs) place le domaine au centre, sans aucune dépendance technique. Le domaine définit des ports (interfaces) ; l'infrastructure fournit des adaptateurs qui les implémentent : base SQL, API externe, file de messages."
+        },
+        {
+          "title": "La règle de dépendance",
+          "body": "Les dépendances pointent toujours vers l'intérieur. Le domaine ne référence ni Entity Framework, ni ASP.NET, ni le SDK du fournisseur d'e-mails. C'est l'inversion de dépendances (le D de SOLID) appliquée à toute l'application.",
+          "code": "// Domaine : le port\npublic interface IDepotCommandes\n{\n    Commande? Trouver(Guid id);\n    void Enregistrer(Commande c);\n}\n\n// Infrastructure : l'adaptateur\nclass DepotCommandesSql(AppDb db)\n    : IDepotCommandes { ... }"
+        },
+        {
+          "title": "Ports primaires et secondaires",
+          "body": "Les ports primaires (ou « pilotants ») sont ce que l'application offre : ses cas d'usage, appelés par un contrôleur, un CLI ou un test. Les ports secondaires (« pilotés ») sont ce dont elle a besoin : stockage, envoi, horloge."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-hexa-q1",
+          "prompt": "Dans une architecture hexagonale, dans quel projet est déclarée l'interface IDepotCommandes ?",
+          "choices": [
+            "Dans le domaine (ou la couche application)",
+            "Dans le projet d'infrastructure SQL",
+            "Dans le projet API",
+            "Dans un projet partagé avec le front-end"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le domaine exprime son besoin dans ses propres termes ; l'infrastructure s'y conforme. Ainsi, le domaine ne dépend de rien.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-hexa-q2",
+          "prompt": "Que dit la règle de dépendance de la clean architecture ?",
+          "choices": [
+            "Les dépendances du code source pointent toujours vers l'intérieur, vers le domaine",
+            "Le domaine dépend de la base de données",
+            "Chaque couche dépend de toutes les autres",
+            "L'interface utilisateur est au centre"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les détails (framework, base, interface) dépendent des règles métier, jamais l'inverse.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sys-hexa-q3",
+          "prompt": "Cette entité du domaine viole la règle de dépendance. Touche la ligne en cause.",
+          "code": "using System.ComponentModel.DataAnnotations;\nusing Microsoft.EntityFrameworkCore;\n\nnamespace Boutique.Domaine;\n\npublic class Commande\n{\n    public Guid Id { get; private set; }\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le domaine référence Entity Framework, un détail d'infrastructure. Le mapping doit être configuré côté infrastructure (IEntityTypeConfiguration). DataAnnotations fait partie de la bibliothèque standard, c'est plus discutable mais toléré.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-hexa-q4",
+          "prompt": "Quel bénéfice immédiat de ce découpage pour les tests ?",
+          "choices": [
+            "Tester un cas d'usage avec des adaptateurs en mémoire, sans base ni réseau",
+            "Ne plus avoir besoin de tests",
+            "Tester uniquement l'interface graphique",
+            "Les tests deviennent plus lents mais plus sûrs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un DepotCommandesEnMemoire implémente le port : les tests du domaine sont rapides et déterministes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-hexa-q5",
+          "prompt": "Le cas d'usage a besoin de la date du jour pour calculer une échéance. Que faire ?",
+          "choices": [
+            "Définir un port IHorloge (ou utiliser TimeProvider) injecté, pour pouvoir fixer la date en test",
+            "Appeler DateTime.Now directement dans le domaine",
+            "Passer la date dans une variable globale",
+            "Lire la date depuis la base de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'horloge est une dépendance externe comme une autre. .NET 8 fournit TimeProvider, avec FakeTimeProvider pour les tests.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sys-hexa-q6",
+          "prompt": "Lesquels sont des adaptateurs secondaires (pilotés) ?",
+          "choices": [
+            "Un dépôt SQL",
+            "Un client d'API de paiement",
+            "Un producteur de messages Kafka",
+            "Un contrôleur HTTP"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le contrôleur HTTP appelle l'application : c'est un adaptateur primaire (pilotant).",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "sys-ddd-bases",
       "title": "Les bases du DDD",
       "summary": "Langage ubiquitaire, entités, objets valeur, agrégats.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Langage ubiquitaire et contextes",
+          "body": "Le Domain-Driven Design aligne le code sur le vocabulaire des experts métier : si le métier dit « réserver un créneau », le code a une méthode Reserver, pas UpdateSlotStatus. Un même mot peut avoir des sens différents selon le contexte (un « produit » pour le catalogue, la logistique, la facturation) : chaque contexte délimité (bounded context) a son propre modèle."
+        },
+        {
+          "title": "Entités et objets valeur",
+          "body": "Une entité a une identité qui persiste malgré les changements (un client reste lui-même s'il déménage). Un objet valeur n'est défini que par ses valeurs et est immuable : deux Montant(10, EUR) sont interchangeables. Les records C# s'y prêtent bien.",
+          "code": "public record Montant(decimal Valeur, string Devise)\n{\n    public Montant Plus(Montant m) => Devise == m.Devise\n        ? this with { Valeur = Valeur + m.Valeur }\n        : throw new InvalidOperationException();\n}"
+        },
+        {
+          "title": "Agrégats",
+          "body": "Un agrégat regroupe des objets qui doivent rester cohérents ensemble, derrière une racine. On ne modifie une ligne de commande qu'à travers la Commande, qui vérifie ses invariants. Une transaction ne modifie qu'un agrégat ; les autres sont référencés par leur identifiant."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-ddd-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "public record Montant(decimal Valeur, string Devise);\n\nvar a = new Montant(10, \"EUR\");\nvar b = new Montant(10, \"EUR\");\nConsole.WriteLine(a == b);",
+          "choices": [
+            "True",
+            "False",
+            "Une erreur de compilation",
+            "Une exception"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un record compare ses valeurs, pas ses références : exactement la sémantique d'un objet valeur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-ddd-q2",
+          "prompt": "Lequel est typiquement une entité plutôt qu'un objet valeur ?",
+          "choices": [
+            "Un client",
+            "Une adresse postale",
+            "Un montant avec sa devise",
+            "Une plage de dates"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un client garde son identité même si son nom ou son adresse changent. Une adresse modifiée est simplement une autre adresse.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sys-ddd-q3",
+          "prompt": "La commande ne doit jamais dépasser 50 lignes, mais cette règle peut être contournée. Touche la ligne en cause.",
+          "code": "public class Commande\n{\n    public List<Ligne> Lignes { get; } = new();\n\n    public void Ajouter(Ligne l)\n    {\n        if (Lignes.Count >= 50)\n            throw new InvalidOperationException();\n        Lignes.Add(l);\n    }\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La liste est exposée : n'importe qui peut écrire commande.Lignes.Add(...) sans passer par la racine. Il faut exposer un IReadOnlyList et garder la liste privée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-ddd-q4",
+          "prompt": "Une Commande doit référencer le Client qui l'a passée. Comment, selon le DDD ?",
+          "choices": [
+            "Par son identifiant (ClientId), car ce sont deux agrégats différents",
+            "En contenant l'objet Client complet, modifiable",
+            "En copiant toutes les données du client dans chaque ligne",
+            "Par une variable globale"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque agrégat est une frontière de cohérence et de transaction. Référencer par identifiant évite de modifier deux agrégats à la fois.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sys-ddd-q5",
+          "prompt": "Le métier parle de « résilier un contrat ». Quelle méthode écrire ?",
+          "choices": [
+            "contrat.Resilier(date, motif)",
+            "contrat.SetStatus(3)",
+            "contrat.Statut = \"R\"",
+            "contratService.Update(contrat)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le langage ubiquitaire : le code dit ce que dit le métier, et la méthode garantit les règles de la résiliation.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sys-ddd-q6",
+          "prompt": "Quelles affirmations sur les contextes délimités sont vraies ?",
+          "choices": [
+            "Un même terme peut avoir des modèles différents selon le contexte",
+            "Ils forment souvent de bonnes frontières pour découper des services",
+            "Chaque contexte a son propre langage ubiquitaire",
+            "Toute l'entreprise doit partager un unique modèle de Produit"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un modèle unique pour toute l'entreprise devient un monstre que personne ne comprend. On traduit entre contextes à leurs frontières.",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sys-defi-architecture-applicative",
+    "title": "Défi entretien : architecture applicative",
+    "summary": "Remettre de l'ordre dans une application.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sys-defi3-q1",
+        "prompt": "Cas pratique 1/3 — Une application de réservation a toute sa logique dans les contrôleurs, avec des requêtes SQL partout. Par quoi commencer ?",
+        "choices": [
+          "Extraire les règles métier dans des classes de domaine testables, une fonctionnalité à la fois",
+          "Tout réécrire en microservices",
+          "Changer de base de données",
+          "Ajouter un cache"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un refactoring progressif, protégé par des tests, apporte de la valeur sans tout bloquer. Les microservices multiplieraient les problèmes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi3-q2",
+        "prompt": "Cas pratique 2/3 — La règle « pas deux réservations sur le même créneau » est vérifiée dans trois contrôleurs différents. Où la placer ?",
+        "choices": [
+          "Dans l'agrégat Planning (ou Creneau), seul point d'entrée pour réserver",
+          "Dans un helper statique",
+          "Dans chaque contrôleur, mais mieux testé",
+          "Uniquement dans une contrainte SQL"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'invariant est protégé par la racine d'agrégat. Une contrainte d'unicité en base reste une bonne sécurité supplémentaire contre les accès concurrents.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "sys-defi3-q3",
+        "prompt": "Cas pratique 3/3 — Remets dans l'ordre le cas d'usage Reserver.",
+        "lines": [
+          "var planning = depot.Trouver(salleId);",
+          "planning.Reserver(creneau, clientId);",
+          "depot.Enregistrer(planning);",
+          "notifications.Envoyer(clientId, creneau);"
+        ],
+        "explanation": "Charger l'agrégat, lui demander d'appliquer la règle, persister, puis déclencher les effets externes une fois l'état enregistré.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi3-q4",
+        "prompt": "Quelle structure de projets respecte la règle de dépendance ?",
+        "choices": [
+          "Api → Application → Domaine, et Infrastructure → Application",
+          "Domaine → Infrastructure → Api",
+          "Domaine → Api",
+          "Application → Infrastructure → Domaine → Api"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le domaine ne dépend de rien ; l'infrastructure implémente les ports déclarés par l'application ; l'API assemble le tout.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi3-q5",
+        "prompt": "Pour un petit outil interne CRUD, faut-il une architecture hexagonale complète avec DDD ?",
+        "choices": [
+          "Non : la complexité de l'architecture doit être proportionnée à celle du métier",
+          "Oui, toujours",
+          "Oui, sinon le code ne compile pas",
+          "Non, car le DDD est interdit pour les outils internes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le DDD vise les domaines complexes. Pour un CRUD simple, une architecture légère est plus productive.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "sys-defi3-q6",
+        "prompt": "Quels signes montrent qu'un domaine est bien isolé ?",
+        "choices": [
+          "Les tests du domaine tournent en millisecondes sans base de données",
+          "Le projet Domaine ne référence aucun package d'infrastructure",
+          "Les noms des classes et méthodes parlent le langage du métier",
+          "Le domaine contient les contrôleurs HTTP"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les contrôleurs sont des adaptateurs primaires, à l'extérieur du domaine.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

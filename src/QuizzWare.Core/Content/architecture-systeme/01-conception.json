@@ -101,8 +101,231 @@
           "answerIndex": 1,
           "explanation": "Interface Segregation : plusieurs petites interfaces ciblées évitent aux clients de dépendre de méthodes inutiles.",
           "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "archi-solid-q6",
+          "prompt": "Chaque nouveau moyen de paiement oblige à modifier cette méthode. Touche la ligne qui viole Open/Closed.",
+          "code": "decimal Frais(Paiement p)\n{\n    switch (p.Type)\n    {\n        case \"carte\": return p.Montant * 0.01m;\n        case \"paypal\": return p.Montant * 0.03m;\n        default: return 0;\n    }\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Le switch sur le type centralise tous les cas. Avec une interface IMoyenPaiement exposant Frais(), un nouveau moyen de paiement est une nouvelle classe, sans toucher l'existant.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "archi-couplage",
+      "title": "Couplage, cohésion et simplicité",
+      "summary": "Ce qui rend un code facile à changer.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Faible couplage, forte cohésion",
+          "body": "Le couplage mesure à quel point un module dépend des détails d'un autre : plus il est fort, plus un changement se propage. La cohésion mesure à quel point les éléments d'un module servent un même but. On vise des modules cohérents, reliés par des interfaces étroites."
+        },
+        {
+          "title": "Composition plutôt qu'héritage",
+          "body": "L'héritage couple fortement l'enfant aux détails du parent, et ne permet qu'un seul axe de variation. La composition assemble des objets qui collaborent via des interfaces : on peut changer une pièce, même à l'exécution.",
+          "code": "class Notification(IEnvoi envoi, IFormat format)\n{\n    public void Envoyer(string msg)\n        => envoi.Envoyer(format.Mettre(msg));\n}"
+        },
+        {
+          "title": "DRY, KISS, YAGNI",
+          "body": "DRY : une connaissance doit avoir une seule source de vérité (pas deux codes qui se ressemblent par hasard). KISS : la solution la plus simple qui marche. YAGNI : ne pas construire aujourd'hui une flexibilité pour un besoin hypothétique."
+        },
+        {
+          "title": "La loi de Déméter",
+          "body": "Ne parler qu'à ses voisins directs. commande.Client.Adresse.Ville.Nom fait dépendre l'appelant de toute la chaîne : le moindre changement de structure le casse."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "archi-couplage-q1",
+          "prompt": "Que vise-t-on en conception ?",
+          "choices": [
+            "Un faible couplage et une forte cohésion",
+            "Un fort couplage et une forte cohésion",
+            "Un faible couplage et une faible cohésion",
+            "Un fort couplage et une faible cohésion"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque module fait une chose bien définie (cohésion) et dépend peu des détails des autres (couplage) : un changement reste local.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "archi-couplage-q2",
+          "prompt": "Quelle ligne viole la loi de Déméter ?",
+          "choices": [
+            "var ville = commande.Client.Adresse.Ville.Nom;",
+            "var total = commande.Total();",
+            "var client = commande.Client;",
+            "commande.Expedier();"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'appelant navigue dans la structure interne de quatre objets. commande.VilleDeLivraison() cacherait ce détail.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "archi-couplage-q3",
+          "prompt": "Des notifications doivent pouvoir partir par e-mail ou SMS, en texte ou HTML. Avec l'héritage, combien de classes faut-il ?",
+          "choices": [
+            "4 classes (une par combinaison) ; avec la composition, 2 + 2 pièces assemblées",
+            "2 classes",
+            "1 classe",
+            "8 classes"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'héritage multiplie les combinaisons (EmailHtml, EmailTexte, SmsHtml, SmsTexte). Ajouter un canal ou un format avec la composition ne coûte qu'une classe.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "archi-couplage-q4",
+          "prompt": "Un développeur ajoute un système de plugins « au cas où on en aurait besoin un jour ». Quel principe enfreint-il ?",
+          "choices": [
+            "YAGNI",
+            "DRY",
+            "Liskov",
+            "Déméter"
+          ],
+          "answerIndex": 0,
+          "explanation": "You Aren't Gonna Need It : cette flexibilité a un coût immédiat (code, tests, complexité) pour un bénéfice hypothétique.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "archi-couplage-q5",
+          "prompt": "Deux fonctions ont un code identique : l'une calcule la TVA, l'autre des frais de port qui valent aujourd'hui 20 %. Faut-il les fusionner ?",
+          "choices": [
+            "Non : ce sont deux connaissances différentes qui évolueront séparément",
+            "Oui, DRY interdit toute duplication de code",
+            "Oui, pour gagner des lignes",
+            "Non, car la fusion ralentirait le code"
+          ],
+          "answerIndex": 0,
+          "explanation": "DRY porte sur la connaissance, pas sur le texte. Fusionner créerait un couplage accidentel : le jour où les frais changent, la TVA changerait aussi.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "archi-couplage-q6",
+          "prompt": "Quels signes indiquent un couplage trop fort ?",
+          "choices": [
+            "Modifier une classe oblige à en modifier beaucoup d'autres",
+            "Impossible de tester une classe sans démarrer la base de données",
+            "Une classe instancie elle-même toutes ses dépendances avec new",
+            "Une classe implémente une petite interface"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Recevoir ses dépendances via des interfaces (injection) réduit le couplage et rend les tests possibles.",
+          "difficulty": 2
         }
       ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "archi-defi-conception",
+    "title": "Défi entretien : conception",
+    "summary": "Revue d'une classe qui fait tout.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "archi-defi1-q1",
+        "prompt": "Cas pratique 1/3 — Une classe FactureService calcule les totaux, génère le PDF, l'enregistre en base et l'envoie par e-mail. Quel est le premier problème ?",
+        "choices": [
+          "Elle a plusieurs raisons de changer : elle viole Single Responsibility",
+          "Elle est trop courte",
+          "Elle n'utilise pas d'héritage",
+          "Elle devrait être statique"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un changement de mise en page du PDF, de schéma de base ou de fournisseur d'e-mail touche tous la même classe.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "archi-defi1-q2",
+        "prompt": "Cas pratique 2/3 — Elle contient new SmtpClient(\"smtp.prod\") et new SqlConnection(...). Pourquoi est-ce gênant pour les tests ?",
+        "choices": [
+          "On ne peut pas tester le calcul sans serveur SMTP ni base : il faut injecter des abstractions",
+          "Les tests seraient trop rapides",
+          "new est interdit en C#",
+          "Ce n'est pas gênant"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec IFactureRepository et IEnvoiMail injectés dans le constructeur, les tests passent des doublures et vérifient le calcul seul.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "archi-defi1-q3",
+        "prompt": "Cas pratique 3/3 — Remets dans l'ordre la classe refactorée.",
+        "lines": [
+          "class FactureService(",
+          "    IFactureRepository depot,",
+          "    IGenerateurPdf pdf,",
+          "    IEnvoiMail mail)",
+          "{",
+          "    public void Emettre(Facture f) { ... }",
+          "}"
+        ],
+        "explanation": "Le service orchestre ; chaque responsabilité est derrière une abstraction remplaçable.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "archi-defi1-q4",
+        "prompt": "Une méthode Sauvegarder() d'une sous-classe ReadOnlyRepository lève NotSupportedException. Quel principe est en cause ?",
+        "choices": [
+          "Liskov Substitution : un code qui attend un Repository ne peut pas utiliser ce sous-type sans surprise",
+          "Open/Closed",
+          "DRY",
+          "YAGNI"
+        ],
+        "answerIndex": 0,
+        "explanation": "Mieux vaut séparer IReadRepository et IWriteRepository (Interface Segregation) que mentir sur ce que fait le sous-type.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "archi-defi1-q5",
+        "prompt": "Quels arguments montrent qu'une abstraction est prématurée ?",
+        "choices": [
+          "Elle n'a qu'une seule implémentation et aucune autre n'est prévue",
+          "Elle complique la lecture sans faciliter les tests",
+          "Elle a été créée « pour plus tard »",
+          "Elle permet de tester le code métier sans base de données"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une abstraction se justifie par un besoin réel : plusieurs implémentations, ou une doublure de test. Sinon, c'est de la complexité gratuite.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "archi-defi1-q6",
+        "prompt": "En entretien : comment présenter un principe comme SOLID ?",
+        "choices": [
+          "Comme des heuristiques au service de la maintenabilité, à appliquer avec discernement",
+          "Comme des règles absolues à appliquer partout",
+          "Comme une contrainte imposée par le compilateur",
+          "Comme une mode dépassée"
+        ],
+        "answerIndex": 0,
+        "explanation": "Appliqués aveuglément, ils produisent des interfaces et des couches inutiles. L'intervieweur attend qu'on sache pourquoi et quand les utiliser.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

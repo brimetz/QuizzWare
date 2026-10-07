@@ -7,19 +7,424 @@
       "id": "sys-api-rest",
       "title": "REST en pratique",
       "summary": "Ressources, verbes, codes de statut, pagination.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des ressources et des verbes",
+          "body": "Les URL désignent des ressources (des noms, au pluriel), et les verbes HTTP disent quoi en faire : GET lit, POST crée, PUT remplace, PATCH modifie partiellement, DELETE supprime. GET ne doit jamais modifier l'état.",
+          "code": "GET    /commandes?statut=payee\nGET    /commandes/42\nPOST   /commandes\nPATCH  /commandes/42\nDELETE /commandes/42\nGET    /clients/7/commandes",
+          "language": "text"
+        },
+        {
+          "title": "Les codes de statut",
+          "body": "2xx succès : 200 OK, 201 Created (avec l'en-tête Location), 204 No Content. 4xx erreur du client : 400 requête invalide, 401 non authentifié, 403 interdit, 404 introuvable, 409 conflit, 422 données invalides, 429 trop de requêtes. 5xx erreur du serveur : 500, 503 indisponible."
+        },
+        {
+          "title": "Paginer les listes",
+          "body": "Une liste sans limite finit par renvoyer un million de lignes. La pagination par offset (?page=3&taille=50) est simple mais lente sur les grandes tables et instable si des éléments sont insérés pendant la lecture. La pagination par curseur (?apres=id_du_dernier) reste rapide et stable."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-rest-q1",
+          "prompt": "Quel code renvoyer après la création réussie d'une ressource par POST ?",
+          "choices": [
+            "201 Created, avec un en-tête Location vers la nouvelle ressource",
+            "200 OK sans corps",
+            "204 No Content",
+            "302 Found"
+          ],
+          "answerIndex": 0,
+          "explanation": "201 signale qu'une ressource a été créée, et Location indique son URL.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-rest-q2",
+          "prompt": "Un utilisateur authentifié tente de lire la commande d'un autre client. Quel code ?",
+          "choices": [
+            "403 Forbidden (ou 404 pour ne pas révéler son existence)",
+            "401 Unauthorized",
+            "400 Bad Request",
+            "500 Internal Server Error"
+          ],
+          "answerIndex": 0,
+          "explanation": "401 signifie « non authentifié » malgré son nom. 403 : authentifié mais pas autorisé. Beaucoup d'APIs renvoient 404 pour ne pas confirmer qu'une ressource existe.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-rest-q3",
+          "prompt": "Quelle URL respecte les conventions REST pour annuler une commande ?",
+          "choices": [
+            "POST /commandes/42/annulation (ou PATCH /commandes/42 avec le nouveau statut)",
+            "GET /annulerCommande?id=42",
+            "POST /commandes/annuler/42/maintenant",
+            "DELETE /annulerCommande/42"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un GET ne doit jamais modifier l'état (les robots, caches et préchargements l'appellent librement). On modélise l'action comme une ressource ou un changement d'état.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-rest-q4",
+          "prompt": "Pourquoi la pagination par curseur est-elle préférée sur un fil d'actualité ?",
+          "choices": [
+            "Elle ne saute ni ne répète d'éléments quand de nouveaux sont insérés, et reste rapide sur les grandes tables",
+            "Elle permet d'aller directement à la page 500",
+            "Elle est plus simple à implémenter",
+            "Elle renvoie plus d'éléments par page"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec OFFSET, une insertion décale tout : l'utilisateur revoit un élément en passant à la page suivante. Et OFFSET 100000 oblige la base à parcourir 100 000 lignes.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sys-rest-q5",
+          "prompt": "Quels codes indiquent une erreur du client ?",
+          "choices": [
+            "400",
+            "404",
+            "429",
+            "503"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "503 Service Unavailable est une erreur serveur (5xx) : le client peut réessayer plus tard.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sys-rest-q6",
+          "prompt": "Ce point d'entrée renvoie un code trompeur. Touche la ligne fautive.",
+          "code": "[HttpGet(\"produits/{id}\")]\npublic IActionResult Lire(int id)\n{\n    var p = _depot.Trouver(id);\n    if (p is null)\n        return Ok(new { erreur = \"introuvable\" });\n    return Ok(p);\n}",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Une erreur renvoyée avec 200 trompe les clients, les caches et la supervision. Il faut NotFound() : 404.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "sys-api-versioning",
       "title": "Versioning et compatibilité",
       "summary": "Faire évoluer une API sans casser les clients.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Ce qui casse, ce qui ne casse pas",
+          "body": "Ajouter un champ optionnel ou un nouveau point d'entrée est compatible. Renommer ou supprimer un champ, changer son type, rendre obligatoire un paramètre ou changer le sens d'une valeur casse les clients existants. Une application mobile ancienne peut tourner pendant des années."
+        },
+        {
+          "title": "Être tolérant en lecture",
+          "body": "Les clients doivent ignorer les champs inconnus (principe de robustesse : strict dans ce qu'on envoie, tolérant dans ce qu'on reçoit). Sinon, même l'ajout d'un champ les casse."
+        },
+        {
+          "title": "Versionner et déprécier",
+          "body": "Pour un changement cassant, on publie une nouvelle version (/v2/ dans l'URL, un en-tête ou un paramètre), on garde l'ancienne le temps de la migration, on l'annonce dépréciée (en-têtes Deprecation et Sunset) et on mesure qui l'utilise encore avant de la retirer."
+        }
+      ],
+      "questions": [
+        {
+          "type": "multi",
+          "id": "sys-versioning-q1",
+          "prompt": "Quels changements cassent les clients existants ?",
+          "choices": [
+            "Renommer le champ prix en montant",
+            "Changer le type de id de nombre à chaîne",
+            "Rendre obligatoire un paramètre auparavant facultatif",
+            "Ajouter un champ optionnel devise"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Ajouter un champ optionnel est compatible, à condition que les clients ignorent les champs inconnus.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-versioning-q2",
+          "prompt": "Le champ prix doit devenir un objet { valeur, devise }. Comment éviter de casser les clients ?",
+          "choices": [
+            "Ajouter un nouveau champ prixDetaille, garder prix et le déprécier",
+            "Remplacer prix directement",
+            "Supprimer prix et prévenir par e-mail",
+            "Renvoyer les deux formats aléatoirement"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'évolution additive permet aux clients de migrer à leur rythme. On retire l'ancien champ quand plus personne ne l'utilise (ou dans une v2).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-versioning-q3",
+          "prompt": "Le désérialiseur d'une application cliente échoue dès que l'API ajoute un champ. Quel principe le client viole-t-il ?",
+          "choices": [
+            "Le principe de robustesse : il devrait ignorer les champs inconnus",
+            "Le principe de Liskov",
+            "YAGNI",
+            "L'idempotence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un client strict sur les champs inconnus interdit à l'API toute évolution, même compatible.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-versioning-q4",
+          "prompt": "Pourquoi une API consommée par une application mobile doit-elle être particulièrement prudente ?",
+          "choices": [
+            "Les utilisateurs ne mettent pas tous l'application à jour : d'anciennes versions l'appellent pendant des années",
+            "Les téléphones ne supportent pas JSON",
+            "Les stores interdisent le versioning",
+            "Elle n'a pas à l'être"
+          ],
+          "answerIndex": 0,
+          "explanation": "Contrairement à un site web, on ne contrôle pas le code client déployé. Certaines applications forcent une mise à jour minimale, en dernier recours.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-versioning-q5",
+          "prompt": "Avant de retirer la v1 d'une API, que faire ?",
+          "choices": [
+            "Mesurer son trafic restant, prévenir les clients concernés, annoncer une date (en-tête Sunset)",
+            "La couper un vendredi soir",
+            "La retirer dès la sortie de la v2",
+            "Renvoyer des erreurs aléatoires pour inciter à migrer"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ne retire une version qu'en sachant qui l'utilise encore, et après leur avoir laissé le temps de migrer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-versioning-q6",
+          "prompt": "Un statut « en_attente » est ajouté à un enum renvoyé par l'API. Pourquoi ce changement peut-il casser des clients ?",
+          "choices": [
+            "Un client qui traite tous les cas connus avec un switch exhaustif peut planter sur une valeur inconnue",
+            "Ajouter une valeur n'a jamais d'impact",
+            "Parce que les enums sont interdits en JSON",
+            "Parce que le nom contient un tiret bas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ajouter une valeur d'enum est un piège classique. Il faut documenter que la liste peut s'étendre, et que les clients doivent prévoir un cas par défaut.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "sys-api-idempotence",
       "title": "Idempotence et nouvelles tentatives",
       "summary": "Rejouer une requête sans effet de bord.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le problème du timeout",
+          "body": "Le client envoie un paiement et ne reçoit pas de réponse. Le serveur l'a-t-il traité ? Impossible à savoir : la requête ou la réponse a pu se perdre. S'il réessaie, il risque de payer deux fois ; sinon, de ne pas payer du tout."
+        },
+        {
+          "title": "Les verbes idempotents",
+          "body": "Une opération est idempotente si l'exécuter plusieurs fois a le même effet qu'une fois. GET, PUT et DELETE le sont par définition : remplacer deux fois par la même valeur ne change rien. POST ne l'est pas : deux POST créent deux ressources."
+        },
+        {
+          "title": "La clé d'idempotence",
+          "body": "Le client génère un identifiant unique par opération et l'envoie dans un en-tête. Le serveur enregistre la clé avec le résultat, dans la même transaction que l'effet. Une requête rejouée avec la même clé renvoie le résultat enregistré, sans refaire l'opération.",
+          "code": "POST /paiements\nIdempotency-Key: 4f1c2b9e-7a3d-4e5f-9b21-0c8d6a7e3f10\n\n{ \"montant\": 4999, \"devise\": \"EUR\" }",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "multi",
+          "id": "sys-idempotence-q1",
+          "prompt": "Quelles méthodes HTTP sont idempotentes par définition ?",
+          "choices": [
+            "GET",
+            "PUT",
+            "DELETE",
+            "POST"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Deux DELETE de la même ressource laissent le même état (supprimée), même si le second renvoie 404. Deux POST créent deux ressources.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-idempotence-q2",
+          "prompt": "Qui génère la clé d'idempotence ?",
+          "choices": [
+            "Le client, une fois par opération logique, réutilisée à chaque nouvelle tentative",
+            "Le serveur, à chaque requête reçue",
+            "Le client, une nouvelle à chaque tentative",
+            "La base de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une nouvelle clé par tentative rendrait le mécanisme inutile : le serveur verrait deux opérations différentes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-idempotence-q3",
+          "prompt": "L'opération PATCH /compte { \"solde\": \"+10\" } est-elle idempotente ?",
+          "choices": [
+            "Non : chaque exécution ajoute encore 10",
+            "Oui, car PATCH est toujours idempotent",
+            "Oui, car le corps est identique",
+            "Cela dépend du navigateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "PATCH n'est pas idempotent par nature : tout dépend de l'opération. { \"solde\": 110 } serait idempotent, « +10 » ne l'est pas.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sys-idempotence-q4",
+          "prompt": "Deux requêtes identiques arrivant en même temps peuvent encore débiter deux fois. Touche la ligne qui rend cela possible.",
+          "code": "var deja = await _db.Cles.FindAsync(cle);\nif (deja != null)\n    return deja.Reponse;\nvar r = await _banque.Debiter(montant);\n_db.Cles.Add(new Cle(cle, r));\nawait _db.SaveChangesAsync();\nreturn r;",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Entre la vérification et l'enregistrement, une seconde requête passe le même test et débite aussi. Il faut d'abord réserver la clé (insertion avec contrainte d'unicité), puis exécuter l'opération.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sys-idempotence-q5",
+          "prompt": "Combien de temps conserver les clés d'idempotence ?",
+          "choices": [
+            "Au moins aussi longtemps que la fenêtre pendant laquelle un client peut réessayer (souvent 24 h)",
+            "Une seconde",
+            "Il ne faut pas les conserver",
+            "Indéfiniment, quoi qu'il arrive"
+          ],
+          "answerIndex": 0,
+          "explanation": "Stripe, par exemple, les garde 24 heures. Au-delà, on peut les purger pour limiter le stockage.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-idempotence-q6",
+          "prompt": "Le client réessaie automatiquement après un timeout. Quelle stratégie d'attente entre les tentatives ?",
+          "choices": [
+            "Un backoff exponentiel avec une part d'aléatoire (jitter)",
+            "Réessayer immédiatement en boucle",
+            "Attendre toujours exactement 1 seconde",
+            "Réessayer à l'infini sans limite"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans jitter, des milliers de clients réessaient au même instant et submergent un serveur qui se rétablit. Et il faut un nombre maximal de tentatives.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sys-defi-apis",
+    "title": "Défi entretien : concevoir une API",
+    "summary": "L'API d'une plateforme de réservation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sys-defi4-q1",
+        "prompt": "Cas pratique 1/3 — On conçoit l'API d'un site de réservation d'hôtels. Quelle URL pour lister les réservations d'un client ?",
+        "choices": [
+          "GET /clients/{id}/reservations",
+          "GET /getReservationsForClient?id={id}",
+          "POST /reservations/lister",
+          "GET /reservation_client_{id}"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une ressource imbriquée sous son parent, lue avec GET. On peut aussi accepter GET /reservations?clientId={id}.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi4-q2",
+        "prompt": "Cas pratique 2/3 — Deux clients réservent la dernière chambre au même moment. Quel code renvoyer au second ?",
+        "choices": [
+          "409 Conflict, avec un message expliquant que la chambre n'est plus disponible",
+          "200 OK",
+          "500 Internal Server Error",
+          "404 Not Found"
+        ],
+        "answerIndex": 0,
+        "explanation": "La requête est valide mais entre en conflit avec l'état actuel de la ressource. Le client peut proposer une autre chambre.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi4-q3",
+        "prompt": "Cas pratique 3/3 — Sur un réseau mobile instable, le client réessaie le POST /reservations. Comment éviter les doubles réservations ?",
+        "choices": [
+          "Une clé d'idempotence générée par le client et vérifiée par le serveur",
+          "Interdire les nouvelles tentatives",
+          "Remplacer POST par GET",
+          "Afficher un message demandant de ne cliquer qu'une fois"
+        ],
+        "answerIndex": 0,
+        "explanation": "La clé permet au serveur de reconnaître une tentative répétée et de renvoyer la réservation déjà créée.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi4-q4",
+        "prompt": "Un client reçoit 429 Too Many Requests. Que doit-il faire ?",
+        "choices": [
+          "Attendre le délai indiqué par l'en-tête Retry-After avant de réessayer",
+          "Réessayer immédiatement",
+          "Abandonner définitivement",
+          "Changer d'adresse IP"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le serveur limite le débit et indique quand revenir. Réessayer immédiatement aggrave la situation.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "sys-defi4-q5",
+        "prompt": "Que doit contenir une bonne réponse d'erreur d'API ?",
+        "choices": [
+          "Un code HTTP adapté",
+          "Un code d'erreur stable, exploitable par le programme",
+          "Un message lisible et, si utile, les champs en cause",
+          "La trace complète de l'exception côté serveur"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une trace de pile révèle des détails internes exploitables par un attaquant. Le format Problem Details (RFC 9457) standardise ces réponses.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi4-q6",
+        "prompt": "En entretien, on vous demande REST ou gRPC pour des appels entre microservices internes. Quelle réponse est la plus juste ?",
+        "choices": [
+          "gRPC est souvent adapté en interne (contrat typé, binaire, streaming) ; REST reste plus simple pour les APIs publiques",
+          "REST est toujours supérieur",
+          "gRPC est toujours supérieur",
+          "Aucun des deux ne fonctionne entre services"
+        ],
+        "answerIndex": 0,
+        "explanation": "gRPC apporte performance et contrats générés, mais il est moins accessible depuis un navigateur. Le choix dépend des clients.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

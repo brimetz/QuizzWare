@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (65 écrits) | 333 (157 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 133 (71 écrits) | 335 (177 écrites) | 185 (7 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -15,32 +15,34 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 1. ✅ Principes de conception
    - ✅ Les principes SOLID
-2. 🕓 Design patterns
-   - Patterns de création
-   - Patterns de structure
-   - Patterns de comportement
-3. 🕓 Architecture applicative
-   - Architecture en couches
-   - Hexagonale et clean architecture
-   - Les bases du DDD
-4. 🕓 Concevoir des APIs
-   - REST en pratique
-   - Versioning et compatibilité
-   - Idempotence et nouvelles tentatives
-5. 🕓 Données à l'échelle
-   - Stratégies de cache
-   - CAP et PACELC
-   - Partitionnement
+   - ✅ Couplage, cohésion et simplicité
+2. ✅ Design patterns
+   - ✅ Patterns de création
+   - ✅ Patterns de structure
+   - ✅ Patterns de comportement
+3. ✅ Architecture applicative
+   - ✅ Architecture en couches
+   - ✅ Hexagonale et clean architecture
+   - ✅ Les bases du DDD
+4. ✅ Concevoir des APIs
+   - ✅ REST en pratique
+   - ✅ Versioning et compatibilité
+   - ✅ Idempotence et nouvelles tentatives
+5. ✅ Données à l'échelle
+   - ✅ Stratégies de cache
+   - ✅ CAP et PACELC
+   - ✅ Partitionnement
 6. ✅ Systèmes distribués
    - ✅ Monolithe, microservices et systèmes distribués
-7. 🕓 Communication asynchrone
-   - Files et topics
-   - Garanties de livraison
-   - Outbox et idempotence
-8. 🕓 Résilience et observabilité
-   - Timeouts, retries et circuit breakers
-   - Limitation de débit
-   - Logs, métriques et traces
+   - ✅ Découper en services
+7. ✅ Communication asynchrone
+   - ✅ Files et topics
+   - ✅ Garanties de livraison
+   - ✅ Outbox et idempotence
+8. ✅ Résilience et observabilité
+   - ✅ Timeouts, retries et circuit breakers
+   - ✅ Limitation de débit
+   - ✅ Logs, métriques et traces
 
 **Spécialisations**
 

@@ -7,19 +7,424 @@
       "id": "sys-resilience-patterns",
       "title": "Timeouts, retries et circuit breakers",
       "summary": "Contenir les pannes en cascade.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Toujours un timeout",
+          "body": "Un appel sans timeout vers un service lent bloque un thread ou une connexion indéfiniment. Quand toutes les ressources sont occupées à attendre, le service appelant tombe à son tour : c'est la panne en cascade. Le timeout HttpClient par défaut est de 100 secondes, souvent bien trop long."
+        },
+        {
+          "title": "Réessayer avec discernement",
+          "body": "On ne réessaie que les erreurs transitoires (timeout, 503, 429), jamais un 400. On espace les tentatives (backoff exponentiel avec jitter), on limite leur nombre, et on ne réessaie que des opérations idempotentes. Attention aux retries empilés : 3 tentatives à chacun de 3 niveaux font 27 appels."
+        },
+        {
+          "title": "Circuit breaker et bulkhead",
+          "body": "Le circuit breaker s'ouvre après trop d'échecs : les appels échouent immédiatement au lieu d'attendre, le service malade respire, puis quelques appels d'essai (semi-ouvert) testent son rétablissement. Le bulkhead (cloison) limite les ressources allouées à chaque dépendance, pour qu'une seule ne puisse pas tout consommer.",
+          "code": "builder.Services.AddHttpClient<CatalogueClient>()\n    .AddStandardResilienceHandler();\n// timeout, retries avec backoff, circuit breaker,\n// limitation de concurrence"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-resilience-q1",
+          "prompt": "Un service de recommandations devient très lent. Sans timeout, que risque la page produit qui l'appelle ?",
+          "choices": [
+            "Épuiser ses threads et connexions à attendre, et tomber à son tour",
+            "Rien, elle attendra simplement",
+            "Afficher des recommandations plus pertinentes",
+            "Accélérer"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une dépendance secondaire lente ne doit pas faire tomber la page : timeout court, et affichage sans recommandations en cas d'échec (mode dégradé).",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sys-resilience-q2",
+          "prompt": "Quelles réponses justifient une nouvelle tentative automatique ?",
+          "choices": [
+            "503 Service Unavailable",
+            "Un timeout réseau",
+            "429 Too Many Requests, après le délai Retry-After",
+            "400 Bad Request"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une requête invalide le restera : la renvoyer ne fait qu'ajouter de la charge.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-resilience-q3",
+          "prompt": "La passerelle, le service A et le service B réessaient chacun 3 fois en cas d'échec (4 tentatives au total). Combien d'appels B reçoit-il au pire, pour une requête utilisateur ?",
+          "choices": [
+            "16",
+            "4",
+            "12",
+            "8"
+          ],
+          "answerIndex": 0,
+          "explanation": "La passerelle appelle A jusqu'à 4 fois, et chaque appel de A appelle B jusqu'à 4 fois : 4 × 4 = 16. Les retries s'amplifient à chaque niveau ; mieux vaut les placer à un seul endroit.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sys-resilience-q4",
+          "prompt": "Que se passe-t-il quand un circuit breaker est ouvert ?",
+          "choices": [
+            "Les appels échouent immédiatement, sans solliciter le service défaillant",
+            "Les appels passent normalement",
+            "Les appels sont mis en file indéfiniment",
+            "Le service défaillant est redémarré"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'appelant gagne du temps (pas d'attente) et le service malade n'est pas assailli pendant sa récupération.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-resilience-q5",
+          "prompt": "Pourquoi ajouter du jitter (un délai aléatoire) au backoff exponentiel ?",
+          "choices": [
+            "Pour éviter que tous les clients réessaient au même instant et submergent le service",
+            "Pour rendre les tests non déterministes",
+            "Pour réduire le nombre de tentatives",
+            "Pour chiffrer les requêtes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans jitter, les clients qui ont échoué ensemble réessaient ensemble, par vagues synchronisées.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sys-resilience-q6",
+          "prompt": "Cette boucle de nouvelles tentatives aggrave une panne. Touche la ligne en cause.",
+          "code": "for (int i = 0; i < 5; i++)\n{\n    try\n    {\n        return await client.GetAsync(url);\n    }\n    catch (HttpRequestException) { }\n}\nthrow new ServiceIndisponible();",
+          "bugLines": [
+            7
+          ],
+          "explanation": "Les tentatives s'enchaînent sans aucune attente : le service en difficulté reçoit 5 requêtes coup sur coup. Il faut attendre entre les tentatives (backoff exponentiel avec jitter).",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "sys-rate-limiting",
       "title": "Limitation de débit",
       "summary": "Token bucket et fenêtres glissantes.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Pourquoi limiter",
+          "body": "La limitation de débit protège un service contre les abus, les clients défaillants qui bouclent et les pics qui dépassent sa capacité. On limite par clé d'API, par utilisateur ou par adresse IP, et on répond 429 Too Many Requests avec un en-tête Retry-After."
+        },
+        {
+          "title": "Le seau à jetons (token bucket)",
+          "body": "Le seau contient au plus N jetons et se remplit à un rythme constant. Chaque requête consomme un jeton ; seau vide, requête refusée. Il autorise des rafales jusqu'à N, tout en bornant le débit moyen.",
+          "code": "class Seau(int capacite, double parSeconde)\n{\n    double _jetons = capacite;\n    double _dernier;\n    public bool Prendre(double maintenant)\n    {\n        _jetons = Math.Min(capacite, _jetons\n            + (maintenant - _dernier) * parSeconde);\n        _dernier = maintenant;\n        if (_jetons < 1) return false;\n        _jetons--;\n        return true;\n    }\n}"
+        },
+        {
+          "title": "Les fenêtres",
+          "body": "La fenêtre fixe (100 requêtes par minute calendaire) est simple, mais un client peut envoyer 100 requêtes à 12:00:59 puis 100 à 12:01:00, soit 200 en deux secondes. La fenêtre glissante lisse ce problème en comptant sur les 60 dernières secondes. Dans un système à plusieurs instances, les compteurs vivent dans un stockage partagé comme Redis."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-ratelimit-q1",
+          "prompt": "Avec la classe Seau de la leçon, qu'affiche ce code ?",
+          "code": "var s = new Seau(3, 1);\nvar r = \"\";\nforeach (var t in new[] { 0.0, 0, 0, 0, 0.5, 1 })\n    r += s.Prendre(t) ? \"o\" : \"x\";\nConsole.WriteLine(r);",
+          "choices": [
+            "oooxxo",
+            "oooooo",
+            "oooxox",
+            "oxxxxo"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le seau commence plein : 3 requêtes passent en rafale, la 4e est refusée. À 0,5 s, il n'y a qu'un demi-jeton ; à 1 s, un jeton entier s'est accumulé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-ratelimit-q2",
+          "prompt": "Quel code HTTP renvoyer quand un client dépasse sa limite ?",
+          "choices": [
+            "429 Too Many Requests, avec Retry-After",
+            "403 Forbidden",
+            "500 Internal Server Error",
+            "200 OK avec un message"
+          ],
+          "answerIndex": 0,
+          "explanation": "429 indique explicitement la limitation, et Retry-After dit au client quand revenir.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-ratelimit-q3",
+          "prompt": "Limite de 100 requêtes par minute en fenêtre fixe. Combien de requêtes un client peut-il faire passer en deux secondes, à cheval sur deux minutes ?",
+          "choices": [
+            "200",
+            "100",
+            "3",
+            "50"
+          ],
+          "answerIndex": 0,
+          "explanation": "100 à la fin d'une fenêtre, 100 au début de la suivante. La fenêtre glissante ou le seau à jetons évitent ce pic.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-ratelimit-q4",
+          "prompt": "L'API tourne sur 10 instances, chacune avec son compteur en mémoire limité à 100 requêtes par minute. Quel est le problème ?",
+          "choices": [
+            "Un client réparti par le load balancer peut atteindre jusqu'à 1 000 requêtes par minute",
+            "Aucun problème",
+            "Les compteurs sont trop précis",
+            "Les instances vont planter"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour une limite globale, il faut un compteur partagé (Redis), ou diviser la limite par le nombre d'instances en acceptant l'approximation.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sys-ratelimit-q5",
+          "prompt": "Sur quelles clés peut-on limiter le débit ?",
+          "choices": [
+            "La clé d'API ou le client OAuth",
+            "L'utilisateur authentifié",
+            "L'adresse IP, pour les points d'entrée anonymes comme la connexion",
+            "La couleur du navigateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Limiter par IP la page de connexion freine les attaques par force brute ; limiter par client permet des quotas différents selon les offres.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-ratelimit-q6",
+          "prompt": "Quel est l'intérêt du seau à jetons par rapport à une limite stricte « 1 requête toutes les 100 ms » ?",
+          "choices": [
+            "Il tolère des rafales courtes (jusqu'à la capacité du seau) tout en bornant le débit moyen",
+            "Il est plus strict",
+            "Il n'a aucune limite",
+            "Il ne fonctionne qu'avec HTTP/2"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une page qui charge 5 ressources d'un coup est un usage normal : le seau l'accepte, tant que la moyenne reste raisonnable.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "sys-observabilite",
       "title": "Logs, métriques et traces",
       "summary": "Les trois piliers de l'observabilité.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les trois piliers",
+          "body": "Les logs racontent des événements précis (« paiement 42 refusé : carte expirée »). Les métriques sont des nombres agrégés dans le temps (requêtes par seconde, taux d'erreur, latence p99) : peu coûteuses, idéales pour les alertes. Les traces suivent une requête à travers tous les services qu'elle traverse, avec la durée de chaque étape."
+        },
+        {
+          "title": "Des logs structurés",
+          "body": "Un log structuré est un objet aux champs nommés, pas une phrase à analyser. On peut alors filtrer par CommandeId ou compter par Raison. Un identifiant de corrélation (trace id) relie tous les logs d'une même requête, d'un service à l'autre.",
+          "code": "logger.LogWarning(\n    \"Paiement {CommandeId} refusé : {Raison}\",\n    cmd.Id, raison);"
+        },
+        {
+          "title": "Surveiller ce qui compte",
+          "body": "Les signaux essentiels : latence, trafic, erreurs, saturation. La moyenne de latence cache les lents : on suit les percentiles (p95, p99). On alerte sur les symptômes vus par les utilisateurs (taux d'erreur, latence), pas sur chaque cause possible. OpenTelemetry est le standard ouvert pour produire les trois types de signaux."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-observabilite-q1",
+          "prompt": "Une requête utilisateur traverse 6 services et prend 4 secondes. Quel outil montre où le temps est passé ?",
+          "choices": [
+            "Le traçage distribué",
+            "Une métrique de CPU moyenne",
+            "Les logs d'un seul service",
+            "Un test unitaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une trace montre chaque appel (span) avec sa durée et ses parents : on voit immédiatement l'étape lente.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-observabilite-q2",
+          "prompt": "Pourquoi écrire logger.LogInformation(\"Commande {Id} créée\", id) plutôt que $\"Commande {id} créée\" ?",
+          "choices": [
+            "Le modèle garde Id comme champ structuré, filtrable et agrégeable dans l'outil de logs",
+            "C'est plus court",
+            "Les chaînes interpolées sont interdites en C#",
+            "Il n'y a aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec l'interpolation, le message est une chaîne différente à chaque fois et la valeur est perdue en tant que champ. Le modèle constant permet aussi de grouper les messages identiques.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-observabilite-q3",
+          "prompt": "La latence moyenne est de 80 ms, mais des utilisateurs se plaignent de lenteurs. Quelle métrique regarder ?",
+          "choices": [
+            "Les percentiles élevés (p95, p99)",
+            "La latence minimale",
+            "La moyenne sur une semaine",
+            "Le nombre de serveurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si 1 % des requêtes prend 5 secondes, la moyenne bouge à peine, alors qu'un utilisateur actif croise ces lenteurs régulièrement.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sys-observabilite-q4",
+          "prompt": "Ce log pose un grave problème. Touche la ligne en cause.",
+          "code": "logger.LogInformation(\n    \"Connexion de {Email}\", req.Email);\nlogger.LogDebug(\n    \"Requête reçue : {Corps}\", req);\nlogger.LogInformation(\n    \"Mot de passe : {Mdp}\", req.MotDePasse);",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Un secret ne doit jamais apparaître dans les logs, qui sont copiés, conservés et lus par beaucoup de personnes. Même le log du corps complet (ligne 4) est risqué s'il contient le mot de passe.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-observabilite-q5",
+          "prompt": "Sur quoi déclencher une alerte qui réveille l'astreinte la nuit ?",
+          "choices": [
+            "Un symptôme qui touche les utilisateurs : taux d'erreur ou latence au-delà de l'objectif",
+            "Un CPU à 70 % pendant une minute",
+            "Chaque exception journalisée",
+            "Le redémarrage d'une instance qui s'est rétablie seule"
+          ],
+          "answerIndex": 0,
+          "explanation": "Trop d'alertes non actionnables et l'équipe finit par les ignorer. On alerte sur l'impact, et on enquête ensuite sur les causes.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sys-observabilite-q6",
+          "prompt": "Associations correctes :",
+          "choices": [
+            "Métrique : taux d'erreur par minute, pour alerter",
+            "Log : le détail d'un échec précis, pour comprendre",
+            "Trace : le parcours d'une requête entre services, pour localiser",
+            "Métrique : le contenu complet de chaque requête"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les métriques sont des agrégats numériques : y stocker des données détaillées exploserait leur coût (cardinalité).",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sys-defi-resilience",
+    "title": "Défi entretien : résilience",
+    "summary": "Une panne en production.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sys-defi8-q1",
+        "prompt": "Cas pratique 1/3 — Vendredi 18 h : le taux d'erreur du site passe à 30 %. Quelle est la première chose à faire ?",
+        "choices": [
+          "Rétablir le service au plus vite (annuler le dernier déploiement s'il est suspect), puis chercher la cause",
+          "Trouver la ligne de code fautive avant toute action",
+          "Attendre que ça passe",
+          "Redémarrer toutes les bases de données"
+        ],
+        "answerIndex": 0,
+        "explanation": "En incident, on mitige d'abord : retour arrière, désactivation d'une fonctionnalité, ajout de capacité. L'analyse détaillée vient après.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi8-q2",
+        "prompt": "Cas pratique 2/3 — Les traces montrent que le service Paiement attend 30 s un fournisseur externe, et que tous ses threads sont bloqués. Quel correctif immédiat ?",
+        "choices": [
+          "Un timeout court et un circuit breaker sur l'appel au fournisseur",
+          "Augmenter le nombre de threads à l'infini",
+          "Ajouter des retries sans délai",
+          "Supprimer les logs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le service échoue vite au lieu de s'épuiser à attendre, et le reste du site continue de fonctionner.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi8-q3",
+        "prompt": "Cas pratique 3/3 — Après l'incident, que produit l'équipe ?",
+        "choices": [
+          "Un post-mortem sans recherche de coupable : chronologie, causes, actions pour éviter la récidive",
+          "Une liste des personnes responsables",
+          "Rien, l'incident est clos",
+          "Un gel des déploiements pour un an"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un post-mortem « blameless » encourage chacun à partager ce qu'il a vu ; on corrige le système, pas les personnes.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi8-q4",
+        "prompt": "Le service de recommandations est en panne. Que doit afficher la page produit ?",
+        "choices": [
+          "La page sans recommandations, ou des recommandations génériques en cache (mode dégradé)",
+          "Une erreur 500",
+          "Une page blanche",
+          "Un message demandant de revenir plus tard"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une fonctionnalité secondaire ne doit pas empêcher l'essentiel : voir le produit et l'acheter.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi8-q5",
+        "prompt": "Un SLO de disponibilité de 99,9 % sur 30 jours autorise combien d'indisponibilité ?",
+        "choices": [
+          "Environ 43 minutes",
+          "Environ 4 minutes",
+          "Environ 7 heures",
+          "Aucune"
+        ],
+        "answerIndex": 0,
+        "explanation": "0,1 % de 43 200 minutes = 43,2 minutes. C'est le « budget d'erreur » : tant qu'il en reste, l'équipe peut prendre des risques en livrant.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sys-defi8-q6",
+        "prompt": "Quelles pratiques rendent un système plus résilient ?",
+        "choices": [
+          "Des timeouts sur tous les appels réseau",
+          "Des déploiements progressifs (canary) avec retour arrière rapide",
+          "Tester les pannes volontairement (chaos engineering)",
+          "Un seul serveur très puissant"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un serveur unique est un point de défaillance unique : quelle que soit sa puissance, sa panne arrête tout.",
+        "difficulty": 2
+      }
+    ]
+  }
 }

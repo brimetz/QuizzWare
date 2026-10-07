@@ -7,19 +7,419 @@
       "id": "sys-messaging",
       "title": "Files et topics",
       "summary": "Point à point, publication et abonnement.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Pourquoi un intermédiaire",
+          "body": "Avec un appel synchrone, l'appelant attend et échoue si le destinataire est en panne. Avec un message déposé dans un broker (RabbitMQ, Azure Service Bus, Kafka...), l'émetteur continue son travail : le destinataire traitera le message quand il pourra. Le broker absorbe aussi les pics de charge."
+        },
+        {
+          "title": "File ou topic",
+          "body": "Une file (point à point) livre chaque message à un seul consommateur : plusieurs instances d'un même service se partagent le travail. Un topic (publication / abonnement) livre chaque message à chaque abonné : la facturation, l'e-mail et les statistiques reçoivent tous l'événement « commande passée »."
+        },
+        {
+          "title": "Commandes et événements",
+          "body": "Une commande demande une action à un destinataire précis (« EnvoyerFacture »). Un événement annonce un fait passé, sans savoir qui l'écoute (« CommandePassee »). Les événements découplent davantage : on ajoute un abonné sans modifier l'émetteur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-messaging-q1",
+          "prompt": "Trois instances d'un service de redimensionnement d'images doivent se partager les tâches. Quel modèle ?",
+          "choices": [
+            "Une file : chaque tâche est traitée par une seule instance",
+            "Un topic : chaque instance reçoit chaque tâche",
+            "Un appel HTTP vers chaque instance",
+            "Une base de données partagée interrogée en boucle"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le modèle des « consommateurs concurrents » : la file répartit les messages, et on ajoute des instances pour absorber plus de charge.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-messaging-q2",
+          "prompt": "L'événement « CommandePassee » doit déclencher la facturation, un e-mail et les statistiques. Quel modèle ?",
+          "choices": [
+            "Un topic avec trois abonnements",
+            "Une seule file partagée par les trois services",
+            "Trois appels synchrones depuis le service Commandes",
+            "Un fichier partagé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque abonné reçoit sa copie de l'événement. Ajouter un quatrième abonné ne demande aucune modification du service Commandes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-messaging-q3",
+          "prompt": "Lequel est un événement plutôt qu'une commande ?",
+          "choices": [
+            "PaiementAccepte",
+            "EnvoyerEmailConfirmation",
+            "ReserverStock",
+            "CalculerFrais"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un événement se nomme au passé : il décrit un fait accompli. Les autres sont des ordres adressés à un destinataire.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sys-messaging-q4",
+          "prompt": "Quels bénéfices apporte la communication asynchrone par messages ?",
+          "choices": [
+            "L'émetteur fonctionne même si le destinataire est temporairement en panne",
+            "Les pics de charge sont lissés par la file",
+            "Les services sont moins couplés",
+            "Le résultat est immédiatement disponible pour l'appelant"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Justement, le résultat n'est pas immédiat : l'appelant doit accepter un traitement différé (cohérence à terme).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-messaging-q5",
+          "prompt": "Un message fait planter le consommateur à chaque tentative. Que doit-il advenir de ce message ?",
+          "choices": [
+            "Après quelques tentatives, il part dans une file de messages en échec (dead-letter queue) pour analyse",
+            "Il est retenté indéfiniment",
+            "Il est supprimé silencieusement",
+            "Le broker s'arrête"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un « message poison » retenté sans fin bloque la file. La dead-letter queue l'isole, et une alerte permet de le corriger puis de le rejouer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-messaging-q6",
+          "prompt": "Les messages d'une file s'accumulent plus vite qu'ils ne sont consommés. Que surveiller et faire ?",
+          "choices": [
+            "Surveiller la profondeur de la file et l'âge du plus vieux message, et ajouter des consommateurs",
+            "Augmenter la taille des messages",
+            "Supprimer les plus anciens régulièrement",
+            "Passer en appels synchrones"
+          ],
+          "answerIndex": 0,
+          "explanation": "La profondeur de la file est la métrique clé d'un système asynchrone ; elle sert souvent à déclencher la mise à l'échelle automatique.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "sys-livraison",
       "title": "Garanties de livraison",
       "summary": "Au plus une fois, au moins une fois, exactement une fois.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Trois garanties",
+          "body": "Au plus une fois : le message est confirmé avant traitement ; en cas de panne, il est perdu. Au moins une fois : il est confirmé après traitement ; en cas de panne entre les deux, il est relivré et traité deux fois. Exactement une fois : impossible à garantir de bout en bout sur un réseau qui peut perdre des messages."
+        },
+        {
+          "title": "Au moins une fois + idempotence",
+          "body": "La pratique standard : livraison au moins une fois, et un consommateur idempotent. On mémorise l'identifiant des messages traités, dans la même transaction que l'effet, et on ignore les doublons. On obtient ainsi un effet « exactement une fois ».",
+          "code": "async Task Traiter(Message m)\n{\n    if (await db.Traites.AnyAsync(t => t.Id == m.Id))\n        return;                  // doublon\n    Appliquer(m);\n    db.Traites.Add(new Traite(m.Id));\n    await db.SaveChangesAsync(); // une transaction\n}"
+        },
+        {
+          "title": "L'ordre des messages",
+          "body": "Avec plusieurs consommateurs ou des nouvelles tentatives, l'ordre n'est pas garanti. Kafka garantit l'ordre au sein d'une partition : on choisit une clé (l'identifiant de la commande) pour que tous les messages d'une même entité aillent dans la même partition."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-livraison-q1",
+          "prompt": "Le consommateur confirme (ack) le message, puis plante avant de le traiter. Quelle garantie ce choix donne-t-il ?",
+          "choices": [
+            "Au plus une fois : le message est perdu",
+            "Au moins une fois",
+            "Exactement une fois",
+            "Aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le broker le croit traité et ne le relivrera pas. Acceptable pour des métriques, pas pour un paiement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-livraison-q2",
+          "prompt": "Le consommateur traite le message, puis plante avant de le confirmer. Que se passe-t-il ?",
+          "choices": [
+            "Le message est relivré et traité une seconde fois",
+            "Le message est perdu",
+            "Le broker supprime le message",
+            "Le traitement est automatiquement annulé"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la livraison au moins une fois : pas de perte, mais des doublons possibles. Le consommateur doit être idempotent.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sys-livraison-q3",
+          "prompt": "Ce consommateur peut encore traiter deux fois le même message. Touche la ligne en cause.",
+          "code": "async Task Traiter(Message m)\n{\n    if (await db.Traites.AnyAsync(t => t.Id == m.Id))\n        return;\n    await banque.Crediter(m.Compte, m.Montant);\n    db.Traites.Add(new Traite(m.Id));\n    await db.SaveChangesAsync();\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Le crédit est un appel externe, hors de la transaction : une panne avant SaveChanges laisse le crédit fait mais non mémorisé. Il faut un appel idempotent (en passant m.Id comme clé d'idempotence à la banque).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sys-livraison-q4",
+          "prompt": "Les événements « commande créée » puis « commande annulée » sont traités dans le désordre. Comment l'éviter avec Kafka ?",
+          "choices": [
+            "Utiliser l'identifiant de la commande comme clé de partition",
+            "Augmenter le nombre de partitions",
+            "Utiliser une clé aléatoire",
+            "Désactiver les nouvelles tentatives"
+          ],
+          "answerIndex": 0,
+          "explanation": "Tous les événements d'une même commande vont dans la même partition, et sont lus dans l'ordre par un seul consommateur.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sys-livraison-q5",
+          "prompt": "Pourquoi « exactement une fois » ne peut-il pas être garanti par le seul réseau ?",
+          "choices": [
+            "L'émetteur ne peut pas distinguer un message perdu d'un accusé de réception perdu : il doit renvoyer, au risque de dupliquer",
+            "Parce que les brokers sont lents",
+            "Parce que TCP l'interdit",
+            "Il peut toujours être garanti"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le problème des deux généraux. On obtient l'effet « exactement une fois » en combinant relivraison et déduplication côté consommateur.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sys-livraison-q6",
+          "prompt": "Quelle combinaison est le standard de l'industrie pour des traitements fiables ?",
+          "choices": [
+            "Livraison au moins une fois, avec des consommateurs idempotents",
+            "Livraison au plus une fois, sans vérification",
+            "Livraison exactement une fois garantie par le réseau",
+            "Pas de broker, uniquement des appels synchrones"
+          ],
+          "answerIndex": 0,
+          "explanation": "On accepte les doublons (pas de perte) et on les neutralise à la réception.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "sys-outbox",
       "title": "Outbox et idempotence",
       "summary": "Publier un événement de façon fiable.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le problème de la double écriture",
+          "body": "Un service enregistre une commande en base, puis publie « CommandePassee ». Si la publication échoue après le commit, l'événement est perdu. Si on publie avant le commit et que la transaction échoue, on annonce une commande qui n'existe pas. Base et broker ne partagent pas de transaction."
+        },
+        {
+          "title": "Le pattern Outbox",
+          "body": "On écrit l'événement dans une table outbox de la même base, dans la même transaction que la commande : soit les deux existent, soit aucun. Un processus séparé lit l'outbox, publie les événements, puis les marque comme publiés.",
+          "code": "using var tx = await db.Database\n    .BeginTransactionAsync();\ndb.Commandes.Add(cmd);\ndb.Outbox.Add(new Evenement(\n    \"CommandePassee\", Json(cmd)));\nawait db.SaveChangesAsync();\nawait tx.CommitAsync();"
+        },
+        {
+          "title": "Ce que l'outbox implique",
+          "body": "Le relais peut planter entre la publication et le marquage : l'événement sera republié. L'outbox donne donc une livraison au moins une fois, et les consommateurs doivent être idempotents. Le pendant côté consommateur est l'inbox : la table des messages déjà traités."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-outbox-q1",
+          "prompt": "Quel problème le pattern Outbox résout-il ?",
+          "choices": [
+            "Garantir qu'un changement en base et la publication de son événement se font tous les deux, ou aucun",
+            "Accélérer les requêtes SQL",
+            "Chiffrer les messages",
+            "Réduire la taille de la base"
+          ],
+          "answerIndex": 0,
+          "explanation": "Écrire l'événement dans la même transaction que la donnée transforme une double écriture risquée en une seule écriture atomique.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sys-outbox-q2",
+          "prompt": "Ce code peut perdre l'événement. Touche la ligne en cause.",
+          "code": "db.Commandes.Add(cmd);\nawait db.SaveChangesAsync();\nawait bus.Publier(new CommandePassee(cmd.Id));\nreturn Created(cmd.Id);",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Si le broker est indisponible ou si le processus s'arrête juste après le commit, la commande existe mais l'événement n'est jamais publié. L'outbox règle ce problème.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "sys-outbox-q3",
+          "prompt": "Remets dans l'ordre le fonctionnement de l'outbox.",
+          "language": "text",
+          "lines": [
+            "Transaction : écrire la commande et l'événement",
+            "Commit",
+            "Le relais lit les événements non publiés",
+            "Le relais publie sur le broker",
+            "Le relais marque les événements comme publiés"
+          ],
+          "explanation": "Le marquage vient après la publication : un plantage entre les deux provoque une republication, jamais une perte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-outbox-q4",
+          "prompt": "Avec une outbox, quelle garantie ont les consommateurs ?",
+          "choices": [
+            "Au moins une fois : un événement peut arriver en double",
+            "Exactement une fois, garanti",
+            "Au plus une fois",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le relais peut publier puis planter avant de marquer l'événement. Les consommateurs doivent dédupliquer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-outbox-q5",
+          "prompt": "Plutôt qu'un relais qui interroge la table outbox en boucle, quelle alternative existe ?",
+          "choices": [
+            "La capture des changements (CDC, par exemple Debezium) qui lit le journal de transactions de la base",
+            "Un déclencheur qui appelle le broker depuis la base",
+            "Publier depuis le navigateur",
+            "Il n'y en a pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le CDC lit le journal des écritures (WAL, binlog) et publie les insertions dans l'outbox avec une faible latence, sans interroger la table.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "sys-outbox-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "L'outbox doit être dans la même base que les données métier",
+            "Les événements de l'outbox doivent porter un identifiant unique, utilisé par les consommateurs pour dédupliquer",
+            "La table inbox mémorise les messages déjà traités par un consommateur",
+            "L'outbox supprime le besoin d'idempotence"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Outbox côté émetteur, inbox côté consommateur : ensemble, ils donnent un effet « exactement une fois ».",
+          "difficulty": 3
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sys-defi-asynchrone",
+    "title": "Défi entretien : communication asynchrone",
+    "summary": "Fiabiliser un flux de commandes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sys-defi7-q1",
+        "prompt": "Cas pratique 1/3 — Après une commande, le service appelle en synchrone la facturation, l'e-mail et la fidélité. Quand l'e-mail tombe, plus personne ne peut commander. Que proposer ?",
+        "choices": [
+          "Publier un événement CommandePassee ; chaque service réagit de son côté",
+          "Ajouter un quatrième appel synchrone de vérification",
+          "Augmenter le timeout de l'appel e-mail",
+          "Fusionner les quatre services"
+        ],
+        "answerIndex": 0,
+        "explanation": "La commande ne dépend plus de la disponibilité des services secondaires : l'e-mail partira quand le service sera rétabli.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi7-q2",
+        "prompt": "Cas pratique 2/3 — Comment garantir que l'événement est publié si la commande est enregistrée ?",
+        "choices": [
+          "Avec une outbox écrite dans la même transaction que la commande",
+          "En publiant avant d'enregistrer",
+          "En publiant deux fois par sécurité",
+          "En demandant au client de réessayer"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'outbox rend l'écriture de la commande et de l'événement atomique.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi7-q3",
+        "prompt": "Cas pratique 3/3 — Le service fidélité reçoit parfois deux fois le même événement et double les points. Que faire ?",
+        "choices": [
+          "Le rendre idempotent : mémoriser l'identifiant des événements traités dans la même transaction que l'ajout des points",
+          "Demander au broker de ne jamais relivrer",
+          "Diviser les points par deux",
+          "Ignorer un événement sur deux"
+        ],
+        "answerIndex": 0,
+        "explanation": "La relivraison est normale en « au moins une fois » : c'est au consommateur de la neutraliser.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi7-q4",
+        "prompt": "Le client veut voir l'état « facturée » dès qu'il recharge la page, mais la facturation est asynchrone. Comment gérer l'interface ?",
+        "choices": [
+          "Afficher un état intermédiaire (« en cours ») et le mettre à jour par interrogation périodique ou notification push",
+          "Rendre tout le traitement synchrone",
+          "Mentir en affichant « facturée » immédiatement",
+          "Bloquer la page jusqu'à la fin"
+        ],
+        "answerIndex": 0,
+        "explanation": "La cohérence à terme doit être assumée dans l'interface : on montre honnêtement que le traitement est en cours.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sys-defi7-q5",
+        "prompt": "Que doit contenir un bon message d'événement ?",
+        "choices": [
+          "Un identifiant unique d'événement",
+          "Le type et une version du schéma",
+          "La date de l'événement et l'identifiant de l'entité concernée",
+          "Le mot de passe de la base de données"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'identifiant sert à dédupliquer, la version à faire évoluer le format, l'identifiant d'entité à partitionner et à ordonner.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi7-q6",
+        "prompt": "En entretien : quand préférer un appel synchrone à un message ?",
+        "choices": [
+          "Quand l'appelant a besoin de la réponse pour continuer (vérifier un stock avant d'afficher « disponible »)",
+          "Jamais",
+          "Toujours",
+          "Quand le destinataire est souvent en panne"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une requête qui attend un résultat immédiat reste synchrone ; les effets secondaires (e-mails, statistiques) passent en asynchrone.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

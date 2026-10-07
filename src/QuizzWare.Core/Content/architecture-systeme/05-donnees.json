@@ -7,19 +7,426 @@
       "id": "sys-cache",
       "title": "Stratégies de cache",
       "summary": "Cache-aside, write-through, invalidation.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Cache-aside",
+          "body": "La stratégie la plus courante : l'application lit d'abord le cache ; en cas d'absence (miss), elle lit la base et remplit le cache. À l'écriture, elle met à jour la base puis supprime l'entrée du cache.",
+          "code": "async Task<Produit> Lire(int id)\n{\n    var p = await cache.Get<Produit>($\"p:{id}\");\n    if (p is null)\n    {\n        p = await db.Produits.FindAsync(id);\n        await cache.Set($\"p:{id}\", p,\n            TimeSpan.FromMinutes(10));\n    }\n    return p;\n}"
+        },
+        {
+          "title": "Write-through et write-behind",
+          "body": "Write-through écrit dans le cache et la base en même temps : le cache est toujours à jour, mais chaque écriture est plus lente. Write-behind écrit dans le cache et persiste plus tard, en lot : rapide, mais une panne peut perdre des écritures."
+        },
+        {
+          "title": "Invalidation et expiration",
+          "body": "« Il n'y a que deux choses difficiles en informatique : l'invalidation de cache et le nommage. » Une durée de vie (TTL) borne le temps pendant lequel une donnée périmée peut être servie. Attention à la ruée (cache stampede) : quand une clé très demandée expire, des milliers de requêtes frappent la base en même temps."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-cache-q1",
+          "prompt": "Dans le pattern cache-aside, que fait-on après avoir modifié un produit en base ?",
+          "choices": [
+            "On supprime son entrée du cache, la prochaine lecture la rechargera",
+            "Rien, le cache se met à jour tout seul",
+            "On vide entièrement le cache",
+            "On redémarre le serveur de cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Supprimer plutôt que mettre à jour évite d'écrire en cache une valeur qui pourrait être écrasée dans le désordre par une écriture concurrente.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-cache-q2",
+          "prompt": "Une clé de cache très demandée expire et 5 000 requêtes interrogent la base en même temps. Comment s'appelle ce problème ?",
+          "choices": [
+            "Une ruée sur le cache (cache stampede)",
+            "Une injection SQL",
+            "Un interblocage",
+            "Une fuite mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Solutions : un verrou pour qu'une seule requête recharge la valeur, un rafraîchissement anticipé avant expiration, ou des TTL légèrement aléatoires.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-cache-q3",
+          "prompt": "Quelle donnée est la moins adaptée à un cache de 10 minutes ?",
+          "choices": [
+            "Le solde d'un compte bancaire affiché avant un virement",
+            "La liste des pays",
+            "La fiche descriptive d'un produit",
+            "La page d'accueil d'un journal"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une donnée périmée de 10 minutes est sans gravité pour un catalogue, mais pas pour un solde servant à autoriser une opération.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-cache-q4",
+          "prompt": "Quel est le risque principal du write-behind ?",
+          "choices": [
+            "Perdre des écritures si le cache tombe avant leur persistance",
+            "Des lectures plus lentes",
+            "Une base de données toujours vide",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'écriture est confirmée au client alors qu'elle n'existe qu'en mémoire.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sys-cache-q5",
+          "prompt": "Le cache-aside de la leçon : un produit inexistant fait interroger la base à chaque requête. Touche la ligne en cause.",
+          "code": "var p = await cache.Get<Produit>(cle);\nif (p is null)\n{\n    p = await db.Produits.FindAsync(id);\n    if (p is not null)\n        await cache.Set(cle, p, ttl);\n}\nreturn p;",
+          "bugLines": [
+            5
+          ],
+          "explanation": "L'absence n'est jamais mise en cache : un attaquant qui demande des ids inexistants contourne le cache. On peut stocker un marqueur « absent » avec un TTL court.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "sys-cache-q6",
+          "prompt": "Où peut-on placer un cache ?",
+          "choices": [
+            "Dans le navigateur, avec les en-têtes HTTP Cache-Control",
+            "Sur un CDN, près des utilisateurs",
+            "En mémoire dans le processus de l'application",
+            "Dans un cache distribué comme Redis"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "explanation": "Chaque niveau a ses compromis : un cache en mémoire est le plus rapide mais n'est pas partagé entre les instances, contrairement à Redis.",
+          "difficulty": 1
+        }
+      ]
     },
     {
       "id": "sys-cap",
       "title": "CAP et PACELC",
       "summary": "Choisir entre cohérence, disponibilité et latence.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le théorème CAP",
+          "body": "Lors d'une partition réseau (des nœuds ne peuvent plus se parler), un système distribué doit choisir : rester cohérent (C) en refusant certaines requêtes, ou rester disponible (A) en répondant avec des données potentiellement périmées. Les partitions étant inévitables, le choix est entre CP et AP."
+        },
+        {
+          "title": "PACELC : et sans panne ?",
+          "body": "CAP ne parle que des partitions. PACELC complète : s'il y a Partition, choisir entre A et C ; Else (fonctionnement normal), choisir entre Latence et Cohérence. Attendre la confirmation de toutes les répliques coûte du temps, même quand tout va bien."
+        },
+        {
+          "title": "Les niveaux de cohérence",
+          "body": "Cohérence forte : chaque lecture voit la dernière écriture. Cohérence à terme (eventual) : les répliques convergent, mais une lecture peut être en retard. Entre les deux, « lire ses propres écritures » garantit à un utilisateur de voir ses propres modifications. Avec N répliques, si W + R > N (écritures confirmées par W, lectures sur R), une lecture croise toujours la dernière écriture."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-cap-q1",
+          "prompt": "Une partition réseau isole deux centres de données. Un système CP...",
+          "choices": [
+            "Refuse certaines requêtes pour ne jamais renvoyer de données incohérentes",
+            "Répond toujours, quitte à renvoyer des données périmées",
+            "Supprime les données de la partition minoritaire",
+            "Ne peut pas exister"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un système CP sacrifie la disponibilité pendant la partition, typiquement du côté minoritaire qui ne peut plus obtenir de quorum.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-cap-q2",
+          "prompt": "Pour un panier d'achat sur un site marchand mondial, quel choix est le plus courant ?",
+          "choices": [
+            "AP : le panier reste utilisable, les éventuels conflits sont fusionnés ensuite",
+            "CP : bloquer les ajouts au panier pendant une partition",
+            "Ni l'un ni l'autre",
+            "Désactiver le panier"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'exemple de Dynamo chez Amazon : un panier indisponible coûte des ventes, et fusionner deux versions est acceptable.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-cap-q3",
+          "prompt": "Que décrit le « ELC » de PACELC ?",
+          "choices": [
+            "En l'absence de partition, le compromis entre latence et cohérence",
+            "Le coût en électricité",
+            "La reprise après panne",
+            "La compression des données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Même sans panne, une écriture synchrone sur toutes les répliques est plus lente qu'une réplication asynchrone.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sys-cap-q4",
+          "prompt": "3 répliques (N = 3). Les écritures sont confirmées par 2 répliques (W = 2). Combien de répliques lire (R) pour être sûr de voir la dernière écriture ?",
+          "choices": [
+            "2",
+            "1",
+            "3",
+            "0"
+          ],
+          "answerIndex": 0,
+          "explanation": "W + R > N : 2 + 2 = 4 > 3. Deux ensembles de 2 répliques parmi 3 se recoupent forcément sur au moins une.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sys-cap-q5",
+          "prompt": "Un utilisateur modifie son pseudo puis recharge la page : il voit l'ancien. La lecture est allée sur une réplique en retard. Quelle garantie manque-t-il ?",
+          "choices": [
+            "Lire ses propres écritures (read-your-writes)",
+            "La durabilité",
+            "L'atomicité",
+            "Le chiffrement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Solution simple : lire depuis le nœud principal pendant quelques secondes après une écriture de cet utilisateur.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sys-cap-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Dans un système distribué, les partitions réseau finissent toujours par arriver",
+            "La cohérence à terme signifie que les répliques convergent si les écritures cessent",
+            "Un même système peut offrir des niveaux de cohérence différents selon les opérations",
+            "Un système CA tolérant aux partitions est facile à construire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "« CA » n'a de sens que sans partition, donc sans distribution réelle. Cassandra ou Cosmos DB laissent même choisir le niveau de cohérence par requête.",
+          "difficulty": 3
+        }
+      ]
     },
     {
       "id": "sys-partitionnement",
       "title": "Partitionnement",
       "summary": "Répartir les données et la charge.",
-      "difficulty": 3
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Réplication et partitionnement",
+          "body": "La réplication copie les mêmes données sur plusieurs nœuds (tolérance aux pannes, lectures réparties). Le partitionnement (sharding) découpe les données : chaque nœud n'en détient qu'une partie, ce qui répartit les écritures et le volume. On combine souvent les deux."
+        },
+        {
+          "title": "Choisir la clé",
+          "body": "Par plages (A–F, G–M...) : les requêtes par intervalle restent efficaces, mais une plage peut devenir un point chaud. Par hachage de la clé : la charge est bien répartie, mais une requête par intervalle doit interroger toutes les partitions. Une mauvaise clé (la date du jour pour des écritures) envoie tout vers une seule partition.",
+          "code": "int Partition(string cle, int n)\n    => (int)(Hash(cle) % (uint)n);"
+        },
+        {
+          "title": "Le hachage cohérent",
+          "body": "Avec hash % n, ajouter un nœud change la partition de presque toutes les clés. Le hachage cohérent place nœuds et clés sur un anneau : une clé va au premier nœud suivant. Ajouter un nœud ne déplace que les clés d'un segment, environ 1/n des données."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-partition-q1",
+          "prompt": "Quelle est la différence entre réplication et partitionnement ?",
+          "choices": [
+            "La réplication copie les mêmes données sur plusieurs nœuds ; le partitionnement répartit des données différentes",
+            "Ce sont deux noms de la même chose",
+            "La réplication découpe, le partitionnement copie",
+            "Le partitionnement ne concerne que les fichiers"
+          ],
+          "answerIndex": 0,
+          "explanation": "Répliquer augmente la disponibilité et la capacité de lecture ; partitionner augmente la capacité d'écriture et de stockage.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-partition-q2",
+          "prompt": "Des événements sont partitionnés par date. Pourquoi est-ce une mauvaise clé ?",
+          "choices": [
+            "Toutes les écritures du jour vont sur la même partition, qui devient un point chaud",
+            "Les dates ne peuvent pas être hachées",
+            "Les requêtes par date deviennent impossibles",
+            "Ce n'est pas un problème"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une seule partition reçoit toute la charge pendant que les autres sont inactives. On préfère une clé qui répartit les écritures (identifiant de l'appareil, de l'utilisateur...).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-partition-q3",
+          "prompt": "Avec Partition(cle) = hash % n, on passe de 4 à 5 nœuds. Quelle proportion de clés change de nœud ?",
+          "choices": [
+            "Environ 80 %",
+            "Environ 20 %",
+            "Aucune",
+            "Exactement 50 %"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une clé reste en place seulement si hash % 4 == hash % 5, soit 4 cas sur 20 : 80 % des données migrent. Le hachage cohérent n'en déplace qu'environ 20 %.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sys-partition-q4",
+          "prompt": "Les données sont partitionnées par hachage de user_id. Quelle requête devient coûteuse ?",
+          "choices": [
+            "Les 10 commandes les plus récentes, tous utilisateurs confondus",
+            "Les commandes de l'utilisateur 42",
+            "Le profil de l'utilisateur 42",
+            "La mise à jour d'une commande de l'utilisateur 42"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans user_id dans la requête, il faut interroger toutes les partitions et fusionner leurs résultats (scatter-gather).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-partition-q5",
+          "prompt": "Une star a 50 millions d'abonnés, et son user_id fait de sa partition un point chaud. Que faire ?",
+          "choices": [
+            "Traiter les clés très chaudes à part, par exemple en ajoutant un suffixe aléatoire pour les répartir sur plusieurs partitions",
+            "Supprimer son compte",
+            "Augmenter le TTL du cache uniquement",
+            "Repasser sur un seul serveur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Répartir une clé chaude sur plusieurs partitions oblige à lire et fusionner toutes ces partitions, mais distribue la charge.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "sys-partition-q6",
+          "prompt": "Quelles difficultés apporte le partitionnement ?",
+          "choices": [
+            "Les jointures et transactions entre partitions deviennent coûteuses",
+            "Rééquilibrer les données quand on ajoute des nœuds",
+            "Les requêtes sans la clé de partition interrogent tous les nœuds",
+            "Il rend impossible la réplication"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Chaque partition est d'ailleurs généralement répliquée : les deux techniques se combinent.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sys-defi-donnees",
+    "title": "Défi entretien : données à l'échelle",
+    "summary": "Un service de raccourcissement d'URL.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sys-defi5-q1",
+        "prompt": "Cas pratique 1/3 — On conçoit un raccourcisseur d'URL : 100 millions de redirections par jour, 1 million de créations. Quelle caractéristique guide la conception ?",
+        "choices": [
+          "Le trafic est très majoritairement en lecture : un cache est essentiel",
+          "Le trafic est majoritairement en écriture",
+          "Il faut une transaction distribuée par redirection",
+          "Le volume est trop faible pour s'en soucier"
+        ],
+        "answerIndex": 0,
+        "explanation": "100 lectures pour 1 écriture : un code court, une fois créé, ne change jamais. C'est idéal pour un cache (et même un CDN).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi5-q2",
+        "prompt": "Cas pratique 2/3 — Quelle clé de partitionnement pour la table des codes ?",
+        "choices": [
+          "Le hachage du code court, qui est la clé de toutes les lectures",
+          "La date de création",
+          "Le pays de l'utilisateur",
+          "La longueur de l'URL"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque redirection cherche un code : partitionner par hachage du code répartit la charge et cible une seule partition par requête.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi5-q3",
+        "prompt": "Cas pratique 3/3 — Le lien d'une campagne télévisée reçoit soudain 50 000 requêtes par seconde. Qu'est-ce qui absorbe ce pic ?",
+        "choices": [
+          "Le cache (en mémoire, Redis ou CDN) : la valeur ne change jamais, elle peut être servie sans toucher la base",
+          "Ajouter des index",
+          "Passer la base en cohérence forte",
+          "Supprimer le lien"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une donnée immuable et très demandée est le cas idéal du cache. La redirection peut même être mise en cache par le navigateur (301).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi5-q4",
+        "prompt": "Ordre de grandeur : 1 million de créations par jour pendant 10 ans, environ 500 octets par entrée. Quel volume ?",
+        "choices": [
+          "Environ 2 To",
+          "Environ 2 Go",
+          "Environ 2 Po",
+          "Environ 200 Mo"
+        ],
+        "answerIndex": 0,
+        "explanation": "10⁶ × 365 × 10 ≈ 3,65 milliards d'entrées × 500 octets ≈ 1,8 To. Les estimations « au dos de l'enveloppe » sont attendues en entretien de conception.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sys-defi5-q5",
+        "prompt": "Le compteur de clics de chaque lien est mis à jour à chaque redirection. Quelles approches évitent de surcharger la base ?",
+        "choices": [
+          "Agréger les compteurs en mémoire et les écrire par lots",
+          "Publier un événement par clic dans une file, consommé en arrière-plan",
+          "Accepter un compteur légèrement en retard (cohérence à terme)",
+          "Une transaction synchrone sur la base à chaque clic"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un compteur de statistiques tolère un léger retard. Une écriture synchrone par clic ferait de la base le goulot d'étranglement.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi5-q6",
+        "prompt": "En entretien de conception de système, par quoi commencer ?",
+        "choices": [
+          "Clarifier les besoins et estimer les volumes, avant de dessiner l'architecture",
+          "Choisir la base de données",
+          "Écrire le code du service",
+          "Dessiner directement des microservices"
+        ],
+        "answerIndex": 0,
+        "explanation": "Besoins fonctionnels, contraintes (latence, disponibilité), ordres de grandeur : ce sont eux qui justifient chaque choix ensuite.",
+        "difficulty": 1
+      }
+    ]
+  }
 }

@@ -7,19 +7,424 @@
       "id": "sys-patterns-creation",
       "title": "Patterns de création",
       "summary": "Factory, Builder, Singleton et leurs pièges.",
-      "difficulty": 1
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Factory",
+          "body": "Une fabrique centralise la décision « quelle classe instancier ». L'appelant demande un IExporteur pour un format donné, sans connaître CsvExporteur ni JsonExporteur.",
+          "code": "static IExporteur Creer(string format) => format switch\n{\n    \"csv\" => new CsvExporteur(),\n    \"json\" => new JsonExporteur(),\n    _ => throw new ArgumentException(format)\n};"
+        },
+        {
+          "title": "Builder",
+          "body": "Un builder construit pas à pas un objet complexe aux nombreux paramètres optionnels, avec des appels chaînés lisibles. StringBuilder, les configurations d'HttpClient ou de l'hôte ASP.NET Core en sont des exemples."
+        },
+        {
+          "title": "Singleton et ses pièges",
+          "body": "Le Singleton garantit une seule instance accessible globalement. C'est un état global déguisé : dépendances cachées, tests qui s'influencent, problèmes de concurrence. On préfère enregistrer le service avec une durée de vie singleton dans le conteneur d'injection, puis l'injecter.",
+          "code": "services.AddSingleton<IHorloge, HorlogeSysteme>();"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-creation-q1",
+          "prompt": "Quel est le principal reproche fait au Singleton classique (Instance statique) ?",
+          "choices": [
+            "C'est un état global : dépendances cachées et tests difficiles à isoler",
+            "Il consomme trop de mémoire",
+            "Il est impossible à implémenter en C#",
+            "Il crée une nouvelle instance à chaque appel"
+          ],
+          "answerIndex": 0,
+          "explanation": "Tout code peut appeler Config.Instance sans le déclarer : on ne voit pas la dépendance, et on ne peut pas la remplacer dans un test.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-creation-q2",
+          "prompt": "Un objet Requete a une URL obligatoire et dix options facultatives. Quel pattern rend sa construction lisible ?",
+          "choices": [
+            "Builder",
+            "Singleton",
+            "Observer",
+            "Adapter"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un constructeur à onze paramètres est illisible. Le builder nomme chaque option : new RequeteBuilder(url).Timeout(5).Retries(3).Build().",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-creation-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "var sb = new StringBuilder(\"a\");\nsb.Append(\"b\").Append(\"c\").Insert(0, \"x\");\nConsole.WriteLine(sb);",
+          "choices": [
+            "xabc",
+            "abcx",
+            "abc",
+            "x"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque méthode renvoie le builder lui-même, ce qui permet de chaîner les appels. Insert(0, ...) ajoute au début.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sys-creation-q4",
+          "prompt": "Ce singleton paresseux est utilisé par plusieurs threads. Touche la ligne qui peut créer deux instances.",
+          "code": "class Cache\n{\n    static Cache? _instance;\n    public static Cache Instance\n    {\n        get\n        {\n            if (_instance == null)\n                _instance = new Cache();\n            return _instance;\n        }\n    }\n}",
+          "bugLines": [
+            8
+          ],
+          "explanation": "Deux threads peuvent tester null en même temps et créer chacun une instance. Lazy<Cache> ou un initialiseur statique règlent le problème.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-creation-q5",
+          "prompt": "Quel avantage apporte une fabrique comme Creer(format) ?",
+          "choices": [
+            "L'appelant dépend de l'interface IExporteur, pas des classes concrètes",
+            "Elle rend le code plus rapide",
+            "Elle évite toute allocation mémoire",
+            "Elle remplace les tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le choix de la classe concrète est à un seul endroit : ajouter un format ne touche que la fabrique.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sys-creation-q6",
+          "prompt": "Quelles façons de garantir une instance unique sont sûres entre threads en C# ?",
+          "choices": [
+            "static readonly Lazy<T> _x = new(() => new T());",
+            "static readonly T _x = new T();",
+            "services.AddSingleton<T>() dans le conteneur d'injection",
+            "if (_x == null) _x = new T(); sans verrou"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Lazy<T> et les initialiseurs statiques sont thread-safe par défaut. Le conteneur gère aussi la création unique.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "sys-patterns-structure",
       "title": "Patterns de structure",
       "summary": "Adapter, Decorator, Facade, Proxy.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Adapter",
+          "body": "Un adaptateur traduit une interface existante vers celle qu'attend le code. On enveloppe une bibliothèque de paiement externe dans notre IPaiement, pour ne pas la laisser se répandre dans tout le code."
+        },
+        {
+          "title": "Decorator",
+          "body": "Un décorateur implémente la même interface que l'objet qu'il enveloppe et ajoute un comportement avant ou après : cache, logs, retries. On peut les empiler sans modifier la classe d'origine.",
+          "code": "class DepotAvecCache(IDepot inner) : IDepot\n{\n    readonly Dictionary<int, Produit> _cache = new();\n    public Produit Lire(int id)\n    {\n        if (!_cache.TryGetValue(id, out var p))\n            _cache[id] = p = inner.Lire(id);\n        return p;\n    }\n}"
+        },
+        {
+          "title": "Facade et Proxy",
+          "body": "Une façade offre un point d'entrée simple à un sous-système complexe (Commander() qui orchestre stock, paiement et livraison). Un proxy a la même interface que l'objet réel et en contrôle l'accès : chargement paresseux, contrôle de droits, appel distant."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-structure-q1",
+          "prompt": "On veut ajouter des logs à tous les appels d'un IDepot sans modifier ses implémentations. Quel pattern ?",
+          "choices": [
+            "Decorator",
+            "Singleton",
+            "Builder",
+            "Factory"
+          ],
+          "answerIndex": 0,
+          "explanation": "DepotAvecLogs(IDepot inner) implémente IDepot, journalise puis délègue à inner.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-structure-q2",
+          "prompt": "Le SDK d'un transporteur expose ExpedierColis(PoidsGrammes, CodePostal). Notre code attend ILivraison.Livrer(Commande). Quel pattern ?",
+          "choices": [
+            "Adapter",
+            "Decorator",
+            "Observer",
+            "Command"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'adaptateur implémente ILivraison et traduit la commande vers l'API du SDK. Changer de transporteur ne touche qu'une classe.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-structure-q3",
+          "prompt": "Avec le DepotAvecCache de la leçon, combien de fois inner.Lire est-il appelé ?",
+          "code": "var depot = new DepotAvecCache(new DepotSql());\ndepot.Lire(1);\ndepot.Lire(2);\ndepot.Lire(1);\ndepot.Lire(1);",
+          "choices": [
+            "2",
+            "4",
+            "1",
+            "3"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une fois pour l'id 1, une fois pour l'id 2 ; les lectures suivantes de l'id 1 sont servies par le cache.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-structure-q4",
+          "prompt": "Quelle différence entre un Decorator et un Proxy ?",
+          "choices": [
+            "Les deux enveloppent un objet de même interface ; le décorateur ajoute un comportement, le proxy contrôle l'accès à l'objet",
+            "Le proxy change l'interface, le décorateur non",
+            "Le décorateur est réservé à l'interface graphique",
+            "Il n'y a aucune ressemblance"
+          ],
+          "answerIndex": 0,
+          "explanation": "Leur structure est quasi identique ; c'est l'intention qui diffère : enrichir (décorateur) ou contrôler, retarder, rendre distant (proxy).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-structure-q5",
+          "prompt": "Une méthode Commander() appelle le stock, le paiement, la facturation et la livraison, et le contrôleur n'appelle qu'elle. Quel pattern ?",
+          "choices": [
+            "Facade",
+            "Adapter",
+            "Proxy",
+            "Singleton"
+          ],
+          "answerIndex": 0,
+          "explanation": "La façade cache la complexité d'un sous-système derrière une interface simple.",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "sys-structure-q6",
+          "prompt": "Remets dans l'ordre l'empilement de décorateurs : l'appel doit passer par les logs, puis le cache, puis la base.",
+          "lines": [
+            "IDepot depot =",
+            "    new DepotAvecLogs(",
+            "        new DepotAvecCache(",
+            "            new DepotSql()));"
+          ],
+          "explanation": "Le décorateur le plus externe est appelé en premier. Ici, même les lectures servies par le cache sont journalisées.",
+          "difficulty": 2
+        }
+      ]
     },
     {
       "id": "sys-patterns-comportement",
       "title": "Patterns de comportement",
       "summary": "Strategy, Observer, Command, State.",
-      "difficulty": 2
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Strategy",
+          "body": "On encapsule une famille d'algorithmes interchangeables derrière une interface : calcul de frais, tri, compression. Le code appelant reçoit la stratégie et ne contient plus de switch. En C#, un simple délégué Func suffit souvent."
+        },
+        {
+          "title": "Observer",
+          "body": "Un sujet notifie ses abonnés quand son état change, sans les connaître. Les événements C# (event) et les systèmes de publication / abonnement l'implémentent. Piège : un abonné oublié n'est jamais libéré (fuite mémoire).",
+          "code": "class Panier\n{\n    public event Action<decimal>? TotalChange;\n    decimal _total;\n    public void Ajouter(decimal prix)\n    {\n        _total += prix;\n        TotalChange?.Invoke(_total);\n    }\n}"
+        },
+        {
+          "title": "Command et State",
+          "body": "Command transforme une action en objet : on peut la mettre en file, la journaliser ou l'annuler (undo). State donne à un objet un comportement différent selon son état (Brouillon, Publié, Archivé), sans if répétés dans chaque méthode."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sys-comportement-q1",
+          "prompt": "Qu'affiche ce code, avec la classe Panier de la leçon ?",
+          "code": "var p = new Panier();\np.TotalChange += t => Console.Write($\"{t} \");\np.Ajouter(10);\np.Ajouter(5);",
+          "choices": [
+            "10 15",
+            "10 5",
+            "15",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'abonné est notifié à chaque ajout avec le nouveau total.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-comportement-q2",
+          "prompt": "Un éditeur de texte doit pouvoir annuler les dernières actions. Quel pattern ?",
+          "choices": [
+            "Command, chaque commande sachant s'exécuter et s'annuler",
+            "Singleton",
+            "Adapter",
+            "Builder"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque action est un objet avec Executer() et Annuler(), empilé dans un historique.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sys-comportement-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "Func<decimal, decimal> standard = m => m * 0.05m;\nFunc<decimal, decimal> premium = m => 0;\nvar strategie = premium;\nConsole.WriteLine(strategie(200));",
+          "choices": [
+            "0",
+            "10,00",
+            "200",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les délégués rendent le pattern Strategy très léger : la stratégie est une simple fonction qu'on choisit et qu'on passe.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sys-comportement-q4",
+          "prompt": "Chaque ouverture de cet écran ajoute un abonné, et les anciens écrans ne sont jamais libérés. Touche la ligne en cause.",
+          "code": "class EcranPanier\n{\n    public EcranPanier(Panier panier)\n    {\n        panier.TotalChange += Afficher;\n    }\n    void Afficher(decimal t) { }\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Le panier, qui vit longtemps, garde une référence vers chaque écran via l'abonnement. Il faut se désabonner (-=) à la fermeture de l'écran.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sys-comportement-q5",
+          "prompt": "Les méthodes Publier, Archiver et Modifier d'un Article contiennent chacune un switch sur son statut. Quel pattern les simplifie ?",
+          "choices": [
+            "State",
+            "Observer",
+            "Facade",
+            "Factory"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque état devient une classe qui définit ce qui est permis et vers quel état on passe. Ajouter un état n'oblige plus à modifier chaque switch.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sys-comportement-q6",
+          "prompt": "Quels mécanismes du langage C# implémentent directement un pattern ?",
+          "choices": [
+            "event : Observer",
+            "Func<T, R> passé en paramètre : Strategy",
+            "IEnumerable et foreach : Iterator",
+            "var : Singleton"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Beaucoup de patterns du livre du « Gang of Four » (1994) sont devenus des fonctionnalités des langages modernes.",
+          "difficulty": 2
+        }
+      ]
     }
-  ]
+  ],
+  "challenge": {
+    "id": "sys-defi-patterns",
+    "title": "Défi entretien : design patterns",
+    "summary": "Choisir le bon pattern, ou aucun.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sys-defi2-q1",
+        "prompt": "Cas pratique 1/3 — Un service calcule des frais de livraison : standard, express, retrait en magasin, et d'autres modes arriveront. Quel pattern ?",
+        "choices": [
+          "Strategy : une implémentation par mode de livraison",
+          "Singleton",
+          "Proxy",
+          "Builder"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque mode est un algorithme interchangeable derrière ICalculFrais. Un nouveau mode est une nouvelle classe.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi2-q2",
+        "prompt": "Cas pratique 2/3 — Qui choisit la stratégie à partir du mode demandé par le client ?",
+        "choices": [
+          "Une fabrique, ou un dictionnaire de stratégies enregistré dans le conteneur d'injection",
+          "Chaque stratégie elle-même",
+          "Le client, en envoyant le nom de la classe",
+          "Un Singleton global"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le choix de l'implémentation est centralisé ; le reste du code ne voit que l'interface.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi2-q3",
+        "prompt": "Cas pratique 3/3 — On veut mettre en cache les frais calculés, sans toucher aux stratégies. Quel pattern ?",
+        "choices": [
+          "Decorator autour de ICalculFrais",
+          "Adapter",
+          "State",
+          "Command"
+        ],
+        "answerIndex": 0,
+        "explanation": "FraisAvecCache(ICalculFrais inner) ajoute le cache à n'importe quelle stratégie.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi2-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "var historique = new Stack<Action>();\nint x = 0;\nvoid Ajouter(int n)\n{\n    x += n;\n    historique.Push(() => x -= n);\n}\nAjouter(5);\nAjouter(3);\nhistorique.Pop()();\nConsole.WriteLine(x);",
+        "choices": [
+          "5",
+          "8",
+          "0",
+          "3"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque action empile son annulation (pattern Command). Pop() récupère la dernière, qui retire 3.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sys-defi2-q5",
+        "prompt": "Un collègue ajoute une AbstractFactory, un Builder et un Visitor pour une fonctionnalité qui affiche une liste. Que lui répondre ?",
+        "choices": [
+          "Les patterns répondent à des problèmes : sans problème, ils n'ajoutent que de la complexité",
+          "C'est parfait, plus il y a de patterns, mieux c'est",
+          "Il manque un Singleton",
+          "Il faut tout réécrire en héritage"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un pattern se justifie quand le code en a besoin (variations, extensions). Sinon, KISS.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "sys-defi2-q6",
+        "prompt": "Associations correctes entre besoin et pattern :",
+        "choices": [
+          "Notifier plusieurs composants d'un changement : Observer",
+          "Utiliser une API tierce avec notre interface : Adapter",
+          "Simplifier l'accès à un sous-système complexe : Facade",
+          "Garantir une seule instance : Strategy"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une instance unique, c'est le Singleton (de préférence via le conteneur d'injection).",
+        "difficulty": 1
+      }
+    ]
+  }
 }
