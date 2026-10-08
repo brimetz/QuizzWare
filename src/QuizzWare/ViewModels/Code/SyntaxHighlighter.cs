@@ -99,10 +99,21 @@ public static class SyntaxHighlighter
     /// Police à chasse fixe. À préciser sur chaque Span : sous Windows, les spans n'héritent pas de la police du Label.
     /// Garder synchronisé avec la ressource MonoFont de Styles.xaml.
     /// </summary>
-    public static string MonoFont { get; } =
-        DeviceInfo.Platform == DevicePlatform.Android ? "monospace"
-        : DeviceInfo.Platform == DevicePlatform.iOS ? "Menlo"
-        : "Consolas";
+    public static string MonoFont { get; } = DetectMonoFont();
+
+    private static string DetectMonoFont()
+    {
+        try
+        {
+            return DeviceInfo.Platform == DevicePlatform.Android ? "monospace"
+                : DeviceInfo.Platform == DevicePlatform.iOS ? "Menlo"
+                : "Consolas";
+        }
+        catch (Exception)
+        {
+            return "monospace"; // hors appareil (tests unitaires) : DeviceInfo n'est pas disponible
+        }
+    }
 
     public static Span CreateSpan(string text, Color color) =>
         new() { Text = text, TextColor = color, FontFamily = MonoFont, FontSize = Palette.CodeFontSize };

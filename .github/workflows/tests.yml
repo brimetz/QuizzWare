@@ -5,7 +5,8 @@ on:
   pull_request:
 
 jobs:
-  tests:
+  core:
+    name: Core et contenu
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -19,7 +20,7 @@ jobs:
       - name: Tests du Core et validation du contenu
         run: dotnet test tests/QuizzWare.Core.Tests -c Release --logger "console;verbosity=normal"
 
-      # Le plan, les arbres de spécialisations et la carte doivent rester synchronisés.
+      # Le plan, les arbres de spécialisations, la carte et la liste des identifiants publiés doivent être à jour.
       - name: Contenu synchronisé avec le plan
         run: |
           dotnet run --project tools/GenerateurContenu -c Release
@@ -29,3 +30,22 @@ jobs:
             git diff --stat
             exit 1
           fi
+
+  app:
+    name: Application MAUI
+    # Le workload MAUI complet (Android, iOS) n'existe pas sous Linux.
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Workload MAUI
+        run: dotnet workload install maui
+
+      # ViewModels, accessibilité et remontée des plantages, sur la cible net9.0 de l'application (sans appareil).
+      - name: Tests de l'application
+        run: dotnet test tests/QuizzWare.App.Tests -c Release --logger "console;verbosity=normal"

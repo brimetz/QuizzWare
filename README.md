@@ -21,6 +21,7 @@ Au-delà des leçons :
 - **Premier lancement** : profil (étudiant → senior), centres d'intérêt (affichés en premier sur l'accueil) et objectif quotidien, puis un parcours conseillé.
 - **Test de niveau** : 2 questions par chapitre du tronc commun, sans correction en cours de route ; chaque chapitre réussi sans faute est validé, et le test s'arrête au premier chapitre raté. Proposé tant qu'aucune leçon de la catégorie n'est validée.
 - **Accessibilité** (⚙️ Réglages › Accessibilité) : thèmes sombre, clair, contraste élevé et sépia ; couleurs de correction adaptées au daltonisme (bleu / orange), avec ✓ et ✗ toujours affichés ; polices Atkinson Hyperlegible et OpenDyslexic (SIL OFL, dans `Resources/Fonts`) ; taille du texte et du code ; animations réduites. Les contrastes de chaque thème sont vérifiés par les tests (critères WCAG). Réglages propres à l'appareil, indépendants de la progression.
+- **Plantages et problèmes** : les plantages et erreurs inattendues sont enregistrés sur l'appareil (`erreurs.json`, données personnelles retirées). Au lancement suivant un plantage, l'app propose d'envoyer le rapport ; « 🐞 Signaler un problème » (Réglages) fait de même avec les erreurs récentes. L'envoi ouvre une issue GitHub pré-remplie que l'utilisateur relit : aucun service tiers, rien d'automatique. Voir [CrashReporter.cs](src/QuizzWare/Services/CrashReporter.cs).
 - **Mode entretien** : simulation chronométrée (Junior 10 questions / 8 min, Confirmé 15 / 12 min, Senior 15 / 10 min), questions réparties entre les chapitres, verdict et sujets à retravailler. Les erreurs rejoignent la révision espacée.
 
 Publication sur le Play Store : **[docs/PUBLICATION.md](docs/PUBLICATION.md)**.
@@ -50,6 +51,7 @@ src/
     Resources/Raw/sons/    Sons générés par tools/GenerateurSons.ps1
 tests/
   QuizzWare.Core.Tests/    Tests xUnit du Core (y compris validation du contenu JSON)
+  QuizzWare.App.Tests/     Tests xUnit de l'application (ViewModels, accessibilité, plantages)
 docs/
   CONTENU.md               Guide de rédaction (formats, règles, contraintes mobiles)
   CARTE.md                 Carte des sujets (générée)
@@ -93,6 +95,9 @@ Pour Android, il faut aussi le SDK Android (installé avec Visual Studio « Dév
 ```powershell
 # Tests du Core (ne nécessite pas MAUI)
 dotnet test tests/QuizzWare.Core.Tests
+
+# Tests de l'application : ViewModels, accessibilité, plantages (cible net9.0 de l'app, sans appareil)
+dotnet test tests/QuizzWare.App.Tests
 
 # Lancer sur Windows (le plus rapide pour itérer)
 dotnet build src/QuizzWare -t:Run -f net9.0-windows10.0.19041.0
