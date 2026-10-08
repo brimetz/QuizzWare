@@ -7,7 +7,7 @@
              Title="Réglages">
 
     <ScrollView>
-        <VerticalStackLayout Padding="16,8,16,32" Spacing="24">
+        <VerticalStackLayout x:Name="Sections" Padding="16,8,16,32" Spacing="24">
 
             <!-- Abonnement -->
             <VerticalStackLayout Spacing="10">
