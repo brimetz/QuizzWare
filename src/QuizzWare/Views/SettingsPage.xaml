@@ -18,8 +18,27 @@
                     </Border.GestureRecognizers>
                     <VerticalStackLayout Spacing="4">
                         <Label Text="{Binding SubscriptionTitle}" Style="{StaticResource SubHeaderLabel}" />
-                        <Label Text="{Binding SubscriptionText}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                        <Label Text="{Binding SubscriptionText}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                     </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Accessibilité -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="♿ Accessibilité" Style="{StaticResource HeaderLabel}" />
+                <Border Style="{StaticResource Card}" SemanticProperties.Description="Ouvrir les réglages d'accessibilité">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenAccessibilityCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Thème, couleurs et police" Style="{StaticResource SubHeaderLabel}" />
+                            <Label Text="Fond clair ou contrasté, couleurs adaptées au daltonisme, police lisible, taille du texte et du code, animations."
+                                   Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
+                        </VerticalStackLayout>
+                        <Label Grid.Column="1" Text="›" FontSize="{DynamicResource FontSizeTitle}" TextColor="{DynamicResource TextMuted}"
+                               VerticalOptions="Center" />
+                    </Grid>
                 </Border>
             </VerticalStackLayout>
 
@@ -39,9 +58,9 @@
                                 <Grid ColumnDefinitions="*,Auto">
                                     <VerticalStackLayout Spacing="2">
                                         <Label Text="{Binding Label}" Style="{StaticResource SubHeaderLabel}" />
-                                        <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                        <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                                     </VerticalStackLayout>
-                                    <Label Grid.Column="1" Text="{Binding XpText}" TextColor="{StaticResource Warning}"
+                                    <Label Grid.Column="1" Text="{Binding XpText}" TextColor="{DynamicResource Warning}"
                                            FontAttributes="Bold" VerticalOptions="Center" />
                                 </Grid>
                             </Border>
@@ -59,18 +78,18 @@
                             <VerticalStackLayout Spacing="2">
                                 <Label Text="Rappel quotidien" Style="{StaticResource SubHeaderLabel}" />
                                 <Label Text="Pour protéger ta série et faire tes révisions."
-                                       Style="{StaticResource MutedLabel}" FontSize="13" />
+                                       Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                             </VerticalStackLayout>
                             <Switch Grid.Column="1" IsToggled="{Binding RemindersEnabled}" IsEnabled="{Binding RemindersSupported}"
-                                    OnColor="{StaticResource Primary}" VerticalOptions="Center" />
+                                    OnColor="{DynamicResource Primary}" VerticalOptions="Center" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding RemindersEnabled}">
                             <Label Text="Heure du rappel" VerticalOptions="Center" />
                             <TimePicker Grid.Column="1" Time="{Binding ReminderTime}" Format="HH:mm"
-                                        TextColor="{StaticResource TextPrimary}" />
+                                        TextColor="{DynamicResource TextPrimary}" />
                         </Grid>
                         <Label Text="Les rappels sont disponibles sur Android et iOS." Style="{StaticResource MutedLabel}"
-                               FontSize="13" IsVisible="{Binding RemindersUnsupported}" />
+                               FontSize="{DynamicResource FontSizeSmall}" IsVisible="{Binding RemindersUnsupported}" />
                     </VerticalStackLayout>
                 </Border>
             </VerticalStackLayout>
@@ -82,11 +101,11 @@
                     <VerticalStackLayout Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <Label Text="Sons" Style="{StaticResource SubHeaderLabel}" VerticalOptions="Center" />
-                            <Switch Grid.Column="1" IsToggled="{Binding SoundEnabled}" OnColor="{StaticResource Primary}" />
+                            <Switch Grid.Column="1" IsToggled="{Binding SoundEnabled}" OnColor="{DynamicResource Primary}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <Label Text="Vibrations" Style="{StaticResource SubHeaderLabel}" VerticalOptions="Center" />
-                            <Switch Grid.Column="1" IsToggled="{Binding HapticsEnabled}" OnColor="{StaticResource Primary}" />
+                            <Switch Grid.Column="1" IsToggled="{Binding HapticsEnabled}" OnColor="{DynamicResource Primary}" />
                         </Grid>
                     </VerticalStackLayout>
                 </Border>
@@ -106,7 +125,7 @@
                     <VerticalStackLayout Spacing="4">
                         <Label Text="Bientôt disponible" Style="{StaticResource SubHeaderLabel}" />
                         <Label Text="Crée ton profil pour sauvegarder ta progression et la retrouver sur tous tes appareils. En attendant, elle est enregistrée sur ce téléphone."
-                               Style="{StaticResource MutedLabel}" FontSize="13" />
+                               Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                     </VerticalStackLayout>
                 </Border>
             </VerticalStackLayout>
@@ -116,7 +135,7 @@
                 <Label Text="📊 Progression" Style="{StaticResource HeaderLabel}" />
                 <Label Text="{Binding StatsText}" Style="{StaticResource MutedLabel}" />
                 <Button Text="Réinitialiser la progression" Command="{Binding ResetCommand}"
-                        Style="{StaticResource SecondaryButton}" TextColor="{StaticResource Error}" />
+                        Style="{StaticResource SecondaryButton}" TextColor="{DynamicResource Error}" />
             </VerticalStackLayout>
 
         </VerticalStackLayout>

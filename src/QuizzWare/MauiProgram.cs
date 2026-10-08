@@ -15,6 +15,14 @@ public static class MauiProgram
     {
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>();
+        builder.ConfigureFonts(fonts =>
+        {
+            // Polices d'accessibilité (Accessibilité > Police)
+            fonts.AddFont("AtkinsonHyperlegible-Regular.ttf", "Atkinson");
+            fonts.AddFont("AtkinsonHyperlegible-Bold.ttf", "AtkinsonBold");
+            fonts.AddFont("OpenDyslexic-Regular.otf", "OpenDyslexic");
+            fonts.AddFont("OpenDyslexic-Bold.otf", "OpenDyslexicBold");
+        });
 
         // Rappels quotidiens : notifications locales sur mobile, rien sur Windows (développement).
 #if ANDROID || IOS
@@ -29,6 +37,7 @@ public static class MauiProgram
         builder.AddAudio();
         builder.Services.AddSingleton<FeedbackService>();
         builder.Services.AddSingleton<ContentReporter>();
+        builder.Services.AddSingleton<AppearanceService>();
 
         // Abonnement Premium : Google Play Billing en Release sur mobile, simulé en développement.
 #if (ANDROID || IOS) && !DEBUG
@@ -56,6 +65,7 @@ public static class MauiProgram
         builder.Services.AddTransient<SettingsPage>().AddTransient<SettingsViewModel>();
         builder.Services.AddTransient<OnboardingPage>().AddTransient<OnboardingViewModel>();
         builder.Services.AddTransient<PremiumPage>().AddTransient<PremiumViewModel>();
+        builder.Services.AddTransient<AccessibilityPage>().AddTransient<AccessibilityViewModel>();
 
 #if DEBUG
         builder.Logging.AddDebug();

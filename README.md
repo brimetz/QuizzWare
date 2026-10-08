@@ -20,6 +20,7 @@ Au-delà des leçons :
 
 - **Premier lancement** : profil (étudiant → senior), centres d'intérêt (affichés en premier sur l'accueil) et objectif quotidien, puis un parcours conseillé.
 - **Test de niveau** : 2 questions par chapitre du tronc commun, sans correction en cours de route ; chaque chapitre réussi sans faute est validé, et le test s'arrête au premier chapitre raté. Proposé tant qu'aucune leçon de la catégorie n'est validée.
+- **Accessibilité** (⚙️ Réglages › Accessibilité) : thèmes sombre, clair, contraste élevé et sépia ; couleurs de correction adaptées au daltonisme (bleu / orange), avec ✓ et ✗ toujours affichés ; polices Atkinson Hyperlegible et OpenDyslexic (SIL OFL, dans `Resources/Fonts`) ; taille du texte et du code ; animations réduites. Les contrastes de chaque thème sont vérifiés par les tests (critères WCAG). Réglages propres à l'appareil, indépendants de la progression.
 - **Mode entretien** : simulation chronométrée (Junior 10 questions / 8 min, Confirmé 15 / 12 min, Senior 15 / 10 min), questions réparties entre les chapitres, verdict et sujets à retravailler. Les erreurs rejoignent la révision espacée.
 
 Publication sur le Play Store : **[docs/PUBLICATION.md](docs/PUBLICATION.md)**.

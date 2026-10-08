@@ -115,6 +115,9 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
     }
 
     [RelayCommand]
+    private Task OpenAccessibilityAsync() => Shell.Current.GoToAsync(nameof(Views.AccessibilityPage));
+
+    [RelayCommand]
     private Task RedoOnboardingAsync() => Shell.Current.GoToAsync(nameof(Views.OnboardingPage));
 
     [RelayCommand]

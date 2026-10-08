@@ -14,12 +14,12 @@
                 <Label Text="QuizzWare Premium" Style="{StaticResource TitleLabel}" HorizontalOptions="Center" />
             </VerticalStackLayout>
 
-            <Border Style="{StaticResource Card}" Stroke="{StaticResource Warning}" IsVisible="{Binding HasReason}">
+            <Border Style="{StaticResource Card}" Stroke="{DynamicResource Warning}" IsVisible="{Binding HasReason}">
                 <Label Text="{Binding ReasonText}" Style="{StaticResource SubHeaderLabel}" />
             </Border>
 
             <!-- Déjà abonné -->
-            <Border Style="{StaticResource Card}" Stroke="{StaticResource Success}" IsVisible="{Binding IsPremium}">
+            <Border Style="{StaticResource Card}" Stroke="{DynamicResource Success}" IsVisible="{Binding IsPremium}">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="✅ Tu es Premium. Merci pour ton soutien !" Style="{StaticResource SubHeaderLabel}" />
                     <Button Text="Gérer mon abonnement" Command="{Binding ManageCommand}" Style="{StaticResource SecondaryButton}" />
@@ -29,10 +29,10 @@
             <!-- Avantages -->
             <Border Style="{StaticResource Card}">
                 <VerticalStackLayout Spacing="12">
-                    <Label Text="{Binding InterviewsText}" FontSize="15" />
-                    <Label Text="{Binding CategoriesText}" FontSize="15" />
-                    <Label Text="🌳 Toutes leurs spécialisations et leurs défis" FontSize="15" />
-                    <Label Text="{Binding FreeText}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                    <Label Text="{Binding InterviewsText}" FontSize="{DynamicResource FontSizeBody}" />
+                    <Label Text="{Binding CategoriesText}" FontSize="{DynamicResource FontSizeBody}" />
+                    <Label Text="🌳 Toutes leurs spécialisations et leurs défis" FontSize="{DynamicResource FontSizeBody}" />
+                    <Label Text="{Binding FreeText}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                 </VerticalStackLayout>
             </Border>
 
@@ -40,7 +40,7 @@
             <VerticalStackLayout Spacing="10" IsVisible="{Binding IsNotPremium}">
                 <Label Text="{Binding PriceText}" Style="{StaticResource HeaderLabel}" HorizontalOptions="Center" />
                 <Button Text="S'abonner" Command="{Binding SubscribeCommand}" />
-                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Primary}" />
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{DynamicResource Primary}" />
                 <Label Style="{StaticResource MutedLabel}" FontSize="12" HorizontalTextAlignment="Center"
                        Text="Abonnement mensuel à renouvellement automatique, débité sur ton compte Google Play. Tu peux le résilier à tout moment depuis Google Play : l'accès Premium reste actif jusqu'à la fin de la période payée." />
             </VerticalStackLayout>

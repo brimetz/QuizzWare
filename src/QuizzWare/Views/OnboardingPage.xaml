@@ -10,7 +10,7 @@
 
         <!-- Avancement -->
         <Grid Padding="16,24,16,8" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-            <Label Text="‹" FontSize="28" TextColor="{StaticResource TextMuted}" VerticalOptions="Center"
+            <Label Text="‹" FontSize="28" TextColor="{DynamicResource TextMuted}" VerticalOptions="Center"
                    IsVisible="{Binding CanGoBack}" Padding="4,0,12,4">
                 <Label.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding BackCommand}" />
@@ -25,7 +25,7 @@
 
                 <!-- 1. Bienvenue -->
                 <VerticalStackLayout IsVisible="{Binding IsWelcome}" Spacing="18" Padding="0,40,0,0">
-                    <Label Text="&lt;/&gt;" FontSize="64" FontAttributes="Bold" TextColor="{StaticResource Primary}"
+                    <Label Text="&lt;/&gt;" FontSize="64" FontAttributes="Bold" TextColor="{DynamicResource Primary}"
                            HorizontalOptions="Center" />
                     <Label Text="Bienvenue sur QuizzWare" Style="{StaticResource TitleLabel}" HorizontalTextAlignment="Center" />
                     <Label Text="Des leçons de 5 minutes, des quizz sans clavier, du code à lire et à déboguer, et des simulations d'entretien. Le tout pour progresser chaque jour dans ton métier de développeur."
@@ -48,7 +48,7 @@
                                     </Border.GestureRecognizers>
                                     <VerticalStackLayout Spacing="2">
                                         <Label Text="{Binding Label}" Style="{StaticResource SubHeaderLabel}" />
-                                        <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                        <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                                     </VerticalStackLayout>
                                 </Border>
                             </DataTemplate>
@@ -70,7 +70,7 @@
                                         <TapGestureRecognizer Command="{Binding TapCommand}" />
                                     </Border.GestureRecognizers>
                                     <VerticalStackLayout>
-                                        <Label Text="{Binding Label}" FontAttributes="Bold" FontSize="14" />
+                                        <Label Text="{Binding Label}" FontAttributes="Bold" FontSize="{DynamicResource FontSizeMuted}" />
                                         <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="11" />
                                     </VerticalStackLayout>
                                 </Border>
@@ -95,9 +95,9 @@
                                     <Grid ColumnDefinitions="*,Auto">
                                         <VerticalStackLayout Spacing="2">
                                             <Label Text="{Binding Label}" Style="{StaticResource SubHeaderLabel}" />
-                                            <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                            <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                                         </VerticalStackLayout>
-                                        <Label Grid.Column="1" Text="{Binding XpText}" TextColor="{StaticResource Warning}"
+                                        <Label Grid.Column="1" Text="{Binding XpText}" TextColor="{DynamicResource Warning}"
                                                FontAttributes="Bold" VerticalOptions="Center" />
                                     </Grid>
                                 </Border>
@@ -118,19 +118,19 @@
                                         <Grid ColumnDefinitions="48,*" ColumnSpacing="12">
                                             <Border Style="{StaticResource Badge}" BackgroundColor="{Binding Color}"
                                                     WidthRequest="48" HeightRequest="48">
-                                                <Label Text="{Binding Icon}" FontAttributes="Bold" FontSize="14" TextColor="White"
+                                                <Label Text="{Binding Icon}" FontAttributes="Bold" FontSize="14" FontFamily="" TextColor="White"
                                                        HorizontalOptions="Center" VerticalOptions="Center" />
                                             </Border>
                                             <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                                                 <Label Text="{Binding Name}" Style="{StaticResource SubHeaderLabel}" />
-                                                <Label Text="{Binding Hint}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                                <Label Text="{Binding Hint}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                                             </VerticalStackLayout>
                                         </Grid>
                                         <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                                             <Button Text="🎯 Test de niveau" Command="{Binding PlacementCommand}"
-                                                    IsVisible="{Binding SuggestPlacement}" FontSize="14" Padding="8" />
+                                                    IsVisible="{Binding SuggestPlacement}" FontSize="{DynamicResource FontSizeMuted}" Padding="8" />
                                             <Button Grid.Column="1" Text="Voir le parcours" Command="{Binding OpenCommand}"
-                                                    Style="{StaticResource SecondaryButton}" FontSize="14" Padding="8" />
+                                                    Style="{StaticResource SecondaryButton}" FontSize="{DynamicResource FontSizeMuted}" Padding="8" />
                                         </Grid>
                                     </VerticalStackLayout>
                                 </Border>
@@ -142,7 +142,7 @@
         </ScrollView>
 
         <!-- Actions -->
-        <Border Grid.Row="2" BackgroundColor="{StaticResource Background}" StrokeThickness="0" Padding="16,12,16,20">
+        <Border Grid.Row="2" BackgroundColor="{DynamicResource Background}" StrokeThickness="0" Padding="16,12,16,20">
             <Grid>
                 <VerticalStackLayout Spacing="8" IsVisible="{Binding IsNotSummary}">
                     <Button Text="{Binding NextText}" Command="{Binding NextCommand}" />

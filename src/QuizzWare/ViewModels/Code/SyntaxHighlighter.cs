@@ -104,7 +104,8 @@ public static class SyntaxHighlighter
         : DeviceInfo.Platform == DevicePlatform.iOS ? "Menlo"
         : "Consolas";
 
-    public static Span CreateSpan(string text, Color color) => new() { Text = text, TextColor = color, FontFamily = MonoFont };
+    public static Span CreateSpan(string text, Color color) =>
+        new() { Text = text, TextColor = color, FontFamily = MonoFont, FontSize = Palette.CodeFontSize };
 
     public static FormattedString Highlight(string line, string? language)
     {

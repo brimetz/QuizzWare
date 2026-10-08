@@ -10,20 +10,20 @@
     <ScrollView>
         <VerticalStackLayout Padding="16,8,16,32" Spacing="16">
 
-            <Border Style="{StaticResource Card}" Stroke="{StaticResource Primary}">
+            <Border Style="{StaticResource Card}" Stroke="{DynamicResource Primary}">
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="56,*" ColumnSpacing="14">
-                        <Border Style="{StaticResource Badge}" BackgroundColor="{StaticResource SurfaceRaised}">
-                            <Label Text="{Binding Badge}" FontAttributes="Bold" FontSize="13" TextColor="White"
+                        <Border Style="{StaticResource Badge}" BackgroundColor="{DynamicResource SurfaceRaised}">
+                            <Label Text="{Binding Badge}" FontAttributes="Bold" FontSize="13" FontFamily="" TextColor="White"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                            <Label Text="{Binding KindLabel}" TextColor="{StaticResource Primary}" FontSize="12" FontAttributes="Bold" />
+                            <Label Text="{Binding KindLabel}" TextColor="{DynamicResource Primary}" FontSize="12" FontAttributes="Bold" />
                             <Label Text="{Binding Title}" Style="{StaticResource HeaderLabel}" />
                         </VerticalStackLayout>
                     </Grid>
                     <Label Text="{Binding Summary}" Style="{StaticResource BodyLabel}" />
-                    <Label Text="{Binding RelatedText}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                    <Label Text="{Binding RelatedText}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                     <ProgressBar Progress="{Binding Progress}" />
                     <Label Text="{Binding ProgressText}" Style="{StaticResource MutedLabel}" FontSize="12" />
                 </VerticalStackLayout>

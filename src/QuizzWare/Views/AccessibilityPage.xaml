@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:QuizzWare.ViewModels"
+             xmlns:controls="clr-namespace:QuizzWare.Views.Controls"
+             x:Class="QuizzWare.Views.AccessibilityPage"
+             x:DataType="vm:AccessibilityViewModel"
+             Title="Accessibilité">
+
+    <ContentPage.Resources>
+        <!-- Option de liste (thème, police) -->
+        <DataTemplate x:Key="OptionCard" x:DataType="vm:AppearanceOptionViewModel">
+            <Border Style="{StaticResource Card}" Padding="14,12"
+                    Stroke="{Binding StrokeColor}" BackgroundColor="{Binding BackgroundColor}"
+                    SemanticProperties.Description="{Binding Label}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding TapCommand}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="{Binding Label}" Style="{StaticResource SubHeaderLabel}" FontFamily="{Binding FontFamily}" />
+                        <Label Text="{Binding Description}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}"
+                               IsVisible="{Binding HasDescription}" />
+                        <HorizontalStackLayout Spacing="6" IsVisible="{Binding HasSwatches}" Margin="0,4,0,0"
+                                               BindableLayout.ItemsSource="{Binding Swatches}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="Color">
+                                    <Border BackgroundColor="{Binding .}" Stroke="{DynamicResource Stroke}" StrokeThickness="1"
+                                            StrokeShape="RoundRectangle 6" WidthRequest="26" HeightRequest="18" />
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                    <Label Grid.Column="1" Text="{Binding SelectedMark}" TextColor="{DynamicResource Primary}"
+                           FontAttributes="Bold" FontSize="{DynamicResource FontSizeHeader}" VerticalOptions="Center" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Pastille de taille -->
+        <DataTemplate x:Key="SizeChip" x:DataType="vm:AppearanceOptionViewModel">
+            <Border Stroke="{Binding StrokeColor}" BackgroundColor="{Binding BackgroundColor}" StrokeThickness="2"
+                    StrokeShape="RoundRectangle 12" Padding="12,8" Margin="0,0,8,8"
+                    SemanticProperties.Description="{Binding Label}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding TapCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="{Binding Label}" FontAttributes="Bold" />
+            </Border>
+        </DataTemplate>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Aperçu : reste visible pendant qu'on fait défiler les réglages -->
+        <Border Style="{StaticResource Card}" Margin="16,8,16,8" Padding="14">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Aperçu" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
+                <Label Text="Qu'affiche ce code ?" Style="{StaticResource SubHeaderLabel}" />
+                <controls:CodeBlockView Lines="{Binding PreviewCode}" />
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                    <Border BackgroundColor="{Binding PreviewCorrectBackground}" Stroke="{Binding PreviewCorrectStroke}"
+                            StrokeThickness="2" StrokeShape="RoundRectangle 12" Padding="8">
+                        <Label Text="✓ 15.0" HorizontalTextAlignment="Center" FontAttributes="Bold" />
+                    </Border>
+                    <Border Grid.Column="1" BackgroundColor="{Binding PreviewWrongBackground}" Stroke="{Binding PreviewWrongStroke}"
+                            StrokeThickness="2" StrokeShape="RoundRectangle 12" Padding="8">
+                        <Label Text="✗ 15" HorizontalTextAlignment="Center" FontAttributes="Bold" />
+                    </Border>
+                    <Border Grid.Column="2" BackgroundColor="{Binding PreviewOptionBackground}" Stroke="{Binding PreviewOptionStroke}"
+                            StrokeThickness="2" StrokeShape="RoundRectangle 12" Padding="8" Opacity="0.6">
+                        <Label Text="45" HorizontalTextAlignment="Center" />
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
+        </Border>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="16,8,16,32" Spacing="24">
+
+                <!-- Thème -->
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🎨 Thème" Style="{StaticResource HeaderLabel}" />
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding ThemeOptions}"
+                                         BindableLayout.ItemTemplate="{StaticResource OptionCard}" />
+                </VerticalStackLayout>
+
+                <!-- Couleurs de correction -->
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="✅ Couleurs de correction" Style="{StaticResource HeaderLabel}" />
+                    <Border Style="{StaticResource Card}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Adaptées au daltonisme" Style="{StaticResource SubHeaderLabel}" />
+                                <Label Text="Bleu pour une bonne réponse, orange pour une erreur, au lieu du vert et du rouge. Les symboles ✓ et ✗ restent toujours affichés."
+                                       Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding AdaptedFeedback}" OnColor="{DynamicResource Primary}"
+                                    VerticalOptions="Center" SemanticProperties.Description="Couleurs adaptées au daltonisme" />
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- Police -->
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🔤 Police" Style="{StaticResource HeaderLabel}" />
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Fonts}"
+                                         BindableLayout.ItemTemplate="{StaticResource OptionCard}" />
+                    <Label Text="Le code reste dans une police à chasse fixe, pour garder l'alignement des lignes."
+                           Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
+                </VerticalStackLayout>
+
+                <!-- Tailles -->
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🔍 Taille du texte" Style="{StaticResource HeaderLabel}" />
+                    <FlexLayout Wrap="Wrap" Direction="Row" BindableLayout.ItemsSource="{Binding TextSizes}"
+                                BindableLayout.ItemTemplate="{StaticResource SizeChip}" />
+                    <Label Text="💻 Taille du code" Style="{StaticResource HeaderLabel}" Margin="0,8,0,0" />
+                    <FlexLayout Wrap="Wrap" Direction="Row" BindableLayout.ItemsSource="{Binding CodeSizes}"
+                                BindableLayout.ItemTemplate="{StaticResource SizeChip}" />
+                    <Label Text="Les longues lignes de code défilent horizontalement."
+                           Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
+                </VerticalStackLayout>
+
+                <!-- Animations -->
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🎞 Animations" Style="{StaticResource HeaderLabel}" />
+                    <Border Style="{StaticResource Card}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Réduire les animations" Style="{StaticResource SubHeaderLabel}" />
+                                <Label Text="La correction apparaît sans glisser ni trembler, et le bilan sans confettis."
+                                       Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding ReduceMotion}" OnColor="{DynamicResource Primary}"
+                                    VerticalOptions="Center" SemanticProperties.Description="Réduire les animations" />
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
+
+                <Button Text="Rétablir les réglages par défaut" Command="{Binding ResetCommand}"
+                        Style="{StaticResource SecondaryButton}" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+
+</ContentPage>

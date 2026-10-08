@@ -1,3 +1,4 @@
+using QuizzWare.Services;
 using QuizzWare.ViewModels;
 
 namespace QuizzWare.Views;
@@ -7,11 +8,13 @@ public partial class ResultPage : ContentPage
     private static readonly string[] ConfettiEmojis = ["🎉", "✨", "⭐", "🎊", "💜", "🟨", "🟪"];
 
     private readonly ResultViewModel _viewModel;
+    private readonly AppearanceService _appearance;
     private bool _played;
 
-    public ResultPage(ResultViewModel viewModel)
+    public ResultPage(ResultViewModel viewModel, AppearanceService appearance)
     {
         InitializeComponent();
+        _appearance = appearance;
         BindingContext = _viewModel = viewModel;
     }
 
@@ -23,6 +26,8 @@ public partial class ResultPage : ContentPage
         _played = true;
 
         _ = _viewModel.PlayEndSoundAsync();
+        if (_appearance.Current.ReduceMotion)
+            return; // Accessibilité : ni rebond du score, ni confettis.
 
         // Le score « saute » à l'arrivée.
         ScoreBlock.Scale = 0.6;

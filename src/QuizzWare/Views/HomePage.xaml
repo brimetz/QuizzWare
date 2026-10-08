@@ -15,13 +15,13 @@
                         <Label Text="{Binding SummaryText}" Style="{StaticResource MutedLabel}" />
                     </VerticalStackLayout>
                     <Border Grid.Column="1" Style="{StaticResource Pill}" VerticalOptions="Start">
-                        <Label Text="{Binding StreakText}" FontAttributes="Bold" FontSize="16" />
+                        <Label Text="{Binding StreakText}" FontAttributes="Bold" FontSize="{DynamicResource FontSizeReading}" />
                     </Border>
                     <Border Grid.Column="2" Style="{StaticResource Pill}" VerticalOptions="Start">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding OpenSettingsCommand}" />
                         </Border.GestureRecognizers>
-                        <Label Text="⚙️" FontSize="16" />
+                        <Label Text="⚙️" FontSize="{DynamicResource FontSizeReading}" />
                     </Border>
                 </Grid>
 
@@ -49,17 +49,17 @@
                     </Border.GestureRecognizers>
                     <Grid ColumnDefinitions="56,*" ColumnSpacing="14">
                         <Border Style="{StaticResource Badge}" BackgroundColor="{Binding Color}" VerticalOptions="Start">
-                            <Label Text="{Binding Icon}" FontAttributes="Bold" FontSize="16" TextColor="White"
+                            <Label Text="{Binding Icon}" FontAttributes="Bold" FontSize="16" FontFamily="" TextColor="White"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="6">
                             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
                                 <Label Text="{Binding Name}" Style="{StaticResource SubHeaderLabel}" />
-                                <Label Grid.Column="1" Text="★" TextColor="{StaticResource Warning}" FontSize="16"
+                                <Label Grid.Column="1" Text="★" TextColor="{DynamicResource Warning}" FontSize="{DynamicResource FontSizeReading}"
                                        IsVisible="{Binding IsFavorite}" />
                                 <Border Grid.Column="2" Style="{StaticResource Pill}" Padding="8,2" VerticalOptions="Start"
                                         IsVisible="{Binding IsPremiumLocked}">
-                                    <Label Text="⭐ Premium" FontSize="11" FontAttributes="Bold" TextColor="{StaticResource Warning}" />
+                                    <Label Text="⭐ Premium" FontSize="11" FontAttributes="Bold" TextColor="{DynamicResource Warning}" />
                                 </Border>
                             </Grid>
                             <Label Text="{Binding LevelText}" Style="{StaticResource MutedLabel}" />

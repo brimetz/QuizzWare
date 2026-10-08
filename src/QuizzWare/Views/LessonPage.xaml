@@ -12,7 +12,7 @@
             <VerticalStackLayout Padding="16,8,16,24" Spacing="20">
                 <VerticalStackLayout Spacing="6">
                     <Label Text="{Binding Title}" Style="{StaticResource TitleLabel}" FontSize="26" />
-                    <Label Text="{Binding Summary}" Style="{StaticResource MutedLabel}" FontSize="16" />
+                    <Label Text="{Binding Summary}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeReading}" />
                 </VerticalStackLayout>
 
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding Sections}" Spacing="16">
@@ -20,7 +20,7 @@
                         <DataTemplate x:DataType="vm:SectionItem">
                             <Border Style="{StaticResource Card}">
                                 <VerticalStackLayout Spacing="10">
-                                    <Label Text="{Binding Title}" Style="{StaticResource SubHeaderLabel}" TextColor="{StaticResource Primary}" />
+                                    <Label Text="{Binding Title}" Style="{StaticResource SubHeaderLabel}" TextColor="{DynamicResource Primary}" />
                                     <Label Text="{Binding Body}" Style="{StaticResource BodyLabel}" />
                                     <controls:CodeBlockView Lines="{Binding CodeLines}" IsVisible="{Binding HasCode}" />
                                 </VerticalStackLayout>
@@ -29,7 +29,7 @@
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
 
-                <Label Text="⚑ Une erreur dans ce cours ? Signale-la" Style="{StaticResource MutedLabel}" FontSize="13"
+                <Label Text="⚑ Une erreur dans ce cours ? Signale-la" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}"
                        HorizontalOptions="Center" Padding="8">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding ReportCommand}" />
@@ -38,7 +38,7 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <Border Grid.Row="1" BackgroundColor="{StaticResource Background}" StrokeThickness="0" Padding="16,12,16,20">
+        <Border Grid.Row="1" BackgroundColor="{DynamicResource Background}" StrokeThickness="0" Padding="16,12,16,20">
             <Button Text="{Binding QuizButtonText}" Command="{Binding StartQuizCommand}" />
         </Border>
     </Grid>

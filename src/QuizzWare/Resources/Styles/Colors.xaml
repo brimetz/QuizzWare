@@ -2,9 +2,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <!-- Garder synchronisé avec ViewModels/Palette.cs -->
+    <!-- Valeurs par défaut (thème sombre). Services/AppearanceService les remplace selon les réglages d'accessibilité :
+         dans les pages, toujours y accéder par DynamicResource. Les thèmes sont définis dans Core/Appearance/Themes.cs. -->
     <Color x:Key="Primary">#7C4DFF</Color>
     <Color x:Key="PrimaryDark">#5A2FD6</Color>
+    <Color x:Key="PrimarySurface">#2E2560</Color>
+    <Color x:Key="OnPrimary">#FFFFFF</Color>
     <Color x:Key="Background">#0F1221</Color>
     <Color x:Key="Surface">#1A1F36</Color>
     <Color x:Key="SurfaceRaised">#242A47</Color>
@@ -15,8 +18,22 @@
     <Color x:Key="Error">#FF5370</Color>
     <Color x:Key="Warning">#FFC857</Color>
     <Color x:Key="CodeBackground">#0A0D18</Color>
+    <Color x:Key="CodeText">#E8EAF6</Color>
+    <Color x:Key="CodeString">#C3E88D</Color>
 
-    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}" />
-    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Surface}" />
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#7C4DFF" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#1A1F36" />
+
+    <!-- Police et tailles de texte (réglables dans Accessibilité) -->
+    <x:String x:Key="AppFont"></x:String>
+    <x:Double x:Key="FontSizeSmall">13</x:Double>
+    <x:Double x:Key="FontSizeMuted">14</x:Double>
+    <x:Double x:Key="FontSizeBody">15</x:Double>
+    <x:Double x:Key="FontSizeReading">16</x:Double>
+    <x:Double x:Key="FontSizeButton">16</x:Double>
+    <x:Double x:Key="FontSizeSubHeader">17</x:Double>
+    <x:Double x:Key="FontSizeHeader">20</x:Double>
+    <x:Double x:Key="FontSizeTitle">30</x:Double>
+    <x:Double x:Key="FontSizeCode">13</x:Double>
 
 </ResourceDictionary>

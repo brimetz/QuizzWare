@@ -13,16 +13,16 @@
                 <VerticalStackLayout x:Name="ScoreBlock" Spacing="6" HorizontalOptions="Center">
                     <Label Text="{Binding Headline}" Style="{StaticResource TitleLabel}" HorizontalTextAlignment="Center" />
                     <Label Text="{Binding ScoreText}" FontSize="56" FontAttributes="Bold" HorizontalTextAlignment="Center" />
-                    <Label Text="{Binding XpText}" TextColor="{StaticResource Warning}" FontSize="18" FontAttributes="Bold"
+                    <Label Text="{Binding XpText}" TextColor="{DynamicResource Warning}" FontSize="18" FontAttributes="Bold"
                            HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
 
                 <!-- Bilan d'examen : entretien ou test de niveau -->
-                <Border Style="{StaticResource Card}" IsVisible="{Binding HasReport}" Stroke="{StaticResource Primary}">
+                <Border Style="{StaticResource Card}" IsVisible="{Binding HasReport}" Stroke="{DynamicResource Primary}">
                     <VerticalStackLayout Spacing="8">
-                        <Label Text="{Binding ReportTitle}" Style="{StaticResource SubHeaderLabel}" TextColor="{StaticResource Primary}" />
+                        <Label Text="{Binding ReportTitle}" Style="{StaticResource SubHeaderLabel}" TextColor="{DynamicResource Primary}" />
                         <Label Text="{Binding ReportDetails}" Style="{StaticResource BodyLabel}" />
-                        <Label Text="À retravailler" Style="{StaticResource SubHeaderLabel}" FontSize="15"
+                        <Label Text="À retravailler" Style="{StaticResource SubHeaderLabel}" FontSize="{DynamicResource FontSizeBody}"
                                IsVisible="{Binding HasWeakTopics}" Margin="0,6,0,0" />
                         <VerticalStackLayout BindableLayout.ItemsSource="{Binding WeakTopics}" Spacing="4" IsVisible="{Binding HasWeakTopics}">
                             <BindableLayout.ItemTemplate>
@@ -35,7 +35,7 @@
                 </Border>
 
                 <Border Style="{StaticResource Card}" IsVisible="{Binding IsLevelUp}"
-                        BackgroundColor="{StaticResource PrimaryDark}" Stroke="{StaticResource Primary}">
+                        BackgroundColor="{DynamicResource PrimaryDark}" Stroke="{DynamicResource Primary}">
                     <Label Text="{Binding LevelUpText}" FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="Center" />
                 </Border>
 
@@ -54,16 +54,16 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <Label Text="{Binding LessonText}" TextColor="{Binding LessonColor}" FontSize="16"
+                <Label Text="{Binding LessonText}" TextColor="{Binding LessonColor}" FontSize="{DynamicResource FontSizeReading}"
                        HorizontalTextAlignment="Center" />
 
-                <Label Text="{Binding StreakText}" Style="{StaticResource MutedLabel}" FontSize="16"
+                <Label Text="{Binding StreakText}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeReading}"
                        HorizontalTextAlignment="Center" />
 
             </VerticalStackLayout>
         </ScrollView>
 
-        <Border Grid.Row="1" BackgroundColor="{StaticResource Background}" StrokeThickness="0" Padding="16,12,16,20">
+        <Border Grid.Row="1" BackgroundColor="{DynamicResource Background}" StrokeThickness="0" Padding="16,12,16,20">
             <Button Text="Continuer" Command="{Binding ContinueCommand}" />
         </Border>
 

@@ -15,7 +15,7 @@
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="56,*" ColumnSpacing="14">
                         <Border Style="{StaticResource Badge}" BackgroundColor="{Binding Color}">
-                            <Label Text="{Binding Icon}" FontAttributes="Bold" FontSize="16" TextColor="White"
+                            <Label Text="{Binding Icon}" FontAttributes="Bold" FontSize="16" FontFamily="" TextColor="White"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
@@ -30,7 +30,7 @@
             </Border>
 
             <!-- Test de niveau : proposé tant qu'aucune leçon n'est validée -->
-            <Border Style="{StaticResource Card}" Stroke="{StaticResource Warning}" IsVisible="{Binding CanTakePlacement}">
+            <Border Style="{StaticResource Card}" Stroke="{DynamicResource Warning}" IsVisible="{Binding CanTakePlacement}">
                 <Border.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding StartPlacementCommand}" />
                 </Border.GestureRecognizers>
@@ -38,9 +38,9 @@
                     <Label Text="🎯" FontSize="28" VerticalOptions="Center" />
                     <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                         <Label Text="Test de niveau" Style="{StaticResource SubHeaderLabel}" />
-                        <Label Text="{Binding PlacementText}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                        <Label Text="{Binding PlacementText}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                     </VerticalStackLayout>
-                    <Label Grid.Column="2" Text="›" FontSize="28" TextColor="{StaticResource Warning}" VerticalOptions="Center" />
+                    <Label Grid.Column="2" Text="›" FontSize="28" TextColor="{DynamicResource Warning}" VerticalOptions="Center" />
                 </Grid>
             </Border>
 
@@ -49,7 +49,7 @@
                     Style="{StaticResource SecondaryButton}" />
 
             <!-- Entrée vers l'arbre des spécialisations -->
-            <Border Style="{StaticResource Card}" Stroke="{StaticResource Primary}" IsVisible="{Binding HasSpecializations}">
+            <Border Style="{StaticResource Card}" Stroke="{DynamicResource Primary}" IsVisible="{Binding HasSpecializations}">
                 <Border.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding OpenSpecializationsCommand}" />
                 </Border.GestureRecognizers>
@@ -57,9 +57,9 @@
                     <Label Text="🌳" FontSize="28" VerticalOptions="Center" />
                     <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                         <Label Text="Arbre des spécialisations" Style="{StaticResource SubHeaderLabel}" />
-                        <Label Text="{Binding SpecializationsText}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                        <Label Text="{Binding SpecializationsText}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
                     </VerticalStackLayout>
-                    <Label Grid.Column="2" Text="›" FontSize="28" TextColor="{StaticResource Primary}" VerticalOptions="Center" />
+                    <Label Grid.Column="2" Text="›" FontSize="28" TextColor="{DynamicResource Primary}" VerticalOptions="Center" />
                 </Grid>
             </Border>
 

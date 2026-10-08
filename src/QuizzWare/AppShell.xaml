@@ -4,9 +4,9 @@
        xmlns:views="clr-namespace:QuizzWare.Views"
        x:Class="QuizzWare.AppShell"
        Shell.FlyoutBehavior="Disabled"
-       Shell.BackgroundColor="{StaticResource Background}"
-       Shell.ForegroundColor="{StaticResource TextPrimary}"
-       Shell.TitleColor="{StaticResource TextPrimary}">
+       Shell.BackgroundColor="{DynamicResource Background}"
+       Shell.ForegroundColor="{DynamicResource TextPrimary}"
+       Shell.TitleColor="{DynamicResource TextPrimary}">
 
     <ShellContent Title="QuizzWare"
                   ContentTemplate="{DataTemplate views:HomePage}"

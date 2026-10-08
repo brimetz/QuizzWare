@@ -1,3 +1,4 @@
+using QuizzWare.Services;
 using QuizzWare.ViewModels;
 
 namespace QuizzWare.Views;
@@ -5,10 +6,12 @@ namespace QuizzWare.Views;
 public partial class QuizPage : ContentPage
 {
     private readonly QuizViewModel _viewModel;
+    private readonly AppearanceService _appearance;
 
-    public QuizPage(QuizViewModel viewModel)
+    public QuizPage(QuizViewModel viewModel, AppearanceService appearance)
     {
         InitializeComponent();
+        _appearance = appearance;
         BindingContext = _viewModel = viewModel;
         _viewModel.AnswerChecked += OnAnswerChecked;
     }
@@ -31,6 +34,11 @@ public partial class QuizPage : ContentPage
         FeedbackPanel.AbortAnimation("slide");
         FeedbackPanel.TranslationY = 240;
         FeedbackPanel.TranslationX = 0;
+        if (_appearance.Current.ReduceMotion)
+        {
+            FeedbackPanel.TranslationY = 0; // Accessibilité : la correction apparaît sans glisser ni trembler.
+            return;
+        }
         await FeedbackPanel.TranslateTo(0, 0, 220, Easing.CubicOut);
 
         if (isCorrect)

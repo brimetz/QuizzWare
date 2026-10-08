@@ -1,26 +1,61 @@
+using QuizzWare.Core.Appearance;
+
 namespace QuizzWare.ViewModels;
 
-/// <summary>Couleurs utilisées depuis le code. Garder synchronisé avec Resources/Styles/Colors.xaml.</summary>
+/// <summary>
+/// Couleurs utilisées depuis le code, issues du thème choisi dans Accessibilité (voir Core/Appearance/Themes.cs).
+/// Les pages en XAML utilisent les mêmes couleurs via les ressources dynamiques ; <see cref="Services.AppearanceService"/>
+/// met les deux à jour ensemble.
+/// </summary>
 public static class Palette
 {
-    public static readonly Color Primary = Color.FromArgb("#7C4DFF");
-    public static readonly Color PrimarySurface = Color.FromArgb("#2E2560");
-    public static readonly Color Surface = Color.FromArgb("#1A1F36");
-    public static readonly Color SurfaceRaised = Color.FromArgb("#242A47");
-    public static readonly Color Stroke = Color.FromArgb("#2F365A");
-    public static readonly Color TextPrimary = Color.FromArgb("#E8EAF6");
-    public static readonly Color TextMuted = Color.FromArgb("#9AA0C3");
-    public static readonly Color Success = Color.FromArgb("#2ECC71");
-    public static readonly Color SuccessSurface = Color.FromArgb("#173D2B");
-    public static readonly Color Error = Color.FromArgb("#FF5370");
-    public static readonly Color ErrorSurface = Color.FromArgb("#45192A");
-    public static readonly Color Warning = Color.FromArgb("#FFC857");
+    public static Color Primary { get; private set; } = null!;
+    public static Color PrimarySurface { get; private set; } = null!;
+    public static Color Surface { get; private set; } = null!;
+    public static Color SurfaceRaised { get; private set; } = null!;
+    public static Color Stroke { get; private set; } = null!;
+    public static Color TextPrimary { get; private set; } = null!;
+    public static Color TextMuted { get; private set; } = null!;
+    public static Color Success { get; private set; } = null!;
+    public static Color SuccessSurface { get; private set; } = null!;
+    public static Color Error { get; private set; } = null!;
+    public static Color ErrorSurface { get; private set; } = null!;
+    public static Color Warning { get; private set; } = null!;
 
     // Coloration syntaxique
-    public static readonly Color CodeText = Color.FromArgb("#E8EAF6");
-    public static readonly Color CodeKeyword = Color.FromArgb("#C792EA");
-    public static readonly Color CodeString = Color.FromArgb("#C3E88D");
-    public static readonly Color CodeNumber = Color.FromArgb("#F78C6C");
-    public static readonly Color CodeComment = Color.FromArgb("#697098");
-    public static readonly Color CodeType = Color.FromArgb("#82AAFF");
+    public static Color CodeText { get; private set; } = null!;
+    public static Color CodeKeyword { get; private set; } = null!;
+    public static Color CodeString { get; private set; } = null!;
+    public static Color CodeNumber { get; private set; } = null!;
+    public static Color CodeComment { get; private set; } = null!;
+    public static Color CodeType { get; private set; } = null!;
+
+    /// <summary>Taille du code : les spans (lignes colorées) la reçoivent explicitement, comme leur police.</summary>
+    public static double CodeFontSize { get; private set; } = 13;
+
+    static Palette() => Apply(Themes.Dark, adaptedFeedback: false, codeFontSize: 13);
+
+    public static void Apply(Theme theme, bool adaptedFeedback, double codeFontSize)
+    {
+        var feedback = theme.FeedbackFor(adaptedFeedback);
+        Primary = Color.FromArgb(theme.Primary);
+        PrimarySurface = Color.FromArgb(theme.PrimarySurface);
+        Surface = Color.FromArgb(theme.Surface);
+        SurfaceRaised = Color.FromArgb(theme.SurfaceRaised);
+        Stroke = Color.FromArgb(theme.Stroke);
+        TextPrimary = Color.FromArgb(theme.TextPrimary);
+        TextMuted = Color.FromArgb(theme.TextMuted);
+        Success = Color.FromArgb(feedback.Success);
+        SuccessSurface = Color.FromArgb(feedback.SuccessSurface);
+        Error = Color.FromArgb(feedback.Error);
+        ErrorSurface = Color.FromArgb(feedback.ErrorSurface);
+        Warning = Color.FromArgb(theme.Warning);
+        CodeText = Color.FromArgb(theme.CodeText);
+        CodeKeyword = Color.FromArgb(theme.CodeKeyword);
+        CodeString = Color.FromArgb(theme.CodeString);
+        CodeNumber = Color.FromArgb(theme.CodeNumber);
+        CodeComment = Color.FromArgb(theme.CodeComment);
+        CodeType = Color.FromArgb(theme.CodeType);
+        CodeFontSize = codeFontSize;
+    }
 }

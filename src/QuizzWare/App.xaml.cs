@@ -7,10 +7,10 @@ public partial class App : Application
     private readonly ReminderCoordinator _reminders;
     private readonly ISubscriptionService _subscription;
 
-    public App(ReminderCoordinator reminders, ISubscriptionService subscription)
+    public App(ReminderCoordinator reminders, ISubscriptionService subscription, AppearanceService appearance)
     {
         InitializeComponent();
-        UserAppTheme = AppTheme.Dark;
+        appearance.ApplySaved(); // thème, police et tailles choisis dans Accessibilité, avant la première page
         _reminders = reminders;
         _subscription = subscription;
         _reminders.Start();

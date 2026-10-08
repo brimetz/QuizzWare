@@ -98,8 +98,13 @@ public partial class OptionViewModel(int index, string text, bool isMultiple, Ac
     [ObservableProperty]
     private double opacity = 1;
 
-    /// <summary>Lettre (A, B, C...) pour un choix unique, case à cocher pour un choix multiple.</summary>
-    public string Marker => isMultiple ? (IsSelected ? "☑" : "☐") : ((char)('A' + index)).ToString();
+    /// <summary>
+    /// Lettre (A, B, C...) pour un choix unique, case à cocher pour un choix multiple ; après correction, ✓ ou ✗ :
+    /// le résultat ne repose pas seulement sur la couleur (accessibilité).
+    /// </summary>
+    public string Marker => correctionMark ?? (isMultiple ? (IsSelected ? "☑" : "☐") : ((char)('A' + index)).ToString());
+
+    private string? correctionMark;
 
     partial void OnIsSelectedChanged(bool value) => SetState(value ? OptionState.Selected : OptionState.Idle);
 
@@ -108,6 +113,14 @@ public partial class OptionViewModel(int index, string text, bool isMultiple, Ac
 
     public void SetState(OptionState state)
     {
+        correctionMark = state switch
+        {
+            OptionState.Correct => "✓",
+            OptionState.Wrong => "✗",
+            _ => null,
+        };
+        OnPropertyChanged(nameof(Marker));
+
         (BackgroundColor, StrokeColor, Opacity) = state switch
         {
             OptionState.Selected => (Palette.PrimarySurface, Palette.Primary, 1.0),

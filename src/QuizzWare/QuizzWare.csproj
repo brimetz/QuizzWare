@@ -50,6 +50,8 @@
     <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0F1221" BaseSize="128,128" />
     <!-- Sons générés par tools/GenerateurSons.ps1 -->
     <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- Polices d'accessibilité (SIL Open Font License 1.1, licences dans le même dossier) -->
+    <MauiFont Include="Resources\Fonts\*.ttf;Resources\Fonts\*.otf" />
   </ItemGroup>
 
   <ItemGroup>
