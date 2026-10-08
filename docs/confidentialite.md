@@ -1,6 +1,6 @@
 # Règles de confidentialité de QuizzWare
 
-*Dernière mise à jour : 7 octobre 2026*
+*Dernière mise à jour : 8 octobre 2026*
 
 QuizzWare est une application d'apprentissage pour développeurs. Elle a été conçue pour fonctionner **entièrement sur ton appareil**.
 
@@ -28,6 +28,12 @@ Les rappels quotidiens sont des notifications **locales**, programmées par l'ap
 ## Signaler une erreur
 
 Le lien « ⚑ Signaler » ouvre ton navigateur sur la page GitHub du projet, avec un formulaire pré-rempli (identifiant de la question et version de l'application). Rien n'est envoyé tant que tu ne valides pas toi-même le formulaire sur GitHub, dont les [règles de confidentialité](https://docs.github.com/fr/site-policy/privacy-policies/github-general-privacy-statement) s'appliquent alors.
+
+## Plantages et problèmes
+
+Si l'application se ferme de façon inattendue ou rencontre une erreur, elle en garde une trace **sur ton appareil** : type d'erreur, message, emplacement dans le code, écran affiché, version de l'application, du système et modèle du téléphone. Les noms de session présents dans les chemins de fichiers et les adresses e-mail sont retirés. Seuls les 20 derniers rapports sont conservés.
+
+Ces rapports ne sont **jamais envoyés automatiquement**. Après un plantage, l'application te propose de l'envoyer ; tu peux aussi utiliser **Réglages › Signaler un problème**. Dans les deux cas, ton navigateur s'ouvre sur un formulaire GitHub pré-rempli : tu le relis, tu peux le modifier, et rien n'est publié tant que tu ne le valides pas toi-même. Les issues GitHub sont publiques, et les [règles de confidentialité de GitHub](https://docs.github.com/fr/site-policy/privacy-policies/github-general-privacy-statement) s'appliquent alors.
 
 ## Enfants
 

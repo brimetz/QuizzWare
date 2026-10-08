@@ -7,9 +7,9 @@ namespace QuizzWare.Services;
 /// <summary>
 /// Applique les réglages d'accessibilité (thème, couleurs de correction, police, tailles, animations) à toute l'application.
 /// Les pages lisent couleurs, polices et tailles par <c>DynamicResource</c> : elles se mettent à jour immédiatement.
-/// Les réglages sont propres à l'appareil (Preferences), indépendants de la progression.
+/// Les réglages sont propres à l'appareil (IPreferences), indépendants de la progression.
 /// </summary>
-public sealed class AppearanceService
+public sealed class AppearanceService(IPreferences preferences)
 {
     private const string PreferenceKey = "apparence";
 
@@ -38,7 +38,7 @@ public sealed class AppearanceService
         AppearanceSettings saved;
         try
         {
-            var json = Preferences.Default.Get(PreferenceKey, string.Empty);
+            var json = preferences.Get(PreferenceKey, string.Empty);
             saved = string.IsNullOrEmpty(json) ? new() : JsonSerializer.Deserialize<AppearanceSettings>(json) ?? new();
         }
         catch (JsonException)
@@ -93,7 +93,7 @@ public sealed class AppearanceService
         }
 
         if (save)
-            Preferences.Default.Set(PreferenceKey, JsonSerializer.Serialize(Current));
+            preferences.Set(PreferenceKey, JsonSerializer.Serialize(Current));
         Changed?.Invoke(this, Current);
     }
 

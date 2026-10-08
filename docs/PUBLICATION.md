@@ -56,7 +56,7 @@ dotnet build src/QuizzWare -t:Run -f net9.0-android -c Release
 |---|---|
 | Fiche du Store | Textes de [play-store/fiche.md](play-store/fiche.md), icône `play-store/icone-512.png`, bannière `play-store/banniere-1024x500.png`, au moins 2 captures d'écran de téléphone |
 | Règles de confidentialité | URL publique de [confidentialite.md](confidentialite.md), par exemple `https://github.com/brimetz/QuizzWare/blob/main/docs/confidentialite.md` (le dépôt doit être public) |
-| Sécurité des données | **Aucune donnée collectée ni partagée** : tout reste sur l'appareil. Pas de chiffrement en transit à déclarer (aucune donnée envoyée). |
+| Sécurité des données | **Aucune donnée collectée ni partagée** : tout reste sur l'appareil. Pas de chiffrement en transit à déclarer (aucune donnée envoyée). Les rapports de plantage restent sur l'appareil ; ils ne sont transmis que si l'utilisateur les publie lui-même sur GitHub depuis son navigateur, ce qui ne constitue pas une collecte par l'application. Si un service de remontée automatique (Sentry…) était ajouté un jour, il faudrait déclarer « Plantages » et « Diagnostics ». |
 | Publicités | Non |
 | Accès à l'application | Tout est accessible sans identifiants (le contenu Premium s'obtient par l'abonnement Google Play, pas par un compte) |
 | Classification du contenu | Questionnaire IARC : catégorie « Référence, actualités ou éducation », aucune violence, aucun contenu sensible → classé tout public |

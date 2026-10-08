@@ -37,7 +37,14 @@ public static class MauiProgram
         builder.AddAudio();
         builder.Services.AddSingleton<FeedbackService>();
         builder.Services.AddSingleton<ContentReporter>();
+        builder.Services.AddSingleton(Preferences.Default);
         builder.Services.AddSingleton<AppearanceService>();
+
+        // Plantages et erreurs : journal local, envoi par l'utilisateur seulement (issue GitHub pré-remplie)
+        builder.Services.AddSingleton(_ => new QuizzWare.Core.Diagnostics.ErrorLog(Path.Combine(FileSystem.AppDataDirectory, "erreurs.json")));
+        builder.Services.AddSingleton<IDeviceDescriber, MauiDeviceDescriber>();
+        builder.Services.AddSingleton<IBrowserLauncher, MauiBrowserLauncher>();
+        builder.Services.AddSingleton<CrashReporter>();
 
         // Abonnement Premium : Google Play Billing en Release sur mobile, simulé en développement.
 #if (ANDROID || IOS) && !DEBUG
@@ -71,6 +78,9 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        return builder.Build();
+        var app = builder.Build();
+        // Au plus tôt : un plantage pendant le démarrage doit aussi être enregistré.
+        app.Services.GetRequiredService<CrashReporter>().Install();
+        return app;
     }
 }

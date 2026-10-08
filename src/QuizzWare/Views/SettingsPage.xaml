@@ -111,6 +111,24 @@
                 </Border>
             </VerticalStackLayout>
 
+            <!-- Problème -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="🐞 Un problème ?" Style="{StaticResource HeaderLabel}" />
+                <Border Style="{StaticResource Card}" SemanticProperties.Description="Signaler un problème">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ReportProblemCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Signaler un problème" Style="{StaticResource SubHeaderLabel}" />
+                            <Label Text="{Binding ProblemText}" Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}" />
+                        </VerticalStackLayout>
+                        <Label Grid.Column="1" Text="›" FontSize="{DynamicResource FontSizeTitle}" TextColor="{DynamicResource TextMuted}"
+                               VerticalOptions="Center" />
+                    </Grid>
+                </Border>
+            </VerticalStackLayout>
+
             <!-- Profil -->
             <VerticalStackLayout Spacing="10">
                 <Label Text="🧭 Profil et centres d'intérêt" Style="{StaticResource HeaderLabel}" />

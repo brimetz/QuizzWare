@@ -6,7 +6,8 @@ using QuizzWare.Services;
 
 namespace QuizzWare.ViewModels;
 
-public partial class SettingsViewModel(ProgressService progressService, IReminderService reminders, ISubscriptionService subscription)
+public partial class SettingsViewModel(ProgressService progressService, IReminderService reminders, ISubscriptionService subscription,
+    CrashReporter crashes)
     : ObservableObject
 {
     [ObservableProperty]
@@ -67,6 +68,10 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
         (SubscriptionTitle, SubscriptionText) = subscription.IsPremium
             ? ("⭐ Premium actif", "Toutes les catégories et les entretiens illimités. Touche pour gérer ton abonnement.")
             : ("Version gratuite", $"{freeLeft} entretien{(freeLeft > 1 ? "s" : "")} gratuit{(freeLeft > 1 ? "s" : "")} restant{(freeLeft > 1 ? "s" : "")} cette semaine. Touche pour découvrir Premium.");
+        var errors = crashes.RecentErrors().Count;
+        ProblemText = errors == 0
+            ? "Ouvre un rapport pré-rempli sur GitHub : tu décris le problème, tu relis, puis tu l'envoies."
+            : $"{errors} erreur{(errors > 1 ? "s" : "")} enregistrée{(errors > 1 ? "s" : "")} ces 7 derniers jours, jointe{(errors > 1 ? "s" : "")} au rapport. Tu relis tout avant de l'envoyer.";
         _loading = false;
     }
 
@@ -113,6 +118,12 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
         if (!_loading)
             await progressService.UpdateSettingsAsync(s => s.HapticsEnabled = value);
     }
+
+    [ObservableProperty]
+    private string problemText = string.Empty;
+
+    [RelayCommand]
+    private Task ReportProblemAsync() => crashes.ReportProblemAsync();
 
     [RelayCommand]
     private Task OpenAccessibilityAsync() => Shell.Current.GoToAsync(nameof(Views.AccessibilityPage));
