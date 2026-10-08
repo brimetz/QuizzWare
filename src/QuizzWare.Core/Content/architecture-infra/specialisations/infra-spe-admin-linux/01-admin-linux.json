@@ -1,0 +1,450 @@
+{
+  "id": "linux-ch-essentiel",
+  "title": "Administration Linux : l'essentiel",
+  "summary": "systemd, comptes et disques.",
+  "lessons": [
+    {
+      "id": "linux-systemd",
+      "title": "Services avec systemd",
+      "summary": "systemctl, unités et journaux.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "systemctl",
+          "body": "systemctl start lance un service maintenant, enable l'active au démarrage, enable --now fait les deux. status montre son état (active, inactive, failed) et ses dernières lignes de journal. Après la modification d'un fichier d'unité, systemctl daemon-reload fait relire la configuration à systemd.",
+          "code": "sudo systemctl enable --now nginx\nsystemctl status nginx\nsudo systemctl daemon-reload\nsudo systemctl restart api",
+          "language": "shell"
+        },
+        {
+          "title": "journalctl",
+          "body": "journalctl lit le journal de systemd : -u filtre un service, -f suit en direct, --since limite dans le temps, -b se limite au démarrage courant (-b -1 au précédent), -p err aux erreurs.",
+          "code": "journalctl -u nginx -f --since \"10 min ago\"\njournalctl -u api -b -p err",
+          "language": "shell"
+        },
+        {
+          "title": "Les timers",
+          "body": "Un timer systemd remplace avantageusement cron : journaux intégrés, dépendances, limites de ressources, et rattrapage des exécutions manquées pendant que la machine était éteinte (Persistent=true). systemctl list-timers liste les prochaines exécutions."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "linux-systemd-q1",
+          "prompt": "Quelle différence entre systemctl enable et systemctl start ?",
+          "choices": [
+            "enable active le service au démarrage ; start le lance maintenant",
+            "Ce sont deux noms pour la même chose",
+            "start active au démarrage, enable lance maintenant",
+            "enable redémarre la machine"
+          ],
+          "answerIndex": 0,
+          "explanation": "enable --now fait les deux à la fois.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "linux-systemd-q2",
+          "prompt": "Complète : activer et démarrer nginx, puis suivre ses journaux en direct.",
+          "code": "sudo systemctl ___ --now nginx\njournalctl -u nginx ___ --since \"10 min ago\"",
+          "language": "shell",
+          "answers": [
+            "enable",
+            "-f"
+          ],
+          "distractors": [
+            "start",
+            "-n",
+            "--tail"
+          ],
+          "explanation": "-f (follow) affiche les nouvelles lignes au fur et à mesure.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "linux-systemd-q3",
+          "prompt": "Les modifications du fichier d'unité ne sont pas prises en compte. Touche la ligne en cause.",
+          "code": "sudo nano /etc/systemd/system/api.service\nsudo systemctl restart api",
+          "language": "shell",
+          "bugLines": [
+            2
+          ],
+          "explanation": "systemd garde l'ancienne version en mémoire : il faut sudo systemctl daemon-reload avant le redémarrage.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "linux-systemd-q4",
+          "prompt": "Comment voir les journaux du service api depuis ce matin ?",
+          "choices": [
+            "journalctl -u api --since today",
+            "cat /var/log/api",
+            "systemctl logs api",
+            "dmesg api"
+          ],
+          "answerIndex": 0,
+          "explanation": "--since accepte aussi des dates précises ou des durées relatives.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "linux-systemd-q5",
+          "prompt": "Quel avantage a un timer systemd sur une tâche cron ?",
+          "choices": [
+            "Journaux intégrés, dépendances, et rattrapage des exécutions manquées avec Persistent=true",
+            "Il est plus rapide à écrire",
+            "Il ne fonctionne qu'en root",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "On voit aussi les prochaines exécutions avec systemctl list-timers.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "linux-systemd-q6",
+          "prompt": "Quels états d'un service systemctl status peut-il afficher ?",
+          "choices": [
+            "active",
+            "inactive",
+            "failed",
+            "compiled"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On trouve aussi activating et deactivating pendant les transitions.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "linux-comptes",
+      "title": "Comptes, droits et SSH",
+      "summary": "Permissions, sudo et accès distant.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Permissions",
+          "body": "Chaque fichier a un propriétaire, un groupe et des droits de lecture, écriture et exécution pour le propriétaire, le groupe et les autres. chmod 640 donne rw-r----- : le propriétaire lit et écrit, le groupe lit, les autres rien. chown change le propriétaire. umask fixe les droits retirés aux nouveaux fichiers : avec 027, ils sont créés en 640 (ou 750 pour un dossier)."
+        },
+        {
+          "title": "sudo",
+          "body": "sudo exécute une commande avec d'autres droits, selon les règles de /etc/sudoers et /etc/sudoers.d/. On les modifie avec visudo, qui vérifie la syntaxe : une erreur pourrait bloquer sudo pour tout le monde. On accorde des commandes précises plutôt que ALL.",
+          "code": "# /etc/sudoers.d/deploy\ndeploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart api",
+          "language": "text"
+        },
+        {
+          "title": "SSH",
+          "body": "On se connecte avec des clés plutôt qu'un mot de passe, on interdit la connexion directe de root et l'authentification par mot de passe dans /etc/ssh/sshd_config, et fail2ban bannit les adresses qui multiplient les échecs.",
+          "code": "PermitRootLogin no\nPasswordAuthentication no",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "linux-comptes-q1",
+          "prompt": "Quels droits donne chmod 640 fichier ?",
+          "choices": [
+            "rw-r----- : le propriétaire lit et écrit, le groupe lit, les autres n'ont rien",
+            "rwxr-x--- ",
+            "rw-rw-rw-",
+            "r--r-----"
+          ],
+          "answerIndex": 0,
+          "explanation": "6 = lecture (4) + écriture (2) ; 4 = lecture ; 0 = rien.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "linux-comptes-q2",
+          "prompt": "Complète sshd_config : interdire root et les mots de passe.",
+          "code": "PermitRootLogin ___\nPasswordAuthentication ___",
+          "language": "text",
+          "answers": [
+            "no",
+            "no"
+          ],
+          "distractors": [
+            "yes",
+            "maybe",
+            "true"
+          ],
+          "explanation": "On vérifie qu'une connexion par clé fonctionne avant de recharger sshd, pour ne pas s'enfermer dehors.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "linux-comptes-q3",
+          "prompt": "Le compte de déploiement n'a besoin que de redémarrer l'API. Touche la ligne trop permissive.",
+          "code": "deploy ALL=(ALL) NOPASSWD: ALL",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Ce compte est root sans mot de passe. On limite à la commande nécessaire : NOPASSWD: /usr/bin/systemctl restart api.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "linux-comptes-q4",
+          "prompt": "Pourquoi modifier sudoers avec visudo plutôt qu'avec un éditeur quelconque ?",
+          "choices": [
+            "visudo vérifie la syntaxe avant d'enregistrer : une erreur pourrait bloquer sudo",
+            "visudo chiffre le fichier",
+            "Un autre éditeur ne peut pas ouvrir ce fichier",
+            "visudo redémarre la machine"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sur un serveur sans mot de passe root, sudo cassé peut rendre l'administration impossible.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "linux-comptes-q5",
+          "prompt": "Avec umask 027, quels droits reçoit un nouveau fichier ordinaire ?",
+          "choices": [
+            "640 : aucun droit pour les autres",
+            "777",
+            "027",
+            "600, toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "666 moins les bits du masque 027 donne 640 ; pour un dossier, 777 donne 750.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "linux-comptes-q6",
+          "prompt": "Comment durcir l'accès SSH à un serveur ?",
+          "choices": [
+            "N'accepter que l'authentification par clé",
+            "Interdire la connexion directe de root",
+            "Utiliser fail2ban contre la force brute",
+            "Ouvrir le port 22 à tous avec un mot de passe simple"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On peut aussi limiter les adresses sources ou passer par un bastion.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "linux-disques",
+      "title": "Disques, journaux et mémoire",
+      "summary": "Espace, inodes, montage et OOM.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "L'espace disque",
+          "body": "df -h montre l'espace par système de fichiers, du -sh la taille des dossiers. Deux pièges classiques : un fichier supprimé mais encore ouvert par un processus occupe toujours sa place (lsof +L1 le révèle, il faut redémarrer ou faire rouvrir le processus) ; et un disque peut être « plein » faute d'inodes (df -i) quand il contient des millions de petits fichiers.",
+          "code": "df -h\ndf -i\ndu -xsh /var/* | sort -h | tail\nsudo lsof +L1",
+          "language": "shell"
+        },
+        {
+          "title": "Journaux et montages",
+          "body": "logrotate fait tourner, compresse et supprime les vieux journaux. Dans /etc/fstab, on désigne les disques par UUID (les noms comme /dev/sdb changent quand on ajoute un disque) ; l'option nofail évite qu'un disque secondaire absent bloque le démarrage. Avec LVM, lvextend -r agrandit un volume et son système de fichiers.",
+          "code": "UUID=3f1c…  /data  ext4  defaults,nofail  0 2",
+          "language": "text"
+        },
+        {
+          "title": "La mémoire",
+          "body": "free -h distingue la mémoire libre de la mémoire disponible (le cache se libère au besoin). Quand la mémoire manque vraiment, l'OOM killer du noyau tue un processus : dmesg ou journalctl -k le montrent. top ou htop, triés par mémoire, désignent les gros consommateurs."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "linux-disques-q1",
+          "prompt": "df indique un disque plein à 100 %, mais du ne trouve que 20 Go de fichiers sur 50. Cause probable ?",
+          "choices": [
+            "Un fichier supprimé mais encore ouvert par un processus (souvent un journal)",
+            "Un bug de df",
+            "Des fichiers cachés que du ne voit jamais",
+            "La mémoire vive est pleine"
+          ],
+          "answerIndex": 0,
+          "explanation": "lsof +L1 le montre ; redémarrer ou faire rouvrir ses fichiers au processus libère l'espace.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "linux-disques-q2",
+          "prompt": "« No space left on device », alors que df -h montre de la place. Que vérifier ?",
+          "choices": [
+            "Les inodes, avec df -i",
+            "La mémoire, avec free",
+            "Le réseau",
+            "La date du système"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque fichier consomme un inode : des millions de petits fichiers les épuisent.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "linux-disques-q3",
+          "prompt": "Complète : l'espace en format lisible, puis les dossiers de /var/log les plus gros.",
+          "code": "df -___\ndu -sh /var/log/* | sort -___ | tail",
+          "language": "shell",
+          "answers": [
+            "h",
+            "h"
+          ],
+          "distractors": [
+            "n",
+            "r",
+            "k"
+          ],
+          "explanation": "sort -h sait trier des tailles comme 512K, 3M et 2G ; sort -n les mélangerait.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "linux-disques-q4",
+          "prompt": "Après l'ajout d'un disque, le serveur ne démarre plus. Touche la ligne de /etc/fstab en cause.",
+          "code": "/dev/sdb1  /data  ext4  defaults  0 2",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Le nouveau disque a décalé les noms : /dev/sdb1 ne désigne plus le même disque. On utilise l'UUID, et nofail pour un disque non essentiel.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "linux-disques-q5",
+          "prompt": "À quoi sert logrotate ?",
+          "choices": [
+            "À faire tourner, compresser et supprimer les vieux journaux",
+            "À sauvegarder les journaux dans le cloud",
+            "À chiffrer les journaux",
+            "À trier les journaux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans lui, un journal grossit jusqu'à remplir le disque.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "linux-disques-q6",
+          "prompt": "Quelles commandes aident à diagnostiquer un manque de mémoire ?",
+          "choices": [
+            "free -h",
+            "dmesg, pour les traces de l'OOM killer",
+            "top ou htop triés par mémoire",
+            "df -h"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "df concerne l'espace disque.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "linux-defi",
+    "title": "Défi entretien : le disque plein",
+    "summary": "Trouver, nettoyer, prévenir.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "linux-defi-q1",
+        "prompt": "Cas pratique 1/3 — Alerte : la partition racine d'un serveur web est pleine à 100 %. Que lancer d'abord ?",
+        "choices": [
+          "du -xsh /* | sort -h, puis descendre dans le plus gros dossier",
+          "Redémarrer le serveur",
+          "rm -rf /tmp/*",
+          "Formater le disque"
+        ],
+        "answerIndex": 0,
+        "explanation": "-x reste sur le même système de fichiers : on ne compte pas les autres disques montés.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "linux-defi-q2",
+        "prompt": "Cas pratique 2/3 — /var/log/app contient un seul fichier de 30 Go, jamais tourné. Que faire durablement ?",
+        "choices": [
+          "Configurer logrotate pour ce journal, avec rotation, compression et conservation limitée",
+          "Le supprimer chaque semaine à la main",
+          "Agrandir le disque tous les mois",
+          "Désactiver les journaux"
+        ],
+        "answerIndex": 0,
+        "explanation": "logrotate doit aussi signaler à l'application de rouvrir son fichier (ou utiliser copytruncate).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "linux-defi-q3",
+        "prompt": "Cas pratique 3/3 — Après la suppression du gros fichier, df n'a pas bougé. Pourquoi, et que faire ?",
+        "choices": [
+          "L'application le tient encore ouvert : la faire rouvrir ses journaux ou la redémarrer (lsof +L1 le confirme)",
+          "df se met à jour une fois par jour",
+          "Le fichier est dans la corbeille",
+          "Il faut redémarrer le serveur"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'espace n'est libéré que quand plus aucun processus n'a le fichier ouvert.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "linux-defi-q4",
+        "prompt": "Après un redémarrage, le service api est en état failed. Comment comprendre pourquoi ?",
+        "choices": [
+          "systemctl status api, puis journalctl -u api -b",
+          "Réinstaller le service",
+          "ls /etc",
+          "ping localhost"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les dernières lignes du journal donnent presque toujours la cause.",
+        "difficulty": 1
+      },
+      {
+        "type": "order",
+        "id": "linux-defi-q5",
+        "prompt": "Remets dans l'ordre la modification d'un service.",
+        "language": "shell",
+        "lines": [
+          "sudo nano /etc/systemd/system/api.service",
+          "sudo systemctl daemon-reload",
+          "sudo systemctl restart api",
+          "systemctl status api"
+        ],
+        "explanation": "On vérifie toujours l'état après le redémarrage.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "linux-defi-q6",
+        "prompt": "Que font ces options de journalctl ?",
+        "choices": [
+          "-u filtre un service",
+          "-b se limite au démarrage courant",
+          "-f suit le journal en direct",
+          "-z compresse le journal"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La rétention du journal se règle dans journald.conf.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

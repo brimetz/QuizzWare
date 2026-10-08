@@ -1,0 +1,445 @@
+{
+  "id": "tf-ch-essentiel",
+  "title": "Terraform : l'essentiel",
+  "summary": "Ressources, état et modules.",
+  "lessons": [
+    {
+      "id": "tf-bases",
+      "title": "Ressources et cycle de vie",
+      "summary": "Providers, plan et apply.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Décrire l'infrastructure",
+          "body": "Terraform décrit l'infrastructure en HCL, de façon déclarative : on écrit l'état voulu, pas les étapes. Un provider (AWS, Azure, Kubernetes, GitHub…) fournit des types de ressources ; une ressource est un objet que Terraform crée et gère ; une data source lit un objet existant sans le gérer. Les variables paramètrent, les outputs exposent des valeurs.",
+          "code": "variable \"env\" {\n  type = string\n}\n\nresource \"aws_s3_bucket\" \"logs\" {\n  bucket = \"acme-logs-${var.env}\"\n}\n\noutput \"bucket_arn\" {\n  value = aws_s3_bucket.logs.arn\n}",
+          "language": "text"
+        },
+        {
+          "title": "init, plan, apply",
+          "body": "terraform init télécharge les providers et configure le stockage de l'état. terraform plan compare le code, l'état et la réalité, et affiche ce qui serait créé, modifié ou détruit, sans rien toucher. terraform apply applique. On relit toujours le plan, surtout les lignes qui détruisent ou remplacent."
+        },
+        {
+          "title": "Les dépendances",
+          "body": "Référencer l'attribut d'une autre ressource (aws_s3_bucket.logs.arn) crée une dépendance : Terraform construit un graphe et crée les ressources dans le bon ordre, en parallèle quand c'est possible. depends_on n'est nécessaire que pour une dépendance invisible dans le code. Aucun secret ne s'écrit en dur dans les fichiers .tf."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "tf-bases-q1",
+          "prompt": "Que fait terraform plan ?",
+          "choices": [
+            "Il compare code, état et réalité, et affiche les changements prévus sans les appliquer",
+            "Il applique les changements",
+            "Il supprime l'infrastructure",
+            "Il formate les fichiers"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut enregistrer le plan (-out) pour appliquer exactement ce qui a été relu.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "tf-bases-q2",
+          "prompt": "À quoi sert le fichier d'état (state) ?",
+          "choices": [
+            "À associer chaque ressource du code à l'objet réel créé, avec ses identifiants et attributs",
+            "À stocker le code source",
+            "À journaliser les connexions",
+            "À rien, c'est un cache facultatif"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans lui, Terraform ne saurait pas quel bucket réel correspond à aws_s3_bucket.logs.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "tf-bases-q3",
+          "prompt": "Complète : utiliser la variable env et exposer le nom du bucket.",
+          "code": "resource \"aws_s3_bucket\" \"logs\" {\n  bucket = \"acme-logs-${___.env}\"\n}\n\noutput \"nom\" {\n  ___ = aws_s3_bucket.logs.bucket\n}",
+          "language": "text",
+          "answers": [
+            "var",
+            "value"
+          ],
+          "distractors": [
+            "variable",
+            "local",
+            "return"
+          ],
+          "explanation": "On lit une variable avec var.nom et une valeur locale avec local.nom.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "tf-bases-q4",
+          "prompt": "Revue de code : touche la ligne problématique.",
+          "code": "resource \"aws_db_instance\" \"main\" {\n  engine   = \"postgres\"\n  username = \"admin\"\n  password = \"Sup3rS3cret!\"\n}",
+          "language": "text",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le mot de passe finit dans le dépôt. On le laisse gérer par le service (manage_master_user_password) ou on le lit depuis un gestionnaire de secrets.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "tf-bases-q5",
+          "prompt": "Quelle différence entre une data source et une ressource ?",
+          "choices": [
+            "Une data source lit un objet existant sans le gérer ; une ressource est créée et gérée par Terraform",
+            "Aucune",
+            "Une data source crée des données dans une base",
+            "Une ressource est en lecture seule"
+          ],
+          "answerIndex": 0,
+          "explanation": "Par exemple, lire l'identifiant d'un VPC créé par une autre équipe.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "tf-bases-q6",
+          "prompt": "Quelles commandes font partie du cycle Terraform habituel ?",
+          "choices": [
+            "terraform init",
+            "terraform plan",
+            "terraform apply",
+            "terraform compile"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Terraform n'a pas d'étape de compilation.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "tf-etat",
+      "title": "Gérer l'état",
+      "summary": "Backend distant, verrou et dérive.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Un état partagé et verrouillé",
+          "body": "En équipe, l'état vit dans un backend distant (un bucket S3, Azure Storage, Terraform Cloud), chiffré et partagé par tous et par la CI. Le verrouillage empêche deux apply simultanés de le corrompre. On sépare les états par environnement et par grand composant, pour limiter l'impact d'une erreur.",
+          "code": "terraform {\n  backend \"s3\" {\n    bucket       = \"acme-tfstate\"\n    key          = \"prod/reseau.tfstate\"\n    region       = \"eu-west-3\"\n    use_lockfile = true\n  }\n}",
+          "language": "text"
+        },
+        {
+          "title": "L'état contient des secrets",
+          "body": "Mots de passe générés, clés, attributs sensibles : tout est stocké en clair dans l'état. Son accès doit être restreint et son stockage chiffré ; on ne le versionne jamais dans Git. On ne le modifie pas à la main : des commandes existent (terraform state mv, import, des blocs moved et import)."
+        },
+        {
+          "title": "La dérive",
+          "body": "Un changement fait à la main dans la console (une règle de pare-feu ouverte « temporairement ») crée une dérive : le prochain plan propose de revenir à ce que dit le code. En CI, on lance plan sur chaque pull request, et apply seulement après relecture et fusion."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "tf-etat-q1",
+          "prompt": "Pourquoi un état distant avec verrouillage ?",
+          "choices": [
+            "Toute l'équipe et la CI partagent le même état, et deux apply simultanés ne peuvent pas le corrompre",
+            "Pour accélérer les plans",
+            "Pour ne plus avoir besoin de providers",
+            "Parce que Terraform refuse l'état local"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un état local par poste, chacun croirait gérer une infrastructure différente.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "tf-etat-q2",
+          "prompt": "Le fichier d'état peut-il contenir des secrets ?",
+          "choices": [
+            "Oui, en clair : il doit être chiffré et son accès restreint",
+            "Non, Terraform les masque toujours",
+            "Seulement si on utilise des variables",
+            "Non, les secrets ne sont jamais stockés"
+          ],
+          "answerIndex": 0,
+          "explanation": "sensitive = true masque une valeur à l'affichage, pas dans l'état.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "tf-etat-q3",
+          "prompt": "Quelqu'un a modifié une règle de pare-feu à la main dans la console. Que montrera le prochain plan ?",
+          "choices": [
+            "Une dérive : Terraform proposera de remettre la valeur décrite dans le code",
+            "Rien, Terraform ne voit pas les changements manuels",
+            "Une erreur bloquante",
+            "La suppression de la règle"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si le changement manuel était voulu, on le reporte dans le code.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "tf-etat-q4",
+          "prompt": "Complète : renommer une ressource dans le code sans la détruire ni la recréer.",
+          "code": "___ {\n  from = aws_instance.web\n  to   = aws_instance.serveur\n}",
+          "language": "text",
+          "answers": [
+            "moved"
+          ],
+          "distractors": [
+            "rename",
+            "import",
+            "migrate"
+          ],
+          "explanation": "Le bloc moved indique à Terraform que c'est le même objet sous un nouveau nom.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "tf-etat-q5",
+          "prompt": "Revue du pipeline lancé sur chaque pull request : touche la ligne problématique.",
+          "code": "terraform init\nterraform apply -auto-approve",
+          "language": "shell",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Une pull request non relue modifie la production. Sur une PR, on lance plan et on publie le résultat ; apply vient après la relecture et la fusion.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "tf-etat-q6",
+          "prompt": "Quelles sont de bonnes pratiques pour l'état ?",
+          "choices": [
+            "Un backend distant chiffré",
+            "Le verrouillage",
+            "Un état par environnement et par grand composant",
+            "Modifier le fichier d'état à la main pour corriger une erreur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les commandes state et les blocs moved ou import font ces corrections en sécurité.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "tf-modules",
+      "title": "Modules et bonnes pratiques",
+      "summary": "for_each, versions et cycle de vie.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les modules",
+          "body": "Un module regroupe des ressources derrière des variables d'entrée et des outputs : un « service web » réutilisable, avec sa base, son DNS et ses alertes. On épingle les versions des modules et des providers : ~> 5.40 accepte 5.40 et suivantes, mais pas 6.0, qui peut changer le comportement."
+        },
+        {
+          "title": "count ou for_each",
+          "body": "count crée N copies identifiées par un indice ; retirer un élément au milieu d'une liste décale les indices suivants, que Terraform détruit et recrée. for_each identifie chaque copie par une clé stable : retirer une clé ne touche que la ressource correspondante.",
+          "code": "resource \"aws_iam_user\" \"u\" {\n  for_each = toset(var.utilisateurs)\n  name     = each.key\n}",
+          "language": "text"
+        },
+        {
+          "title": "Le cycle de vie et la qualité",
+          "body": "Le bloc lifecycle règle des cas particuliers : prevent_destroy fait échouer tout plan qui détruirait la ressource (une base de production), create_before_destroy crée le remplaçant avant de supprimer l'ancien, ignore_changes ignore un attribut géré ailleurs. terraform fmt, validate, puis tflint ou checkov vérifient le code en CI."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "tf-modules-q1",
+          "prompt": "Retirer « leo » de la liste fait détruire et recréer l'utilisateur « mia ». Touche une ligne en cause.",
+          "code": "variable \"utilisateurs\" {\n  default = [\"ana\", \"leo\", \"mia\"]\n}\n\nresource \"aws_iam_user\" \"u\" {\n  count = length(var.utilisateurs)\n  name  = var.utilisateurs[count.index]\n}",
+          "language": "text",
+          "bugLines": [
+            6,
+            7
+          ],
+          "explanation": "mia passe de l'indice 2 à l'indice 1 : Terraform renomme u[1] et détruit u[2]. Avec for_each, chaque utilisateur est identifié par son nom.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "tf-modules-q2",
+          "prompt": "Complète : un utilisateur par nom, identifié par une clé stable.",
+          "code": "resource \"aws_iam_user\" \"u\" {\n  ___ = toset(var.utilisateurs)\n  name     = each.___\n}",
+          "language": "text",
+          "answers": [
+            "for_each",
+            "key"
+          ],
+          "distractors": [
+            "count",
+            "index",
+            "name"
+          ],
+          "explanation": "Pour un ensemble de chaînes, each.key et each.value sont identiques.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "tf-modules-q3",
+          "prompt": "Que fait lifecycle { prevent_destroy = true } ?",
+          "choices": [
+            "Il fait échouer tout plan qui détruirait la ressource",
+            "Il empêche toute modification de la ressource",
+            "Il sauvegarde la ressource avant destruction",
+            "Il masque la ressource du plan"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un garde-fou précieux pour une base de données ou un bucket de sauvegardes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "tf-modules-q4",
+          "prompt": "Pourquoi épingler la version des providers ?",
+          "choices": [
+            "Une nouvelle version majeure peut changer le comportement : on choisit quand monter de version",
+            "Pour accélérer terraform init",
+            "Parce que Terraform l'exige",
+            "Pour réduire la taille de l'état"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le fichier .terraform.lock.hcl, versionné, fige aussi les versions exactes utilisées.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "tf-modules-q5",
+          "prompt": "Quelles versions la contrainte ~> 5.40 accepte-t-elle ?",
+          "choices": [
+            "5.40 et suivantes, jusqu'à 6.0 exclu",
+            "Exactement 5.40",
+            "Toutes les versions supérieures à 5.40",
+            "5.40.x seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "~> 5.40.0 limiterait aux correctifs 5.40.x.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "tf-modules-q6",
+          "prompt": "Quels outils vérifient la qualité du code Terraform ?",
+          "choices": [
+            "terraform fmt",
+            "terraform validate",
+            "tflint ou checkov",
+            "terraform destroy"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "checkov repère aussi les mauvaises configurations de sécurité (bucket public, chiffrement absent).",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "tf-defi",
+    "title": "Défi entretien : l'infrastructure partagée",
+    "summary": "État, environnements et CI.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "tf-defi-q1",
+        "prompt": "Cas pratique 1/3 — Deux ingénieurs lancent apply en même temps, chacun avec un état local sur son poste. Conséquence ?",
+        "choices": [
+          "Des états divergents : ressources en double ou orphelines ; il faut un backend distant verrouillé",
+          "Aucune, Terraform fusionne les états",
+          "Le second apply est simplement plus lent",
+          "Les deux apply échouent toujours"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chacun ignore ce que l'autre a créé.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "tf-defi-q2",
+        "prompt": "Cas pratique 2/3 — Comment organiser les environnements de développement, recette et production ?",
+        "choices": [
+          "Un état séparé par environnement, avec les mêmes modules et des variables différentes",
+          "Un seul état pour tout",
+          "Un dépôt Git par environnement, avec du code copié",
+          "Uniquement la production dans Terraform"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le même code garantit que la recette ressemble à la production.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "tf-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment déployer en sécurité depuis la CI ?",
+        "choices": [
+          "plan sur chaque pull request, relu, puis apply du plan validé après la fusion",
+          "apply sur chaque commit, sans relecture",
+          "apply manuel depuis un poste de développeur",
+          "destroy puis apply à chaque déploiement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Appliquer le fichier de plan enregistré garantit qu'on applique ce qui a été relu.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "tf-defi-q4",
+        "prompt": "Un plan prévoit de détruire puis recréer la base de production, après le renommage d'une ressource dans le code. Que faire ?",
+        "choices": [
+          "Ne pas appliquer ; ajouter un bloc moved, et protéger la base avec prevent_destroy",
+          "Appliquer et restaurer la sauvegarde",
+          "Supprimer l'état",
+          "Appliquer avec -auto-approve"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le plan est le dernier moment pour éviter une catastrophe : on lit toujours les remplacements.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "tf-defi-q5",
+        "prompt": "Remets les étapes d'un pipeline Terraform dans l'ordre.",
+        "language": "shell",
+        "lines": [
+          "terraform init",
+          "terraform fmt -check",
+          "terraform validate",
+          "terraform plan -out=plan.tfplan",
+          "terraform apply plan.tfplan"
+        ],
+        "explanation": "Les vérifications rapides d'abord, puis le plan enregistré, appliqué tel quel.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "tf-defi-q6",
+        "prompt": "Que ne faut-il jamais versionner dans le dépôt ?",
+        "choices": [
+          "Le fichier terraform.tfstate",
+          "Des fichiers .tfvars contenant des secrets",
+          "Des clés d'accès cloud",
+          "Les fichiers .tf des modules"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le code des modules est fait pour être versionné et relu.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

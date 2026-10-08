@@ -1,0 +1,440 @@
+{
+  "id": "cas-ch-essentiel",
+  "title": "Études de cas de system design",
+  "summary": "Raccourcisseur d'URL, fil d'actualité, limiteur de débit, messagerie.",
+  "lessons": [
+    {
+      "id": "cas-raccourcisseur",
+      "title": "Un raccourcisseur d'URL",
+      "summary": "Identifiants courts et lectures massives.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les exigences",
+          "body": "Créer un lien court pour une URL longue, et rediriger qui l'ouvre. Les lectures dominent largement les écritures, souvent cent pour une. Il faut des identifiants courts, uniques, et une redirection très rapide."
+        },
+        {
+          "title": "L'identifiant",
+          "body": "Avec 62 caractères (chiffres, minuscules, majuscules), 7 caractères donnent 62⁷, soit environ 3,5 billions de liens. On peut encoder en base 62 un compteur unique (sans collision), ou tronquer un hachage de l'URL, mais il faut alors détecter les collisions.",
+          "code": "ALPHABET = \"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n\ndef base62(n):\n    s = \"\"\n    while n > 0:\n        n, r = divmod(n, 62)\n        s = ALPHABET[r] + s\n    return s or \"0\"",
+          "language": "python"
+        },
+        {
+          "title": "Stockage et redirection",
+          "body": "Un stockage clé-valeur (code → URL) se partitionne facilement. Un cache garde les liens populaires. Une redirection 301 est permanente : les navigateurs la mémorisent, ce qui allège le service mais fait perdre les statistiques ; une 302 repasse toujours par le service, qui peut compter les clics."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cas-raccourcisseur-q1",
+          "prompt": "Combien d'identifiants différents offrent 7 caractères en base 62 ?",
+          "choices": [
+            "Environ 3,5 × 10¹²",
+            "Environ 62 × 7",
+            "Environ 10⁷",
+            "Environ 3,5 millions"
+          ],
+          "answerIndex": 0,
+          "explanation": "62⁷ ≈ 3,52 × 10¹² : de quoi tenir très longtemps.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cas-raccourcisseur-q2",
+          "prompt": "Faut-il rediriger avec un 301 ou un 302 ?",
+          "choices": [
+            "301 est mis en cache par les navigateurs (moins de charge, mais statistiques perdues) ; 302 repasse par le service et permet de compter les clics",
+            "Toujours 301",
+            "Toujours 302",
+            "Un 200 avec du JavaScript"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un bon candidat explique le compromis plutôt que d'affirmer une seule réponse.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cas-raccourcisseur-q3",
+          "prompt": "Quel type de stockage convient aux correspondances code → URL ?",
+          "choices": [
+            "Un stockage clé-valeur, lu par clé et facile à partitionner",
+            "Un graphe",
+            "Un tableur",
+            "Un fichier texte unique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque lecture est une recherche par clé exacte.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "cas-raccourcisseur-q4",
+          "prompt": "Complète cet encodage en base 62.",
+          "code": "def base62(n):\n    s = \"\"\n    while n > 0:\n        n, r = ___(n, 62)\n        s = ALPHABET[___] + s\n    return s or \"0\"",
+          "language": "python",
+          "answers": [
+            "divmod",
+            "r"
+          ],
+          "distractors": [
+            "divide",
+            "n",
+            "mod"
+          ],
+          "explanation": "divmod renvoie le quotient et le reste ; le reste donne le caractère suivant, de droite à gauche.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cas-raccourcisseur-q5",
+          "prompt": "Deux URL différentes reçoivent parfois le même code, et la seconde écrase la première. Touche la ligne en cause.",
+          "code": "def code_court(url):\n    return hashlib.md5(url.encode()).hexdigest()[:7]",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Tronquer un hachage produit des collisions, d'autant plus nombreuses que les liens s'accumulent. On vérifie l'unicité à l'insertion, ou on encode un compteur unique.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cas-raccourcisseur-q6",
+          "prompt": "Comment absorber les lectures massives ?",
+          "choices": [
+            "Un cache des liens populaires",
+            "Des répliques de lecture",
+            "Des redirections servies au plus près des utilisateurs (edge)",
+            "Recalculer le code à chaque lecture"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le code est créé une fois ; seules les lectures se multiplient.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "cas-fil",
+      "title": "Un fil d'actualité",
+      "summary": "Diffuser à l'écriture ou agréger à la lecture.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Deux stratégies",
+          "body": "Avec la diffusion à l'écriture (fan-out on write), publier un message l'insère dans le fil pré-calculé de chaque abonné : la lecture est instantanée. Avec l'agrégation à la lecture (fan-out on read), on rassemble au moment de lire les messages des comptes suivis : écriture légère, lecture coûteuse pour qui suit beaucoup de comptes."
+        },
+        {
+          "title": "Le cas des célébrités",
+          "body": "Un compte suivi par 50 millions de personnes déclencherait 50 millions d'écritures par message. L'approche hybride diffuse à l'écriture pour la plupart des comptes, et fusionne à la lecture les messages des quelques comptes très suivis."
+        },
+        {
+          "title": "Stockage et pagination",
+          "body": "Les fils pré-calculés vivent en mémoire, par exemple un Sorted Set Redis par utilisateur, limité aux quelques centaines de messages les plus récents. On pagine par curseur (le dernier identifiant vu), stable quand de nouveaux messages arrivent."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cas-fil-q1",
+          "prompt": "Que fait la diffusion à l'écriture (fan-out on write) ?",
+          "choices": [
+            "À la publication, elle insère le message dans le fil de chaque abonné, pour une lecture instantanée",
+            "Elle calcule le fil à chaque ouverture de l'application",
+            "Elle envoie un e-mail à chaque abonné",
+            "Elle supprime les vieux messages"
+          ],
+          "answerIndex": 0,
+          "explanation": "On paie le travail à l'écriture, plus rare que la lecture.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cas-fil-q2",
+          "prompt": "Quel problème pose la diffusion à l'écriture pour un compte suivi par 50 millions de personnes ?",
+          "choices": [
+            "50 millions d'écritures par message : on fusionne plutôt ses messages à la lecture (approche hybride)",
+            "Aucun",
+            "Les abonnés ne voient rien",
+            "La base refuse les messages"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les quelques comptes très suivis sont traités à part.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cas-fil-q3",
+          "prompt": "Où stocker les fils pré-calculés ?",
+          "choices": [
+            "En mémoire, par exemple un Sorted Set Redis par utilisateur, limité aux messages récents",
+            "Dans un fichier par utilisateur sur un disque partagé",
+            "Dans le navigateur",
+            "Nulle part"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les messages plus anciens se lisent, plus rarement, depuis la base.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cas-fil-q4",
+          "prompt": "Comment paginer un fil d'actualité ?",
+          "choices": [
+            "Par curseur : le dernier identifiant ou horodatage vu",
+            "Par numéro de page",
+            "En renvoyant tout le fil",
+            "Au hasard"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les nouveaux messages ne décalent pas les pages suivantes.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cas-fil-q5",
+          "prompt": "Pour un utilisateur qui suit 5 000 comptes, l'ouverture du fil prend 4 secondes à chaque fois. Touche la ligne qui fait ce travail coûteux à chaque lecture.",
+          "code": "SELECT * FROM posts\nWHERE auteur_id IN (SELECT suivi_id FROM abonnements WHERE abonne_id = :moi)\nORDER BY cree_le DESC\nLIMIT 20;",
+          "language": "sql",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Chaque ouverture parcourt les messages de 5 000 auteurs pour en garder 20. Un fil pré-calculé à l'écriture évite ce travail.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cas-fil-q6",
+          "prompt": "Que comprend l'approche hybride ?",
+          "choices": [
+            "La diffusion à l'écriture pour la plupart des comptes",
+            "La fusion à la lecture des messages des comptes très suivis",
+            "Des fils en cache, limités en taille",
+            "Le recalcul complet du fil à chaque ouverture"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On combine les forces des deux stratégies.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "cas-limiteur",
+      "title": "Un limiteur de débit",
+      "summary": "Algorithmes et mise en œuvre distribuée.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les algorithmes",
+          "body": "La fenêtre fixe compte les requêtes par minute calendaire : simple, mais elle laisse passer le double à la frontière (fin d'une minute, début de la suivante). La fenêtre glissante lisse ce défaut. Le seau à jetons ajoute des jetons à débit constant jusqu'à une capacité ; chaque requête en consomme un : les rafales courtes sont permises. Le seau qui fuit lisse le débit de sortie.",
+          "code": "def autoriser(seau, maintenant):\n    ecoule = maintenant - seau.derniere_maj\n    seau.jetons = min(seau.capacite, seau.jetons + ecoule * seau.debit)\n    seau.derniere_maj = maintenant\n    if seau.jetons >= 1:\n        seau.jetons -= 1\n        return True\n    return False",
+          "language": "python"
+        },
+        {
+          "title": "En distribué",
+          "body": "Le limiteur se place devant les services, dans la passerelle d'API. Avec plusieurs instances, les compteurs vivent dans un stockage partagé comme Redis, mis à jour de façon atomique (INCR, ou un script Lua pour le seau à jetons)."
+        },
+        {
+          "title": "La réponse et les pannes",
+          "body": "Une requête refusée reçoit 429 avec Retry-After et des en-têtes indiquant le quota restant. Si Redis tombe, il faut choisir : laisser passer (échec ouvert) pour ne pas couper le service, ou refuser (échec fermé) pour les points sensibles comme la connexion."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cas-limiteur-q1",
+          "prompt": "Comment fonctionne le seau à jetons ?",
+          "choices": [
+            "Des jetons s'ajoutent à débit constant jusqu'à une capacité ; chaque requête en consomme un, ce qui autorise de courtes rafales",
+            "Il refuse une requête sur deux",
+            "Il compte les requêtes par jour calendaire",
+            "Il met les requêtes dans une file sans limite"
+          ],
+          "answerIndex": 0,
+          "explanation": "La capacité fixe la taille maximale d'une rafale ; le débit, la moyenne autorisée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cas-limiteur-q2",
+          "prompt": "Quel est le défaut de la fenêtre fixe ?",
+          "choices": [
+            "Elle laisse passer jusqu'au double de la limite à la frontière entre deux fenêtres",
+            "Elle est trop compliquée",
+            "Elle refuse toutes les requêtes",
+            "Elle exige une base relationnelle"
+          ],
+          "answerIndex": 0,
+          "explanation": "100 requêtes à 0:59 et 100 à 1:00 : 200 en deux secondes.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cas-limiteur-q3",
+          "prompt": "Où placer le limiteur de débit ?",
+          "choices": [
+            "Dans la passerelle d'API ou le répartiteur, devant les services",
+            "Dans le navigateur de l'utilisateur",
+            "Dans la base de données",
+            "Après le traitement de la requête"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les requêtes refusées ne consomment rien côté services.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "cas-limiteur-q4",
+          "prompt": "Complète ce seau à jetons.",
+          "code": "def autoriser(seau, maintenant):\n    ecoule = maintenant - seau.derniere_maj\n    seau.jetons = ___(seau.capacite, seau.jetons + ecoule * seau.debit)\n    seau.derniere_maj = maintenant\n    if seau.jetons >= 1:\n        seau.jetons -= 1\n        return True\n    return ___",
+          "language": "python",
+          "answers": [
+            "min",
+            "False"
+          ],
+          "distractors": [
+            "max",
+            "None",
+            "True"
+          ],
+          "explanation": "Le seau ne déborde jamais de sa capacité.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cas-limiteur-q5",
+          "prompt": "Le Redis du limiteur tombe. Faut-il laisser passer ou refuser les requêtes ?",
+          "choices": [
+            "Cela dépend : souvent laisser passer pour ne pas couper le service, mais refuser sur les points sensibles comme la connexion",
+            "Toujours refuser",
+            "Toujours laisser passer",
+            "Redémarrer tous les serveurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "On décide à l'avance, point d'accès par point d'accès.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cas-limiteur-q6",
+          "prompt": "Que contient la réponse d'un limiteur qui refuse une requête ?",
+          "choices": [
+            "Le code 429",
+            "L'en-tête Retry-After",
+            "Des en-têtes indiquant le quota restant",
+            "Un code 200 avec un corps vide"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le client sait ainsi quand réessayer.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "cas-defi",
+    "title": "Défi entretien : une messagerie instantanée",
+    "summary": "Connexions, présence et livraison.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cas-defi-q1",
+        "prompt": "Cas pratique 1/3 — On conçoit une messagerie individuelle en temps réel pour 10 millions d'utilisateurs connectés. Comment les messages arrivent-ils aux clients ?",
+        "choices": [
+          "Par des connexions persistantes (WebSocket), tenues par des passerelles dédiées",
+          "Par une requête HTTP toutes les secondes",
+          "Par e-mail",
+          "Par SMS"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le serveur pousse le message dès qu'il arrive, sans attente.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cas-defi-q2",
+        "prompt": "Cas pratique 2/3 — Comment savoir sur quelle passerelle le destinataire est connecté ?",
+        "choices": [
+          "Un registre de présence (utilisateur → passerelle) en mémoire partagée, ou un canal de publication par utilisateur",
+          "Envoyer le message à toutes les passerelles, toujours",
+          "Demander à l'expéditeur",
+          "Une seule passerelle pour tous"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le registre se met à jour à chaque connexion et déconnexion.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cas-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le destinataire est hors ligne. Que faire ?",
+        "choices": [
+          "Enregistrer le message, envoyer une notification push, et livrer à la reconnexion à partir du dernier message reçu",
+          "Abandonner le message",
+          "Réessayer en boucle jusqu'à sa reconnexion",
+          "Renvoyer une erreur à l'expéditeur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le client indique son dernier message reçu ; le serveur envoie la suite.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cas-defi-q4",
+        "prompt": "10 millions d'utilisateurs envoient chacun 40 messages par jour. Combien de messages par seconde, en moyenne ?",
+        "choices": [
+          "Environ 4 600",
+          "Environ 46",
+          "Environ 460 000",
+          "Environ 400 millions"
+        ],
+        "answerIndex": 0,
+        "explanation": "400 millions par jour divisés par 86 400 secondes ; on prévoit ensuite les pics, plusieurs fois plus élevés.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cas-defi-q5",
+        "prompt": "Comment garantir l'ordre des messages dans une conversation ?",
+        "choices": [
+          "Un numéro de séquence par conversation, attribué par le serveur",
+          "L'horloge du téléphone de l'expéditeur",
+          "L'ordre d'arrivée sur n'importe quelle passerelle",
+          "L'ordre alphabétique"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les horloges des téléphones sont fausses et désynchronisées.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "cas-defi-q6",
+        "prompt": "Quels composants cette messagerie comprend-elle ?",
+        "choices": [
+          "Des passerelles WebSocket",
+          "Un service de présence",
+          "Un stockage des messages partitionné par conversation",
+          "Un serveur unique pour tout"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un serveur unique ne tiendrait ni la charge ni les pannes.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

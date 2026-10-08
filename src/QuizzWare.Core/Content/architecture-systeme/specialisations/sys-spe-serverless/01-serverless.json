@@ -1,0 +1,440 @@
+{
+  "id": "sls-ch-essentiel",
+  "title": "Serverless : l'essentiel",
+  "summary": "Fonctions, événements et facturation à l'usage.",
+  "lessons": [
+    {
+      "id": "sls-principes",
+      "title": "Les fonctions",
+      "summary": "Déclencheurs, échelle et limites.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Pas de serveur à gérer",
+          "body": "Avec AWS Lambda, Azure Functions ou les fonctions de Google Cloud, on déploie une fonction déclenchée par un événement : requête HTTP, message dans une file, fichier déposé, minuterie. La plateforme crée autant d'instances que nécessaire, jusqu'à zéro quand il n'y a rien à faire, et facture à l'exécution.",
+          "code": "export const handler = async (event) => {\n  const commande = JSON.parse(event.body);\n  await enregistrer(commande);\n  return { statusCode: 201, body: JSON.stringify({ id: commande.id }) };\n};",
+          "language": "javascript"
+        },
+        {
+          "title": "Sans état",
+          "body": "Chaque invocation peut tomber sur une instance différente, et une instance peut disparaître à tout moment : on ne garde aucun état important en mémoire. Les données vivent dans une base, un cache ou un stockage externe."
+        },
+        {
+          "title": "Les limites",
+          "body": "Une fonction a une durée maximale (15 minutes pour Lambda), une mémoire limitée, et un démarrage à froid quand une nouvelle instance doit être créée : quelques centaines de millisecondes à quelques secondes selon le langage et le paquet."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sls-principes-q1",
+          "prompt": "Que signifie « serverless » ?",
+          "choices": [
+            "Pas de serveur à gérer : la plateforme met à l'échelle et facture à l'usage",
+            "Qu'il n'y a aucun serveur physique",
+            "Que le code tourne dans le navigateur",
+            "Que l'application est gratuite"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les serveurs existent, mais leur gestion est entièrement déléguée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sls-principes-q2",
+          "prompt": "Qu'est-ce qu'un démarrage à froid ?",
+          "choices": [
+            "Le délai supplémentaire quand la plateforme doit créer une nouvelle instance de la fonction",
+            "Un démarrage du centre de données en hiver",
+            "Un redémarrage manuel",
+            "Une fonction qui échoue"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les invocations suivantes sur la même instance, « à chaud », sont rapides.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "sls-principes-q3",
+          "prompt": "Complète ce gestionnaire Lambda déclenché par une requête HTTP.",
+          "code": "export const ___ = async (event) => {\n  const commande = JSON.parse(event.___);\n  await enregistrer(commande);\n  return { statusCode: 201 };\n};",
+          "language": "javascript",
+          "answers": [
+            "handler",
+            "body"
+          ],
+          "distractors": [
+            "main",
+            "data",
+            "payload"
+          ],
+          "explanation": "Le corps HTTP arrive sous forme de chaîne dans event.body.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sls-principes-q4",
+          "prompt": "Quelle est la durée maximale d'exécution d'une fonction AWS Lambda ?",
+          "choices": [
+            "15 minutes",
+            "30 secondes",
+            "1 heure",
+            "Illimitée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Au-delà, on découpe le travail ou on utilise un autre service.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sls-principes-q5",
+          "prompt": "Le compteur de visites repart souvent à zéro et diffère d'une requête à l'autre. Touche une ligne en cause.",
+          "code": "let compteur = 0;\nexport const handler = async () => {\n  compteur++;\n  return { statusCode: 200, body: `Visite n° ${compteur}` };\n};",
+          "language": "javascript",
+          "bugLines": [
+            1,
+            3
+          ],
+          "explanation": "Chaque instance a son propre compteur, perdu quand elle disparaît. L'état partagé va dans un stockage externe (un INCR Redis, par exemple).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sls-principes-q6",
+          "prompt": "Quels événements peuvent déclencher une fonction ?",
+          "choices": [
+            "Une requête HTTP",
+            "Un message dans une file",
+            "Un fichier déposé dans un stockage",
+            "Un humain qui démarre un serveur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Ainsi qu'une minuterie, un changement en base ou un événement d'un autre service.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "sls-conception",
+      "title": "Concevoir des fonctions",
+      "summary": "Connexions, idempotence et démarrage.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Initialiser hors du gestionnaire",
+          "body": "Le code en dehors du gestionnaire s'exécute une fois par instance ; les invocations suivantes le réutilisent. On y crée les clients (base, SDK) au lieu de les recréer à chaque appel. Mille instances simultanées ouvrent toutefois mille connexions à la base : un proxy de connexions (RDS Proxy, PgBouncer) les mutualise.",
+          "code": "const pool = new Pool({ connectionString: process.env.DB_URL });\n\nexport const handler = async (event) => {\n  const r = await pool.query(\"SELECT * FROM produits WHERE id = $1\", [event.id]);\n  return r.rows[0];\n};",
+          "language": "javascript"
+        },
+        {
+          "title": "Idempotence et échecs",
+          "body": "Les déclencheurs asynchrones (files, événements) réessaient en cas d'échec, et un message peut être livré deux fois : la fonction doit être idempotente. Pour une file traitée par lots, on signale les messages en échec un par un, afin que seuls ceux-là soient retraités ; après plusieurs échecs, ils partent dans une file de messages en erreur.",
+          "code": "export const handler = async (event) => {\n  const echecs = [];\n  for (const msg of event.Records) {\n    try { await traiter(JSON.parse(msg.body)); }\n    catch { echecs.push({ itemIdentifier: msg.messageId }); }\n  }\n  return { batchItemFailures: echecs };\n};",
+          "language": "javascript"
+        },
+        {
+          "title": "Le démarrage à froid",
+          "body": "On le réduit avec un paquet plus léger, moins de dépendances, une initialisation paresseuse de ce qui sert rarement, et pour les fonctions critiques, une concurrence provisionnée qui garde des instances prêtes, facturée en continu."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "sls-conception-q1",
+          "prompt": "Sous charge, la base sature de connexions. Touche la ligne en cause.",
+          "code": "export const handler = async (event) => {\n  const db = new Pool({ connectionString: process.env.DB_URL });\n  const r = await db.query(\"SELECT * FROM produits WHERE id = $1\", [event.id]);\n  return r.rows[0];\n};",
+          "language": "javascript",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Un nouveau pool à chaque invocation, jamais fermé. On le crée hors du gestionnaire, et on passe par un proxy de connexions.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sls-conception-q2",
+          "prompt": "1 000 instances simultanées ouvrent chacune une connexion PostgreSQL. Que faire ?",
+          "choices": [
+            "Mutualiser les connexions avec un proxy (RDS Proxy, PgBouncer)",
+            "Augmenter max_connections à 100 000",
+            "Ouvrir deux connexions par instance",
+            "Désactiver la mise à l'échelle"
+          ],
+          "answerIndex": 0,
+          "explanation": "PostgreSQL supporte mal des milliers de connexions directes.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sls-conception-q3",
+          "prompt": "Pourquoi une fonction déclenchée par une file doit-elle être idempotente ?",
+          "choices": [
+            "Les échecs sont réessayés et un message peut être livré deux fois",
+            "Pour être plus rapide",
+            "Parce que les files sont lentes",
+            "Ce n'est pas nécessaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Traiter deux fois le même message ne doit rien changer.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "sls-conception-q4",
+          "prompt": "Complète : ne faire retraiter que les messages en échec du lot.",
+          "code": "export const handler = async (event) => {\n  const echecs = [];\n  for (const msg of event.Records) {\n    try { await traiter(JSON.parse(msg.body)); }\n    catch { echecs.push({ itemIdentifier: msg.___ }); }\n  }\n  return { ___: echecs };\n};",
+          "language": "javascript",
+          "answers": [
+            "messageId",
+            "batchItemFailures"
+          ],
+          "distractors": [
+            "receiptHandle",
+            "failures",
+            "id"
+          ],
+          "explanation": "Sans cela, un seul échec fait retraiter tout le lot, y compris les messages réussis.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sls-conception-q5",
+          "prompt": "Qu'est-ce que la concurrence provisionnée ?",
+          "choices": [
+            "Des instances gardées prêtes pour éviter les démarrages à froid, facturées en continu",
+            "Une limite au nombre d'instances",
+            "Un mode gratuit",
+            "Une file d'attente"
+          ],
+          "answerIndex": 0,
+          "explanation": "On la réserve aux fonctions dont la latence compte vraiment.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sls-conception-q6",
+          "prompt": "Comment réduire le démarrage à froid ?",
+          "choices": [
+            "Un paquet plus léger, avec moins de dépendances",
+            "L'initialisation paresseuse de ce qui sert rarement",
+            "La concurrence provisionnée pour les fonctions critiques",
+            "Ajouter des dépendances"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Chaque dépendance chargée au démarrage allonge le premier appel.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "sls-architecture",
+      "title": "Architectures sans serveur",
+      "summary": "Événements, coûts et pièges.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des chaînes d'événements",
+          "body": "Les architectures sans serveur s'enchaînent par des événements : un fichier déposé déclenche une fonction, qui publie une tâche dans une file, traitée par une autre fonction. Pour un processus en plusieurs étapes, un orchestrateur (Step Functions) remplace les appels directs. Une fonction qui en appelle une autre en synchrone, qui en appelle une troisième, paie l'attente à chaque niveau et cumule délais et pannes."
+        },
+        {
+          "title": "Le coût",
+          "body": "Le sans serveur est très économique pour une charge faible ou irrégulière. Sous une charge forte et constante, la facturation à l'invocation peut dépasser celle d'un service toujours allumé : on compare avec les chiffres réels. Attention aussi aux boucles : une fonction qui écrit dans le stockage qui la déclenche se relance sans fin."
+        },
+        {
+          "title": "Dépendance au fournisseur",
+          "body": "Déclencheurs, formats d'événements et services gérés sont propres à chaque plateforme. On isole la logique métier dans du code ordinaire, appelé par de fins adaptateurs, ce qui facilite aussi les tests locaux. Les traces distribuées sont indispensables pour suivre une requête à travers des fonctions et des files."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sls-architecture-q1",
+          "prompt": "La fonction A appelle B en synchrone, qui appelle C. Quel est le problème ?",
+          "choices": [
+            "On paie l'attente à chaque niveau, et les délais et pannes s'accumulent : on préfère des files ou un orchestrateur",
+            "Aucun",
+            "Les fonctions ne peuvent pas s'appeler",
+            "C'est la meilleure pratique"
+          ],
+          "answerIndex": 0,
+          "explanation": "A est facturée pendant qu'elle attend B, qui est facturée pendant qu'elle attend C.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sls-architecture-q2",
+          "prompt": "Que devient le coût du sans serveur sous une charge forte et constante ?",
+          "choices": [
+            "Il peut dépasser celui d'un service toujours allumé : il faut comparer",
+            "Il devient nul",
+            "Il est toujours le plus bas",
+            "Il est fixe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le sans serveur brille sur les charges faibles, irrégulières ou en pics.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sls-architecture-q3",
+          "prompt": "Comment limiter la dépendance à un fournisseur ?",
+          "choices": [
+            "Isoler la logique métier dans du code ordinaire, appelé par de fins adaptateurs propres à la plateforme",
+            "Écrire tout le code dans le gestionnaire",
+            "N'utiliser aucun service géré",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "La logique se teste aussi sans la plateforme.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "sls-architecture-q4",
+          "prompt": "Remets dans l'ordre ce traitement événementiel.",
+          "language": "text",
+          "lines": [
+            "Un fichier est déposé dans le stockage",
+            "Une fonction est déclenchée et valide le fichier",
+            "Elle publie une tâche dans une file",
+            "Une seconde fonction traite la tâche",
+            "Le résultat est enregistré en base"
+          ],
+          "explanation": "La file absorbe les pics et permet les nouvelles tentatives.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sls-architecture-q5",
+          "prompt": "La facture explose : la fonction se redéclenche sans fin. Touche la ligne en cause.",
+          "code": "// Déclenchée à chaque dépôt dans le bucket « images »\nexport const handler = async (event) => {\n  const img = await lire(event);\n  await ecrire(\"images\", miniature(img));\n};",
+          "language": "javascript",
+          "bugLines": [
+            4
+          ],
+          "explanation": "La miniature, écrite dans le bucket déclencheur, déclenche à son tour la fonction. On l'écrit dans un autre bucket.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sls-architecture-q6",
+          "prompt": "Dans quels cas le sans serveur convient-il bien ?",
+          "choices": [
+            "Un trafic faible ou irrégulier",
+            "Des traitements déclenchés par des événements (fichiers, messages)",
+            "Des tâches planifiées courtes",
+            "Un calcul intensif de plusieurs heures"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La durée maximale exclut les calculs très longs.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "sls-defi",
+    "title": "Défi entretien : une API aux pics violents",
+    "summary": "Échelle, connexions et démarrage.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sls-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une API reçoit dix requêtes par heure en journée, rien la nuit, et des pics de 500 requêtes par seconde pendant les soldes. Quelle option d'hébergement ?",
+        "choices": [
+          "Des fonctions sans serveur, qui passent de zéro à des centaines d'instances",
+          "Dix serveurs allumés en permanence",
+          "Un seul petit serveur",
+          "Un serveur dimensionné pour les soldes, toute l'année"
+        ],
+        "answerIndex": 0,
+        "explanation": "On ne paie que ce qui est consommé, et l'échelle suit les pics.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sls-defi-q2",
+        "prompt": "Cas pratique 2/3 — Pendant les soldes, la base PostgreSQL refuse des connexions. Que faire ?",
+        "choices": [
+          "Créer le client hors du gestionnaire et passer par un proxy de connexions",
+          "Limiter la fonction à une seule instance",
+          "Changer de base de données",
+          "Ajouter des nouvelles tentatives sans délai"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les connexions sont réutilisées et mutualisées.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "sls-defi-q3",
+        "prompt": "Cas pratique 3/3 — Les premiers clients du matin attendent trois secondes. Pourquoi, et que faire ?",
+        "choices": [
+          "Des démarrages à froid : alléger le paquet, ou garder des instances prêtes avec la concurrence provisionnée",
+          "Le réseau est lent le matin",
+          "La base est éteinte la nuit",
+          "Rien n'est possible"
+        ],
+        "answerIndex": 0,
+        "explanation": "Après une nuit sans trafic, toutes les instances ont disparu.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sls-defi-q4",
+        "prompt": "Une Map déclarée hors du gestionnaire sert de cache. Est-elle partagée par toutes les instances ?",
+        "choices": [
+          "Non : chaque instance a la sienne, perdue quand l'instance disparaît",
+          "Oui, entre toutes les instances",
+          "Oui, et elle est sauvegardée en base",
+          "Elle provoque une erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Pratique pour un cache local tolérant ; un cache partagé passe par Redis.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "sls-defi-q5",
+        "prompt": "Cette fonction s'arrête au bout de 15 minutes sans avoir fini. Touche la ligne en cause.",
+        "code": "export const handler = async () => {\n  for (const client of await tousLesClients()) {   // 2 millions\n    await genererFacture(client);\n  }\n};",
+        "language": "javascript",
+        "bugLines": [
+          2
+        ],
+        "explanation": "Tout le travail est fait dans une seule invocation. On publie un message par client (ou par lot) dans une file, traité par d'autres invocations.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sls-defi-q6",
+        "prompt": "Quelles sont de bonnes pratiques pour les fonctions sans serveur ?",
+        "choices": [
+          "Des fonctions idempotentes",
+          "Des délais et des files de messages en erreur configurés",
+          "Des traces distribuées",
+          "Un état gardé en mémoire d'une invocation à l'autre"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'état en mémoire disparaît avec l'instance.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,439 @@
+{
+  "id": "rmq-ch-essentiel",
+  "title": "RabbitMQ : l'essentiel",
+  "summary": "Exchanges, files et traitement fiable.",
+  "lessons": [
+    {
+      "id": "rmq-modele",
+      "title": "Exchanges et files",
+      "summary": "Comment un message trouve sa file.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le parcours d'un message",
+          "body": "Un producteur ne publie pas directement dans une file : il publie sur un exchange, avec une clé de routage. L'exchange route le message vers les files qui lui sont liées (bindings). Les consommateurs lisent les files ; un message acquitté est retiré de sa file."
+        },
+        {
+          "title": "Les types d'exchange",
+          "body": "direct route vers les files dont la clé de liaison est exactement la clé de routage. topic route par motif : dans commande.*.payee, * vaut un mot, et # zéro ou plusieurs mots. fanout envoie à toutes les files liées, sans regarder la clé. headers route selon les en-têtes du message.",
+          "code": "Exchange « evenements »  (fanout) → toutes les files liées\nExchange « commandes »   (topic)\n  file « facturation » liée par commande.*.payee\n  file « audit »       liée par commande.#",
+          "language": "text"
+        },
+        {
+          "title": "Survivre à un redémarrage",
+          "body": "Une file durable survit au redémarrage du broker ; un message persistant y est écrit sur disque. Il faut les deux : un message persistant dans une file non durable disparaît avec elle."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rmq-modele-q1",
+          "prompt": "Où un producteur publie-t-il un message dans RabbitMQ ?",
+          "choices": [
+            "Sur un exchange, qui le route vers les files liées",
+            "Directement dans la base de données du consommateur",
+            "Dans un fichier partagé",
+            "Directement chez chaque consommateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'exchange par défaut, sans nom, route directement vers la file du même nom que la clé.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rmq-modele-q2",
+          "prompt": "Une file est liée à un exchange topic avec le motif commande.*.payee. Reçoit-elle les messages de clé commande.fr.payee et commande.payee ?",
+          "choices": [
+            "Seulement commande.fr.payee : * correspond exactement à un mot",
+            "Les deux",
+            "Seulement commande.payee",
+            "Aucun des deux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec commande.#.payee, les deux correspondraient : # accepte zéro mot ou plus.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "rmq-modele-q3",
+          "prompt": "Complète avec le type d'exchange adapté.",
+          "code": "Exchange « evenements » de type ___ : chaque file liée reçoit tout\nExchange « commandes » de type ___ : routage par motif (commande.*.payee)",
+          "language": "text",
+          "answers": [
+            "fanout",
+            "topic"
+          ],
+          "distractors": [
+            "broadcast",
+            "queue",
+            "pattern"
+          ],
+          "explanation": "direct exigerait une correspondance exacte de la clé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rmq-modele-q4",
+          "prompt": "Que faut-il pour qu'un message survive au redémarrage du broker ?",
+          "choices": [
+            "Une file durable et un message persistant",
+            "Un message persistant seulement",
+            "Une file durable seulement",
+            "Rien, tout est conservé par défaut"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux réglages sont nécessaires.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "rmq-modele-q5",
+          "prompt": "Après un redémarrage de RabbitMQ, des commandes ont disparu. Touche la ligne en cause.",
+          "code": "canal.queue_declare(queue=\"commandes\", durable=False)\ncanal.basic_publish(exchange=\"\", routing_key=\"commandes\",\n                    body=json.dumps(cmd))",
+          "language": "python",
+          "bugLines": [
+            1
+          ],
+          "explanation": "La file n'est pas durable : elle disparaît au redémarrage, avec son contenu. Il faut durable=True, et des messages persistants (delivery_mode=2).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rmq-modele-q6",
+          "prompt": "Quels sont des types d'exchange de RabbitMQ ?",
+          "choices": [
+            "direct",
+            "topic",
+            "fanout",
+            "partition"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le quatrième est headers ; les partitions sont un concept de Kafka.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "rmq-fiabilite",
+      "title": "Un traitement fiable",
+      "summary": "Accusés, prefetch et messages en erreur.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les accusés de réception",
+          "body": "Avec un acquittement manuel, le consommateur confirme (ack) une fois le traitement terminé ; s'il plante avant, RabbitMQ remet le message à un autre consommateur. Avec auto_ack, le message est retiré dès sa livraison : un plantage le fait perdre. La livraison est donc « au moins une fois », et le traitement doit être idempotent.",
+          "code": "canal.basic_qos(prefetch_count=10)\n\ndef traiter(ch, methode, props, corps):\n    enregistrer(json.loads(corps))\n    ch.basic_ack(delivery_tag=methode.delivery_tag)\n\ncanal.basic_consume(queue=\"commandes\", on_message_callback=traiter)",
+          "language": "python"
+        },
+        {
+          "title": "Le prefetch",
+          "body": "prefetch_count limite le nombre de messages livrés mais pas encore acquittés par consommateur. Sans limite, un consommateur peut recevoir des milliers de messages d'un coup pendant que les autres attendent ; avec une limite, la charge se répartit."
+        },
+        {
+          "title": "Les messages en erreur",
+          "body": "Un message rejeté sans être remis en file, expiré ou en surnombre part vers un dead letter exchange, qui le route vers une file d'analyse. Côté producteur, les publisher confirms garantissent que le broker a bien enregistré chaque message."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "rmq-fiabilite-q1",
+          "prompt": "Quand le consommateur plante, les messages en cours de traitement sont perdus. Touche la ligne en cause.",
+          "code": "canal.basic_consume(queue=\"commandes\",\n                    on_message_callback=traiter,\n                    auto_ack=True)",
+          "language": "python",
+          "bugLines": [
+            3
+          ],
+          "explanation": "auto_ack retire le message dès sa livraison. Il faut acquitter à la main, après le traitement.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "rmq-fiabilite-q2",
+          "prompt": "Complète : au plus 10 messages non acquittés par consommateur, et un acquittement après traitement.",
+          "code": "canal.basic_qos(prefetch_count=___)\n\ndef traiter(ch, methode, props, corps):\n    enregistrer(json.loads(corps))\n    ch.___(delivery_tag=methode.delivery_tag)",
+          "language": "python",
+          "answers": [
+            "10",
+            "basic_ack"
+          ],
+          "distractors": [
+            "0",
+            "ack",
+            "confirm"
+          ],
+          "explanation": "prefetch_count=0 signifie « sans limite ».",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rmq-fiabilite-q3",
+          "prompt": "À quoi sert prefetch_count ?",
+          "choices": [
+            "À limiter les messages non acquittés par consommateur, pour répartir équitablement la charge",
+            "À limiter la taille d'un message",
+            "À fixer la durée de vie des messages",
+            "À compter les consommateurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un consommateur lent ne monopolise plus des milliers de messages.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rmq-fiabilite-q4",
+          "prompt": "Qu'est-ce qu'un dead letter exchange ?",
+          "choices": [
+            "L'exchange qui reçoit les messages rejetés, expirés ou en surnombre",
+            "Un exchange supprimé",
+            "Un exchange réservé aux administrateurs",
+            "L'exchange par défaut"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les messages problématiques sont mis de côté pour analyse, sans bloquer les autres.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rmq-fiabilite-q5",
+          "prompt": "Que garantissent les publisher confirms ?",
+          "choices": [
+            "Le broker confirme au producteur que chaque message a bien été enregistré",
+            "Le consommateur a fini le traitement",
+            "Le message est chiffré",
+            "Le message est livré une seule fois"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans confirmation, un message peut se perdre entre le producteur et le broker.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "rmq-fiabilite-q6",
+          "prompt": "Qu'implique une livraison « au moins une fois » ?",
+          "choices": [
+            "Un message peut être reçu deux fois",
+            "Le consommateur doit être idempotent",
+            "On acquitte après le traitement",
+            "On acquitte avant le traitement"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Acquitter avant le traitement donnerait « au plus une fois », avec un risque de perte.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "rmq-choisir",
+      "title": "Concevoir avec RabbitMQ",
+      "summary": "Ordre, nouvelles tentatives et haute disponibilité.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "RabbitMQ ou Kafka",
+          "body": "RabbitMQ excelle comme file de tâches : routage riche, acquittement message par message, message retiré une fois traité. Kafka est un journal qu'on relit, adapté aux flux à grand débit et aux nombreux consommateurs indépendants. Une file lue par plusieurs consommateurs ne garantit plus l'ordre de traitement."
+        },
+        {
+          "title": "Réessayer plus tard",
+          "body": "Remettre immédiatement en file un message qui échoue peut le faire tourner en boucle. Pour réessayer après un délai, on le rejette vers une file d'attente avec une durée de vie (TTL) dont le dead letter exchange le renvoie vers la file principale ; après quelques tentatives, il part dans une file d'erreurs."
+        },
+        {
+          "title": "Haute disponibilité et supervision",
+          "body": "Les files quorum sont répliquées sur plusieurs nœuds avec l'algorithme Raft : ce sont elles qu'on utilise pour la haute disponibilité. On surveille la profondeur des files, le nombre de messages non acquittés et le nombre de consommateurs connectés."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rmq-choisir-q1",
+          "prompt": "Il faut distribuer des tâches de génération de PDF à un groupe de workers. RabbitMQ ou Kafka ?",
+          "choices": [
+            "RabbitMQ : une file de tâches, avec acquittement et répartition entre workers",
+            "Kafka, toujours",
+            "Ni l'un ni l'autre",
+            "Les deux en même temps"
+          ],
+          "answerIndex": 0,
+          "explanation": "Kafka conviendrait mieux pour rejouer un historique ou alimenter de nombreux consommateurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rmq-choisir-q2",
+          "prompt": "Cinq consommateurs lisent la même file. L'ordre de traitement des messages est-il garanti ?",
+          "choices": [
+            "Non : des messages consécutifs sont traités en parallèle par des consommateurs différents",
+            "Oui, toujours",
+            "Oui, si la file est durable",
+            "Oui, si les messages sont persistants"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour un ordre strict par entité, on partitionne (une file par groupe d'entités, un consommateur par file).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "rmq-choisir-q3",
+          "prompt": "Comment réessayer un message 30 secondes plus tard ?",
+          "choices": [
+            "Le rejeter vers une file d'attente avec une durée de vie de 30 s, dont le dead letter exchange le renvoie vers la file principale",
+            "time.sleep(30) dans le consommateur",
+            "Le remettre en file immédiatement",
+            "Le supprimer et attendre que le producteur le renvoie"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le consommateur reste libre de traiter les autres messages pendant l'attente.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "rmq-choisir-q4",
+          "prompt": "Que sont les files quorum ?",
+          "choices": [
+            "Des files répliquées sur plusieurs nœuds avec Raft, recommandées pour la haute disponibilité",
+            "Des files qui exigent un vote des consommateurs",
+            "Des files temporaires",
+            "Des files réservées aux administrateurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elles remplacent les anciennes files miroirs.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "rmq-choisir-q5",
+          "prompt": "Un message mal formé tourne en boucle et sature le consommateur. Touche la ligne en cause.",
+          "code": "def traiter(ch, methode, props, corps):\n    try:\n        enregistrer(json.loads(corps))\n        ch.basic_ack(methode.delivery_tag)\n    except Exception:\n        ch.basic_nack(methode.delivery_tag, requeue=True)",
+          "language": "python",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Un message qui échouera toujours est remis en file à l'infini. On le rejette sans le remettre (requeue=False) vers le dead letter exchange, après un nombre limité de tentatives.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rmq-choisir-q6",
+          "prompt": "Quelles métriques surveiller sur RabbitMQ ?",
+          "choices": [
+            "La profondeur des files",
+            "Le nombre de messages non acquittés",
+            "Le nombre de consommateurs connectés",
+            "Le nombre de lignes de code des producteurs"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une file qui grossit sans consommateur connecté appelle une alerte.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "rmq-defi",
+    "title": "Défi entretien : les factures perdues",
+    "summary": "File de tâches fiable.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "rmq-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une boutique génère une facture PDF à chaque commande, dans la requête : l'API devient lente. Que faire ?",
+        "choices": [
+          "Publier une tâche dans une file RabbitMQ, traitée par des workers en arrière-plan",
+          "Générer les PDF plus petits",
+          "Augmenter le délai de la requête",
+          "Supprimer les factures"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'API répond tout de suite ; les workers absorbent la charge à leur rythme.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "rmq-defi-q2",
+        "prompt": "Cas pratique 2/3 — Quand un worker plante au milieu d'une facture, celle-ci n'est jamais générée. Pourquoi ?",
+        "choices": [
+          "Le message était acquitté dès sa livraison (auto_ack) : il faut acquitter après le traitement",
+          "RabbitMQ perd un message sur mille",
+          "Le PDF est trop gros",
+          "Le worker est trop rapide"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec un acquittement manuel, le message revient à un autre worker.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rmq-defi-q3",
+        "prompt": "Cas pratique 3/3 — Une commande au format invalide fait échouer le worker en boucle. Que faire ?",
+        "choices": [
+          "La rejeter sans remise en file, vers une file d'erreurs (dead letter) pour analyse",
+          "La remettre en file indéfiniment",
+          "Redémarrer RabbitMQ",
+          "Ignorer toutes les erreurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le reste des factures continue d'être traité.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rmq-defi-q4",
+        "prompt": "Une file est liée à un exchange topic avec le motif facture.#. Reçoit-elle les messages de clé facture.fr.emise ?",
+        "choices": [
+          "Oui : # correspond à zéro mot ou plus",
+          "Non : # correspond à un seul mot",
+          "Seulement si la file est durable",
+          "Seulement avec un exchange fanout"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec facture.*, il faudrait exactement un mot après facture.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "rmq-defi-q5",
+        "prompt": "Remets dans l'ordre le parcours d'un message.",
+        "language": "text",
+        "lines": [
+          "Le producteur publie sur l'exchange avec une clé de routage",
+          "L'exchange route le message vers les files liées",
+          "Le broker livre le message à un consommateur",
+          "Le consommateur traite le message",
+          "Le consommateur acquitte le message"
+        ],
+        "explanation": "Le message n'est retiré de la file qu'à l'acquittement.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "rmq-defi-q6",
+        "prompt": "Qu'est-ce qui rend le traitement fiable ?",
+        "choices": [
+          "Des files durables et des messages persistants",
+          "Les publisher confirms",
+          "Un acquittement manuel après le traitement",
+          "auto_ack=True"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Chaque maillon, du producteur au consommateur, doit être fiable.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

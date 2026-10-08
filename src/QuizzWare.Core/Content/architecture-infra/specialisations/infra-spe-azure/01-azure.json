@@ -1,0 +1,444 @@
+{
+  "id": "azure-ch-essentiel",
+  "title": "Azure : l'essentiel",
+  "summary": "Organisation, services et architecture.",
+  "lessons": [
+    {
+      "id": "az-bases",
+      "title": "Organisation et accès",
+      "summary": "Abonnements, groupes de ressources et RBAC.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La hiérarchie",
+          "body": "Un tenant Microsoft Entra ID porte les identités de l'organisation. En dessous : des groupes d'administration, des abonnements (l'unité de facturation), des groupes de ressources, puis les ressources elles-mêmes. Un groupe de ressources rassemble ce qui vit et meurt ensemble : le supprimer supprime tout son contenu.",
+          "code": "az group create --name rg-api-prod --location francecentral\naz role assignment create --assignee $ID \\\n  --role Reader \\\n  --scope /subscriptions/$SUB/resourceGroups/rg-api-prod",
+          "language": "shell"
+        },
+        {
+          "title": "RBAC",
+          "body": "Les droits s'attribuent en associant un rôle (Owner, Contributor, Reader, ou un rôle précis comme Storage Blob Data Reader) à une identité, sur une étendue : groupe d'administration, abonnement, groupe de ressources ou ressource. Les attributions se transmettent vers le bas. Contributor gère les ressources mais ne peut pas accorder de droits ; Owner le peut."
+        },
+        {
+          "title": "Les identités managées",
+          "body": "Une identité managée est une identité fournie par Azure à une ressource (App Service, VM, Function) : elle s'authentifie auprès des autres services sans aucun secret à stocker ni à renouveler. On lui accorde seulement les rôles nécessaires."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "az-bases-q1",
+          "prompt": "Dans quel ordre s'emboîtent ces niveaux, du plus large au plus précis ?",
+          "choices": [
+            "Groupe d'administration, abonnement, groupe de ressources, ressource",
+            "Ressource, groupe de ressources, abonnement",
+            "Abonnement, groupe d'administration, ressource",
+            "Groupe de ressources, abonnement, ressource"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le tenant Entra ID se trouve au-dessus de l'ensemble.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "az-bases-q2",
+          "prompt": "Que se passe-t-il quand on supprime un groupe de ressources ?",
+          "choices": [
+            "Toutes les ressources qu'il contient sont supprimées",
+            "Seul le groupe est supprimé, les ressources restent",
+            "Les ressources sont déplacées dans un autre groupe",
+            "Rien, il faut d'abord le vider"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pratique pour supprimer un environnement de test entier ; dangereux en production, d'où les verrous (resource locks).",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "az-bases-q3",
+          "prompt": "Complète : créer le groupe, puis y donner un accès en lecture seule.",
+          "code": "az group ___ --name rg-api-prod --location francecentral\naz role assignment create --assignee $ID \\\n  --role ___ \\\n  --scope /subscriptions/$SUB/resourceGroups/rg-api-prod",
+          "language": "shell",
+          "answers": [
+            "create",
+            "Reader"
+          ],
+          "distractors": [
+            "add",
+            "Owner",
+            "new"
+          ],
+          "explanation": "Reader permet de tout voir sans rien modifier.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "az-bases-q4",
+          "prompt": "Cette application doit seulement lire les blobs d'un compte de stockage. Touche la ligne en cause.",
+          "code": "az role assignment create --assignee $APP_ID \\\n  --role Owner --scope /subscriptions/$SUB",
+          "language": "shell",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Owner sur tout l'abonnement : elle peut tout faire, y compris accorder des droits. Il suffit de Storage Blob Data Reader sur le compte de stockage.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "az-bases-q5",
+          "prompt": "Qu'est-ce qu'une identité managée ?",
+          "choices": [
+            "Une identité fournie par Azure à une ressource, qui s'authentifie sans secret à stocker",
+            "Un compte administrateur partagé",
+            "Un mot de passe renouvelé chaque mois",
+            "Un groupe d'utilisateurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'équivalent des rôles IAM attachés chez AWS.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "az-bases-q6",
+          "prompt": "Lesquels sont des rôles intégrés d'Azure RBAC ?",
+          "choices": [
+            "Owner",
+            "Contributor",
+            "Reader",
+            "Superuser"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il existe aussi des centaines de rôles spécialisés par service.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "az-services",
+      "title": "Les services clés",
+      "summary": "Calcul, données, secrets et messages.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Calcul",
+          "body": "App Service héberge des applications web sans gérer de serveur ; Azure Functions exécute du code à la demande ; Container Apps lance des conteneurs avec mise à l'échelle automatique, jusqu'à zéro ; AKS fournit un Kubernetes géré quand on a besoin de tout son contrôle."
+        },
+        {
+          "title": "Données et secrets",
+          "body": "Storage regroupe Blob (fichiers), Queue et Table. Azure SQL est un SQL Server géré ; Cosmos DB, une base NoSQL distribuée mondialement. Key Vault conserve secrets, clés et certificats ; avec une identité managée et DefaultAzureCredential, une application les lit sans aucun secret dans sa configuration.",
+          "code": "var client = new SecretClient(\n    new Uri(\"https://kv-api.vault.azure.net/\"),\n    new DefaultAzureCredential());\nKeyVaultSecret s = await client.GetSecretAsync(\"DbPassword\");",
+          "language": "csharp"
+        },
+        {
+          "title": "Messages et événements",
+          "body": "Service Bus transporte des messages métier fiables (files, sujets, messages en erreur). Event Hubs ingère des flux massifs (télémétrie, journaux) à la manière de Kafka. Event Grid route des événements (un blob créé, une ressource modifiée) vers des gestionnaires."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "az-services-q1",
+          "prompt": "Quel service pour héberger simplement une API web, sans gérer de serveurs ni de Kubernetes ?",
+          "choices": [
+            "App Service (ou Container Apps pour un conteneur)",
+            "AKS",
+            "Des machines virtuelles",
+            "Blob Storage"
+          ],
+          "answerIndex": 0,
+          "explanation": "On réserve AKS aux besoins qui justifient un Kubernetes complet.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "az-services-q2",
+          "prompt": "Quel service pour ingérer des millions d'événements de télémétrie par seconde ?",
+          "choices": [
+            "Event Hubs",
+            "Service Bus",
+            "Event Grid",
+            "Azure SQL"
+          ],
+          "answerIndex": 0,
+          "explanation": "Service Bus vise des messages métier fiables ; Event Grid, des notifications d'événements.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "az-services-q3",
+          "prompt": "Complète : lire un secret dans Key Vault grâce à l'identité managée, sans secret dans la configuration.",
+          "code": "var client = new SecretClient(\n    new Uri(\"https://kv-api.vault.azure.net/\"),\n    new ___());\nKeyVaultSecret s = await client.___(\"DbPassword\");",
+          "language": "csharp",
+          "answers": [
+            "DefaultAzureCredential",
+            "GetSecretAsync"
+          ],
+          "distractors": [
+            "AzureKey",
+            "ReadSecretAsync",
+            "FetchAsync"
+          ],
+          "explanation": "DefaultAzureCredential utilise l'identité managée en production et le compte du développeur en local.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "az-services-q4",
+          "prompt": "Ce fichier de configuration est versionné. Touche la ligne en cause.",
+          "code": "{\n  \"Storage\": {\n    \"ConnectionString\": \"DefaultEndpointsProtocol=https;AccountName=stapi;AccountKey=8fK2...==\"\n  }\n}",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La clé du compte donne un accès total au stockage. On passe par une identité managée avec un rôle limité.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "az-services-q5",
+          "prompt": "Quelle différence entre Azure SQL et Cosmos DB ?",
+          "choices": [
+            "Azure SQL est une base relationnelle gérée ; Cosmos DB une base NoSQL distribuée mondialement",
+            "Ce sont deux noms du même service",
+            "Cosmos DB ne stocke que des fichiers",
+            "Azure SQL ne fonctionne qu'en Europe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le choix dépend du modèle de données et des besoins de distribution.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "az-services-q6",
+          "prompt": "Quels services Azure exécutent du code ?",
+          "choices": [
+            "App Service",
+            "Azure Functions",
+            "AKS",
+            "Blob Storage"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Blob Storage stocke des fichiers.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "az-architecture",
+      "title": "Réseau, gouvernance et coûts",
+      "summary": "Points de terminaison privés, Policy et Bicep.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le réseau",
+          "body": "Un VNet découpé en sous-réseaux, filtrés par des NSG. Un Private Endpoint donne à un service PaaS (Azure SQL, Storage, Key Vault) une adresse privée dans le VNet : on peut alors couper tout accès public. Front Door et Application Gateway exposent les applications, avec un pare-feu applicatif (WAF). Azure Bastion évite d'ouvrir RDP ou SSH sur Internet."
+        },
+        {
+          "title": "Gouvernance et IaC",
+          "body": "Azure Policy applique des règles à grande échelle : régions autorisées, tags obligatoires, stockage public interdit, avec un effet d'audit ou de refus. Bicep décrit l'infrastructure de façon déclarative, compilé en modèles ARM.",
+          "code": "resource sa 'Microsoft.Storage/storageAccounts@2023-05-01' = {\n  name: 'stapiprod'\n  location: resourceGroup().location\n  sku: { name: 'Standard_LRS' }\n  kind: 'StorageV2'\n  properties: {\n    allowBlobPublicAccess: false\n  }\n}",
+          "language": "text"
+        },
+        {
+          "title": "Supervision et coûts",
+          "body": "Azure Monitor collecte métriques et journaux dans Log Analytics ; Application Insights suit les applications (requêtes, dépendances, exceptions, traces). Cost Management et Azure Advisor aident à réduire la facture : réservations, arrêt des ressources inutilisées, tailles adaptées."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "az-architecture-q1",
+          "prompt": "Qu'est-ce qu'un Private Endpoint ?",
+          "choices": [
+            "Une adresse privée dans le VNet pour un service PaaS, qui permet de couper son accès public",
+            "Une URL secrète",
+            "Un VPN vers le poste du développeur",
+            "Une règle de pare-feu"
+          ],
+          "answerIndex": 0,
+          "explanation": "La base n'est plus joignable depuis Internet, seulement depuis le réseau privé.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "az-architecture-q2",
+          "prompt": "À quoi sert Azure Policy ?",
+          "choices": [
+            "À appliquer des règles de conformité à grande échelle, avec un effet d'audit ou de refus",
+            "À attribuer des rôles aux utilisateurs",
+            "À sauvegarder les ressources",
+            "À facturer les équipes"
+          ],
+          "answerIndex": 0,
+          "explanation": "RBAC dit qui peut agir ; Policy dit ce qui est permis, quel que soit l'auteur.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "az-architecture-q3",
+          "prompt": "Complète ce Bicep : même région que le groupe de ressources, et aucun accès public aux blobs.",
+          "code": "resource sa 'Microsoft.Storage/storageAccounts@2023-05-01' = {\n  name: 'stapiprod'\n  location: ___\n  sku: { name: 'Standard_LRS' }\n  kind: 'StorageV2'\n  properties: {\n    allowBlobPublicAccess: ___\n  }\n}",
+          "language": "text",
+          "answers": [
+            "resourceGroup().location",
+            "false"
+          ],
+          "distractors": [
+            "true",
+            "'global'",
+            "null"
+          ],
+          "explanation": "On évite de coder une région en dur ; et on interdit l'accès public dès la création.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "az-architecture-q4",
+          "prompt": "Que fournit Application Insights ?",
+          "choices": [
+            "Le suivi des applications : requêtes, dépendances, exceptions et traces distribuées",
+            "La gestion des identités",
+            "Le stockage des sauvegardes",
+            "La facturation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il s'appuie sur OpenTelemetry pour collecter les données.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "az-architecture-q5",
+          "prompt": "Revue des règles du NSG d'une VM d'administration : touche la ligne en cause.",
+          "code": "Priorité 100  Autoriser  Entrant  Source: Internet  Port: 3389",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "RDP ouvert à Internet est une cible permanente de force brute. On passe par Azure Bastion ou un VPN.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "az-architecture-q6",
+          "prompt": "Comment réduire la facture Azure ?",
+          "choices": [
+            "Des réservations ou plans d'économies pour la charge stable",
+            "Arrêter les environnements inutilisés",
+            "Suivre les recommandations d'Azure Advisor",
+            "Choisir systématiquement les offres Premium par précaution"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On dimensionne d'après les mesures réelles, pas par crainte.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "azure-defi",
+    "title": "Défi entretien : une application à durcir",
+    "summary": "Secrets, réseau et gouvernance.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "azure-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une application App Service lit ses mots de passe dans des paramètres d'application en clair. Comment l'améliorer ?",
+        "choices": [
+          "Stocker les secrets dans Key Vault et les lire grâce à une identité managée",
+          "Les encoder en base64",
+          "Les mettre dans le code",
+          "Les envoyer par e-mail à l'équipe"
+        ],
+        "answerIndex": 0,
+        "explanation": "Plus aucun secret dans la configuration, et des accès journalisés.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "azure-defi-q2",
+        "prompt": "Cas pratique 2/3 — La base Azure SQL accepte des connexions de toutes les adresses. Que faire ?",
+        "choices": [
+          "Créer un Private Endpoint dans le VNet de l'application et désactiver l'accès public",
+          "Changer le mot de passe tous les jours",
+          "Renommer la base",
+          "Ajouter des règles pour chaque adresse IP de développeur"
+        ],
+        "answerIndex": 0,
+        "explanation": "La base n'est plus exposée sur Internet.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "azure-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment empêcher toute équipe de recréer un compte de stockage public ?",
+        "choices": [
+          "Une Azure Policy avec un effet deny sur l'accès public",
+          "Une note dans le wiki",
+          "Retirer tous les droits aux équipes",
+          "Des audits manuels mensuels"
+        ],
+        "answerIndex": 0,
+        "explanation": "La création non conforme est refusée, quel que soit l'outil utilisé.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "azure-defi-q4",
+        "prompt": "Quelle différence entre les rôles Contributor et Owner ?",
+        "choices": [
+          "Contributor gère les ressources mais ne peut pas accorder de droits ; Owner le peut",
+          "Contributor ne peut rien modifier",
+          "Owner ne voit pas les ressources",
+          "Aucune"
+        ],
+        "answerIndex": 0,
+        "explanation": "Accorder Owner, c'est permettre de s'attribuer encore plus de droits.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "azure-defi-q5",
+        "prompt": "À quoi sert Event Grid ?",
+        "choices": [
+          "À router des événements (un blob créé, une ressource modifiée) vers des gestionnaires",
+          "À stocker des fichiers",
+          "À héberger des sites web",
+          "À gérer des identités"
+        ],
+        "answerIndex": 0,
+        "explanation": "Par exemple : une image déposée déclenche une Function qui crée sa miniature.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "azure-defi-q6",
+        "prompt": "Quelles sont de bonnes pratiques d'identité sur Azure ?",
+        "choices": [
+          "Des identités managées plutôt que des secrets",
+          "La MFA et l'accès conditionnel",
+          "Le moindre privilège, à la plus petite étendue possible",
+          "Un compte partagé pour toute l'équipe"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un compte partagé rend impossible de savoir qui a fait quoi.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

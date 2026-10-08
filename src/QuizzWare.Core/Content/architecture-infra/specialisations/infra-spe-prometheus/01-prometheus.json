@@ -1,0 +1,448 @@
+{
+  "id": "prom-ch-essentiel",
+  "title": "Prometheus et Grafana : l'essentiel",
+  "summary": "Métriques, PromQL et alertes.",
+  "lessons": [
+    {
+      "id": "prom-modele",
+      "title": "Le modèle de Prometheus",
+      "summary": "Collecte, types de métriques et labels.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La collecte",
+          "body": "Prometheus interroge (scrape) à intervalle régulier un endpoint /metrics exposé par chaque cible, et stocke les valeurs en séries temporelles. Les cibles sont découvertes automatiquement (Kubernetes, cloud) ou listées. Pour un logiciel qui n'expose rien, un exporter fait la traduction : node_exporter pour la machine, postgres_exporter pour la base.",
+          "code": "# HELP http_requests_total Requêtes HTTP reçues\n# TYPE http_requests_total counter\nhttp_requests_total{methode=\"GET\",statut=\"200\"} 10427\nhttp_requests_total{methode=\"GET\",statut=\"500\"} 12",
+          "language": "text"
+        },
+        {
+          "title": "Les types de métriques",
+          "body": "Un counter ne fait qu'augmenter (requêtes reçues, erreurs) et repart à zéro au redémarrage. Une gauge monte et descend (taille d'une file, mémoire utilisée). Un histogram range les observations dans des intervalles (buckets), ce qui permet de calculer des quantiles de latence. Un summary calcule des quantiles côté application."
+        },
+        {
+          "title": "Les labels",
+          "body": "Chaque combinaison de labels crée une série distincte. Des labels bornés (méthode, statut, route) restent maîtrisables ; un identifiant d'utilisateur ou une URL complète en label crée des millions de séries : c'est l'explosion de cardinalité, qui fait exploser la mémoire de Prometheus."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "prom-modele-q1",
+          "prompt": "Comment Prometheus collecte-t-il les métriques ?",
+          "choices": [
+            "Il interroge régulièrement un endpoint /metrics exposé par chaque cible",
+            "Les applications lui envoient chaque mesure en direct",
+            "Il lit les journaux des applications",
+            "Il interroge la base de données de chaque application"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le modèle pull ; Pushgateway sert à l'exception des tâches courtes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "prom-modele-q2",
+          "prompt": "Quel type de métrique pour le nombre de requêtes reçues depuis le démarrage ?",
+          "choices": [
+            "Un counter",
+            "Une gauge",
+            "Un summary",
+            "Une chaîne de caractères"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une valeur qui ne fait qu'augmenter : on en calculera le débit avec rate().",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "prom-modele-q3",
+          "prompt": "Depuis l'ajout de cette métrique, la mémoire de Prometheus ne cesse d'augmenter. Touche la ligne en cause.",
+          "code": "http_requests_total{chemin=\"/users/48213\", utilisateur=\"ana@ex.fr\"}",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Chaque utilisateur et chaque URL créent une nouvelle série. On utilise la route (/users/:id) et on met l'identifiant de l'utilisateur dans les journaux ou les traces.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "prom-modele-q4",
+          "prompt": "Complète les types : une taille de file, puis une durée de requête dont on veut les quantiles.",
+          "code": "# TYPE file_attente_taille ___\nfile_attente_taille 42\n# TYPE duree_requete_secondes ___",
+          "language": "text",
+          "answers": [
+            "gauge",
+            "histogram"
+          ],
+          "distractors": [
+            "counter",
+            "timer",
+            "number"
+          ],
+          "explanation": "La taille d'une file monte et descend ; un histogramme permet de calculer le p99 de la durée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "prom-modele-q5",
+          "prompt": "Que fait un exporter comme node_exporter ?",
+          "choices": [
+            "Il expose au format Prometheus les métriques d'un système qui n'en fournit pas (ici, la machine)",
+            "Il exporte les données de Prometheus vers Excel",
+            "Il sauvegarde Prometheus",
+            "Il envoie des alertes"
+          ],
+          "answerIndex": 0,
+          "explanation": "CPU, mémoire, disques, réseau de la machine.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "prom-modele-q6",
+          "prompt": "Quels labels conviennent à une métrique de requêtes HTTP ?",
+          "choices": [
+            "La méthode HTTP",
+            "Le code de statut",
+            "Le modèle de route (/users/:id)",
+            "L'identifiant de l'utilisateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un label doit prendre un nombre limité de valeurs.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "prom-promql",
+      "title": "PromQL",
+      "summary": "rate, agrégations et quantiles.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "rate et les counters",
+          "body": "La valeur brute d'un counter ne dit rien d'utile : elle ne fait que croître. rate(x[5m]) donne le débit moyen par seconde sur 5 minutes, en compensant les remises à zéro dues aux redémarrages. increase donne l'augmentation sur la période. Pour une gauge, on lit la valeur directement, ou on utilise deriv."
+        },
+        {
+          "title": "Agréger",
+          "body": "sum by (service) additionne les séries en ne gardant que le label service ; sans by, tout est additionné. Un ratio d'erreurs se calcule en divisant le débit des réponses 5xx par le débit total.",
+          "code": "sum(rate(http_requests_total{statut=~\"5..\"}[5m]))\n  / sum(rate(http_requests_total[5m]))",
+          "language": "text"
+        },
+        {
+          "title": "Les quantiles",
+          "body": "histogram_quantile calcule un quantile à partir des buckets d'un histogramme, en gardant le label le (la borne de chaque bucket). Les buckets s'additionnent entre réplicas, ce qui permet un p99 global ; les quantiles d'un summary, eux, ne s'agrègent pas.",
+          "code": "histogram_quantile(0.99,\n  sum by (le) (rate(duree_requete_secondes_bucket[5m])))",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "prom-promql-q1",
+          "prompt": "Pourquoi appliquer rate() à un counter plutôt qu'afficher sa valeur brute ?",
+          "choices": [
+            "La valeur brute ne fait que croître et repart à zéro au redémarrage ; rate donne un débit par seconde qui en tient compte",
+            "La valeur brute est confidentielle",
+            "rate arrondit les valeurs",
+            "Prometheus ne stocke pas la valeur brute"
+          ],
+          "answerIndex": 0,
+          "explanation": "« 10 427 requêtes depuis le démarrage » n'aide pas ; « 35 requêtes par seconde » si.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "prom-promql-q2",
+          "prompt": "Complète : la latence au 99e centile, sur 5 minutes, tous réplicas confondus.",
+          "code": "histogram_quantile(0.99,\n  sum by (___) (___(duree_requete_secondes_bucket[5m])))",
+          "language": "text",
+          "answers": [
+            "le",
+            "rate"
+          ],
+          "distractors": [
+            "quantile",
+            "sum",
+            "avg"
+          ],
+          "explanation": "Le label le doit survivre à l'agrégation : histogram_quantile en a besoin.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "prom-promql-q3",
+          "prompt": "Ce graphique de la taille de la file d'attente n'a aucun sens. Touche la ligne en cause.",
+          "code": "rate(file_attente_taille[5m])",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "rate est fait pour les counters. Une gauge s'affiche telle quelle (file_attente_taille), ou avec deriv pour sa tendance.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "prom-promql-q4",
+          "prompt": "Que calcule cette requête ?",
+          "code": "sum(rate(http_requests_total{statut=~\"5..\"}[5m]))\n  / sum(rate(http_requests_total[5m]))",
+          "language": "text",
+          "choices": [
+            "La part des réponses 5xx sur les 5 dernières minutes",
+            "Le nombre total d'erreurs depuis le démarrage",
+            "La latence moyenne",
+            "Le nombre de serveurs en panne"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un ratio d'erreurs : la base d'un SLO de disponibilité.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "prom-promql-q5",
+          "prompt": "Que renvoie sum by (service) (rate(http_requests_total[5m])) ?",
+          "choices": [
+            "Le débit de requêtes additionné par service, les autres labels étant agrégés",
+            "Le nombre de services",
+            "Le débit d'un seul service au hasard",
+            "La liste des labels"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une série par valeur du label service.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "prom-promql-q6",
+          "prompt": "Quelles fonctions s'appliquent normalement à des counters ?",
+          "choices": [
+            "rate",
+            "irate",
+            "increase",
+            "deriv"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "deriv estime la pente d'une gauge.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "prom-alertes",
+      "title": "Alertes et tableaux de bord",
+      "summary": "Règles, Alertmanager et Grafana.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les règles d'alerte",
+          "body": "Une règle d'alerte évalue une expression PromQL ; for impose que la condition reste vraie un certain temps avant de déclencher, ce qui évite les fausses alertes sur un pic passager. Labels et annotations portent la sévérité, un résumé et un lien vers la procédure (runbook).",
+          "code": "groups:\n  - name: api\n    rules:\n      - alert: TauxErreursEleve\n        expr: |\n          sum(rate(http_requests_total{statut=~\"5..\"}[5m]))\n            / sum(rate(http_requests_total[5m])) > 0.05\n        for: 10m\n        labels:\n          severite: page\n        annotations:\n          resume: \"Plus de 5 % d'erreurs depuis 10 minutes\"",
+          "language": "yaml"
+        },
+        {
+          "title": "Alertmanager",
+          "body": "Alertmanager reçoit les alertes de Prometheus, les regroupe, les route selon leurs labels (Slack pour un avertissement, PagerDuty pour une alerte qui réveille), gère les silences pendant une maintenance et l'inhibition (une panne de réseau masque les alertes qu'elle provoque)."
+        },
+        {
+          "title": "Alerter sur les symptômes",
+          "body": "On réveille quelqu'un pour un symptôme visible des utilisateurs (erreurs, latence, SLO menacé), pas pour une cause possible (CPU à 80 %) qui n'a peut-être aucun impact. Dans Grafana, un tableau de bord de service suit la méthode RED : débit (Rate), erreurs (Errors), durée (Duration)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "prom-alertes-q1",
+          "prompt": "À quoi sert for: 10m dans une règle d'alerte ?",
+          "choices": [
+            "La condition doit rester vraie 10 minutes avant que l'alerte se déclenche",
+            "L'alerte est envoyée toutes les 10 minutes",
+            "L'alerte expire après 10 minutes",
+            "La requête porte sur 10 minutes de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un pic d'une minute ne réveille personne.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "prom-alertes-q2",
+          "prompt": "Quel est le rôle d'Alertmanager ?",
+          "choices": [
+            "Regrouper, router et faire taire les alertes, puis les envoyer vers Slack, PagerDuty ou un e-mail",
+            "Évaluer les règles PromQL",
+            "Stocker les métriques",
+            "Dessiner les tableaux de bord"
+          ],
+          "answerIndex": 0,
+          "explanation": "Prometheus évalue les règles ; Alertmanager décide qui prévenir et comment.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "prom-alertes-q3",
+          "prompt": "L'astreinte est réveillée chaque nuit pendant les sauvegardes, sans aucun impact pour les utilisateurs. Touche la ligne à revoir.",
+          "code": "- alert: CPUEleve\n  expr: avg(rate(node_cpu_seconds_total{mode!=\"idle\"}[5m])) > 0.8\n  labels:\n    severite: page",
+          "language": "yaml",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Un CPU élevé est une cause possible, pas un symptôme. Cette alerte peut rester un avertissement ; on réveille quelqu'un pour des erreurs ou une latence qui touchent les utilisateurs.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "prom-alertes-q4",
+          "prompt": "Complète cette règle d'alerte.",
+          "code": "- alert: TauxErreursEleve\n  ___: sum(rate(errors_total[5m])) > 10\n  ___: 10m",
+          "language": "yaml",
+          "answers": [
+            "expr",
+            "for"
+          ],
+          "distractors": [
+            "query",
+            "duration",
+            "wait"
+          ],
+          "explanation": "expr est la condition PromQL, for sa durée minimale.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "prom-alertes-q5",
+          "prompt": "Que mesure la méthode RED ?",
+          "choices": [
+            "Le débit (Rate), les erreurs (Errors) et la durée (Duration) des requêtes",
+            "La RAM, l'Espace disque et le Débit réseau",
+            "Les Redémarrages, les Événements et les Déploiements",
+            "Les Rapports, les Exports et les Données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour les ressources (CPU, disque), on utilise la méthode USE : Utilisation, Saturation, Erreurs.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "prom-alertes-q6",
+          "prompt": "Qu'est-ce qui caractérise une bonne alerte ?",
+          "choices": [
+            "Elle concerne un symptôme visible des utilisateurs",
+            "Elle demande une action humaine",
+            "Elle renvoie vers une procédure (runbook)",
+            "Elle se déclenche à chaque pic de CPU d'une seconde"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une alerte sans action possible finit par être ignorée, avec toutes les autres.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "prom-defi",
+    "title": "Défi entretien : instrumenter une API",
+    "summary": "Métriques, quantiles et alertes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "prom-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une API n'expose aucune métrique. Lesquelles ajouter en premier ?",
+        "choices": [
+          "Débit, erreurs et durée (histogramme) des requêtes, par route et par statut",
+          "L'identifiant de chaque utilisateur connecté",
+          "Le contenu des requêtes",
+          "Le nombre de lignes de code"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec RED, on sait si le service rend le service attendu.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "prom-defi-q2",
+        "prompt": "Cas pratique 2/3 — Comment calculer la latence p99 sur 5 minutes pour l'ensemble des réplicas ?",
+        "choices": [
+          "histogram_quantile(0.99, sum by (le) (rate(duree_requete_secondes_bucket[5m])))",
+          "avg(duree_requete_secondes)",
+          "max(duree_requete_secondes_sum)",
+          "rate(duree_requete_secondes_count[5m]) * 0.99"
+        ],
+        "answerIndex": 0,
+        "explanation": "On additionne les buckets de tous les réplicas avant de calculer le quantile.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "prom-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment alerter sans réveiller l'astreinte pour un pic d'une minute ?",
+        "choices": [
+          "Une alerte sur le taux d'erreurs avec for: 10m, ou mieux une alerte sur la consommation du budget d'erreur",
+          "Une alerte sur chaque erreur",
+          "Pas d'alerte, on lit les tableaux de bord le matin",
+          "Une alerte sur le CPU"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les alertes de burn rate réagissent vite aux pannes graves et ignorent le bruit.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "prom-defi-q4",
+        "prompt": "Un counter repasse à 0 au redémarrage d'un pod. rate() en est-il faussé ?",
+        "choices": [
+          "Non : rate détecte la remise à zéro et la compense",
+          "Oui, il devient négatif",
+          "Oui, il faut redémarrer Prometheus",
+          "Oui, la série est supprimée"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est l'une des raisons de toujours passer par rate ou increase.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "prom-defi-q5",
+        "prompt": "Avec 20 réplicas, pourquoi préférer un histogram à un summary pour la latence ?",
+        "choices": [
+          "Les buckets d'histogrammes s'additionnent entre réplicas ; les quantiles d'un summary ne s'agrègent pas",
+          "Le summary est plus lent à écrire",
+          "L'histogramme prend moins de place, toujours",
+          "Le summary ne fonctionne pas avec Kubernetes"
+        ],
+        "answerIndex": 0,
+        "explanation": "La moyenne de 20 p99 n'est pas le p99 global.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "prom-defi-q6",
+        "prompt": "Quels composants forment cet écosystème de supervision ?",
+        "choices": [
+          "Prometheus, qui collecte et stocke les métriques",
+          "Alertmanager, qui route les alertes",
+          "Grafana, qui affiche les tableaux de bord",
+          "Logstash, qui stocke les métriques Prometheus"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Logstash traite des journaux, dans la pile Elastic.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

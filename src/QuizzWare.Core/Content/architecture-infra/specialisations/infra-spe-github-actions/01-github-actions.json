@@ -1,0 +1,444 @@
+{
+  "id": "gha-ch-essentiel",
+  "title": "GitHub Actions : l'essentiel",
+  "summary": "Workflows, réutilisation et sécurité.",
+  "lessons": [
+    {
+      "id": "gha-bases",
+      "title": "Workflows, jobs et étapes",
+      "summary": "La structure d'un workflow.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un workflow",
+          "body": "Un workflow est un fichier YAML dans .github/workflows/. on dit quand il se déclenche : push, pull_request, schedule (cron), workflow_dispatch (bouton manuel). Il contient des jobs, qui s'exécutent par défaut en parallèle, chacun sur une machine neuve (runner). needs ordonne les jobs entre eux.",
+          "code": "name: ci\non:\n  pull_request:\n  push:\n    branches: [main]\njobs:\n  tests:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 22\n          cache: npm\n      - run: npm ci\n      - run: npm test",
+          "language": "yaml"
+        },
+        {
+          "title": "Les étapes",
+          "body": "Chaque job enchaîne des étapes : uses appelle une action (du code réutilisable publié dans un dépôt), run exécute une commande shell. Le runner démarre vide : la première étape est presque toujours actions/checkout, qui récupère le code. Les actions setup-* installent un langage et peuvent mettre les dépendances en cache."
+        },
+        {
+          "title": "Lire les résultats",
+          "body": "Chaque exécution apparaît dans l'onglet Actions et sur la pull request, avec les journaux de chaque étape. Une étape qui renvoie un code d'erreur fait échouer le job. Une règle de branche protégée peut exiger que certains jobs passent avant toute fusion."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gha-bases-q1",
+          "prompt": "Par défaut, comment s'exécutent deux jobs d'un même workflow ?",
+          "choices": [
+            "En parallèle, chacun sur son propre runner",
+            "L'un après l'autre, dans l'ordre du fichier",
+            "Sur le même runner, en partageant les fichiers",
+            "Seulement le premier"
+          ],
+          "answerIndex": 0,
+          "explanation": "needs crée une dépendance ; les fichiers passent d'un job à l'autre par des artefacts.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "gha-bases-q2",
+          "prompt": "Complète : déployer seulement après la réussite du build.",
+          "code": "jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci && npm run build\n  deploy:\n    ___: build\n    runs-on: ubuntu-latest\n    steps:\n      - ___: ./deploy.sh",
+          "language": "yaml",
+          "answers": [
+            "needs",
+            "run"
+          ],
+          "distractors": [
+            "after",
+            "depends_on",
+            "uses"
+          ],
+          "explanation": "needs attend la réussite du job cité ; run exécute une commande.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "gha-bases-q3",
+          "prompt": "npm ci échoue : package.json introuvable. Touche la ligne qui échoue.",
+          "code": "jobs:\n  tests:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm ci\n      - run: npm test",
+          "language": "yaml",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Le runner démarre vide : il manque l'étape uses: actions/checkout@v4 avant npm ci.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gha-bases-q4",
+          "prompt": "Quel déclencheur permet de lancer un workflow à la main depuis l'interface ?",
+          "choices": [
+            "workflow_dispatch",
+            "manual",
+            "on_click",
+            "schedule"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il peut aussi déclarer des paramètres saisis au lancement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gha-bases-q5",
+          "prompt": "Que fait l'étape actions/setup-node@v4 avec cache: npm ?",
+          "choices": [
+            "Elle installe Node et met en cache les paquets npm, avec une clé tirée du fichier de verrouillage",
+            "Elle met en cache le dossier dist",
+            "Elle publie le paquet sur npm",
+            "Elle met en cache les résultats des tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le cache est réutilisé tant que package-lock.json ne change pas.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gha-bases-q6",
+          "prompt": "Quels événements peuvent déclencher un workflow ?",
+          "choices": [
+            "push",
+            "pull_request",
+            "schedule",
+            "compile"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il en existe beaucoup d'autres : release, issues, workflow_call…",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "gha-avance",
+      "title": "Matrices, artefacts et réutilisation",
+      "summary": "Aller plus vite et ne pas se répéter.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Matrices et concurrence",
+          "body": "Une matrice crée un job par combinaison de valeurs : trois versions de Node sur deux systèmes donnent six jobs. concurrency regroupe les exécutions : avec cancel-in-progress, un nouveau push annule l'exécution précédente de la même branche, devenue inutile.",
+          "code": "strategy:\n  matrix:\n    node: [20, 22, 24]\n    os: [ubuntu-latest, windows-latest]\nruns-on: ${{ matrix.os }}\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true",
+          "language": "yaml"
+        },
+        {
+          "title": "Artefacts, secrets et environnements",
+          "body": "upload-artifact et download-artifact transmettent des fichiers entre jobs (un dossier dist, un rapport de tests). Les secrets sont chiffrés et masqués dans les journaux ; les variables (vars) portent la configuration non sensible. Un environnement (production) peut exiger l'approbation d'un relecteur et garder ses propres secrets."
+        },
+        {
+          "title": "Réutiliser",
+          "body": "Un workflow réutilisable (on: workflow_call) s'appelle depuis d'autres workflows, avec des entrées et des secrets ; une action composite regroupe des étapes. Publiés dans un dépôt partagé, ils évitent de copier le même YAML dans chaque projet."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gha-avance-q1",
+          "prompt": "Une matrice teste 3 versions de Node sur 2 systèmes d'exploitation. Combien de jobs crée-t-elle ?",
+          "choices": [
+            "6",
+            "5",
+            "3",
+            "2"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une par combinaison : 3 × 2.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "gha-avance-q2",
+          "prompt": "Complète : un nouveau push annule l'exécution en cours sur la même branche.",
+          "code": "concurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  ___: true",
+          "language": "yaml",
+          "answers": [
+            "cancel-in-progress"
+          ],
+          "distractors": [
+            "cancel",
+            "stop-previous",
+            "queue"
+          ],
+          "explanation": "On économise des minutes de calcul et on obtient plus vite le résultat utile.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gha-avance-q3",
+          "prompt": "Comment transmettre le dossier dist du job build au job deploy ?",
+          "choices": [
+            "actions/upload-artifact dans build, puis actions/download-artifact dans deploy",
+            "Les jobs partagent le même disque",
+            "Avec une variable d'environnement",
+            "En le commitant dans le dépôt"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque job démarre sur un runner neuf.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gha-avance-q4",
+          "prompt": "Une pull request venue d'un fork peut voler le jeton npm. Touche une ligne en cause.",
+          "code": "on: pull_request_target\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}\n      - run: npm ci && npm test\n        env:\n          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}",
+          "language": "yaml",
+          "bugLines": [
+            1,
+            8
+          ],
+          "explanation": "pull_request_target s'exécute avec les secrets du dépôt ; récupérer et lancer le code de la PR donne ces secrets à l'auteur du fork. On utilise pull_request, sans secrets, pour tester du code externe.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gha-avance-q5",
+          "prompt": "À quoi sert un environnement production avec des relecteurs requis ?",
+          "choices": [
+            "À exiger une approbation humaine avant les jobs qui le ciblent, et à y restreindre ses secrets",
+            "À accélérer les déploiements",
+            "À créer une copie du dépôt",
+            "À masquer les journaux"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut aussi limiter les branches autorisées à y déployer.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gha-avance-q6",
+          "prompt": "Comment partager de la logique de CI entre plusieurs dépôts ?",
+          "choices": [
+            "Des workflows réutilisables (workflow_call)",
+            "Des actions composites",
+            "Des actions publiées dans un dépôt partagé",
+            "Copier le YAML dans chaque dépôt"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les copies divergent vite, et chaque correction doit être refaite partout.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "gha-securite",
+      "title": "Sécuriser ses workflows",
+      "summary": "Permissions, injections et OIDC.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le moindre privilège",
+          "body": "Chaque exécution reçoit un GITHUB_TOKEN ; on limite ses droits avec permissions (contents: read par défaut), en accordant le reste job par job. Les actions tierces s'épinglent par le SHA complet d'un commit : un tag comme @v3 peut être déplacé vers du code malveillant. Dependabot tient ces références à jour.",
+          "code": "permissions:\n  contents: read\n  id-token: write\nsteps:\n  - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "language": "yaml"
+        },
+        {
+          "title": "Les injections",
+          "body": "Une expression ${{ }} est remplacée dans le script avant son exécution : le titre d'un ticket ou d'une pull request, écrit par n'importe qui, peut contenir une commande. On passe ces valeurs par une variable d'environnement (env), que le shell traite comme une simple donnée."
+        },
+        {
+          "title": "OIDC et runners",
+          "body": "Avec OIDC, un workflow échange un jeton signé par GitHub contre des identifiants temporaires chez AWS, Azure ou GCP : plus aucune clé longue à stocker. Les runners auto-hébergés ne doivent pas servir aux dépôts publics : n'importe quelle pull request pourrait exécuter du code sur la machine."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "gha-securite-q1",
+          "prompt": "Complète : lire le code du dépôt et obtenir un jeton OIDC, sans autre droit.",
+          "code": "permissions:\n  contents: ___\n  id-token: ___",
+          "language": "yaml",
+          "answers": [
+            "read",
+            "write"
+          ],
+          "distractors": [
+            "none",
+            "admin",
+            "all"
+          ],
+          "explanation": "id-token: write autorise seulement la demande d'un jeton OIDC, pas l'écriture dans le dépôt.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gha-securite-q2",
+          "prompt": "Un ticket au titre bien choisi exécute des commandes sur le runner. Touche la ligne en cause.",
+          "code": "on: issues\njobs:\n  trier:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo \"Nouveau ticket : ${{ github.event.issue.title }}\"",
+          "language": "yaml",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Un titre comme \"; curl … | sh #\" est collé dans le script. On écrit env: TITRE: ${{ github.event.issue.title }} puis echo \"$TITRE\".",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gha-securite-q3",
+          "prompt": "Pourquoi épingler une action tierce par le SHA d'un commit plutôt que par @v3 ?",
+          "choices": [
+            "Un tag peut être déplacé vers un autre code ; un SHA désigne un contenu immuable",
+            "Pour que le workflow soit plus rapide",
+            "Parce que les tags sont interdits",
+            "Pour masquer la version utilisée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des attaques réelles ont modifié les tags d'actions populaires pour voler des secrets.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gha-securite-q4",
+          "prompt": "Qu'apporte OIDC pour déployer sur AWS depuis GitHub Actions ?",
+          "choices": [
+            "Le workflow obtient des identifiants temporaires en échange d'un jeton signé, sans clé stockée en secret",
+            "Il chiffre le code",
+            "Il accélère le build",
+            "Il remplace IAM"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le rôle AWS peut n'accepter que les jetons d'un dépôt et d'une branche précis.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gha-securite-q5",
+          "prompt": "Pourquoi éviter les runners auto-hébergés sur un dépôt public ?",
+          "choices": [
+            "N'importe qui peut ouvrir une pull request qui exécute du code sur la machine",
+            "Ils sont trop lents",
+            "GitHub les facture plus cher",
+            "Ils ne gèrent pas Docker"
+          ],
+          "answerIndex": 0,
+          "explanation": "La machine peut ensuite servir de point d'entrée dans le réseau interne.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "gha-securite-q6",
+          "prompt": "Comment durcir ses workflows ?",
+          "choices": [
+            "Des permissions minimales pour GITHUB_TOKEN",
+            "Des actions tierces épinglées par SHA",
+            "OIDC plutôt que des clés longues",
+            "pull_request_target avec le code de la pull request récupéré"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Cette dernière combinaison est la faille la plus classique de GitHub Actions.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "gha-defi",
+    "title": "Défi entretien : la CI d'un monorepo",
+    "summary": "Vitesse, identifiants et contrôle.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "gha-defi-q1",
+        "prompt": "Cas pratique 1/3 — La CI d'un monorepo prend 25 minutes ; chaque push relance tout, et les exécutions précédentes continuent. Premiers leviers ?",
+        "choices": [
+          "Cache des dépendances, concurrency avec cancel-in-progress, et filtres de chemins (paths) par projet",
+          "Lancer la CI une fois par jour",
+          "Supprimer les tests",
+          "Un seul gros job séquentiel"
+        ],
+        "answerIndex": 0,
+        "explanation": "On ne teste que ce qui a changé, on ne garde que l'exécution utile, et on réutilise ce qui peut l'être.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gha-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le déploiement utilise une clé AWS stockée en secret depuis trois ans. Que faire ?",
+        "choices": [
+          "Passer à OIDC avec un rôle limité au dépôt et à la branche main, puis supprimer la clé",
+          "Changer la clé tous les trois ans",
+          "La mettre dans une variable plutôt qu'un secret",
+          "Rien, les secrets sont chiffrés"
+        ],
+        "answerIndex": 0,
+        "explanation": "Plus de secret longue durée à faire fuiter.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gha-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment empêcher un déploiement en production sans validation ?",
+        "choices": [
+          "Un environnement production avec relecteurs requis, et un déploiement limité à la branche protégée",
+          "Une note dans le README",
+          "Un workflow_dispatch accessible à tous",
+          "Un commentaire dans le YAML"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le job attend l'approbation avant de recevoir les secrets de production.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gha-defi-q4",
+        "prompt": "Comment n'exécuter un job que sur la branche main ?",
+        "choices": [
+          "if: github.ref == 'refs/heads/main'",
+          "only: main",
+          "branch: main dans le job",
+          "runs-on: main"
+        ],
+        "answerIndex": 0,
+        "explanation": "only est une syntaxe de GitLab CI, pas de GitHub Actions.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gha-defi-q5",
+        "prompt": "Quelle différence entre secrets et vars ?",
+        "choices": [
+          "Les secrets sont chiffrés et masqués dans les journaux ; les variables portent une configuration non sensible",
+          "Aucune",
+          "Les variables sont chiffrées, pas les secrets",
+          "Les secrets ne sont disponibles que la nuit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une URL d'environnement va dans vars ; un mot de passe dans secrets.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "gha-defi-q6",
+        "prompt": "À quoi servent les artefacts ?",
+        "choices": [
+          "Transmettre un build d'un job à l'autre",
+          "Conserver des rapports de tests",
+          "Télécharger un binaire produit par la CI",
+          "Stocker des secrets"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un artefact est téléchargeable par toute personne ayant accès au dépôt : jamais de secret dedans.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,443 @@
+{
+  "id": "pulumi-ch-essentiel",
+  "title": "Pulumi : l'essentiel",
+  "summary": "L'infrastructure dans un vrai langage.",
+  "lessons": [
+    {
+      "id": "pulumi-bases",
+      "title": "Programmes et stacks",
+      "summary": "pulumi up, stacks et configuration.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un programme qui déclare l'infrastructure",
+          "body": "Pulumi décrit l'infrastructure avec un langage généraliste (TypeScript, Python, Go, C#, Java) plutôt qu'avec HCL. Le programme crée des objets ressources ; Pulumi en déduit l'état voulu, le compare à son état enregistré et à la réalité, puis applique les différences, comme Terraform.",
+          "code": "import * as pulumi from \"@pulumi/pulumi\";\nimport * as aws from \"@pulumi/aws\";\n\nconst bucket = new aws.s3.BucketV2(\"logs\", {\n  tags: { env: pulumi.getStack() },\n});\nexport const nomBucket = bucket.id;",
+          "language": "javascript"
+        },
+        {
+          "title": "Stacks et configuration",
+          "body": "Une stack est une instance indépendante du programme, avec sa configuration et son état : dev, recette, prod. pulumi config set fixe une valeur pour la stack courante ; avec --secret, la valeur est chiffrée dans la configuration et dans l'état.",
+          "code": "pulumi stack select prod\npulumi config set --secret dbPassword S3cret!\npulumi preview\npulumi up",
+          "language": "shell"
+        },
+        {
+          "title": "L'état",
+          "body": "Comme Terraform, Pulumi garde un état, stocké dans Pulumi Cloud ou dans un backend géré par l'équipe (bucket S3, Azure Blob). pulumi preview montre les changements prévus ; pulumi up les montre, demande confirmation, puis les applique."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pulumi-bases-q1",
+          "prompt": "Quelle est la principale différence entre Pulumi et Terraform ?",
+          "choices": [
+            "Pulumi utilise des langages généralistes au lieu de HCL",
+            "Pulumi n'a pas d'état",
+            "Pulumi ne gère que Kubernetes",
+            "Pulumi applique les changements sans aperçu"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux suivent le même modèle déclaratif avec un état.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "pulumi-bases-q2",
+          "prompt": "Que fait pulumi up ?",
+          "choices": [
+            "Il affiche un aperçu des changements, demande confirmation, puis les applique",
+            "Il met à jour Pulumi",
+            "Il supprime la stack",
+            "Il compile le programme sans rien déployer"
+          ],
+          "answerIndex": 0,
+          "explanation": "pulumi preview se contente de l'aperçu.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "pulumi-bases-q3",
+          "prompt": "Complète : travailler sur la stack prod et y enregistrer un mot de passe chiffré.",
+          "code": "pulumi ___ select prod\npulumi config set --___ dbPassword S3cret!",
+          "language": "shell",
+          "answers": [
+            "stack",
+            "secret"
+          ],
+          "distractors": [
+            "env",
+            "encrypt",
+            "hidden"
+          ],
+          "explanation": "La valeur est chiffrée dans le fichier de configuration de la stack.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pulumi-bases-q4",
+          "prompt": "Qu'est-ce qu'une stack Pulumi ?",
+          "choices": [
+            "Une instance indépendante du programme, avec sa configuration et son état",
+            "Une pile d'appels",
+            "Un fichier de dépendances",
+            "Un cluster Kubernetes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un même programme déploie dev, recette et prod avec des configurations différentes.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "pulumi-bases-q5",
+          "prompt": "Revue de commande : touche la ligne problématique.",
+          "code": "pulumi config set dbPassword Sup3rS3cret!",
+          "language": "shell",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Sans --secret, le mot de passe est écrit en clair dans le fichier de configuration versionné.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "pulumi-bases-q6",
+          "prompt": "Quels langages Pulumi permet-il d'utiliser ?",
+          "choices": [
+            "TypeScript",
+            "Python",
+            "Go",
+            "HCL uniquement"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Ainsi que C#, Java et YAML.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "pulumi-outputs",
+      "title": "Outputs et composants",
+      "summary": "Des valeurs connues plus tard.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les Outputs",
+          "body": "Beaucoup de valeurs ne sont connues qu'après la création de la ressource : un identifiant, une adresse. Pulumi les représente par des Output, pas par de simples chaînes. On les transforme avec apply, on les assemble avec pulumi.interpolate ; les concaténer comme des chaînes produit un texte d'avertissement au lieu de la valeur.",
+          "code": "const url = pulumi.interpolate`https://${lb.dnsName}/api`;\nconst maj = bucket.id.apply((id) => id.toUpperCase());",
+          "language": "javascript"
+        },
+        {
+          "title": "Le langage au service de l'infrastructure",
+          "body": "Boucles, fonctions, classes, paquets : un ComponentResource regroupe plusieurs ressources en un composant réutilisable (un « service web » avec son répartiteur, son DNS et ses alertes), publiable comme un paquet. Les tests unitaires s'écrivent avec le framework habituel, en simulant les ressources (mocks)."
+        },
+        {
+          "title": "Relier des stacks",
+          "body": "Une StackReference lit les outputs d'une autre stack : la stack réseau publie les identifiants des sous-réseaux, les stacks applicatives les utilisent. Les équipes travaillent séparément, sur des états séparés."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pulumi-outputs-q1",
+          "prompt": "Pourquoi bucket.id n'est-il pas une simple chaîne ?",
+          "choices": [
+            "C'est un Output : sa valeur n'est connue qu'après la création du bucket",
+            "Parce qu'il est chiffré",
+            "Parce que TypeScript n'a pas de chaînes",
+            "C'est une chaîne ordinaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pulumi construit le graphe des dépendances à partir de ces Outputs.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "pulumi-outputs-q2",
+          "prompt": "L'URL produite contient « Calling [toString] on an Output » au lieu du nom de domaine. Touche la ligne en cause.",
+          "code": "const lb = new aws.lb.LoadBalancer(\"api\", { /* ... */ });\nconst url = \"https://\" + lb.dnsName + \"/api\";",
+          "language": "javascript",
+          "bugLines": [
+            2
+          ],
+          "explanation": "On ne concatène pas un Output comme une chaîne : pulumi.interpolate`https://${lb.dnsName}/api` produit un Output<string> correct.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "pulumi-outputs-q3",
+          "prompt": "Complète : assembler une URL, puis transformer l'identifiant.",
+          "code": "const url = pulumi.___`https://${lb.dnsName}/api`;\nconst maj = bucket.id.___((id) => id.toUpperCase());",
+          "language": "javascript",
+          "answers": [
+            "interpolate",
+            "apply"
+          ],
+          "distractors": [
+            "format",
+            "then",
+            "map"
+          ],
+          "explanation": "apply reçoit la valeur une fois connue et renvoie un nouvel Output.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pulumi-outputs-q4",
+          "prompt": "À quoi sert un ComponentResource ?",
+          "choices": [
+            "À regrouper plusieurs ressources en un composant réutilisable",
+            "À stocker l'état",
+            "À chiffrer les secrets",
+            "À lancer des tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'équivalent d'un module Terraform, avec les outils d'un vrai langage.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pulumi-outputs-q5",
+          "prompt": "À quoi sert une StackReference ?",
+          "choices": [
+            "À lire les outputs d'une autre stack, par exemple le réseau partagé",
+            "À copier une stack",
+            "À supprimer une stack",
+            "À référencer un dépôt Git"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les équipes partagent des valeurs sans partager leur état.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "pulumi-outputs-q6",
+          "prompt": "Qu'apporte l'usage d'un vrai langage de programmation ?",
+          "choices": [
+            "Des boucles et des fonctions",
+            "Des tests unitaires avec le framework habituel",
+            "Des paquets réutilisables",
+            "La disparition de l'état"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'état reste indispensable pour savoir ce qui existe déjà.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "pulumi-pratiques",
+      "title": "Pulumi en production",
+      "summary": "Protection, déterminisme et politiques.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Protéger et déployer",
+          "body": "L'option protect: true empêche la suppression d'une ressource critique. En CI, pulumi preview tourne sur chaque pull request, pulumi up après la fusion. pulumi refresh met l'état à jour d'après la réalité pour révéler une dérive. Les politiques (CrossGuard) bloquent les ressources non conformes, comme un bucket public.",
+          "code": "const db = new aws.rds.Instance(\"main\", { /* ... */ },\n  { protect: true });",
+          "language": "javascript"
+        },
+        {
+          "title": "Un programme déterministe",
+          "body": "Le programme doit produire la même infrastructure à chaque exécution : pas d'appel réseau ni de valeur aléatoire ou horaire qui changerait le résultat d'une exécution à l'autre. Sinon, chaque aperçu propose des changements inattendus."
+        },
+        {
+          "title": "L'Automation API",
+          "body": "L'Automation API pilote Pulumi depuis un programme, sans ligne de commande : un portail interne crée un environnement à la demande, un test d'intégration déploie puis détruit une stack temporaire."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pulumi-pratiques-q1",
+          "prompt": "Que fait l'option protect: true sur une ressource ?",
+          "choices": [
+            "Elle empêche sa suppression, même par erreur",
+            "Elle chiffre la ressource",
+            "Elle cache la ressource de l'aperçu",
+            "Elle la rend publique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il faut retirer l'option explicitement avant de pouvoir supprimer la ressource.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pulumi-pratiques-q2",
+          "prompt": "À quoi sert l'Automation API ?",
+          "choices": [
+            "À piloter les déploiements Pulumi depuis un programme : portail interne, tests",
+            "À générer de la documentation",
+            "À remplacer le cloud",
+            "À compiler TypeScript"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pulumi devient une bibliothèque qu'on appelle depuis son propre code.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "pulumi-pratiques-q3",
+          "prompt": "Chaque aperçu propose de changer le type de l'instance. Touche la ligne en cause.",
+          "code": "const prix = await fetch(\"https://api.ex.fr/prix\")\n  .then((r) => r.json());\nconst vm = new aws.ec2.Instance(\"web\", {\n  instanceType: prix.moinsCher,\n  ami: amiId,\n});",
+          "language": "javascript",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Le programme dépend d'un appel réseau dont le résultat varie : l'infrastructure n'est plus déterministe. Le type vient de la configuration de la stack.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "pulumi-pratiques-q4",
+          "prompt": "Complète : empêcher la suppression de la base de production.",
+          "code": "const db = new aws.rds.Instance(\"main\", { /* ... */ },\n  { ___: true });",
+          "language": "javascript",
+          "answers": [
+            "protect"
+          ],
+          "distractors": [
+            "retain",
+            "lock",
+            "keep"
+          ],
+          "explanation": "C'est l'équivalent de prevent_destroy chez Terraform.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pulumi-pratiques-q5",
+          "prompt": "Que fait pulumi refresh ?",
+          "choices": [
+            "Il met l'état à jour d'après la réalité, ce qui révèle les dérives",
+            "Il redéploie tout",
+            "Il recharge le navigateur",
+            "Il supprime l'état"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un changement manuel apparaît ensuite dans l'aperçu.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "pulumi-pratiques-q6",
+          "prompt": "Comment intégrer Pulumi à la CI ?",
+          "choices": [
+            "pulumi preview sur chaque pull request",
+            "pulumi up après la fusion",
+            "Des politiques qui bloquent les ressources non conformes",
+            "pulumi destroy à chaque build"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "destroy supprime l'infrastructure : à réserver aux environnements temporaires.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "pulumi-defi",
+    "title": "Défi entretien : l'infrastructure en TypeScript",
+    "summary": "Composants, secrets et tests.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "pulumi-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une équipe TypeScript veut gérer son infrastructure sans apprendre HCL, et réutiliser des composants entre projets. Pulumi convient-il ?",
+        "choices": [
+          "Oui : des ComponentResource publiés comme paquets npm",
+          "Non, Pulumi ne gère pas TypeScript",
+          "Seulement pour Kubernetes",
+          "Seulement sans état"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'équipe garde ses outils : éditeur, tests, gestionnaire de paquets.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "pulumi-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le mot de passe de la base apparaît en clair dans l'état. Que faire ?",
+        "choices": [
+          "Le passer en configuration secrète (--secret) ou l'envelopper avec pulumi.secret",
+          "Supprimer l'état",
+          "Le mettre dans une variable globale",
+          "Le coder en base64"
+        ],
+        "answerIndex": 0,
+        "explanation": "Pulumi chiffre les valeurs marquées secrètes dans l'état et les masque à l'affichage.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pulumi-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment vérifier, sans rien déployer, qu'un composant crée toujours des buckets chiffrés ?",
+        "choices": [
+          "Un test unitaire qui exécute le programme avec des ressources simulées (mocks) et inspecte leurs propriétés",
+          "Déployer en production et regarder",
+          "Relire le code à chaque fois",
+          "Ce n'est pas possible"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les politiques CrossGuard peuvent aussi l'imposer au déploiement.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "pulumi-defi-q4",
+        "prompt": "Comment lire, en ligne de commande, l'output nomBucket de la stack courante ?",
+        "choices": [
+          "pulumi stack output nomBucket",
+          "pulumi get nomBucket",
+          "pulumi config get nomBucket",
+          "pulumi show nomBucket"
+        ],
+        "answerIndex": 0,
+        "explanation": "config get lit la configuration d'entrée, pas les sorties.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "pulumi-defi-q5",
+        "prompt": "La politique du bucket n'est jamais créée. Touche la ligne en cause.",
+        "code": "if (bucket.id === \"logs-prod\") {\n  new aws.s3.BucketPolicy(\"p\", {\n    bucket: bucket.id,\n    policy,\n  });\n}",
+        "language": "javascript",
+        "bugLines": [
+          1
+        ],
+        "explanation": "bucket.id est un Output, jamais égal à une chaîne. On décide à partir d'une valeur connue d'avance : la stack ou la configuration.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "pulumi-defi-q6",
+        "prompt": "Qu'ont en commun Pulumi et Terraform ?",
+        "choices": [
+          "Un état des ressources",
+          "Un aperçu avant l'application",
+          "Des fournisseurs pour les grands clouds",
+          "Le langage HCL"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Pulumi peut même utiliser des providers Terraform via un pont.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,436 @@
+{
+  "id": "clean-ch-essentiel",
+  "title": "Clean architecture et hexagonale en profondeur",
+  "summary": "Ports, adaptateurs et cas d'usage.",
+  "lessons": [
+    {
+      "id": "clean-dependances",
+      "title": "La règle de dépendance",
+      "summary": "Le métier au centre, l'infrastructure autour.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Vers le centre",
+          "body": "Le métier (domaine et cas d'usage) est au centre ; base de données, framework web, envoi d'e-mails sont à l'extérieur. Les dépendances pointent toujours vers le centre : le métier ne connaît ni Entity Framework ni ASP.NET Core. On peut alors tester et faire évoluer les règles métier sans infrastructure."
+        },
+        {
+          "title": "Ports et adaptateurs",
+          "body": "Un port est une interface définie par le cœur, selon ses besoins (IDepotCommandes, INotificateur). Un adaptateur l'implémente avec une technologie précise, dans l'infrastructure. L'inversion de dépendance fait le reste : le cœur appelle l'interface, le conteneur fournit l'adaptateur.",
+          "code": "// Application\npublic interface IDepotCommandes { Task<Commande?> Trouver(Guid id); }\n\n// Infrastructure\npublic class DepotCommandesEf(BoutiqueDb db) : IDepotCommandes\n{\n    public Task<Commande?> Trouver(Guid id) =>\n        db.Commandes.FindAsync(id).AsTask();\n}"
+        },
+        {
+          "title": "En projets .NET",
+          "body": "Une organisation courante : Domaine (sans aucune dépendance technique), Application (cas d'usage et ports), Infrastructure (adaptateurs : EF Core, SMTP, clients HTTP) et Api (contrôleurs, configuration). Api et Infrastructure référencent Application, qui référence Domaine ; jamais l'inverse."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "clean-dependances-q1",
+          "prompt": "Que dit la règle de dépendance ?",
+          "choices": [
+            "Les dépendances pointent vers le centre : le métier ne connaît ni la base ni le framework",
+            "Le métier dépend de la base de données",
+            "Chaque couche dépend de toutes les autres",
+            "Les dépendances pointent vers l'interface graphique"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'infrastructure s'adapte au métier, pas l'inverse.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "clean-dependances-q2",
+          "prompt": "Où définir l'interface IDepotCommandes ?",
+          "choices": [
+            "Dans le cœur (application ou domaine) ; son implémentation EF Core va dans l'infrastructure",
+            "Dans l'infrastructure, à côté d'EF Core",
+            "Dans le projet Api",
+            "Dans un projet de tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le cœur exprime son besoin ; l'infrastructure y répond.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "clean-dependances-q3",
+          "prompt": "Revue de ce fichier du projet Domaine : touche une ligne en cause.",
+          "code": "namespace Boutique.Domaine;\n\nusing Microsoft.EntityFrameworkCore;\n\npublic class Commande\n{\n    public Guid Id { get; init; }\n    public DbSet<Ligne> Lignes { get; set; } = null!;\n}",
+          "bugLines": [
+            3,
+            8
+          ],
+          "explanation": "Le domaine dépend d'Entity Framework Core : un DbSet n'a rien à faire dans une entité métier. Les lignes sont une simple collection, et EF se configure dans l'infrastructure.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "clean-dependances-q4",
+          "prompt": "Complète : un port défini par l'application, et son adaptateur.",
+          "code": "// Application\npublic interface ___ { Task<Commande?> Trouver(Guid id); }\n\n// Infrastructure\npublic class DepotCommandesEf(BoutiqueDb db) : ___\n{\n    public Task<Commande?> Trouver(Guid id) =>\n        db.Commandes.FindAsync(id).AsTask();\n}",
+          "answers": [
+            "IDepotCommandes",
+            "IDepotCommandes"
+          ],
+          "distractors": [
+            "DbContext",
+            "ICommande",
+            "Repository"
+          ],
+          "explanation": "L'adaptateur implémente le port défini par le cœur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "clean-dependances-q5",
+          "prompt": "Dans quel sens vont les références entre projets ?",
+          "choices": [
+            "Api et Infrastructure référencent Application, qui référence Domaine ; jamais Domaine vers Infrastructure",
+            "Domaine référence Infrastructure",
+            "Tous les projets se référencent mutuellement",
+            "Application référence Api"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le compilateur fait alors respecter la règle de dépendance.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "clean-dependances-q6",
+          "prompt": "Qu'est-ce qui reste hors du domaine ?",
+          "choices": [
+            "L'ORM",
+            "Le framework web",
+            "L'implémentation de l'envoi d'e-mails",
+            "Les règles de calcul des remises"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les règles de remise sont justement le cœur du métier.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "clean-cas-usage",
+      "title": "Cas d'usage et adaptateurs",
+      "summary": "Orchestrer et tester le cœur.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les cas d'usage",
+          "body": "Un cas d'usage orchestre une action de l'utilisateur : il charge ce dont il a besoin par les ports, appelle le domaine qui applique les règles, enregistre le résultat et déclenche les notifications. Il reçoit et renvoie des objets simples, indépendants du protocole.",
+          "code": "public interface IDepotCommandes { Task Ajouter(Commande c); }\n\npublic class PasserCommande(IDepotCommandes depot, TimeProvider temps)\n{\n    public async Task<Guid> Executer(PasserCommandeRequete r)\n    {\n        var commande = Commande.Creer(r.ClientId, r.Lignes, temps.GetUtcNow());\n        await depot.Ajouter(commande);\n        return commande.Id;\n    }\n}"
+        },
+        {
+          "title": "Adaptateurs primaires et secondaires",
+          "body": "Les adaptateurs primaires pilotent l'application : un contrôleur HTTP, un consommateur de messages, une commande en ligne. Les adaptateurs secondaires sont pilotés par elle : la base, l'envoi d'e-mails, un client HTTP vers un autre service. Le même cas d'usage peut être déclenché par une API et par une tâche planifiée."
+        },
+        {
+          "title": "Tester le cœur",
+          "body": "Les cas d'usage et le domaine se testent unitairement avec des doublures en mémoire des ports, et une horloge contrôlée (TimeProvider) : rapides, sans base ni réseau. Les adaptateurs se testent à part, par des tests d'intégration."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "clean-cas-usage-q1",
+          "prompt": "Quel est le rôle d'un cas d'usage ?",
+          "choices": [
+            "Orchestrer une action métier : charger par les ports, appeler le domaine, enregistrer, notifier",
+            "Afficher une page web",
+            "Configurer la base de données",
+            "Contenir le SQL"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les règles elles-mêmes vivent dans le domaine.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "clean-cas-usage-q2",
+          "prompt": "Quelle différence entre un adaptateur primaire et un adaptateur secondaire ?",
+          "choices": [
+            "Le primaire pilote l'application (contrôleur, consommateur de messages) ; le secondaire est piloté par elle (base, e-mail)",
+            "Le primaire est plus important",
+            "Le secondaire est facultatif",
+            "Ce sont deux noms pour la même chose"
+          ],
+          "answerIndex": 0,
+          "explanation": "On parle aussi de côté gauche (entrées) et côté droit (sorties) de l'hexagone.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "clean-cas-usage-q3",
+          "prompt": "Complète ce cas d'usage, qui obtient l'heure par une horloge injectée.",
+          "code": "public interface IDepotCommandes { Task Ajouter(Commande c); }\n\npublic class PasserCommande(IDepotCommandes depot, TimeProvider temps)\n{\n    public async Task<Guid> Executer(PasserCommandeRequete r)\n    {\n        var c = Commande.Creer(r.ClientId, r.Lignes, temps.___());\n        await depot.___(c);\n        return c.Id;\n    }\n}",
+          "answers": [
+            "GetUtcNow",
+            "Ajouter"
+          ],
+          "distractors": [
+            "UtcNow",
+            "Now",
+            "Save"
+          ],
+          "explanation": "TimeProvider (.NET 8) se remplace par FakeTimeProvider dans les tests.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "clean-cas-usage-q4",
+          "prompt": "La règle de remise doit pouvoir être testée sans base ni HTTP. Touche la ligne en cause.",
+          "code": "[HttpPost]\npublic async Task<IActionResult> Passer(CommandeDto dto)\n{\n    var remise = dto.Total > 100 ? dto.Total * 0.1m : 0;\n    db.Commandes.Add(new Commande(dto.ClientId, dto.Total - remise));\n    await db.SaveChangesAsync();\n    return Ok();\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "La règle métier est enfouie dans le contrôleur, à côté de la base. Elle va dans le domaine, appelée par un cas d'usage.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "clean-cas-usage-q5",
+          "prompt": "Comment tester un cas d'usage ?",
+          "choices": [
+            "Unitairement, avec des doublures en mémoire des ports",
+            "Uniquement par des tests de bout en bout",
+            "Sur la base de production",
+            "On ne le teste pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des centaines de tests s'exécutent en quelques secondes.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "clean-cas-usage-q6",
+          "prompt": "Qu'apporte cette architecture ?",
+          "choices": [
+            "Un métier testable sans infrastructure",
+            "Un changement de base ou de framework à impact limité",
+            "Des règles métier rassemblées en un endroit lisible",
+            "Moins de fichiers"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Elle ajoute plutôt des fichiers : c'est son coût.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "clean-mesure",
+      "title": "Avec mesure",
+      "summary": "Coûts, alternatives et tests d'architecture.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le coût",
+          "body": "Plus de projets, plus d'interfaces, des conversions entre modèles (DTO, domaine, entités de persistance) : pour une application CRUD avec peu de règles métier, c'est souvent excessif. Les erreurs courantes : des entités sans comportement (anémiques), une interface pour chaque classe, et des couches qui ne font que transmettre les appels."
+        },
+        {
+          "title": "Les tranches verticales",
+          "body": "L'architecture en tranches verticales organise le code par fonctionnalité plutôt que par couche technique : chaque tranche (passer une commande) contient ce qu'il lui faut, de l'endpoint à l'accès aux données. Elle se combine bien avec un domaine riche là où le métier est complexe."
+        },
+        {
+          "title": "Faire respecter les règles",
+          "body": "Des tests d'architecture (NetArchTest en .NET, ArchUnit en Java) vérifient en CI que le domaine ne dépend pas d'EF Core ou d'ASP.NET : une règle qui n'est pas vérifiée finit toujours par être contournée.",
+          "code": "var resultat = Types.InAssembly(typeof(Commande).Assembly)\n    .Should()\n    .NotHaveDependencyOn(\"Microsoft.EntityFrameworkCore\")\n    .GetResult();\nAssert.True(resultat.IsSuccessful);"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "clean-mesure-q1",
+          "prompt": "Quand la clean architecture est-elle souvent excessive ?",
+          "choices": [
+            "Pour une application CRUD simple, avec peu de règles métier",
+            "Pour un domaine complexe au cœur du métier",
+            "Pour une application maintenue dix ans",
+            "Quand plusieurs interfaces déclenchent les mêmes cas d'usage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les couches coûtent plus qu'elles ne rapportent quand il n'y a rien à isoler.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "clean-mesure-q2",
+          "prompt": "Qu'est-ce que l'architecture en tranches verticales ?",
+          "choices": [
+            "Organiser le code par fonctionnalité, chaque tranche contenant ce qu'il lui faut de l'endpoint aux données",
+            "Découper l'écran en colonnes",
+            "Une couche par développeur",
+            "Un microservice par table"
+          ],
+          "answerIndex": 0,
+          "explanation": "Modifier une fonctionnalité touche une tranche, pas toutes les couches.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "clean-mesure-q3",
+          "prompt": "Complète ce test d'architecture : le domaine ne doit pas dépendre d'Entity Framework Core.",
+          "code": "var resultat = Types.InAssembly(typeof(Commande).Assembly)\n    .Should()\n    .NotHaveDependencyOn(\"Microsoft.___\")\n    .GetResult();\nAssert.True(resultat.___);",
+          "answers": [
+            "EntityFrameworkCore",
+            "IsSuccessful"
+          ],
+          "distractors": [
+            "Data",
+            "Passed",
+            "Success"
+          ],
+          "explanation": "Le test échoue dès qu'un type du domaine référence EF Core.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "clean-mesure-q4",
+          "prompt": "Une classe ServiceCommandes ne fait que transmettre chaque appel au dépôt, sans rien ajouter. Que faire ?",
+          "choices": [
+            "La supprimer, ou y placer la logique qui lui revient : c'est une indirection sans valeur",
+            "Ajouter une autre couche au-dessus",
+            "La dupliquer pour chaque contrôleur",
+            "La garder, une couche de plus ne coûte rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque couche doit apporter quelque chose : règles, orchestration, traduction.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "clean-mesure-q5",
+          "prompt": "Qu'est-ce qu'une entité anémique ?",
+          "choices": [
+            "Une classe qui ne porte que des données, ses règles étant dispersées dans des services",
+            "Une entité sans identifiant",
+            "Une entité supprimée",
+            "Une entité trop grosse"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les règles se retrouvent copiées et contournables un peu partout.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "clean-mesure-q6",
+          "prompt": "Quels sont les coûts de cette architecture ?",
+          "choices": [
+            "Plus de projets et d'indirections",
+            "Des conversions entre modèles",
+            "Une courbe d'apprentissage pour l'équipe",
+            "L'impossibilité de tester"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La testabilité est au contraire son principal bénéfice.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "clean-defi",
+    "title": "Défi entretien : des règles enfouies",
+    "summary": "Extraire le métier et le protéger.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "clean-defi-q1",
+        "prompt": "Cas pratique 1/3 — Chaque contrôleur appelle directement EF Core et contient les règles de prix ; tester une règle exige une base. Par où commencer ?",
+        "choices": [
+          "Extraire les règles dans le domaine, et accéder aux données par des ports implémentés dans l'infrastructure",
+          "Ajouter une base de test partagée",
+          "Écrire plus de tests de bout en bout",
+          "Changer de framework web"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une règle à la fois, avec des tests, sans tout réécrire.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "clean-defi-q2",
+        "prompt": "Cas pratique 2/3 — Où placer l'envoi de l'e-mail de confirmation ?",
+        "choices": [
+          "Un port INotificateur dans l'application, et un adaptateur SMTP dans l'infrastructure",
+          "Directement dans l'entité Commande",
+          "Dans le contrôleur",
+          "Dans une procédure stockée"
+        ],
+        "answerIndex": 0,
+        "explanation": "En test, une doublure enregistre simplement les notifications demandées.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "clean-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment empêcher qu'un développeur réintroduise EF Core dans le domaine ?",
+        "choices": [
+          "Un test d'architecture exécuté en CI",
+          "Une note dans le README",
+          "Une revue de code annuelle",
+          "Rien, ce n'est pas grave"
+        ],
+        "answerIndex": 0,
+        "explanation": "La règle devient automatique et non négociable.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "clean-defi-q4",
+        "prompt": "Le projet Domaine peut-il référencer le projet Infrastructure ?",
+        "choices": [
+          "Non : ce serait une dépendance vers l'extérieur",
+          "Oui, c'est recommandé",
+          "Oui, pour les entités seulement",
+          "Seulement en mode Debug"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est exactement ce que la règle de dépendance interdit.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "clean-defi-q5",
+        "prompt": "Revue de code : cette règle est difficile à tester de façon fiable. Touche la ligne en cause.",
+        "code": "public class Abonnement\n{\n    public bool EstExpire() => DateTime.Now > FinLe;\n    public DateTime FinLe { get; init; }\n}",
+        "bugLines": [
+          3
+        ],
+        "explanation": "La règle lit elle-même l'heure système. On lui passe l'instant (ou un TimeProvider) pour la tester à n'importe quelle date.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "clean-defi-q6",
+        "prompt": "Lesquels sont des adaptateurs secondaires ?",
+        "choices": [
+          "Un dépôt EF Core",
+          "Un client SMTP",
+          "Un client HTTP vers un service externe",
+          "Un contrôleur HTTP"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le contrôleur est un adaptateur primaire : il pilote l'application.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,441 @@
+{
+  "id": "ansible-ch-essentiel",
+  "title": "Ansible : l'essentiel",
+  "summary": "Playbooks, rôles et déploiements progressifs.",
+  "lessons": [
+    {
+      "id": "ansible-bases",
+      "title": "Inventaire et playbooks",
+      "summary": "Configurer des serveurs sans agent.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Sans agent",
+          "body": "Ansible se connecte aux serveurs en SSH et y exécute des modules, sans rien installer à demeure. L'inventaire liste les machines et les range en groupes (web, db). Un playbook décrit, pour un groupe d'hôtes, une suite de tâches ; become exécute avec les droits d'administration.",
+          "code": "- name: Serveurs web\n  hosts: web\n  become: true\n  tasks:\n    - name: Installer nginx\n      ansible.builtin.apt:\n        name: nginx\n        state: present\n    - name: Démarrer nginx\n      ansible.builtin.service:\n        name: nginx\n        state: started\n        enabled: true",
+          "language": "yaml"
+        },
+        {
+          "title": "L'idempotence",
+          "body": "Les modules décrivent un état voulu (state: present, started) : si cet état est déjà atteint, ils ne changent rien et répondent ok ; sinon ils agissent et répondent changed. On peut donc relancer un playbook sans risque. Une commande shell, elle, s'exécute à chaque fois : on la réserve aux cas sans module adapté."
+        },
+        {
+          "title": "Tester avant d'appliquer",
+          "body": "ansible-playbook -i inventaire site.yml lance le playbook. --check simule sans rien modifier, --diff montre les différences dans les fichiers, --limit restreint à certains hôtes. Un premier passage en --check --diff révèle les écarts avant de toucher la production."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ansible-bases-q1",
+          "prompt": "Comment Ansible agit-il sur les serveurs ?",
+          "choices": [
+            "Sans agent : il se connecte en SSH et exécute des modules",
+            "Par un agent installé en permanence sur chaque serveur",
+            "En redémarrant les serveurs sur une image neuve",
+            "Par l'API du fournisseur cloud uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il suffit d'un accès SSH et de Python sur la machine cible.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ansible-bases-q2",
+          "prompt": "Que signifie qu'une tâche Ansible est idempotente ?",
+          "choices": [
+            "La relancer ne change rien si l'état voulu est déjà atteint",
+            "Elle s'exécute en parallèle sur tous les serveurs",
+            "Elle ne peut s'exécuter qu'une fois",
+            "Elle est chiffrée"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui permet d'appliquer le même playbook encore et encore.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "ansible-bases-q3",
+          "prompt": "Chaque exécution ajoute une ligne de plus dans sources.list. Touche la ligne en cause.",
+          "code": "- name: Ajouter le dépôt\n  ansible.builtin.shell: echo \"deb http://repo.ex.fr stable main\" >> /etc/apt/sources.list",
+          "language": "yaml",
+          "bugLines": [
+            2
+          ],
+          "explanation": "shell avec >> n'est pas idempotent. Le module apt_repository (ou lineinfile) ne modifie le fichier que si la ligne manque.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "ansible-bases-q4",
+          "prompt": "Complète : cibler le groupe web avec les droits d'administration.",
+          "code": "- name: Serveurs web\n  ___: web\n  ___: true\n  tasks: []",
+          "language": "yaml",
+          "answers": [
+            "hosts",
+            "become"
+          ],
+          "distractors": [
+            "servers",
+            "sudo",
+            "root"
+          ],
+          "explanation": "become utilise sudo par défaut pour passer administrateur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ansible-bases-q5",
+          "prompt": "Que font les options --check --diff ?",
+          "choices": [
+            "Elles simulent l'exécution sans rien modifier et affichent les différences prévues",
+            "Elles vérifient la syntaxe seulement",
+            "Elles appliquent puis annulent",
+            "Elles comparent deux inventaires"
+          ],
+          "answerIndex": 0,
+          "explanation": "Idéal pour un premier passage sur des serveurs existants.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ansible-bases-q6",
+          "prompt": "Quels modules sont idempotents par conception ?",
+          "choices": [
+            "apt",
+            "template",
+            "service",
+            "shell avec une redirection >>"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les modules shell et command s'exécutent à chaque fois, sauf conditions ajoutées (creates, when).",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "ansible-structure",
+      "title": "Variables, handlers et rôles",
+      "summary": "Organiser des playbooks réutilisables.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Variables et templates",
+          "body": "Les variables viennent de l'inventaire, de group_vars/ (par groupe), host_vars/ (par machine), des rôles et des facts collectés sur chaque machine (système, adresses, mémoire). Le module template remplit un fichier Jinja2 : {{ variable }}, des boucles {% for %}, des filtres comme | default."
+        },
+        {
+          "title": "Les handlers",
+          "body": "Un handler est une tâche déclenchée par notify, seulement si la tâche qui notifie a changé quelque chose, et une seule fois à la fin du play, même si plusieurs tâches le notifient. On redémarre ainsi nginx uniquement quand sa configuration a changé.",
+          "code": "tasks:\n  - name: Configurer nginx\n    ansible.builtin.template:\n      src: nginx.conf.j2\n      dest: /etc/nginx/nginx.conf\n    notify: Redémarrer nginx\nhandlers:\n  - name: Redémarrer nginx\n    ansible.builtin.service:\n      name: nginx\n      state: restarted",
+          "language": "yaml"
+        },
+        {
+          "title": "Les rôles",
+          "body": "Un rôle regroupe tout ce qui configure un composant, dans des dossiers conventionnels : tasks, handlers, templates, files, defaults (valeurs par défaut, facilement surchargées) et vars. Un playbook se résume alors à associer des rôles à des groupes. when rend une tâche conditionnelle, loop la répète."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ansible-structure-q1",
+          "prompt": "Pourquoi redémarrer nginx dans un handler plutôt que dans une tâche ordinaire ?",
+          "choices": [
+            "Le handler ne s'exécute que si la configuration a changé, et une seule fois en fin de play",
+            "Les handlers sont plus rapides",
+            "Les tâches ne peuvent pas redémarrer de service",
+            "Pour que nginx redémarre à chaque exécution"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pas de redémarrage inutile quand rien n'a changé.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "ansible-structure-q2",
+          "prompt": "Complète : redémarrer nginx seulement si sa configuration change.",
+          "code": "tasks:\n  - name: Configurer nginx\n    ansible.builtin.template:\n      src: nginx.conf.j2\n      dest: /etc/nginx/nginx.conf\n    ___: Redémarrer nginx\n___:\n  - name: Redémarrer nginx\n    ansible.builtin.service:\n      name: nginx\n      state: restarted",
+          "language": "yaml",
+          "answers": [
+            "notify",
+            "handlers"
+          ],
+          "distractors": [
+            "trigger",
+            "on_change",
+            "listeners"
+          ],
+          "explanation": "Le nom notifié doit correspondre exactement à celui du handler.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ansible-structure-q3",
+          "prompt": "Que contient un rôle Ansible ?",
+          "choices": [
+            "Des dossiers conventionnels : tasks, handlers, templates, files, defaults, vars",
+            "Un seul fichier de tâches",
+            "Un inventaire",
+            "Une image Docker"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les rôles se partagent entre projets, ou via Ansible Galaxy.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "ansible-structure-q4",
+          "prompt": "htop n'est jamais installé, alors que tous les serveurs sont sous Debian. Touche la ligne en cause.",
+          "code": "- name: Installer htop\n  ansible.builtin.apt:\n    name: htop\n  when: ansible_facts['os_family'] == \"RedHat\"",
+          "language": "yaml",
+          "bugLines": [
+            4
+          ],
+          "explanation": "La condition vise la famille RedHat ; pour apt, c'est \"Debian\". La tâche est toujours ignorée (skipped).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ansible-structure-q5",
+          "prompt": "À quoi sert le fichier group_vars/web.yml ?",
+          "choices": [
+            "À définir des variables pour tous les hôtes du groupe web",
+            "À lister les serveurs web",
+            "À décrire les tâches du groupe web",
+            "À chiffrer le groupe web"
+          ],
+          "answerIndex": 0,
+          "explanation": "host_vars/ fait de même pour une machine précise.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "ansible-structure-q6",
+          "prompt": "Que trouve-t-on dans un template Jinja2 ?",
+          "choices": [
+            "Des variables {{ nom }}",
+            "Des boucles {% for %} … {% endfor %}",
+            "Des filtres comme | default",
+            "Du code compilé en binaire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le template est du texte, rendu sur le poste qui lance Ansible puis copié sur la cible.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "ansible-pratiques",
+      "title": "Ansible en production",
+      "summary": "Secrets, tests et déploiements progressifs.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les secrets",
+          "body": "Ansible Vault chiffre un fichier de variables ou une valeur isolée (ansible-vault encrypt_string), déchiffrés au lancement avec un mot de passe ou un script. On peut aussi lire les secrets dans un gestionnaire externe (Vault de HashiCorp, AWS Secrets Manager) grâce aux plugins de lookup."
+        },
+        {
+          "title": "Déployer par lots",
+          "body": "serial limite le nombre de serveurs traités à la fois : une mise à jour progressive garde le service disponible. delegate_to exécute une tâche sur une autre machine (retirer le serveur du répartiteur de charge avant sa mise à jour), max_fail_percentage arrête tout si trop de serveurs échouent.",
+          "code": "- hosts: web\n  serial: 2\n  max_fail_percentage: 0\n  tasks:\n    - name: Retirer du répartiteur\n      ansible.builtin.command: retirer {{ inventory_hostname }}\n      delegate_to: lb1",
+          "language": "yaml"
+        },
+        {
+          "title": "Tester et situer Ansible",
+          "body": "ansible-lint vérifie les bonnes pratiques ; Molecule teste un rôle dans des conteneurs ou des machines jetables. Terraform et Ansible se complètent : Terraform crée l'infrastructure (réseaux, machines), Ansible configure ce qui tourne dessus ; contrairement à Terraform, Ansible ne garde pas de fichier d'état."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ansible-pratiques-q1",
+          "prompt": "Comment se répartissent les rôles de Terraform et d'Ansible ?",
+          "choices": [
+            "Terraform crée l'infrastructure ; Ansible configure les machines et ce qui tourne dessus",
+            "Ce sont deux outils identiques",
+            "Ansible crée les réseaux, Terraform installe les paquets",
+            "Terraform remplace Ansible depuis 2020"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux peuvent déborder sur le terrain de l'autre, mais c'est leur usage le plus naturel.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "ansible-pratiques-q2",
+          "prompt": "Complète : mettre à jour les serveurs web deux par deux.",
+          "code": "- hosts: web\n  ___: 2\n  tasks:\n    - name: Déployer la nouvelle version\n      ansible.builtin.include_role:\n        name: application",
+          "language": "yaml",
+          "answers": [
+            "serial"
+          ],
+          "distractors": [
+            "batch",
+            "parallel",
+            "forks"
+          ],
+          "explanation": "forks règle le parallélisme d'Ansible, pas le découpage en lots d'un play.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "ansible-pratiques-q3",
+          "prompt": "Ce fichier est versionné dans le dépôt. Touche la ligne en cause.",
+          "code": "# group_vars/prod.yml\ndb_password: Sup3rS3cret!",
+          "language": "yaml",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le mot de passe est en clair. On le chiffre avec ansible-vault, ou on le lit dans un gestionnaire de secrets.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ansible-pratiques-q4",
+          "prompt": "À quoi sert Molecule ?",
+          "choices": [
+            "À tester un rôle dans des conteneurs ou des machines jetables",
+            "À chiffrer des variables",
+            "À générer un inventaire",
+            "À surveiller les serveurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il vérifie aussi l'idempotence : une seconde exécution ne doit rien changer.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ansible-pratiques-q5",
+          "prompt": "Que fait ansible-vault encrypt_string ?",
+          "choices": [
+            "Il chiffre une valeur isolée, à coller dans un fichier de variables",
+            "Il chiffre tout l'inventaire",
+            "Il génère un mot de passe",
+            "Il vérifie la force d'un mot de passe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le reste du fichier reste lisible et facile à relire.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ansible-pratiques-q6",
+          "prompt": "Comment mettre à jour un parc sans interrompre le service ?",
+          "choices": [
+            "serial, pour traiter les serveurs par lots",
+            "delegate_to, pour retirer chaque serveur du répartiteur pendant sa mise à jour",
+            "max_fail_percentage, pour s'arrêter si trop de serveurs échouent",
+            "Mettre à jour tous les serveurs en même temps"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Tout mettre à jour d'un coup, c'est risquer une panne totale si la version est mauvaise.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "ansible-defi",
+    "title": "Défi entretien : quarante serveurs différents",
+    "summary": "Reprendre la main sur un parc.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "ansible-defi-q1",
+        "prompt": "Cas pratique 1/3 — Quarante serveurs, configurés à la main au fil des années, ont tous divergé. Par où commencer ?",
+        "choices": [
+          "Décrire la configuration voulue dans des rôles, et l'appliquer d'abord en --check --diff",
+          "Reconfigurer chaque serveur à la main",
+          "Appliquer un playbook directement en production",
+          "Réinstaller les quarante serveurs le même jour"
+        ],
+        "answerIndex": 0,
+        "explanation": "On voit les écarts avant de les corriger.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ansible-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le premier --check révèle des centaines de différences. Que faire ?",
+        "choices": [
+          "Les examiner par lot, ajuster le code à la configuration voulue, puis appliquer progressivement (serial)",
+          "Tout appliquer d'un coup",
+          "Abandonner Ansible",
+          "Supprimer les tâches qui montrent des différences"
+        ],
+        "answerIndex": 0,
+        "explanation": "Certaines différences sont des réglages voulus qu'il faut reporter dans le code.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ansible-defi-q3",
+        "prompt": "Cas pratique 3/3 — Les mots de passe des bases sont en clair dans les variables. Que faire ?",
+        "choices": [
+          "Les chiffrer avec Ansible Vault, ou les lire dans un gestionnaire de secrets",
+          "Les encoder en base64",
+          "Les mettre dans un fichier .txt à part",
+          "Les supprimer"
+        ],
+        "answerIndex": 0,
+        "explanation": "Et on les change, puisqu'ils ont été exposés.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "ansible-defi-q4",
+        "prompt": "On relance un playbook sans avoir changé la configuration de nginx. Le handler qui redémarre nginx s'exécute-t-il ?",
+        "choices": [
+          "Non : la tâche template répond ok, elle ne notifie donc pas le handler",
+          "Oui, à chaque exécution",
+          "Oui, mais seulement le lundi",
+          "Le playbook échoue"
+        ],
+        "answerIndex": 0,
+        "explanation": "Seul un changement réel déclenche le handler.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "ansible-defi-q5",
+        "prompt": "Cette tâche est marquée changed et redémarre nginx à chaque exécution. Touche la ligne en cause.",
+        "code": "- name: Redémarrer nginx\n  ansible.builtin.command: systemctl restart nginx",
+        "language": "yaml",
+        "bugLines": [
+          2
+        ],
+        "explanation": "command s'exécute toujours. On redémarre via un handler notifié par la tâche de configuration, avec le module service.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "ansible-defi-q6",
+        "prompt": "Quels sont les atouts d'Ansible ?",
+        "choices": [
+          "Aucun agent à installer sur les serveurs",
+          "Des playbooks lisibles en YAML",
+          "Un grand nombre de modules et de collections",
+          "Un fichier d'état qui suit l'infrastructure, comme Terraform"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Ansible n'a pas d'état : il compare à chaque exécution l'état voulu à la réalité.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

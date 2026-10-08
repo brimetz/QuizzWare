@@ -1,0 +1,442 @@
+{
+  "id": "oa-ch-essentiel",
+  "title": "OpenAPI et contrats : l'essentiel",
+  "summary": "Décrire, outiller et gouverner une API.",
+  "lessons": [
+    {
+      "id": "oa-bases",
+      "title": "Décrire une API",
+      "summary": "Chemins, opérations et schémas.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un contrat lisible par des outils",
+          "body": "OpenAPI décrit une API HTTP dans un fichier YAML ou JSON : chemins, opérations, paramètres, corps de requête, réponses par code de statut, et schémas de données (JSON Schema). Des outils en tirent une documentation interactive (Swagger UI, Redoc), des clients, des validations et des tests.",
+          "code": "openapi: 3.1.0\ninfo: { title: API Commandes, version: 1.4.0 }\npaths:\n  /commandes/{id}:\n    get:\n      parameters:\n        - name: id\n          in: path\n          required: true\n          schema: { type: string }\n      responses:\n        \"200\":\n          content:\n            application/json:\n              schema: { $ref: \"#/components/schemas/Commande\" }\n        \"404\": { description: Introuvable }",
+          "language": "yaml"
+        },
+        {
+          "title": "Des schémas réutilisables",
+          "body": "La section components/schemas définit des schémas réutilisés partout avec $ref. Un paramètre de chemin est toujours obligatoire (required: true) : une URL sans lui ne correspondrait pas au chemin."
+        },
+        {
+          "title": "Contrat d'abord, ou code d'abord",
+          "body": "En design-first, on écrit et on relit le contrat avant d'implémenter : le front et le back avancent en parallèle sur une base validée. En code-first, la spécification est générée depuis le code. Dans les deux cas, contrat et implémentation ne doivent jamais diverger."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "oa-bases-q1",
+          "prompt": "Qu'est-ce qu'OpenAPI ?",
+          "choices": [
+            "Un format standard pour décrire une API HTTP, exploitable par des outils",
+            "Une API publique gratuite",
+            "Un serveur web",
+            "Un langage de programmation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Anciennement appelé Swagger.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "oa-bases-q2",
+          "prompt": "Que signifie une approche design-first ?",
+          "choices": [
+            "Écrire et relire le contrat de l'API avant d'écrire le code",
+            "Dessiner l'interface graphique d'abord",
+            "Coder d'abord, documenter ensuite",
+            "Ne jamais écrire de contrat"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les désaccords se règlent sur le contrat, avant d'avoir écrit du code.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "oa-bases-q3",
+          "prompt": "Complète cette opération.",
+          "code": "parameters:\n  - name: id\n    ___: path\n    required: true\nresponses:\n  \"200\":\n    content:\n      application/json:\n        schema: { ___: \"#/components/schemas/Commande\" }",
+          "language": "yaml",
+          "answers": [
+            "in",
+            "$ref"
+          ],
+          "distractors": [
+            "location",
+            "ref",
+            "link"
+          ],
+          "explanation": "in dit où se trouve le paramètre (path, query, header, cookie) ; $ref pointe vers un schéma partagé.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "oa-bases-q4",
+          "prompt": "Les validateurs rejettent cette spécification. Touche la ligne en cause.",
+          "code": "parameters:\n  - name: id\n    in: path\n    required: false",
+          "language": "yaml",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Un paramètre de chemin est toujours obligatoire : required doit valoir true.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "oa-bases-q5",
+          "prompt": "À quoi sert la section components/schemas ?",
+          "choices": [
+            "À définir des schémas réutilisables, référencés avec $ref",
+            "À lister les serveurs",
+            "À stocker les mots de passe",
+            "À décrire l'interface graphique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un même schéma Commande sert à toutes les opérations qui en renvoient.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "oa-bases-q6",
+          "prompt": "Que permettent les outils autour d'OpenAPI ?",
+          "choices": [
+            "Une documentation interactive",
+            "La génération de clients et de serveurs",
+            "La validation des requêtes",
+            "La compilation du noyau Linux"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une seule source de vérité alimente tous ces outils.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "oa-outillage",
+      "title": "Outiller le contrat",
+      "summary": "Lint, mocks, clients et tests.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Vérifier le style",
+          "body": "Spectral analyse une spécification selon des règles : chaque opération a un operationId, les noms suivent la même casse, les erreurs utilisent le format Problem Details. Les règles d'une entreprise s'y ajoutent, et la CI les fait respecter."
+        },
+        {
+          "title": "Avancer sans attendre",
+          "body": "Prism lance un serveur fictif qui répond selon la spécification : le front développe avant que le back existe. openapi-generator produit des clients typés dans de nombreux langages.",
+          "code": "npx @stoplight/prism-cli mock openapi.yaml\nnpx @openapitools/openapi-generator-cli generate \\\n  -i openapi.yaml -g typescript-fetch -o client/",
+          "language": "shell"
+        },
+        {
+          "title": "Tester le contrat",
+          "body": "Des outils comme Schemathesis génèrent des requêtes à partir de la spécification et vérifient que l'API y répond conformément : statuts déclarés, schémas des réponses. Une API qui renvoie un code ou un champ non documenté est détectée en CI."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "oa-outillage-q1",
+          "prompt": "Qu'est-ce que Spectral ?",
+          "choices": [
+            "Un linter qui vérifie une spécification selon des règles de style et de cohérence",
+            "Un serveur de production",
+            "Un outil de chiffrement",
+            "Une base de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Toutes les API de l'entreprise finissent par se ressembler, ce qui aide leurs clients.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "oa-outillage-q2",
+          "prompt": "À quoi sert un serveur fictif comme Prism ?",
+          "choices": [
+            "À répondre selon la spécification, pour que le front avance avant le back",
+            "À remplacer la production",
+            "À tester la charge",
+            "À stocker des données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il renvoie les exemples ou des données conformes aux schémas.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "oa-outillage-q3",
+          "prompt": "Que fait un outil comme Schemathesis ?",
+          "choices": [
+            "Il génère des requêtes à partir de la spécification et vérifie que l'API respecte son contrat",
+            "Il dessine des schémas d'architecture",
+            "Il traduit la documentation",
+            "Il génère des données de production"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il trouve souvent des erreurs 500 sur des entrées inattendues.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "oa-outillage-q4",
+          "prompt": "Complète : lancer un serveur fictif, puis générer un client TypeScript.",
+          "code": "npx @stoplight/prism-cli ___ openapi.yaml\nnpx @openapitools/openapi-generator-cli ___ \\\n  -i openapi.yaml -g typescript-fetch -o client/",
+          "language": "shell",
+          "answers": [
+            "mock",
+            "generate"
+          ],
+          "distractors": [
+            "serve",
+            "build",
+            "run"
+          ],
+          "explanation": "-g choisit le générateur, c'est-à-dire le langage et la bibliothèque cibles.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "oa-outillage-q5",
+          "prompt": "Cette création renvoie en réalité 201, ou 422 si les données sont invalides. Touche la ligne qui documente mal la réponse.",
+          "code": "post:\n  responses:\n    \"200\":\n      description: OK",
+          "language": "yaml",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La réponse documentée ne correspond pas : il faut 201 (avec le schéma créé) et 422 (avec Problem Details). Les tests de contrat le détecteraient.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "oa-outillage-q6",
+          "prompt": "Quelles règles de lint sont utiles pour une spécification ?",
+          "choices": [
+            "Chaque opération a un operationId",
+            "Les noms de champs suivent tous la même casse",
+            "Les réponses d'erreur suivent le schéma Problem Details",
+            "Le fichier fait moins de 100 lignes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La taille d'une spécification dépend de l'API, pas d'une règle de style.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "oa-gouvernance",
+      "title": "Gouverner les contrats",
+      "summary": "Compatibilité, sécurité et événements.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Détecter les ruptures",
+          "body": "Un outil comme oasdiff compare deux versions d'une spécification et signale les changements incompatibles : champ supprimé, type modifié, paramètre ou champ de requête devenu obligatoire. En CI, il empêche de casser les clients par accident."
+        },
+        {
+          "title": "Décrire la sécurité",
+          "body": "securitySchemes décrit les mécanismes d'authentification (OAuth 2, clés, jetons), et chaque opération indique ce qu'elle exige, jusqu'aux scopes OAuth.",
+          "code": "components:\n  securitySchemes:\n    oauth:\n      type: oauth2\n      flows: { clientCredentials: { tokenUrl: /token, scopes: {} } }\npaths:\n  /commandes:\n    post:\n      security:\n        - oauth: [commandes:ecriture]",
+          "language": "yaml"
+        },
+        {
+          "title": "Au-delà du HTTP",
+          "body": "AsyncAPI applique la même idée aux API événementielles (Kafka, AMQP, WebSocket) : canaux, messages et schémas. Un guide de style commun, un catalogue des API et une revue de conception avant l'implémentation forment la gouvernance d'API."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "oa-gouvernance-q1",
+          "prompt": "Que fait oasdiff dans une CI ?",
+          "choices": [
+            "Il détecte les changements incompatibles entre deux versions de la spécification",
+            "Il déploie l'API",
+            "Il génère des tests unitaires",
+            "Il compresse la spécification"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une pull request qui casserait les clients échoue avant la fusion.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "oa-gouvernance-q2",
+          "prompt": "Complète : la création de commande exige un jeton OAuth avec le scope commandes:ecriture.",
+          "code": "components:\n  securitySchemes:\n    oauth:\n      type: ___\npaths:\n  /commandes:\n    post:\n      ___:\n        - oauth: [commandes:ecriture]",
+          "language": "yaml",
+          "answers": [
+            "oauth2",
+            "security"
+          ],
+          "distractors": [
+            "bearer",
+            "auth",
+            "scopes"
+          ],
+          "explanation": "Un jeton porteur simple se décrirait avec type: http et scheme: bearer.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "oa-gouvernance-q3",
+          "prompt": "Le code et la spécification ont divergé. Comment éviter que cela se reproduise ?",
+          "choices": [
+            "Vérifier en CI que l'implémentation respecte la spécification, ou générer la spécification depuis le code",
+            "Relire la documentation une fois par an",
+            "Supprimer la spécification",
+            "Écrire la spécification à la main après chaque déploiement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Seule une vérification automatique tient dans la durée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "oa-gouvernance-q4",
+          "prompt": "Qu'est-ce qu'AsyncAPI ?",
+          "choices": [
+            "L'équivalent d'OpenAPI pour décrire des API événementielles (Kafka, AMQP, WebSocket)",
+            "Une version asynchrone de JavaScript",
+            "Un serveur de files de messages",
+            "Une API de paiement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les événements méritent aussi un contrat versionné.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "oa-gouvernance-q5",
+          "prompt": "Après la publication de la version 1.5.0, les anciens clients reçoivent des 422 en créant des commandes. Touche la ligne en cause.",
+          "code": "# v1.4.0 → v1.5.0, schéma de la requête de création\nNouvelleCommande:\n  required: [client, lignes, devise]   # devise ajouté",
+          "language": "yaml",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Rendre obligatoire un nouveau champ de requête casse les clients qui ne l'envoient pas. On l'ajoute en optionnel, avec une valeur par défaut.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "oa-gouvernance-q6",
+          "prompt": "Que comprend une gouvernance d'API ?",
+          "choices": [
+            "Un guide de style commun",
+            "Un catalogue des API",
+            "Une revue de conception avant l'implémentation",
+            "Des conventions inventées par chaque équipe"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La cohérence entre API simplifie la vie de tous les clients.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "oa-defi",
+    "title": "Défi entretien : une nouvelle API à plusieurs",
+    "summary": "Contrat, clients et compatibilité.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "oa-defi-q1",
+        "prompt": "Cas pratique 1/3 — Le front et le back doivent développer en parallèle une nouvelle API. Comment s'organiser ?",
+        "choices": [
+          "Écrire et relire d'abord le contrat OpenAPI, puis le front s'appuie sur un serveur fictif (Prism)",
+          "Le front attend que le back soit fini",
+          "Chacun devine le format",
+          "On décide du format en production"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le contrat devient le point de rendez-vous des deux équipes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "oa-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le client de l'application mobile est réécrit à la main à chaque changement de l'API. Que faire ?",
+        "choices": [
+          "Le générer depuis la spécification",
+          "Arrêter de faire évoluer l'API",
+          "Écrire les appels HTTP sans types",
+          "Copier le code du back"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le client reste toujours aligné sur le contrat.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "oa-defi-q3",
+        "prompt": "Cas pratique 3/3 — Une modification a cassé l'intégration d'un partenaire. Comment l'éviter à l'avenir ?",
+        "choices": [
+          "Détecter les ruptures en CI (oasdiff) et vérifier l'implémentation par des tests de contrat",
+          "Prévenir le partenaire après coup",
+          "Ne plus avoir de partenaires",
+          "Relire le code à la main"
+        ],
+        "answerIndex": 0,
+        "explanation": "Deux garde-fous : le contrat ne casse pas, et le code respecte le contrat.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "oa-defi-q4",
+        "prompt": "Que manque-t-il souvent à une réponse décrite comme \"404\": { description: Introuvable } ?",
+        "choices": [
+          "Le schéma du corps d'erreur, par exemple Problem Details",
+          "Une couleur",
+          "Un deuxième code 404",
+          "Rien, c'est complet"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les clients générés ne savent pas lire une erreur dont le format n'est pas décrit.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "oa-defi-q5",
+        "prompt": "Cette référence ne se résout pas. Touche la ligne en cause.",
+        "code": "schema: { $ref: \"#/components/schema/Commande\" }",
+        "language": "yaml",
+        "bugLines": [
+          1
+        ],
+        "explanation": "La section s'appelle schemas, au pluriel : #/components/schemas/Commande.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "oa-defi-q6",
+        "prompt": "Qu'apporte un contrat OpenAPI tenu à jour ?",
+        "choices": [
+          "Une documentation toujours disponible",
+          "Des clients générés",
+          "Une validation automatique des échanges",
+          "La fin des tests"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les tests restent nécessaires : le contrat dit la forme, pas la justesse métier.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

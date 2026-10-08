@@ -1,0 +1,444 @@
+{
+  "id": "gql-ch-essentiel",
+  "title": "GraphQL : l'essentiel",
+  "summary": "Schéma, performance et conception.",
+  "lessons": [
+    {
+      "id": "gql-bases",
+      "title": "Schéma et requêtes",
+      "summary": "Le client choisit ce qu'il veut.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un schéma typé",
+          "body": "Une API GraphQL expose un seul point d'entrée et un schéma typé : des types objets, des scalaires (Int, String, ID…), des énumérations. Le ! marque un champ non nul. Les opérations racines sont Query (lecture), Mutation (modification) et Subscription (flux temps réel).",
+          "code": "type Commande {\n  id: ID!\n  montant: Int!\n  client: Client!\n  lignes(premieres: Int = 10): [Ligne!]!\n}\n\ntype Query {\n  commande(id: ID!): Commande\n}",
+          "language": "text"
+        },
+        {
+          "title": "Le client choisit les champs",
+          "body": "Le client écrit une requête qui décrit exactement les champs voulus, y compris dans les objets liés : une seule requête remplace plusieurs appels REST, sans données inutiles. La réponse a la même forme que la requête.",
+          "code": "query {\n  commande(id: \"42\") {\n    id\n    montant\n    client { nom }\n  }\n}",
+          "language": "text"
+        },
+        {
+          "title": "Les résolveurs",
+          "body": "Côté serveur, chaque champ est calculé par un résolveur : une fonction qui va chercher la donnée (base, autre service). Le schéma est introspectable : les outils découvrent les types disponibles pour l'autocomplétion et la génération de code."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gql-bases-q1",
+          "prompt": "Quelle est la différence principale entre GraphQL et REST ?",
+          "choices": [
+            "Le client choisit précisément les champs voulus, via un seul point d'entrée et un schéma typé",
+            "GraphQL n'utilise pas HTTP",
+            "GraphQL ne permet pas de modifier des données",
+            "REST est plus récent"
+          ],
+          "answerIndex": 0,
+          "explanation": "On évite à la fois les données inutiles et les allers-retours multiples.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "gql-bases-q2",
+          "prompt": "Complète : lire la commande 42 et le nom de son client.",
+          "code": "___ {\n  commande(id: \"42\") {\n    id\n    ___ { nom }\n  }\n}",
+          "language": "text",
+          "answers": [
+            "query",
+            "client"
+          ],
+          "distractors": [
+            "select",
+            "get",
+            "user"
+          ],
+          "explanation": "Le champ client, déclaré dans le type Commande, se parcourt dans la même requête.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gql-bases-q3",
+          "prompt": "Que signifie le ! dans String! ?",
+          "choices": [
+            "Le champ ne peut pas être nul",
+            "Le champ est obligatoire en entrée seulement",
+            "Le champ est important",
+            "Le champ est une liste"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans !, le champ peut valoir null.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gql-bases-q4",
+          "prompt": "Qu'est-ce qu'une mutation ?",
+          "choices": [
+            "Une opération qui modifie des données",
+            "Un changement de schéma",
+            "Une erreur de type",
+            "Une requête mise en cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle renvoie, elle aussi, les champs demandés par le client.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "gql-bases-q5",
+          "prompt": "Un client peut demander toutes les commandes de la base en une requête. Touche la ligne en cause.",
+          "code": "type Query {\n  commandes: [Commande!]!\n}",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Aucune pagination : on ajoute des arguments (premieres, apres) et une limite côté serveur.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gql-bases-q6",
+          "prompt": "Quelles sont les opérations racines de GraphQL ?",
+          "choices": [
+            "Query",
+            "Mutation",
+            "Subscription",
+            "Delete"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une suppression s'exprime par une mutation.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "gql-performance",
+      "title": "Performance et sécurité",
+      "summary": "DataLoader, pagination et limites.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le problème N+1",
+          "body": "Pour 50 commandes, le résolveur client est appelé 50 fois : 50 requêtes en base. DataLoader regroupe tous les identifiants demandés pendant un même tour d'exécution en une seule requête, et met les résultats en cache pour la durée de la requête GraphQL.",
+          "code": "const chargeurClients = new DataLoader(async (ids) => {\n  const clients = await db.clients.trouverParIds(ids);\n  return ids.map((id) => clients.find((c) => c.id === id));\n});\nconst resolvers = {\n  Commande: {\n    client: (commande) => chargeurClients.load(commande.clientId),\n  },\n};",
+          "language": "javascript"
+        },
+        {
+          "title": "Pagination et limites",
+          "body": "Les listes se paginent par curseur, souvent avec le modèle des connexions (edges, node, pageInfo). Comme le client compose ses requêtes, il peut en écrire d'énormes ou de très profondes : on limite la profondeur et la complexité, et on peut n'accepter qu'une liste de requêtes enregistrées (requêtes persistées)."
+        },
+        {
+          "title": "Le cache",
+          "body": "Le cache HTTP est plus difficile : un seul point d'entrée, souvent en POST, et des réponses qui varient selon les champs demandés. Les requêtes persistées en GET le rendent possible ; côté client, Apollo ou urql gardent un cache normalisé des objets."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gql-performance-q1",
+          "prompt": "D'où vient le problème N+1 en GraphQL ?",
+          "choices": [
+            "Le résolveur d'un champ lié est appelé pour chaque élément d'une liste, avec une requête en base à chaque fois",
+            "Du réseau",
+            "Des mutations",
+            "Du schéma typé"
+          ],
+          "answerIndex": 0,
+          "explanation": "DataLoader regroupe ces appels en une seule requête.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "gql-performance-q2",
+          "prompt": "Complète le résolveur pour profiter du regroupement.",
+          "code": "const resolvers = {\n  Commande: {\n    client: (commande) =>\n      chargeurClients.___(commande.clientId),\n  },\n};",
+          "language": "javascript",
+          "answers": [
+            "load"
+          ],
+          "distractors": [
+            "get",
+            "fetch",
+            "batch"
+          ],
+          "explanation": "load enregistre l'identifiant ; DataLoader exécute ensuite une seule requête pour tous.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gql-performance-q3",
+          "prompt": "Cette requête fait tomber le serveur. Touche la ligne qui le révèle.",
+          "code": "query {\n  utilisateur(id: \"1\") {\n    amis { amis { amis { amis { amis { nom } } } } }\n  }\n}",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Une imbrication profonde fait exploser le nombre d'objets chargés. Le serveur doit limiter la profondeur et la complexité des requêtes.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gql-performance-q4",
+          "prompt": "Pourquoi le cache HTTP est-il plus difficile avec GraphQL qu'avec REST ?",
+          "choices": [
+            "Un seul point d'entrée, souvent en POST, et des réponses qui varient selon les champs demandés",
+            "GraphQL interdit le cache",
+            "Les réponses GraphQL sont binaires",
+            "Il n'est pas plus difficile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les requêtes persistées en GET et les caches clients normalisés compensent.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gql-performance-q5",
+          "prompt": "Que décrit le modèle des connexions (edges, node, pageInfo) ?",
+          "choices": [
+            "Une pagination par curseur standardisée",
+            "Les connexions réseau",
+            "Les relations entre tables",
+            "Les utilisateurs connectés"
+          ],
+          "answerIndex": 0,
+          "explanation": "pageInfo indique s'il reste des pages et le curseur suivant.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gql-performance-q6",
+          "prompt": "Comment protéger un serveur GraphQL ?",
+          "choices": [
+            "Limiter la profondeur des requêtes",
+            "Limiter leur complexité",
+            "N'accepter que des requêtes persistées",
+            "Activer l'introspection publique sur une API privée"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'introspection publique dévoile tout le schéma à un attaquant.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "gql-conception",
+      "title": "Concevoir un schéma",
+      "summary": "Évolution, erreurs et autorisation.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Évoluer sans versions",
+          "body": "Un schéma GraphQL évolue en continu : on ajoute des champs, on marque les anciens @deprecated, on surveille leur usage, puis on les retire quand plus personne ne les demande. Le serveur sait exactement quels champs chaque client utilise.",
+          "code": "type Client {\n  nom: String! @deprecated(reason: \"Utiliser nomComplet\")\n  nomComplet: String!\n}",
+          "language": "text"
+        },
+        {
+          "title": "Les erreurs",
+          "body": "Une réponse peut contenir à la fois des données et un tableau errors : certains champs ont échoué, d'autres non. Le statut HTTP reste souvent 200 : la supervision doit compter les erreurs dans les réponses. Les erreurs métier attendues (stock insuffisant) gagnent à être modélisées dans le schéma, par exemple avec des unions."
+        },
+        {
+          "title": "Autorisation et organisation",
+          "body": "Chaque résolveur qui renvoie une donnée vérifie que l'utilisateur y a droit : être connecté ne suffit pas. Avec plusieurs équipes, la fédération assemble des sous-graphes, chacun maintenu par une équipe, en un graphe unique servi par un routeur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gql-conception-q1",
+          "prompt": "Comment faire évoluer un schéma GraphQL sans casser les clients ?",
+          "choices": [
+            "Ajouter des champs, marquer les anciens @deprecated, suivre leur usage, puis les retirer",
+            "Créer une nouvelle URL à chaque changement",
+            "Renommer les champs directement",
+            "Ne jamais rien changer"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le suivi de l'usage par champ indique quand le retrait est sans risque.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "gql-conception-q2",
+          "prompt": "Complète : annoncer que nom sera retiré.",
+          "code": "type Client {\n  nom: String! @___(reason: \"Utiliser nomComplet\")\n  nomComplet: String!\n}",
+          "language": "text",
+          "answers": [
+            "deprecated"
+          ],
+          "distractors": [
+            "obsolete",
+            "removed",
+            "legacy"
+          ],
+          "explanation": "Les outils des clients affichent l'avertissement et la raison.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gql-conception-q3",
+          "prompt": "Une réponse contient à la fois data et errors. Qu'est-ce que cela signifie ?",
+          "choices": [
+            "Un résultat partiel : certains champs ont échoué, les autres sont présents",
+            "La requête a entièrement échoué",
+            "Un bug du serveur, toujours",
+            "Une réponse mise en cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les champs en échec valent null si le schéma l'autorise.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gql-conception-q4",
+          "prompt": "Un client connecté peut lire les commandes des autres. Touche la ligne en cause.",
+          "code": "const resolvers = {\n  Query: {\n    commande: (_, { id }, ctx) => {\n      if (!ctx.utilisateur) throw new Error(\"non connecté\");\n      return db.commandes.trouver(id);\n    },\n  },\n};",
+          "language": "javascript",
+          "bugLines": [
+            5
+          ],
+          "explanation": "On vérifie la connexion, pas la propriété : une IDOR. Il faut chercher la commande de cet utilisateur, ou refuser.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gql-conception-q5",
+          "prompt": "Qu'est-ce que la fédération GraphQL ?",
+          "choices": [
+            "Plusieurs équipes exposent chacune un sous-graphe, assemblés en un graphe unique par un routeur",
+            "Une alliance de serveurs DNS",
+            "Un format de fichier",
+            "Une méthode de chiffrement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les clients voient un seul schéma, les équipes restent autonomes.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "gql-conception-q6",
+          "prompt": "Dans quels cas REST reste-t-il préférable ?",
+          "choices": [
+            "Une API publique simple, qui profite du cache HTTP",
+            "Le téléchargement de fichiers volumineux",
+            "Des webhooks envoyés à des partenaires",
+            "Un client mobile qui agrège dix sources sur un écran"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'agrégation de sources multiples est justement le terrain favori de GraphQL.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "gql-defi",
+    "title": "Défi entretien : l'écran aux six appels",
+    "summary": "Adopter GraphQL sans s'écrouler.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "gql-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une application mobile fait six appels REST pour afficher un écran, et charge 80 % de données inutiles. Quelle option ?",
+        "choices": [
+          "Une couche GraphQL (ou un backend dédié au mobile) qui fournit exactement les données de l'écran en une requête",
+          "Six appels en parallèle, sans autre changement",
+          "Mettre toutes les données en cache sur le téléphone",
+          "Supprimer l'écran"
+        ],
+        "answerIndex": 0,
+        "explanation": "Moins d'allers-retours et moins de données : un gain direct sur réseau mobile.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gql-defi-q2",
+        "prompt": "Cas pratique 2/3 — Après la migration, cet écran déclenche 300 requêtes SQL. Que faire ?",
+        "choices": [
+          "Utiliser DataLoader pour regrouper les chargements des relations",
+          "Ajouter des serveurs",
+          "Revenir à REST",
+          "Désactiver les relations"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le problème N+1 est le piège classique de GraphQL.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gql-defi-q3",
+        "prompt": "Cas pratique 3/3 — Un attaquant envoie des requêtes énormes et profondes. Quelles protections ?",
+        "choices": [
+          "Limites de profondeur et de complexité, et requêtes persistées pour les clients connus",
+          "Un pare-feu qui bloque le port 443",
+          "Rien, GraphQL se protège seul",
+          "Des réponses plus lentes pour tout le monde"
+        ],
+        "answerIndex": 0,
+        "explanation": "On mesure le coût d'une requête avant de l'exécuter.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "gql-defi-q4",
+        "prompt": "Le serveur répond 200 avec un tableau errors. Pourquoi la supervision ne voit-elle pas ces erreurs ?",
+        "choices": [
+          "Elle compte les codes HTTP ; il faut des métriques sur le contenu errors des réponses",
+          "Parce que les erreurs GraphQL ne sont pas réelles",
+          "Parce que 200 signifie qu'il n'y a pas d'erreur",
+          "Parce que GraphQL masque toujours les erreurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un taux d'erreurs fondé sur les seuls statuts HTTP serait faux.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "gql-defi-q5",
+        "prompt": "Il faut renommer un champ utilisé par la version 1 de l'application mobile, toujours installée chez des clients. Comment faire ?",
+        "choices": [
+          "Ajouter le nouveau champ, marquer l'ancien @deprecated, et le retirer quand plus personne ne l'utilise",
+          "Le renommer directement",
+          "Créer un nouveau point d'entrée /graphql/v2",
+          "Forcer la mise à jour de toutes les applications le jour même"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les deux champs coexistent pendant la transition.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "gql-defi-q6",
+        "prompt": "Que trouve-t-on dans un schéma GraphQL ?",
+        "choices": [
+          "Des types objets",
+          "Des scalaires",
+          "Des énumérations",
+          "Des tables SQL"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le schéma décrit l'API, pas le stockage.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

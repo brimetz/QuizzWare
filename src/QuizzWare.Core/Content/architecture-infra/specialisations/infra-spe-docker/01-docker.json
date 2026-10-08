@@ -1,0 +1,449 @@
+{
+  "id": "docker-ch-essentiel",
+  "title": "Docker : l'essentiel",
+  "summary": "Images, conteneurs et production.",
+  "lessons": [
+    {
+      "id": "docker-images",
+      "title": "Construire des images",
+      "summary": "Dockerfile, couches et cache.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Image et conteneur",
+          "body": "Une image est un modèle immuable : un système de fichiers en couches et une commande de démarrage. Un conteneur est une instance en cours d'exécution d'une image, avec sa propre couche inscriptible. Une image se désigne par un tag (api:1.4.2) ou, de façon immuable, par son digest (api@sha256:…).",
+          "code": "FROM node:22-slim\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --omit=dev\nCOPY . .\nUSER node\nCMD [\"node\", \"server.js\"]",
+          "language": "text"
+        },
+        {
+          "title": "Les couches et le cache",
+          "body": "Chaque instruction du Dockerfile produit une couche. Si une instruction et ses entrées n'ont pas changé, Docker réutilise la couche en cache ; dès qu'une couche change, toutes les suivantes sont reconstruites. On copie donc d'abord les fichiers de dépendances et on les installe, puis on copie le code, qui change bien plus souvent."
+        },
+        {
+          "title": "Contexte et tags",
+          "body": "Le contexte de build est tout le dossier envoyé à Docker : .dockerignore en exclut node_modules, .git ou des fichiers .env, pour un build plus rapide et une image sans fuite. En production, on déploie un tag précis ou un digest, jamais latest, qui ne désigne pas une version fixe."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "docker-images-q1",
+          "prompt": "Quelle est la différence entre une image et un conteneur ?",
+          "choices": [
+            "L'image est un modèle immuable ; le conteneur en est une instance qui s'exécute",
+            "Ce sont deux noms pour la même chose",
+            "Le conteneur est un fichier, l'image un processus",
+            "L'image contient un noyau, pas le conteneur"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut lancer autant de conteneurs qu'on veut à partir d'une même image.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "docker-images-q2",
+          "prompt": "Chaque modification d'un fichier source relance l'installation complète des dépendances. Touche la ligne en cause.",
+          "code": "FROM node:22-slim\nWORKDIR /app\nCOPY . .\nRUN npm ci\nCMD [\"node\", \"server.js\"]",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Tout le code est copié avant npm ci : le moindre changement invalide le cache de l'installation. On copie d'abord package*.json, on installe, puis on copie le reste.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "docker-images-q3",
+          "prompt": "Complète ce Dockerfile.",
+          "code": "FROM python:3.13-slim\n___ /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\n___ [\"python\", \"main.py\"]",
+          "language": "text",
+          "answers": [
+            "WORKDIR",
+            "CMD"
+          ],
+          "distractors": [
+            "CD",
+            "RUN",
+            "START"
+          ],
+          "explanation": "WORKDIR fixe le dossier courant ; CMD la commande lancée au démarrage. RUN s'exécute au build.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "docker-images-q4",
+          "prompt": "Pourquoi éviter le tag latest en production ?",
+          "choices": [
+            "Il ne désigne pas une version fixe : deux déploiements peuvent tirer des images différentes",
+            "Il est plus lent à télécharger",
+            "Il est réservé aux images officielles",
+            "Il expire au bout d'un mois"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un retour arrière fiable exige de savoir exactement quelle image tournait.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "docker-images-q5",
+          "prompt": "À quoi sert le fichier .dockerignore ?",
+          "choices": [
+            "À exclure du contexte de build node_modules, .git ou .env : build plus rapide, image plus propre",
+            "À ignorer les erreurs du build",
+            "À masquer des conteneurs dans docker ps",
+            "À désactiver le cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans lui, un COPY . . peut embarquer un .env de développement dans l'image.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "docker-images-q6",
+          "prompt": "Comment réduire la taille d'une image ?",
+          "choices": [
+            "Partir d'une image slim ou distroless",
+            "Utiliser un build multi-étapes",
+            "Nettoyer les caches dans la même instruction RUN que l'installation",
+            "Ajouter à la fin un RUN rm qui supprime les fichiers des couches précédentes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une couche ne peut pas alléger les précédentes : le fichier supprimé reste dans l'image, simplement masqué.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "docker-run",
+      "title": "Lancer des conteneurs",
+      "summary": "Ports, variables, volumes et signaux.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "docker run",
+          "body": "-d lance en arrière-plan, --name nomme le conteneur, -p 8080:3000 publie le port 3000 du conteneur sur le port 8080 de l'hôte, -e définit une variable d'environnement, --rm supprime le conteneur à l'arrêt. docker logs affiche sa sortie, docker exec -it lance une commande (un shell) à l'intérieur.",
+          "code": "docker run -d --name api \\\n  -p 8080:3000 \\\n  -e DB_URL=postgres://db/app \\\n  api:1.4.2\ndocker logs -f api\ndocker exec -it api sh",
+          "language": "shell"
+        },
+        {
+          "title": "Les données",
+          "body": "La couche inscriptible d'un conteneur disparaît avec lui. Les données à garder vont dans un volume nommé (géré par Docker) ou un bind mount (un dossier précis de l'hôte, pratique en développement). Les deux survivent à la suppression du conteneur."
+        },
+        {
+          "title": "PID 1 et les signaux",
+          "body": "Le conteneur vit tant que son processus principal (PID 1) vit. docker stop lui envoie SIGTERM, puis SIGKILL après 10 secondes. Avec la forme shell (CMD npm start), le PID 1 est un shell qui ne transmet pas SIGTERM : l'application est tuée brutalement. La forme exec (CMD [\"node\", \"server.js\"]) lance directement l'application."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "docker-run-q1",
+          "prompt": "Complète : publier le port 3000 du conteneur sur le port 8080 de l'hôte, et passer l'URL de la base.",
+          "code": "docker run -d --name api \\\n  -___ 8080:3000 \\\n  -___ DB_URL=postgres://db/app \\\n  api:1.4.2",
+          "language": "shell",
+          "answers": [
+            "p",
+            "e"
+          ],
+          "distractors": [
+            "v",
+            "n",
+            "port"
+          ],
+          "explanation": "-v monte un volume ; les formes longues sont --publish et --env.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "docker-run-q2",
+          "prompt": "Que deviennent les données écrites dans un conteneur sans volume, après docker rm ?",
+          "choices": [
+            "Elles sont perdues",
+            "Elles sont copiées dans l'image",
+            "Elles restent dans /tmp de l'hôte",
+            "Elles sont envoyées au registre"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est pourquoi une base de données en conteneur a toujours un volume.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "docker-run-q3",
+          "prompt": "docker stop attend 10 secondes puis tue le conteneur, coupant les requêtes en cours. Touche la ligne en cause.",
+          "code": "FROM node:22-slim\nWORKDIR /app\nCOPY . .\nCMD npm start",
+          "language": "text",
+          "bugLines": [
+            4
+          ],
+          "explanation": "La forme shell fait d'un shell le PID 1, qui ne transmet pas SIGTERM à Node. On écrit CMD [\"node\", \"server.js\"] et l'application gère SIGTERM.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "docker-run-q4",
+          "prompt": "Que signifie -p 8080:3000 ?",
+          "choices": [
+            "Le port 8080 de l'hôte redirige vers le port 3000 du conteneur",
+            "Le port 3000 de l'hôte redirige vers le port 8080 du conteneur",
+            "Le conteneur utilise les ports 8080 à 3000",
+            "Le conteneur a 8080 Mo de mémoire et 3000 Mo de disque"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'ordre est toujours hôte:conteneur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "docker-run-q5",
+          "prompt": "Comment ouvrir un shell dans le conteneur api en cours d'exécution ?",
+          "choices": [
+            "docker exec -it api sh",
+            "docker run -it api sh",
+            "docker attach api --shell",
+            "docker start api sh"
+          ],
+          "answerIndex": 0,
+          "explanation": "docker run créerait un nouveau conteneur au lieu d'entrer dans l'existant.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "docker-run-q6",
+          "prompt": "Quelles affirmations sur les volumes sont vraies ?",
+          "choices": [
+            "Un volume nommé est géré par Docker",
+            "Un bind mount monte un dossier précis de l'hôte",
+            "Les deux survivent à la suppression du conteneur",
+            "Un bind mount est copié dans l'image"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les volumes n'entrent jamais dans l'image : ils sont montés au lancement.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "docker-production",
+      "title": "Docker en production",
+      "summary": "Multi-étapes, sécurité et Compose.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le build multi-étapes",
+          "body": "Une première étape compile avec tout l'outillage (SDK, compilateur, dépendances de build) ; l'étape finale ne copie que le résultat dans une image minimale. L'image livrée est plus petite, plus rapide à déployer et expose moins de logiciels vulnérables.",
+          "code": "FROM golang:1.25 AS build\nWORKDIR /src\nCOPY . .\nRUN CGO_ENABLED=0 go build -o /app ./cmd/api\n\nFROM gcr.io/distroless/static\nCOPY --from=build /app /app\nUSER nonroot\nENTRYPOINT [\"/app\"]",
+          "language": "text"
+        },
+        {
+          "title": "Sécurité",
+          "body": "Utilisateur non root (USER), image minimale, système de fichiers en lecture seule, capabilities retirées. Les secrets de build (jeton de registre privé) passent par RUN --mount=type=secret, jamais par ARG ou ENV, qui restent lisibles dans l'historique de l'image. On scanne les images (Trivy, Docker Scout) pour repérer les vulnérabilités connues."
+        },
+        {
+          "title": "Compose",
+          "body": "Docker Compose décrit plusieurs services (API, base, cache) dans un fichier, pratique en développement et en test. depends_on n'attend que le démarrage d'un service ; pour attendre qu'une base soit prête, on lui donne un healthcheck et on écrit condition: service_healthy.",
+          "code": "services:\n  api:\n    build: .\n    depends_on:\n      db:\n        condition: service_healthy\n  db:\n    image: postgres:17\n    healthcheck:\n      test: [\"CMD\", \"pg_isready\"]",
+          "language": "yaml"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "docker-production-q1",
+          "prompt": "Quel est l'intérêt d'un build multi-étapes ?",
+          "choices": [
+            "Compiler avec l'outillage complet, puis ne copier que le résultat dans une image minimale",
+            "Construire plusieurs images à la fois",
+            "Déployer sur plusieurs serveurs",
+            "Accélérer l'exécution de l'application"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le compilateur et les sources n'ont rien à faire dans l'image de production.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "docker-production-q2",
+          "prompt": "Complète ce build multi-étapes Java.",
+          "code": "FROM maven:3.9-eclipse-temurin-21 ___ build\nWORKDIR /src\nCOPY . .\nRUN mvn -q package\n\nFROM eclipse-temurin:21-jre\nCOPY ___=build /src/target/app.jar /app.jar",
+          "language": "text",
+          "answers": [
+            "AS",
+            "--from"
+          ],
+          "distractors": [
+            "FROM",
+            "--stage",
+            "IN"
+          ],
+          "explanation": "AS nomme l'étape ; COPY --from copie depuis cette étape.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "docker-production-q3",
+          "prompt": "Revue de sécurité : le jeton du registre npm privé reste lisible dans l'image. Touche la ligne en cause.",
+          "code": "FROM node:22-slim\nARG NPM_TOKEN\nRUN echo \"//registry.npmjs.org/:_authToken=$NPM_TOKEN\" > .npmrc \\\n    && npm ci && rm .npmrc",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Les valeurs d'ARG utilisées par un RUN restent visibles dans l'historique de l'image. On monte le secret : RUN --mount=type=secret,id=npm …",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "docker-production-q4",
+          "prompt": "Dans Compose, depends_on: [db] garantit-il que la base est prête à recevoir des connexions ?",
+          "choices": [
+            "Non : seulement qu'elle a démarré ; il faut un healthcheck et condition: service_healthy",
+            "Oui, toujours",
+            "Oui, si l'image est officielle",
+            "Non, et c'est impossible avec Compose"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une base met souvent quelques secondes à accepter des connexions après le démarrage de son conteneur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "docker-production-q5",
+          "prompt": "Que fait un outil comme Trivy ?",
+          "choices": [
+            "Il recherche les vulnérabilités connues dans les paquets d'une image",
+            "Il compresse les images",
+            "Il déploie les conteneurs",
+            "Il surveille la mémoire des conteneurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "On l'intègre à la CI pour bloquer les images trop vulnérables.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "docker-production-q6",
+          "prompt": "Comment durcir un conteneur ?",
+          "choices": [
+            "Un utilisateur non root",
+            "Une image minimale",
+            "Un système de fichiers en lecture seule",
+            "Monter /var/run/docker.sock"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La socket Docker donne le contrôle de l'hôte.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "docker-defi",
+    "title": "Défi entretien : l'image de 1,4 Go",
+    "summary": "Cache, taille et arrêt propre.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "docker-defi-q1",
+        "prompt": "Cas pratique 1/3 — L'image d'une API Node pèse 1,4 Go et son build prend 6 minutes à chaque commit. Premier levier pour le temps de build ?",
+        "choices": [
+          "Copier package*.json et installer les dépendances avant de copier le code, pour profiter du cache",
+          "Construire sur une machine plus puissante",
+          "Supprimer les tests",
+          "Construire une fois par semaine"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les dépendances changent rarement : leur installation reste en cache.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "docker-defi-q2",
+        "prompt": "Cas pratique 2/3 — Comment réduire ensuite la taille de l'image ?",
+        "choices": [
+          "Image de base slim, build multi-étapes, dépendances de production seulement et .dockerignore",
+          "Compresser l'image en zip",
+          "Supprimer des fichiers dans une dernière instruction RUN",
+          "Utiliser le tag latest"
+        ],
+        "answerIndex": 0,
+        "explanation": "On passe couramment de plus d'un Go à une centaine de Mo.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "docker-defi-q3",
+        "prompt": "Cas pratique 3/3 — À chaque déploiement, des requêtes en cours sont coupées. Que faire ?",
+        "choices": [
+          "Lancer node directement en forme exec pour qu'il reçoive SIGTERM, et terminer proprement les requêtes dans l'application",
+          "Augmenter la mémoire",
+          "Déployer la nuit",
+          "Désactiver les sondes"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'application cesse d'accepter des connexions, finit les requêtes en cours, puis sort.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "docker-defi-q4",
+        "prompt": "Un conteneur s'arrête avec le code 137. Que s'est-il passé ?",
+        "choices": [
+          "Il a reçu SIGKILL, souvent à cause d'un dépassement de sa limite de mémoire",
+          "Il s'est terminé normalement",
+          "Une erreur de syntaxe dans le Dockerfile",
+          "Le port était déjà utilisé"
+        ],
+        "answerIndex": 0,
+        "explanation": "137 = 128 + 9 ; docker inspect indique OOMKilled si c'est la mémoire.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "docker-defi-q5",
+        "prompt": "Remets ce Dockerfile dans l'ordre.",
+        "language": "text",
+        "lines": [
+          "FROM node:22-slim",
+          "WORKDIR /app",
+          "COPY package*.json ./",
+          "RUN npm ci --omit=dev",
+          "COPY . .",
+          "USER node",
+          "CMD [\"node\", \"server.js\"]"
+        ],
+        "explanation": "Dépendances d'abord pour le cache, code ensuite, utilisateur non root, puis la commande en forme exec.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "docker-defi-q6",
+        "prompt": "Que ne doit-on jamais trouver dans une image ?",
+        "choices": [
+          "Des mots de passe et des jetons",
+          "Des clés privées",
+          "Le fichier .env de production",
+          "Le binaire de l'application"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les images circulent dans des registres : tout ce qu'elles contiennent doit pouvoir être lu.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

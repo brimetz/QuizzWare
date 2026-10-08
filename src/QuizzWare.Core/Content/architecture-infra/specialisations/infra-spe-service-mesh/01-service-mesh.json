@@ -1,0 +1,447 @@
+{
+  "id": "mesh-ch-essentiel",
+  "title": "Service mesh : l'essentiel",
+  "summary": "mTLS, routage et choix d'architecture.",
+  "lessons": [
+    {
+      "id": "mesh-principe",
+      "title": "Le principe",
+      "summary": "Proxys, plan de contrôle et mTLS.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Une couche réseau entre les services",
+          "body": "Un service mesh (Istio, Linkerd) place un proxy à côté de chaque service, souvent en sidecar dans le même pod. Tout le trafic entre services passe par ces proxys, qui forment le plan de données ; le plan de contrôle les configure. Le mesh ajoute ainsi des fonctions réseau sans toucher au code des applications."
+        },
+        {
+          "title": "Ce qu'il apporte",
+          "body": "Chiffrement et authentification mutuelle (mTLS) automatiques entre services, délais et nouvelles tentatives, répartition fine du trafic (canary), disjoncteurs, et des métriques par paire de services : taux de requêtes, erreurs, latence."
+        },
+        {
+          "title": "Activer le mTLS strict",
+          "body": "Pendant une migration, le mode PERMISSIVE accepte à la fois le trafic chiffré et en clair, le temps que tous les services rejoignent le mesh. Ensuite, le mode STRICT refuse tout trafic non chiffré.",
+          "code": "apiVersion: security.istio.io/v1\nkind: PeerAuthentication\nmetadata:\n  name: default\n  namespace: prod\nspec:\n  mtls:\n    mode: STRICT",
+          "language": "yaml"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mesh-principe-q1",
+          "prompt": "Qu'est-ce qu'un service mesh ?",
+          "choices": [
+            "Une couche d'infrastructure qui gère la communication entre services au moyen de proxys",
+            "Un nouveau langage de programmation",
+            "Une base de données distribuée",
+            "Un outil de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les fonctions réseau sortent du code applicatif pour aller dans l'infrastructure.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mesh-principe-q2",
+          "prompt": "Quelle différence entre plan de données et plan de contrôle ?",
+          "choices": [
+            "Le plan de données, ce sont les proxys qui transportent le trafic ; le plan de contrôle les configure",
+            "Le plan de données stocke les bases, le plan de contrôle les sauvegarde",
+            "Ce sont deux noms pour la même chose",
+            "Le plan de contrôle transporte le trafic"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec Istio, istiod est le plan de contrôle et les proxys Envoy le plan de données.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mesh-principe-q3",
+          "prompt": "Comment un mesh chiffre-t-il le trafic entre services sans modifier leur code ?",
+          "choices": [
+            "Les proxys établissent entre eux des connexions mTLS avec des certificats émis et renouvelés automatiquement",
+            "Il réécrit le code des services",
+            "Il impose HTTPS dans chaque application",
+            "Il chiffre les disques"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'application parle en clair à son proxy local, qui chiffre vers le proxy distant.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "mesh-principe-q4",
+          "prompt": "Complète : refuser tout trafic non chiffré dans le namespace prod.",
+          "code": "apiVersion: security.istio.io/v1\nkind: PeerAuthentication\nmetadata:\n  name: default\n  namespace: prod\nspec:\n  mtls:\n    mode: ___",
+          "language": "yaml",
+          "answers": [
+            "STRICT"
+          ],
+          "distractors": [
+            "PERMISSIVE",
+            "DISABLE",
+            "REQUIRED"
+          ],
+          "explanation": "PERMISSIVE accepte encore le trafic en clair ; DISABLE coupe le mTLS.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mesh-principe-q5",
+          "prompt": "La migration est terminée ; l'équipe veut refuser tout trafic non chiffré entre services. Touche la ligne à changer.",
+          "code": "spec:\n  mtls:\n    mode: PERMISSIVE",
+          "language": "yaml",
+          "bugLines": [
+            3
+          ],
+          "explanation": "PERMISSIVE, utile pendant la migration, laisse passer le trafic en clair. Il faut STRICT.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mesh-principe-q6",
+          "prompt": "Quelles fonctions un service mesh apporte-t-il ?",
+          "choices": [
+            "Le mTLS entre services",
+            "Délais et nouvelles tentatives",
+            "La répartition fine du trafic entre versions",
+            "La compilation du code"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Et des métriques par service, sans instrumentation supplémentaire.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "mesh-trafic",
+      "title": "Gérer le trafic",
+      "summary": "Routes, canary, retries et disjoncteurs.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Routes et canary",
+          "body": "Avec Istio, une DestinationRule définit des sous-ensembles (v1, v2) d'après les labels des pods ; un VirtualService répartit le trafic entre eux par poids. Envoyer 10 % du trafic à v2 ne dépend plus du nombre de pods de chaque version.",
+          "code": "apiVersion: networking.istio.io/v1\nkind: VirtualService\nmetadata:\n  name: api\nspec:\n  hosts: [api]\n  http:\n    - route:\n        - destination: { host: api, subset: v1 }\n          weight: 90\n        - destination: { host: api, subset: v2 }\n          weight: 10\n      timeout: 2s",
+          "language": "yaml"
+        },
+        {
+          "title": "Retries et délais",
+          "body": "Les nouvelles tentatives masquent les erreurs passagères, mais se multiplient d'une couche à l'autre : trois services qui réessaient chacun trois fois envoient jusqu'à 27 requêtes au service en difficulté. On ne réessaie qu'à un endroit, seulement les opérations idempotentes, avec un délai par tentative."
+        },
+        {
+          "title": "Disjoncteurs et injection de fautes",
+          "body": "outlierDetection écarte temporairement une instance qui renvoie trop d'erreurs ; les limites de connexions protègent un service surchargé. L'injection de fautes (délais, erreurs) teste la résilience de l'ensemble sans modifier le code."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mesh-trafic-q1",
+          "prompt": "Avec Istio, comment envoyer 10 % du trafic vers la version v2 ?",
+          "choices": [
+            "Des sous-ensembles dans une DestinationRule, et des poids dans un VirtualService",
+            "Déployer 10 % de pods v2, sans autre configuration",
+            "Modifier le DNS",
+            "Redémarrer le cluster"
+          ],
+          "answerIndex": 0,
+          "explanation": "La répartition est précise, quel que soit le nombre de pods de chaque version.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "mesh-trafic-q2",
+          "prompt": "Complète : 95 % vers v1, 5 % vers v2, et un délai de 2 secondes.",
+          "code": "http:\n  - route:\n      - destination: { host: api, subset: v1 }\n        ___: 95\n      - destination: { host: api, subset: v2 }\n        weight: 5\n    ___: 2s",
+          "language": "yaml",
+          "answers": [
+            "weight",
+            "timeout"
+          ],
+          "distractors": [
+            "percent",
+            "deadline",
+            "delay"
+          ],
+          "explanation": "La somme des poids doit faire 100.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mesh-trafic-q3",
+          "prompt": "Pourquoi des nouvelles tentatives configurées à chaque niveau sont-elles dangereuses ?",
+          "choices": [
+            "Elles se multiplient : 3 niveaux de 3 tentatives envoient jusqu'à 27 requêtes au service déjà en difficulté",
+            "Elles ralentissent le DNS",
+            "Elles désactivent le mTLS",
+            "Elles ne sont pas dangereuses"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une tempête de nouvelles tentatives, qui transforme un ralentissement en panne.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mesh-trafic-q4",
+          "prompt": "Que fait outlierDetection dans une DestinationRule ?",
+          "choices": [
+            "Il écarte temporairement les instances qui renvoient trop d'erreurs, comme un disjoncteur",
+            "Il détecte les utilisateurs suspects",
+            "Il supprime les pods en erreur",
+            "Il chiffre le trafic"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'instance revient dans le pool après un délai si elle va mieux.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "mesh-trafic-q5",
+          "prompt": "Des clients sont débités deux fois. Touche une ligne en cause.",
+          "code": "- match:\n    - uri: { prefix: /paiements }\n  route:\n    - destination: { host: paiements }\n  retries:\n    attempts: 3\n    retryOn: 5xx",
+          "language": "yaml",
+          "bugLines": [
+            5,
+            6,
+            7
+          ],
+          "explanation": "Un POST de paiement est rejoué après une erreur 5xx, alors qu'il a pu être traité. On ne réessaie pas une opération non idempotente, sauf avec une clé d'idempotence.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "mesh-trafic-q6",
+          "prompt": "À quoi sert l'injection de fautes ?",
+          "choices": [
+            "Tester la résilience face à des délais ou des erreurs, sans modifier le code",
+            "Vérifier les délais et les nouvelles tentatives",
+            "Préparer les équipes aux pannes",
+            "Corriger automatiquement les bugs"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On commence en recette, puis sur une petite part du trafic.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mesh-choisir",
+      "title": "Identités et choix d'architecture",
+      "summary": "Autorisations, coût et alternatives.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Identités et autorisations",
+          "body": "Chaque service reçoit automatiquement un certificat lié à son compte de service (une identité au format SPIFFE). Une AuthorizationPolicy peut alors dire qui a le droit d'appeler qui : seul le service commandes peut appeler paiements, par exemple.",
+          "code": "apiVersion: security.istio.io/v1\nkind: AuthorizationPolicy\nmetadata:\n  name: paiements\nspec:\n  selector:\n    matchLabels: { app: paiements }\n  action: ALLOW\n  rules:\n    - from:\n        - source:\n            principals: [\"cluster.local/ns/prod/sa/commandes\"]",
+          "language": "yaml"
+        },
+        {
+          "title": "Le coût",
+          "body": "Un sidecar par pod consomme CPU et mémoire et ajoute un peu de latence ; le mesh ajoute surtout de la complexité à exploiter et à mettre à jour. Le mode ambient d'Istio réduit ce coût : un proxy par nœud (ztunnel) assure le mTLS, et des proxys waypoint ne gèrent les fonctions HTTP que là où elles servent. Linkerd mise sur la simplicité."
+        },
+        {
+          "title": "Le faut-il vraiment ?",
+          "body": "Avec peu de services et une seule équipe, des bibliothèques de résilience (Resilience4j, Polly), des NetworkPolicies et le TLS de la plateforme suffisent souvent. Un mesh devient intéressant avec beaucoup de services, plusieurs langages et des exigences fortes de sécurité ou de trafic."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mesh-choisir-q1",
+          "prompt": "Dans quel cas un service mesh est-il probablement superflu ?",
+          "choices": [
+            "Peu de services, une seule équipe, des besoins couverts par la plateforme ou des bibliothèques",
+            "Des dizaines de services en plusieurs langages",
+            "Une exigence d'audit de chiffrement de tout le trafic interne",
+            "Des déploiements canary fréquents"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le coût d'exploitation doit être justifié par des besoins réels.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mesh-choisir-q2",
+          "prompt": "Qu'apporte le mode ambient d'Istio ?",
+          "choices": [
+            "Plus de sidecar : un proxy par nœud pour le mTLS, et des proxys waypoint seulement pour les fonctions HTTP",
+            "Une interface graphique",
+            "Le chiffrement des disques",
+            "Un mesh sans plan de contrôle"
+          ],
+          "answerIndex": 0,
+          "explanation": "On paie les fonctions avancées seulement là où on les utilise.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "mesh-choisir-q3",
+          "prompt": "Complète : seul le service commandes (son compte de service porte ce nom) peut appeler paiements.",
+          "code": "spec:\n  selector:\n    matchLabels: { app: paiements }\n  action: ___\n  rules:\n    - from:\n        - source:\n            principals: [\"cluster.local/ns/prod/sa/___\"]",
+          "language": "yaml",
+          "answers": [
+            "ALLOW",
+            "commandes"
+          ],
+          "distractors": [
+            "DENY",
+            "AUDIT",
+            "paiements"
+          ],
+          "explanation": "Dès qu'une politique ALLOW s'applique à un service, tout ce qu'elle n'autorise pas est refusé.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mesh-choisir-q4",
+          "prompt": "Comment un mesh identifie-t-il les services entre eux ?",
+          "choices": [
+            "Par des certificats émis automatiquement, liés au compte de service (identité SPIFFE)",
+            "Par leur adresse IP",
+            "Par un mot de passe partagé",
+            "Par leur nom DNS uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les adresses IP changent sans cesse dans Kubernetes ; l'identité cryptographique, non.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mesh-choisir-q5",
+          "prompt": "Quel est le coût d'un mesh à sidecars ?",
+          "choices": [
+            "Des ressources par pod, un peu de latence, et une complexité d'exploitation et de mise à jour",
+            "Aucun",
+            "Il double le nombre de bases de données",
+            "Il impose de réécrire les applications"
+          ],
+          "answerIndex": 0,
+          "explanation": "À mesurer avant d'adopter, et à comparer aux alternatives.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mesh-choisir-q6",
+          "prompt": "Qu'est-ce qui peut remplacer ou compléter un service mesh ?",
+          "choices": [
+            "Des bibliothèques de résilience comme Resilience4j ou Polly",
+            "Des NetworkPolicies Kubernetes pour filtrer le réseau",
+            "Du TLS géré par l'application ou la plateforme",
+            "La suppression de tous les délais"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Sans délais, un service lent bloque tous ceux qui l'appellent.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "mesh-defi",
+    "title": "Défi entretien : chiffrer tout le trafic interne",
+    "summary": "Migration mTLS et autorisations.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mesh-defi-q1",
+        "prompt": "Cas pratique 1/3 — 40 microservices, 6 équipes ; un audit exige le chiffrement de tout le trafic interne. Quelle approche ?",
+        "choices": [
+          "Un service mesh avec mTLS automatique, d'abord en PERMISSIVE puis en STRICT",
+          "Demander à chaque équipe d'ajouter TLS dans son code",
+          "Chiffrer les disques",
+          "Un VPN entre chaque paire de services"
+        ],
+        "answerIndex": 0,
+        "explanation": "Aucun changement de code, et une migration progressive.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mesh-defi-q2",
+        "prompt": "Cas pratique 2/3 — Pourquoi commencer en mode PERMISSIVE ?",
+        "choices": [
+          "Pour accepter encore le trafic en clair des services qui n'ont pas encore rejoint le mesh",
+          "Parce que STRICT est plus lent",
+          "Pour désactiver les métriques",
+          "Parce que STRICT n'existe pas"
+        ],
+        "answerIndex": 0,
+        "explanation": "On passe en STRICT une fois que tous les clients parlent mTLS.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mesh-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment limiter les services autorisés à appeler paiements ?",
+        "choices": [
+          "Une AuthorizationPolicy fondée sur les identités des services",
+          "Une règle de pare-feu sur les adresses IP des pods",
+          "Un mot de passe dans un en-tête",
+          "Rien, le mTLS suffit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le mTLS authentifie l'appelant ; la politique décide s'il a le droit.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mesh-defi-q4",
+        "prompt": "Quel avantage a un canary géré par le mesh sur un canary par nombre de pods ?",
+        "choices": [
+          "La part du trafic est précise (1 %, 5 %…), indépendamment du nombre de pods de chaque version",
+          "Il ne nécessite pas d'image",
+          "Il supprime les tests",
+          "Il est obligatoire avec Kubernetes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec 1 pod v2 sur 10, on envoie environ 10 %, pas 1 %.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mesh-defi-q5",
+        "prompt": "Une requête traverse 4 services, chacun avec un délai de 10 s et 3 tentatives. Quel est le problème ?",
+        "choices": [
+          "Les tentatives se multiplient et les délais s'additionnent : il faut des budgets de temps décroissants et des tentatives à un seul niveau",
+          "Aucun",
+          "Les requêtes seront trop rapides",
+          "Le mTLS sera désactivé"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le client initial a abandonné depuis longtemps quand les couches profondes réessaient encore.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "mesh-defi-q6",
+        "prompt": "Quelles informations d'observabilité un mesh fournit-il ?",
+        "choices": [
+          "Le débit de requêtes entre chaque paire de services",
+          "Les taux d'erreurs et la latence par service",
+          "Des traces, si l'application propage les en-têtes de trace",
+          "Les journaux métier de l'application"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le proxy voit les requêtes, pas ce que l'application fait à l'intérieur.",
+        "difficulty": 3
+      }
+    ]
+  }
+}

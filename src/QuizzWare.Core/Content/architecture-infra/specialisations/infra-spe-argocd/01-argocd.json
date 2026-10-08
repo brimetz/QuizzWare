@@ -1,0 +1,446 @@
+{
+  "id": "argo-ch-essentiel",
+  "title": "Argo CD et GitOps : l'essentiel",
+  "summary": "Applications, synchronisation et bonnes pratiques.",
+  "lessons": [
+    {
+      "id": "argo-gitops",
+      "title": "GitOps et Applications",
+      "summary": "Git comme source de vérité.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le principe",
+          "body": "En GitOps, l'état voulu du cluster est décrit dans Git. Un agent installé dans le cluster (Argo CD, Flux) compare en continu cet état à la réalité et la réconcilie : il tire les changements (pull) au lieu que la CI les pousse. La CI n'a donc plus besoin d'identifiants sur le cluster, et chaque changement est tracé dans l'historique Git."
+        },
+        {
+          "title": "Une Application",
+          "body": "Une Application Argo CD relie une source (dépôt, chemin, révision) à une destination (cluster et namespace). Son statut de synchronisation dit si le cluster correspond à Git (Synced) ou non (OutOfSync) ; son statut de santé dit si les ressources fonctionnent (Healthy, Progressing, Degraded).",
+          "code": "apiVersion: argoproj.io/v1alpha1\nkind: Application\nmetadata:\n  name: api\n  namespace: argocd\nspec:\n  project: default\n  source:\n    repoURL: https://git.ex.fr/infra.git\n    path: apps/api/prod\n    targetRevision: main\n  destination:\n    server: https://kubernetes.default.svc\n    namespace: api",
+          "language": "yaml"
+        },
+        {
+          "title": "Ce que cela change",
+          "body": "Déployer, c'est fusionner un changement dans le dépôt de configuration ; revenir en arrière, c'est un git revert. Les manifestes peuvent être du YAML brut, du Kustomize ou des charts Helm, qu'Argo CD rend lui-même."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "argo-gitops-q1",
+          "prompt": "Quel est le principe du GitOps ?",
+          "choices": [
+            "Git décrit l'état voulu, et un agent dans le cluster réconcilie en continu la réalité avec Git",
+            "Les développeurs déploient avec kubectl depuis leur poste",
+            "Git est hébergé dans le cluster",
+            "Chaque commit déclenche un redémarrage du cluster"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le dépôt devient la source de vérité, auditable et réversible.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "argo-gitops-q2",
+          "prompt": "Que signifie l'état OutOfSync d'une Application ?",
+          "choices": [
+            "L'état du cluster diffère de ce que décrit Git",
+            "Les pods sont en erreur",
+            "Le dépôt Git est inaccessible",
+            "Argo CD est en panne"
+          ],
+          "answerIndex": 0,
+          "explanation": "La santé des pods est une autre information : Healthy ou Degraded.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "argo-gitops-q3",
+          "prompt": "Complète cette Application.",
+          "code": "spec:\n  source:\n    repoURL: https://git.ex.fr/infra.git\n    ___: apps/api/prod\n    targetRevision: main\n  ___:\n    server: https://kubernetes.default.svc\n    namespace: api",
+          "language": "yaml",
+          "answers": [
+            "path",
+            "destination"
+          ],
+          "distractors": [
+            "folder",
+            "target",
+            "cluster"
+          ],
+          "explanation": "source dit d'où viennent les manifestes, destination où les appliquer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "argo-gitops-q4",
+          "prompt": "Quel avantage a le modèle pull (l'agent tire) sur le modèle push (la CI applique) ?",
+          "choices": [
+            "La CI n'a pas besoin d'identifiants sur le cluster, et la dérive est détectée en continu",
+            "Il est plus rapide à installer",
+            "Il évite d'écrire des manifestes",
+            "Il supprime le besoin de Git"
+          ],
+          "answerIndex": 0,
+          "explanation": "Moins d'accès sensibles à protéger, et un cluster qui revient de lui-même à l'état voulu.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "argo-gitops-q5",
+          "prompt": "La production déploie du code jamais relu. Touche la ligne en cause.",
+          "code": "spec:\n  source:\n    repoURL: https://git.ex.fr/infra.git\n    path: apps/api/prod\n    targetRevision: feature/test-ana",
+          "language": "yaml",
+          "bugLines": [
+            5
+          ],
+          "explanation": "La production suit une branche de travail. Elle doit suivre la branche principale protégée, ou un tag.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "argo-gitops-q6",
+          "prompt": "Qu'apporte le GitOps ?",
+          "choices": [
+            "Un historique et un audit des changements dans Git",
+            "Un retour arrière par git revert",
+            "La détection des dérives",
+            "La fin des revues de code"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Au contraire : chaque changement d'infrastructure passe par une pull request relue.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "argo-sync",
+      "title": "Synchronisation",
+      "summary": "Automatisation, prune, selfHeal et hooks.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Synchronisation automatique",
+          "body": "Par défaut, une synchronisation se lance à la main. Avec automated, Argo CD applique chaque changement de Git. prune supprime du cluster les ressources retirées de Git ; selfHeal annule les modifications manuelles (un kubectl edit) en rétablissant l'état de Git.",
+          "code": "syncPolicy:\n  automated:\n    prune: true\n    selfHeal: true\n  syncOptions:\n    - CreateNamespace=true",
+          "language": "yaml"
+        },
+        {
+          "title": "Ordre et hooks",
+          "body": "Les vagues de synchronisation (sync waves) ordonnent l'application des ressources par une annotation. Les hooks exécutent un Job à un moment précis : PreSync pour une migration de base avant le déploiement, PostSync pour un test de fumée. Argo CD évalue ensuite la santé de chaque ressource."
+        },
+        {
+          "title": "Passer à l'échelle",
+          "body": "Le motif « app of apps » gère un ensemble d'Applications depuis une Application racine. Un ApplicationSet génère des Applications à partir d'un modèle : une par environnement, par cluster ou par dossier du dépôt."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "argo-sync-q1",
+          "prompt": "Un opérateur corrige à chaud un déploiement avec kubectl edit. Avec selfHeal activé, que se passe-t-il ?",
+          "choices": [
+            "Argo CD rétablit l'état décrit dans Git",
+            "La modification est reportée dans Git",
+            "Argo CD s'arrête",
+            "Rien, selfHeal ne concerne que les pods"
+          ],
+          "answerIndex": 0,
+          "explanation": "La correction doit passer par Git, sinon elle est annulée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "argo-sync-q2",
+          "prompt": "Un manifeste est supprimé de Git, mais prune n'est pas activé. Que devient la ressource ?",
+          "choices": [
+            "Elle reste dans le cluster, et l'Application est signalée OutOfSync",
+            "Elle est supprimée immédiatement",
+            "Elle est déplacée dans un autre namespace",
+            "Argo CD la recrée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans prune, Argo CD ne supprime rien par prudence.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "argo-sync-q3",
+          "prompt": "Complète : synchroniser automatiquement, supprimer ce qui disparaît de Git et annuler les modifications manuelles.",
+          "code": "syncPolicy:\n  ___:\n    prune: true\n    ___: true",
+          "language": "yaml",
+          "answers": [
+            "automated",
+            "selfHeal"
+          ],
+          "distractors": [
+            "auto",
+            "heal",
+            "repair"
+          ],
+          "explanation": "Les trois réglages ensemble font converger le cluster vers Git.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "argo-sync-q4",
+          "prompt": "Comment exécuter une migration de base avant le déploiement de la nouvelle version ?",
+          "choices": [
+            "Un Job marqué comme hook PreSync, ou placé dans une vague de synchronisation antérieure",
+            "À la main, avant chaque synchronisation",
+            "Dans un PostSync",
+            "Dans le Dockerfile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si la migration échoue, la synchronisation s'arrête avant le déploiement.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "argo-sync-q5",
+          "prompt": "À quoi sert un ApplicationSet ?",
+          "choices": [
+            "À générer des Applications à partir d'un modèle : une par environnement, cluster ou dossier",
+            "À regrouper des pods",
+            "À stocker des secrets",
+            "À sauvegarder Argo CD"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ajouter un cluster revient alors à ajouter une entrée, pas à écrire une Application.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "argo-sync-q6",
+          "prompt": "Quels états de santé Argo CD peut-il afficher ?",
+          "choices": [
+            "Healthy",
+            "Progressing",
+            "Degraded",
+            "Compiled"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On trouve aussi Suspended et Missing.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "argo-pratiques",
+      "title": "Organiser le GitOps",
+      "summary": "Dépôts, promotion et secrets.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Dépôts et promotion",
+          "body": "On sépare souvent le dépôt du code (qui produit des images) du dépôt de configuration (qui décrit les déploiements) : leurs cycles et leurs droits diffèrent. Promouvoir une version en production, c'est une pull request qui change la version de l'image dans la configuration de production, par exemple dans un overlay Kustomize.",
+          "code": "# apps/api/prod/kustomization.yaml\nimages:\n  - name: registry.ex.fr/api\n    newTag: 1.8.2",
+          "language": "yaml"
+        },
+        {
+          "title": "Les secrets",
+          "body": "Un Secret Kubernetes en clair dans Git est lisible par tous ceux qui ont accès au dépôt. On utilise External Secrets Operator (qui synchronise depuis un gestionnaire de secrets), Sealed Secrets (chiffrés, déchiffrables seulement dans le cluster) ou SOPS."
+        },
+        {
+          "title": "Les projets",
+          "body": "Un AppProject limite ce que ses Applications peuvent faire : dépôts sources autorisés, clusters et namespaces cibles, types de ressources déployables. Associé au RBAC d'Argo CD, il évite qu'une équipe déploie dans le namespace d'une autre."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "argo-pratiques-q1",
+          "prompt": "Comment promouvoir en production une version validée en recette, en GitOps ?",
+          "choices": [
+            "Une pull request qui change la version de l'image dans la configuration de production",
+            "Un kubectl set image en production",
+            "Reconstruire l'image avec le tag prod",
+            "Copier les pods de recette"
+          ],
+          "answerIndex": 0,
+          "explanation": "La même image, testée en recette, part en production après relecture.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "argo-pratiques-q2",
+          "prompt": "Ce manifeste est commité dans le dépôt de configuration. Touche la ligne en cause.",
+          "code": "apiVersion: v1\nkind: Secret\nmetadata:\n  name: db\nstringData:\n  password: Sup3rS3cret!",
+          "language": "yaml",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Le mot de passe est en clair dans Git. On décrit plutôt un ExternalSecret qui le lit dans le gestionnaire de secrets.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "argo-pratiques-q3",
+          "prompt": "Que fait External Secrets Operator ?",
+          "choices": [
+            "Il crée des Secrets Kubernetes à partir d'un gestionnaire de secrets externe (Vault, AWS Secrets Manager…)",
+            "Il chiffre le dépôt Git",
+            "Il supprime les secrets inutilisés",
+            "Il remplace Argo CD"
+          ],
+          "answerIndex": 0,
+          "explanation": "Git ne contient que la référence au secret, jamais sa valeur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "argo-pratiques-q4",
+          "prompt": "Pourquoi séparer le dépôt du code et celui de la configuration ?",
+          "choices": [
+            "Leurs cycles diffèrent (un changement de configuration ne relance pas les builds) et leurs droits d'accès aussi",
+            "Parce qu'Argo CD l'impose",
+            "Pour avoir plus de dépôts",
+            "Pour éviter les pull requests"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les opérateurs peuvent ajuster un déploiement sans toucher au code, et inversement.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "argo-pratiques-q5",
+          "prompt": "Complète : déployer la version 1.8.2 de l'image en production (Kustomize).",
+          "code": "images:\n  - name: registry.ex.fr/api\n    ___: 1.8.2",
+          "language": "yaml",
+          "answers": [
+            "newTag"
+          ],
+          "distractors": [
+            "tag",
+            "version",
+            "image"
+          ],
+          "explanation": "newTag remplace le tag de l'image dans tous les manifestes de l'overlay.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "argo-pratiques-q6",
+          "prompt": "Que permet de restreindre un AppProject ?",
+          "choices": [
+            "Les dépôts sources autorisés",
+            "Les clusters et namespaces cibles",
+            "Les types de ressources déployables",
+            "La compilation des images"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Argo CD ne construit pas d'images : c'est le rôle de la CI.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "argo-defi",
+    "title": "Défi entretien : qui a changé la production ?",
+    "summary": "Dérive, retour arrière et secrets.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "argo-defi-q1",
+        "prompt": "Cas pratique 1/3 — Lors d'un incident, on découvre que les limites mémoire de la production ont été changées à la main ; personne ne sait qui ni quand. Que mettre en place ?",
+        "choices": [
+          "Le GitOps avec selfHeal : tout changement passe par une pull request, et les modifications manuelles sont annulées",
+          "Un fichier texte où noter les changements",
+          "Plus d'administrateurs du cluster",
+          "Des sauvegardes quotidiennes"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'historique Git répond à « qui, quoi, quand, pourquoi ».",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "argo-defi-q2",
+        "prompt": "Cas pratique 2/3 — La version 1.8.2 est défectueuse en production. Comment revenir en arrière ?",
+        "choices": [
+          "git revert du commit qui a promu la 1.8.2 ; Argo CD synchronise l'ancienne version",
+          "Supprimer le namespace",
+          "kubectl rollout undo, puis oublier Git",
+          "Reconstruire l'image 1.8.1"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un retour arrière fait hors de Git serait annulé par selfHeal.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "argo-defi-q3",
+        "prompt": "Cas pratique 3/3 — Les mots de passe des bases doivent arriver dans le cluster sans être en clair dans Git. Comment ?",
+        "choices": [
+          "External Secrets Operator ou Sealed Secrets",
+          "Les écrire en base64 dans le Secret",
+          "Les mettre dans un ConfigMap",
+          "Les passer en annotation"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le base64 n'est qu'un encodage, pas un chiffrement.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "argo-defi-q4",
+        "prompt": "Une Application est Synced mais Degraded. Qu'est-ce que cela signifie ?",
+        "choices": [
+          "Les manifestes de Git sont appliqués, mais les ressources ne fonctionnent pas (pods en erreur, par exemple)",
+          "Git est inaccessible",
+          "La synchronisation est en cours",
+          "Tout va bien"
+        ],
+        "answerIndex": 0,
+        "explanation": "On regarde alors les événements et les journaux des pods concernés.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "argo-defi-q5",
+        "prompt": "Remets dans l'ordre le parcours d'une mise en production en GitOps.",
+        "language": "text",
+        "lines": [
+          "La CI construit et publie l'image 1.8.2",
+          "Une pull request change la version dans le dépôt de configuration",
+          "La pull request est relue et fusionnée",
+          "Argo CD détecte le changement et synchronise",
+          "Le déploiement devient Healthy"
+        ],
+        "explanation": "La CI produit l'image ; c'est Git, via Argo CD, qui la déploie.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "argo-defi-q6",
+        "prompt": "Avec automated, prune et selfHeal activés, que se passe-t-il ?",
+        "choices": [
+          "Les ressources retirées de Git sont supprimées du cluster",
+          "Les modifications manuelles sont annulées",
+          "Le cluster converge vers l'état décrit dans Git",
+          "Les images sont reconstruites"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Argo CD déploie des images existantes ; il ne les construit pas.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

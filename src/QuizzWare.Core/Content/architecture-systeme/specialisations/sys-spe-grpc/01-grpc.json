@@ -1,0 +1,445 @@
+{
+  "id": "grpc-ch-essentiel",
+  "title": "gRPC : l'essentiel",
+  "summary": "Protobuf, évolution des contrats et production.",
+  "lessons": [
+    {
+      "id": "grpc-bases",
+      "title": "Protobuf et services",
+      "summary": "Un contrat typé et du code généré.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un contrat en Protobuf",
+          "body": "Avec gRPC, l'API se décrit dans un fichier .proto : des messages typés et des services avec leurs méthodes. Un compilateur génère le code client et serveur dans chaque langage. Les messages voyagent dans un format binaire compact, sur HTTP/2, qui multiplexe de nombreux appels sur une même connexion.",
+          "code": "syntax = \"proto3\";\npackage commandes.v1;\n\nservice Commandes {\n  rpc Lire (LireRequete) returns (Commande);\n  rpc Suivre (SuivreRequete) returns (stream Evenement);\n}\n\nmessage Commande {\n  string id = 1;\n  int64 montant_centimes = 2;\n  Statut statut = 3;\n}",
+          "language": "text"
+        },
+        {
+          "title": "Les numéros de champ",
+          "body": "Dans le format binaire, un champ n'est pas identifié par son nom mais par son numéro (= 1, = 2). On ne change jamais le numéro d'un champ existant, et on ne réutilise jamais celui d'un champ supprimé : les anciens clients liraient les mauvaises valeurs."
+        },
+        {
+          "title": "Quatre types d'appels",
+          "body": "Unaire (une requête, une réponse), flux côté serveur (le serveur envoie une suite de messages : suivre une commande), flux côté client (le client envoie une suite : un téléversement), et flux bidirectionnel (une conversation)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "grpc-bases-q1",
+          "prompt": "Pourquoi gRPC est-il généralement plus performant que REST avec JSON ?",
+          "choices": [
+            "Un format binaire compact (Protobuf) et HTTP/2, qui multiplexe les appels sur une connexion",
+            "Parce qu'il n'utilise pas le réseau",
+            "Parce qu'il compresse le code source",
+            "Parce qu'il ne fait aucune validation"
+          ],
+          "answerIndex": 0,
+          "explanation": "La sérialisation et l'analyse coûtent aussi moins de CPU.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "grpc-bases-q2",
+          "prompt": "À quoi sert le numéro de champ (= 1) dans un message Protobuf ?",
+          "choices": [
+            "À identifier le champ dans le format binaire : il ne doit jamais changer ni être réutilisé",
+            "À fixer l'ordre d'affichage",
+            "À indiquer la longueur maximale",
+            "À rendre le champ obligatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les noms n'apparaissent pas sur le réseau.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "grpc-bases-q3",
+          "prompt": "Complète ce service : une lecture simple, et un suivi qui envoie une suite d'événements.",
+          "code": "service Commandes {\n  rpc Lire (LireRequete) ___ (Commande);\n  rpc Suivre (SuivreRequete) returns (___ Evenement);\n}",
+          "language": "text",
+          "answers": [
+            "returns",
+            "stream"
+          ],
+          "distractors": [
+            "return",
+            "async",
+            "repeated"
+          ],
+          "explanation": "repeated déclare une liste dans un message ; stream, un flux de messages.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "grpc-bases-q4",
+          "prompt": "Après ce changement, les anciens clients lisent des valeurs aberrantes. Touche une ligne en cause.",
+          "code": "message Commande {\n  string id = 1;\n  int64 montant_centimes = 3;\n  Statut statut = 2;\n}",
+          "language": "text",
+          "bugLines": [
+            3,
+            4
+          ],
+          "explanation": "Les numéros de montant_centimes et statut ont été échangés : un ancien client lit le statut comme un montant. Les numéros existants ne bougent jamais.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "grpc-bases-q5",
+          "prompt": "Quel type d'appel pour envoyer au client chaque changement d'état d'une commande, au fil de l'eau ?",
+          "choices": [
+            "Un flux côté serveur",
+            "Un appel unaire répété chaque seconde",
+            "Un flux côté client",
+            "Un fichier partagé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le client ouvre l'appel une fois, le serveur pousse les événements.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "grpc-bases-q6",
+          "prompt": "Quels sont les atouts de gRPC ?",
+          "choices": [
+            "Un contrat typé partagé",
+            "Du code client et serveur généré",
+            "De bonnes performances",
+            "Des messages lisibles tels quels dans le navigateur, sans outil"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le binaire se lit avec des outils comme grpcurl, pas à l'œil.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "grpc-evolution",
+      "title": "Faire évoluer les contrats",
+      "summary": "Compatibilité, reserved et buf.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Ce qui est compatible",
+          "body": "Ajouter un champ avec un nouveau numéro est compatible : les anciens clients l'ignorent, les nouveaux reçoivent sa valeur par défaut des anciens serveurs. Changer le numéro ou le type d'un champ, ou réutiliser le numéro d'un champ supprimé, ne l'est pas."
+        },
+        {
+          "title": "Supprimer proprement",
+          "body": "Quand on supprime un champ, on réserve son numéro et son nom avec reserved, pour qu'ils ne soient jamais réutilisés par erreur. Pour des changements trop profonds, on crée une nouvelle version du paquet (commandes.v2).",
+          "code": "message Client {\n  reserved 4;\n  reserved \"telephone\";\n  string id = 1;\n  string nom = 2;\n}",
+          "language": "text"
+        },
+        {
+          "title": "Valeurs par défaut et outillage",
+          "body": "En proto3, un champ absent prend sa valeur par défaut (0, chaîne vide, false) : impossible de distinguer « absent » de « zéro », sauf si le champ est déclaré optional. buf lint vérifie le style, buf breaking détecte en CI tout changement incompatible avec la version publiée."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "grpc-evolution-q1",
+          "prompt": "Complète : le champ telephone (numéro 4) a été supprimé.",
+          "code": "message Client {\n  ___ 4;\n  ___ \"telephone\";\n  string id = 1;\n  string nom = 2;\n}",
+          "language": "text",
+          "answers": [
+            "reserved",
+            "reserved"
+          ],
+          "distractors": [
+            "deleted",
+            "deprecated",
+            "removed"
+          ],
+          "explanation": "Le compilateur refusera désormais toute réutilisation de ce numéro ou de ce nom.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "grpc-evolution-q2",
+          "prompt": "En proto3, comment distinguer un champ int32 absent d'un champ valant 0 ?",
+          "choices": [
+            "En le déclarant optional ; sinon les deux sont indiscernables",
+            "C'est impossible, même avec optional",
+            "Le champ absent vaut -1",
+            "Le champ absent vaut null"
+          ],
+          "answerIndex": 0,
+          "explanation": "optional génère une méthode de présence (has_…).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "grpc-evolution-q3",
+          "prompt": "Ajouter un champ à un message est-il compatible avec les anciens clients ?",
+          "choices": [
+            "Oui, avec un nouveau numéro : les anciens clients l'ignorent",
+            "Non, jamais",
+            "Seulement s'il est en premier",
+            "Seulement pour les champs texte"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la façon normale de faire évoluer un contrat.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "grpc-evolution-q4",
+          "prompt": "Ce changement casse tous les clients existants. Touche la ligne en cause.",
+          "code": "message Commande {\n  string id = 1;\n  string montant = 2; // était int64\n}",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Changer le type d'un champ change son encodage. On ajoute un nouveau champ avec un nouveau numéro, et on déprécie l'ancien.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "grpc-evolution-q5",
+          "prompt": "Que fait buf breaking dans la CI ?",
+          "choices": [
+            "Il détecte les changements incompatibles avec la version précédente des fichiers .proto",
+            "Il casse volontairement le build",
+            "Il formate le code",
+            "Il déploie le service"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une pull request qui casserait les clients échoue avant la fusion.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "grpc-evolution-q6",
+          "prompt": "Quels changements sont incompatibles ?",
+          "choices": [
+            "Changer le numéro d'un champ",
+            "Changer le type d'un champ",
+            "Réutiliser le numéro d'un champ supprimé",
+            "Ajouter un champ avec un nouveau numéro"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'ajout est le changement compatible par excellence.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "grpc-production",
+      "title": "gRPC en production",
+      "summary": "Délais, statuts et répartition de charge.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Délais et statuts",
+          "body": "Chaque appel porte un délai (deadline), propagé aux appels qu'il déclenche : un appel en aval ne doit jamais attendre plus que le temps restant à l'appelant. Les erreurs ont des codes : NOT_FOUND, INVALID_ARGUMENT, UNAVAILABLE (temporaire, on peut réessayer avec un délai croissant), DEADLINE_EXCEEDED.",
+          "code": "ctx, cancel := context.WithTimeout(ctx, 2*time.Second)\ndefer cancel()\ncmd, err := client.Lire(ctx, &pb.LireRequete{Id: id})\nif status.Code(err) == codes.DeadlineExceeded {\n    // l'appel a dépassé son délai\n}",
+          "language": "go"
+        },
+        {
+          "title": "La répartition de charge",
+          "body": "Un client gRPC garde une connexion HTTP/2 ouverte et y envoie tous ses appels. Un répartiteur de niveau 4, qui répartit les connexions, envoie donc tout le trafic d'un client vers une seule instance. Il faut un répartiteur de niveau 7, qui répartit les requêtes, ou une répartition côté client."
+        },
+        {
+          "title": "Navigateurs et outillage",
+          "body": "Un navigateur ne peut pas appeler directement un serveur gRPC classique : on passe par gRPC-Web avec un proxy, par Connect, ou par un transcodage HTTP/JSON. Les métadonnées transportent l'authentification ; les intercepteurs ajoutent journaux, métriques et traces ; grpcurl et la réflexion permettent d'explorer un service."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "grpc-production-q1",
+          "prompt": "Pourquoi fixer un délai (deadline) sur chaque appel gRPC ?",
+          "choices": [
+            "Sans délai, un serveur bloqué retient l'appelant indéfiniment ; le délai se propage aussi aux appels en aval",
+            "Pour accélérer le serveur",
+            "Pour chiffrer l'appel",
+            "Ce n'est pas utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les ressources de toute la chaîne sont libérées quand le client abandonne.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "grpc-production-q2",
+          "prompt": "Derrière un répartiteur de niveau 4, une instance gRPC reçoit toute la charge d'un client. Pourquoi ?",
+          "choices": [
+            "Le client garde une connexion HTTP/2 persistante, et le répartiteur ne répartit que les connexions",
+            "Le client est mal codé",
+            "gRPC n'accepte qu'une instance",
+            "Le répartiteur est en panne"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il faut répartir requête par requête : niveau 7 ou côté client.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "grpc-production-q3",
+          "prompt": "Que signifie le code UNAVAILABLE ?",
+          "choices": [
+            "Le service est temporairement indisponible : on peut réessayer avec un délai croissant",
+            "La ressource n'existe pas",
+            "La requête est invalide",
+            "L'utilisateur n'a pas les droits"
+          ],
+          "answerIndex": 0,
+          "explanation": "INVALID_ARGUMENT ou NOT_FOUND ne doivent pas être réessayés : la réponse serait la même.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "grpc-production-q4",
+          "prompt": "Quand le service commandes se fige, tous ses appelants se figent aussi. Touche la ligne en cause.",
+          "code": "conn, _ := grpc.NewClient(\"commandes:443\", opts...)\nclient := pb.NewCommandesClient(conn)\ncmd, err := client.Lire(context.Background(),\n    &pb.LireRequete{Id: id})",
+          "language": "go",
+          "bugLines": [
+            3
+          ],
+          "explanation": "context.Background() n'a aucun délai : l'appel peut attendre pour toujours. On passe un contexte avec délai, dérivé de celui de la requête entrante.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "grpc-production-q5",
+          "prompt": "Complète : un délai de 2 secondes, puis la détection de son dépassement.",
+          "code": "ctx, cancel := context.___(ctx, 2*time.Second)\ndefer cancel()\ncmd, err := client.Lire(ctx, &pb.LireRequete{Id: id})\nif status.Code(err) == codes.___ {\n    // délai dépassé\n}",
+          "language": "go",
+          "answers": [
+            "WithTimeout",
+            "DeadlineExceeded"
+          ],
+          "distractors": [
+            "WithCancel",
+            "Timeout",
+            "Unavailable"
+          ],
+          "explanation": "Le délai voyage dans les métadonnées de l'appel jusqu'au serveur.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "grpc-production-q6",
+          "prompt": "Comment appeler un service gRPC depuis un navigateur ?",
+          "choices": [
+            "gRPC-Web, avec un proxy",
+            "Un transcodage HTTP/JSON",
+            "Le protocole Connect",
+            "Un simple fetch en HTTP/1.1 vers le serveur gRPC classique"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le navigateur n'expose pas le contrôle fin de HTTP/2 dont gRPC a besoin.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "grpc-defi",
+    "title": "Défi entretien : passer à gRPC",
+    "summary": "Migration, répartition et contrats.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "grpc-defi-q1",
+        "prompt": "Cas pratique 1/3 — Vingt microservices internes communiquent en REST/JSON ; la latence et le CPU de sérialisation sont élevés. gRPC est-il adapté ?",
+        "choices": [
+          "Oui : contrats typés, Protobuf compact et HTTP/2 conviennent bien aux appels internes",
+          "Non, gRPC est réservé aux navigateurs",
+          "Non, gRPC est plus lent",
+          "Seulement pour un service"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est l'usage le plus courant de gRPC : la communication entre services.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "grpc-defi-q2",
+        "prompt": "Cas pratique 2/3 — Après la migration, une instance reçoit toute la charge d'un client très actif. Que faire ?",
+        "choices": [
+          "Passer à un répartiteur de niveau 7 ou à une répartition côté client",
+          "Ajouter des instances sans rien changer d'autre",
+          "Revenir à REST",
+          "Augmenter la mémoire de l'instance"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les nouvelles instances ne recevraient rien : la connexion existante reste sur la même.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "grpc-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment faire évoluer les .proto sans casser les clients ?",
+        "choices": [
+          "Ajouter des champs, réserver ceux qu'on supprime, et faire échouer la CI avec buf breaking en cas d'incompatibilité",
+          "Renuméroter les champs à chaque version",
+          "Changer les types librement",
+          "Ne jamais rien modifier"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les règles sont simples, et l'outil les vérifie pour tout le monde.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "grpc-defi-q4",
+        "prompt": "Il faut aussi exposer l'API à des partenaires et au web public. Quelle approche ?",
+        "choices": [
+          "Une façade REST/JSON (par transcodage, par exemple) devant les services gRPC internes",
+          "Demander aux partenaires d'installer protoc",
+          "Exposer les services gRPC internes tels quels",
+          "Abandonner gRPC"
+        ],
+        "answerIndex": 0,
+        "explanation": "REST reste plus simple à consommer et à mettre en cache pour un public large.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "grpc-defi-q5",
+        "prompt": "Le service B reçoit un appel dont il reste 300 ms avant l'échéance, et doit appeler C. Quel délai donner à l'appel vers C ?",
+        "choices": [
+          "Au plus les 300 ms restantes, en propageant le contexte reçu",
+          "Un nouveau délai de 10 s",
+          "Aucun délai",
+          "300 ms plus le délai de B"
+        ],
+        "answerIndex": 0,
+        "explanation": "Au-delà, le client initial a déjà abandonné : continuer serait du travail perdu.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "grpc-defi-q6",
+        "prompt": "Quels codes gRPC justifient une nouvelle tentative, pour une opération idempotente ?",
+        "choices": [
+          "UNAVAILABLE",
+          "RESOURCE_EXHAUSTED, avec un délai croissant",
+          "DEADLINE_EXCEEDED, si le budget de temps le permet",
+          "INVALID_ARGUMENT"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un argument invalide le restera à chaque tentative.",
+        "difficulty": 3
+      }
+    ]
+  }
+}

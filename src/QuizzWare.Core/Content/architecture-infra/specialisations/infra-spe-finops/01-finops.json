@@ -1,0 +1,437 @@
+{
+  "id": "finops-ch-essentiel",
+  "title": "FinOps : l'essentiel",
+  "summary": "Voir, optimiser et piloter les coûts du cloud.",
+  "lessons": [
+    {
+      "id": "finops-principes",
+      "title": "Les principes",
+      "summary": "Visibilité, responsabilité et valeur.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Une pratique d'équipe",
+          "body": "Le FinOps réunit ingénierie, finance et produit autour des coûts du cloud. Dans le cloud, chaque ingénieur peut dépenser en un clic : les équipes deviennent responsables du coût de ce qu'elles consomment, comme de sa performance. Le cycle suit trois phases : informer, optimiser, opérer."
+        },
+        {
+          "title": "Voir qui dépense quoi",
+          "body": "Tout commence par l'attribution des coûts : des étiquettes obligatoires (équipe, application, environnement) sur chaque ressource, et des tableaux de bord par équipe. Le showback montre à chaque équipe ce qu'elle coûte ; le chargeback le lui refacture. Sans étiquettes, une part de la facture reste un mystère."
+        },
+        {
+          "title": "Relier coût et valeur",
+          "body": "Une facture qui augmente n'est pas forcément une mauvaise nouvelle. Le coût unitaire (par commande, par utilisateur actif, par To traité) relie la dépense à la valeur : si l'activité double et la facture augmente de 30 %, l'efficacité s'est améliorée."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "finops-principes-q1",
+          "prompt": "Qu'est-ce que le FinOps ?",
+          "choices": [
+            "Une pratique où ingénierie, finance et produit pilotent ensemble les coûts du cloud, chaque équipe étant responsable de sa consommation",
+            "Un outil de comptabilité",
+            "Une réduction automatique de la facture",
+            "Un fournisseur de cloud"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est d'abord une organisation et une culture, outillées ensuite.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "finops-principes-q2",
+          "prompt": "Quelle différence entre showback et chargeback ?",
+          "choices": [
+            "Le showback montre à chaque équipe ce qu'elle coûte ; le chargeback le lui refacture",
+            "Ce sont deux noms pour la même chose",
+            "Le chargeback rembourse le fournisseur",
+            "Le showback supprime les ressources"
+          ],
+          "answerIndex": 0,
+          "explanation": "On commence souvent par montrer, avant de refacturer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "finops-principes-q3",
+          "prompt": "Pourquoi suivre un coût unitaire, comme le coût par commande ?",
+          "choices": [
+            "Pour relier dépense et valeur : la facture peut augmenter alors que le coût par commande baisse",
+            "Pour facturer les clients",
+            "Pour remplacer la facture",
+            "Pour supprimer les étiquettes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une croissance saine fait souvent monter la facture totale.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "finops-principes-q4",
+          "prompt": "40 % de la facture n'est attribué à aucune équipe. Que manque-t-il probablement ?",
+          "choices": [
+            "Des étiquettes obligatoires (équipe, application, environnement) sur les ressources",
+            "Un fournisseur de cloud",
+            "Des machines plus puissantes",
+            "Un nouveau tableau Excel"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une politique d'étiquetage, imposée par l'IaC ou des règles, règle le problème à la source.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "finops-principes-q5",
+          "prompt": "Quelles sont les trois phases du cycle FinOps ?",
+          "choices": [
+            "Informer, optimiser, opérer",
+            "Acheter, utiliser, jeter",
+            "Coder, tester, déployer",
+            "Planifier, payer, oublier"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est un cycle continu, pas un projet ponctuel.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "finops-principes-q6",
+          "prompt": "Quelles étiquettes sont utiles pour attribuer les coûts ?",
+          "choices": [
+            "L'équipe",
+            "L'environnement",
+            "L'application ou le service",
+            "La couleur préférée du créateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On y ajoute parfois le centre de coût ou le projet.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "finops-optimiser",
+      "title": "Optimiser",
+      "summary": "Taille, horaires, engagements et Kubernetes.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Ne payer que l'utile",
+          "body": "Redimensionner les ressources d'après leur usage réel (rightsizing) ; éteindre les environnements de test la nuit et le week-end ; supprimer les ressources orphelines (disques non attachés, instantanés oubliés, adresses IP réservées) ; déplacer les données froides vers des classes de stockage moins chères, avec des règles de cycle de vie."
+        },
+        {
+          "title": "Acheter malin",
+          "body": "Les engagements sur un ou trois ans (Savings Plans, instances réservées, remises sur engagement) réduisent fortement le prix de la consommation de base, stable. Les instances Spot, jusqu'à 90 % moins chères mais reprises avec un court préavis, conviennent aux traitements interruptibles. Le reste reste à la demande."
+        },
+        {
+          "title": "Kubernetes",
+          "body": "Dans un cluster, on paie les nœuds, dimensionnés d'après les requests des pods : des requests surévaluées remplissent les nœuds de capacité inutilisée. On les ajuste d'après les mesures réelles, et on laisse l'autoscaling adapter le nombre de pods et de nœuds à la charge.",
+          "code": "apiVersion: autoscaling/v2\nkind: HorizontalPodAutoscaler\nspec:\n  minReplicas: 2\n  maxReplicas: 20\n  metrics:\n    - type: Resource\n      resource:\n        name: cpu\n        target: { type: Utilization, averageUtilization: 70 }",
+          "language": "yaml"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "finops-optimiser-q1",
+          "prompt": "Après la suppression de VM, que reste-t-il souvent facturé ?",
+          "choices": [
+            "Des disques non attachés, des instantanés et des adresses IP réservées",
+            "Rien du tout",
+            "Les VM elles-mêmes",
+            "Le réseau du fournisseur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un nettoyage régulier des ressources orphelines est une économie facile.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "finops-optimiser-q2",
+          "prompt": "Sur quelle part de la consommation prendre un engagement d'un à trois ans ?",
+          "choices": [
+            "Sur la consommation de base, stable ; les pics restent à la demande ou en Spot",
+            "Sur 100 % de la consommation maximale",
+            "Sur les environnements de test",
+            "Jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "S'engager sur le pic, c'est payer toute l'année une capacité inutilisée.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "finops-optimiser-q3",
+          "prompt": "Le cluster grossit sans cesse alors que ses nœuds sont presque inactifs. Touche une ligne en cause.",
+          "code": "resources:\n  requests:\n    cpu: \"4\"\n    memory: 8Gi\n# Utilisation mesurée : 0,2 CPU et 600 Mi",
+          "language": "yaml",
+          "bugLines": [
+            3,
+            4
+          ],
+          "explanation": "Le planificateur réserve 4 CPU et 8 Gi par pod, alors qu'il en utilise vingt fois moins. On ajuste les requests d'après les mesures, avec une marge.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "finops-optimiser-q4",
+          "prompt": "Complète cet autoscaler : jusqu'à 20 pods, en visant 70 % d'utilisation du CPU.",
+          "code": "spec:\n  minReplicas: 2\n  ___: 20\n  metrics:\n    - type: Resource\n      resource:\n        name: cpu\n        target: { type: Utilization, averageUtilization: ___ }",
+          "language": "yaml",
+          "answers": [
+            "maxReplicas",
+            "70"
+          ],
+          "distractors": [
+            "maxPods",
+            "100",
+            "replicas"
+          ],
+          "explanation": "Viser 100 % ne laisserait aucune marge pour absorber un pic pendant le démarrage de nouveaux pods.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "finops-optimiser-q5",
+          "prompt": "Quelle économie simple sur des environnements de test allumés en permanence ?",
+          "choices": [
+            "Les éteindre la nuit et le week-end, soit près des deux tiers de leur coût",
+            "Les doubler",
+            "Les passer en Premium",
+            "Les déplacer dans une autre région"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une semaine compte 168 heures, dont environ 50 heures ouvrées.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "finops-optimiser-q6",
+          "prompt": "Quels sont des leviers d'optimisation ?",
+          "choices": [
+            "Le redimensionnement d'après l'usage réel",
+            "Les engagements sur la consommation stable",
+            "Le cycle de vie des données stockées",
+            "Doubler toutes les instances par précaution"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La capacité de réserve se gère par l'autoscaling, pas par le surdimensionnement.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "finops-gouvernance",
+      "title": "Piloter dans la durée",
+      "summary": "Budgets, anomalies et architecture.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Budgets et anomalies",
+          "body": "Des budgets par équipe avec des alertes, des prévisions, et une détection des anomalies : une dépense qui s'écarte brusquement de sa tendance (une tâche qui boucle, un téléchargement massif) est signalée en heures, pas à la facture du mois suivant."
+        },
+        {
+          "title": "Le coût dans la conception",
+          "body": "Les choix d'architecture fixent l'essentiel des coûts : transferts entre régions et vers Internet, appels via une NAT Gateway, requêtes analytiques qui lisent des To, fonctions sans serveur sous une charge continue. Infracost affiche l'impact d'un changement Terraform directement dans la pull request."
+        },
+        {
+          "title": "Un arbitrage, pas un absolu",
+          "body": "Le coût n'est qu'un critère parmi d'autres : économiser 100 € par mois en dégradant la fiabilité ou en ralentissant les équipes n'est pas rentable. Le FinOps vise la dépense la plus utile, pas la plus faible."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "finops-gouvernance-q1",
+          "prompt": "À quoi sert la détection d'anomalies de coûts ?",
+          "choices": [
+            "À signaler une dépense qui s'écarte brusquement de sa tendance, avant la facture du mois",
+            "À trouver des bugs dans le code",
+            "À réduire automatiquement la facture",
+            "À choisir un fournisseur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une boucle qui coûte 300 € par heure doit être vue dans la journée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "finops-gouvernance-q2",
+          "prompt": "Qu'apporte Infracost dans une pull request ?",
+          "choices": [
+            "L'estimation de l'impact financier d'un changement Terraform, avant la fusion",
+            "Des tests unitaires",
+            "La traduction du code",
+            "Un déploiement automatique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le coût devient un critère de revue, comme la sécurité.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "finops-gouvernance-q3",
+          "prompt": "Un service reçoit 50 requêtes par seconde en continu, jour et nuit. Fonction sans serveur ou conteneur toujours allumé ?",
+          "choices": [
+            "Sous une charge soutenue, un service toujours allumé revient souvent moins cher : il faut comparer avec les chiffres réels",
+            "La fonction sans serveur, toujours",
+            "Le conteneur, toujours",
+            "Le choix n'a aucun effet sur le coût"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le sans serveur excelle sur les charges irrégulières ; la facturation à la requête se paie sous charge constante.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "finops-gouvernance-q4",
+          "prompt": "Un service en Europe lit chaque mois 50 To dans un stockage situé aux États-Unis. Quel problème ?",
+          "choices": [
+            "Les transferts entre régions sont facturés au Go : rapprocher les données et le calcul",
+            "Aucun",
+            "Les données seront corrompues",
+            "Le service sera plus rapide"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les transferts de données sont un poste de coût souvent sous-estimé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "finops-gouvernance-q5",
+          "prompt": "Pourquoi le coût ne doit-il pas être le seul critère ?",
+          "choices": [
+            "Il s'arbitre avec la fiabilité, la performance et la vitesse de livraison",
+            "Parce que le cloud est gratuit",
+            "Parce que la finance décide seule",
+            "Il doit être le seul critère"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une panne coûte souvent bien plus cher que l'économie qui l'a provoquée.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "finops-gouvernance-q6",
+          "prompt": "Quelles pratiques de gouvernance des coûts sont recommandées ?",
+          "choices": [
+            "Des budgets par équipe avec des alertes",
+            "Une revue régulière des coûts avec les équipes",
+            "Une estimation du coût dans les revues de conception",
+            "Bloquer tout achat de ressources cloud"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Bloquer tout freine l'innovation ; on rend les coûts visibles et on responsabilise.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "finops-defi",
+    "title": "Défi entretien : la facture qui double",
+    "summary": "Attribuer, couper, ajuster.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "finops-defi-q1",
+        "prompt": "Cas pratique 1/3 — La facture cloud a doublé en six mois et personne ne sait pourquoi. Par où commencer ?",
+        "choices": [
+          "Attribuer les coûts : étiquettes obligatoires et répartition par équipe et par service",
+          "Couper la moitié des serveurs au hasard",
+          "Changer de fournisseur",
+          "Interdire le cloud"
+        ],
+        "answerIndex": 0,
+        "explanation": "On ne peut optimiser que ce qu'on voit.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "finops-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le tableau de bord montre que 35 % de la facture vient d'environnements de recette allumés jour et nuit. Que faire ?",
+        "choices": [
+          "Planifier leur extinction la nuit et le week-end",
+          "Les passer en instances plus grandes",
+          "Les dupliquer",
+          "Les déplacer en production"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une économie rapide, sans impact sur les utilisateurs.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "finops-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le cluster Kubernetes de production n'utilise réellement que 25 % de son CPU. Que faire ?",
+        "choices": [
+          "Ajuster les requests d'après les mesures et laisser l'autoscaling réduire le nombre de nœuds",
+          "Ajouter des nœuds",
+          "Supprimer l'autoscaling",
+          "Ne rien faire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les nœuds sont dimensionnés d'après les réservations, pas d'après l'usage.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "finops-defi-q4",
+        "prompt": "La facture d'une journée affiche 8 000 € de NAT Gateway, d'habitude 50 €. Que s'est-il probablement passé ?",
+        "choices": [
+          "Une tâche a téléchargé massivement depuis Internet ou un service cloud sans endpoint privé, à travers la NAT facturée au Go",
+          "Une hausse de prix du fournisseur",
+          "Un pic d'utilisateurs heureux",
+          "Une erreur de facturation, toujours"
+        ],
+        "answerIndex": 0,
+        "explanation": "La détection d'anomalies l'aurait signalé dans l'heure ; un endpoint de VPC évite ce chemin.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "finops-defi-q5",
+        "prompt": "La facture augmente de 30 % pendant que le nombre de commandes augmente de 60 %. Bonne ou mauvaise nouvelle ?",
+        "choices": [
+          "Bonne : le coût par commande a baissé",
+          "Mauvaise : la facture a augmenté",
+          "Neutre",
+          "Impossible à dire, on ne regarde que la facture"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est tout l'intérêt du coût unitaire.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "finops-defi-q6",
+        "prompt": "Quelles charges conviennent aux instances Spot ?",
+        "choices": [
+          "Des traitements par lots",
+          "Des agents de CI",
+          "Des calculs interruptibles, comme des rendus",
+          "La base de données principale"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une instance Spot peut disparaître avec deux minutes de préavis.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

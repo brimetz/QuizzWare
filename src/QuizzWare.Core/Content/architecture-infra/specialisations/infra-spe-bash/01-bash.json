@@ -1,0 +1,448 @@
+{
+  "id": "bash-ch-essentiel",
+  "title": "Bash et scripts : l'essentiel",
+  "summary": "Syntaxe, robustesse et outils.",
+  "lessons": [
+    {
+      "id": "bash-bases",
+      "title": "Les bases d'un script",
+      "summary": "Variables, guillemets et conditions.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Variables et guillemets",
+          "body": "Un script commence par #!/usr/bin/env bash. Une affectation s'écrit sans espace autour du = : nom=\"Ana\". Une variable s'utilise entre guillemets doubles, \"$nom\" : sans guillemets, une valeur contenant un espace est découpée en plusieurs mots. $(commande) récupère la sortie d'une commande.",
+          "code": "#!/usr/bin/env bash\nfichier=\"mon rapport.txt\"\nlignes=$(wc -l < \"$fichier\")\necho \"$fichier contient $lignes lignes\"",
+          "language": "shell"
+        },
+        {
+          "title": "Codes de sortie et conditions",
+          "body": "Chaque commande renvoie un code de sortie, lisible dans $? : 0 signifie le succès, toute autre valeur un échec. [[ … ]] teste des conditions : -f fichier existe, -z chaîne vide, -eq, -lt, -gt pour comparer des nombres. Attention : > dans [[ ]] compare des chaînes, dans l'ordre alphabétique."
+        },
+        {
+          "title": "Arguments et boucles",
+          "body": "$1, $2… sont les arguments du script, $# leur nombre, \"$@\" la liste complète en préservant les espaces. for parcourt une liste ; while IFS= read -r lit un fichier ligne par ligne. Jamais de boucle sur la sortie de ls, qui se brise sur les noms à espaces : on utilise un motif (for f in *.log)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "bash-bases-q1",
+          "prompt": "Ce script échoue avec « nom: command not found ». Touche la ligne en cause.",
+          "code": "#!/usr/bin/env bash\nnom = \"Ana\"\necho \"Bonjour $nom\"",
+          "language": "shell",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Avec des espaces, Bash lance la commande nom avec les arguments = et Ana. L'affectation s'écrit nom=\"Ana\".",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "bash-bases-q2",
+          "prompt": "Que tente de supprimer la seconde ligne ?",
+          "code": "fichier=\"mon rapport.txt\"\nrm $fichier",
+          "language": "shell",
+          "choices": [
+            "Deux fichiers : « mon » et « rapport.txt »",
+            "Le fichier « mon rapport.txt »",
+            "Rien, erreur de syntaxe",
+            "Tous les fichiers du dossier"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans guillemets, la valeur est découpée aux espaces. rm \"$fichier\" supprime le bon fichier.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "bash-bases-q3",
+          "prompt": "Complète : afficher chaque argument, puis leur nombre.",
+          "code": "for f in \"$___\"; do\n  echo \"Argument : $f\"\ndone\necho \"Nombre d'arguments : $___\"",
+          "language": "shell",
+          "answers": [
+            "@",
+            "#"
+          ],
+          "distractors": [
+            "*",
+            "0",
+            "?"
+          ],
+          "explanation": "\"$@\" garde chaque argument intact ; $0 est le nom du script, $? le dernier code de sortie.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "bash-bases-q4",
+          "prompt": "Que contient $? juste après une commande ?",
+          "choices": [
+            "Son code de sortie : 0 pour un succès",
+            "Son temps d'exécution",
+            "Son identifiant de processus",
+            "Le nombre de lignes affichées"
+          ],
+          "answerIndex": 0,
+          "explanation": "$$ contient, lui, le PID du shell.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "bash-bases-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "[[ 10 > 9 ]] && echo oui || echo non",
+          "language": "shell",
+          "choices": [
+            "non",
+            "oui",
+            "Une erreur",
+            "10"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans [[ ]], > compare des chaînes : « 10 » vient avant « 9 ». Pour des nombres : [[ 10 -gt 9 ]] ou (( 10 > 9 )).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "bash-bases-q6",
+          "prompt": "Quelles sont de bonnes pratiques en Bash ?",
+          "choices": [
+            "Mettre les variables entre guillemets",
+            "Commencer par #!/usr/bin/env bash",
+            "Préférer $(…) aux apostrophes inversées",
+            "Boucler sur la sortie de ls"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La sortie de ls n'est pas faite pour être relue par un programme.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "bash-robustesse",
+      "title": "Des scripts robustes",
+      "summary": "set -euo pipefail, trap et ShellCheck.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "S'arrêter en cas d'erreur",
+          "body": "Par défaut, Bash continue après une commande qui échoue. set -e arrête le script à la première erreur ; set -u fait échouer l'usage d'une variable non définie ; set -o pipefail fait échouer un pipeline dès que l'une de ses commandes échoue, pas seulement la dernière. Ces trois options se combinent en tête de script.",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\n\ntmp=$(mktemp -d)\ntrap 'rm -rf \"$tmp\"' EXIT\n\ncurl -fsS \"$URL\" -o \"$tmp/donnees.json\"",
+          "language": "shell"
+        },
+        {
+          "title": "Nettoyer",
+          "body": "mktemp crée un fichier ou un dossier temporaire au nom unique. trap … EXIT exécute une commande à la sortie du script, qu'il réussisse ou non : on y supprime les fichiers temporaires. ${1:?message} fait échouer le script avec un message si l'argument manque."
+        },
+        {
+          "title": "Vérifier",
+          "body": "ShellCheck analyse un script et signale les guillemets manquants, les variables jamais définies, les tests mal écrits. set -x affiche chaque commande avant de l'exécuter, pratique pour déboguer."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "bash-robustesse-q1",
+          "prompt": "Que fait set -e ?",
+          "choices": [
+            "Le script s'arrête dès qu'une commande échoue",
+            "Il affiche chaque commande",
+            "Il exporte toutes les variables",
+            "Il active les couleurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans lui, un script continue joyeusement après une erreur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "bash-robustesse-q2",
+          "prompt": "Que fait set -o pipefail ?",
+          "choices": [
+            "Un pipeline échoue si n'importe laquelle de ses commandes échoue, pas seulement la dernière",
+            "Il interdit les pipelines",
+            "Il accélère les pipelines",
+            "Il redirige les erreurs vers un fichier"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sinon, dans commande | gzip, seul le code de gzip compte.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "bash-robustesse-q3",
+          "prompt": "Lancé sans argument, ce script tente de vider la racine du disque. Touche une ligne en cause.",
+          "code": "#!/usr/bin/env bash\nDOSSIER=$1\nrm -rf \"$DOSSIER/\"*",
+          "language": "shell",
+          "bugLines": [
+            2,
+            3
+          ],
+          "explanation": "Sans argument, DOSSIER est vide et la commande devient rm -rf /*. On écrit DOSSIER=${1:?dossier manquant} et on active set -u.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "bash-robustesse-q4",
+          "prompt": "Complète : créer un dossier temporaire et le supprimer à la sortie du script.",
+          "code": "tmp=$(___ -d)\n___ 'rm -rf \"$tmp\"' EXIT",
+          "language": "shell",
+          "answers": [
+            "mktemp",
+            "trap"
+          ],
+          "distractors": [
+            "tmpdir",
+            "finally",
+            "defer"
+          ],
+          "explanation": "Le nettoyage a lieu même si le script échoue à mi-chemin.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "bash-robustesse-q5",
+          "prompt": "Qu'est-ce que ShellCheck ?",
+          "choices": [
+            "Un analyseur statique qui repère les erreurs courantes des scripts shell",
+            "Un shell plus rapide",
+            "Un antivirus",
+            "Un outil de compression"
+          ],
+          "answerIndex": 0,
+          "explanation": "On le lance dans l'éditeur et dans la CI.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "bash-robustesse-q6",
+          "prompt": "Quelles options rendent un script plus sûr ?",
+          "choices": [
+            "set -e",
+            "set -u",
+            "set -o pipefail",
+            "set +e en tête de script"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "set +e désactive justement l'arrêt sur erreur.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "bash-outils",
+      "title": "Les outils du quotidien",
+      "summary": "grep, awk, find, jq et cron.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Traiter du texte",
+          "body": "grep filtre des lignes, sed les transforme, awk découpe en colonnes ($1, $2…), sort, uniq -c et head résument. Enchaînés par des tubes, ils répondent en une ligne à beaucoup de questions sur des journaux. Pour du JSON, jq est l'outil adapté.",
+          "code": "awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -3\ncurl -s https://api.ex.fr/users | jq -r '.[].email'",
+          "language": "shell"
+        },
+        {
+          "title": "Des noms de fichiers sûrs",
+          "body": "find -print0 sépare les noms par un caractère nul, que xargs -0 sait lire : les espaces et retours à la ligne dans les noms ne posent plus de problème. while IFS= read -r ligne lit une ligne sans retirer ses espaces ni interpréter ses antislashs."
+        },
+        {
+          "title": "Les scripts planifiés",
+          "body": "cron lance les scripts dans un environnement minimal : PATH réduit, aucun profil chargé, répertoire courant différent. Un script qui fonctionne dans le terminal peut y échouer : on utilise des chemins absolus, on définit les variables nécessaires et on redirige la sortie vers un journal."
+        }
+      ],
+      "questions": [
+        {
+          "type": "order",
+          "id": "bash-outils-q1",
+          "prompt": "Remets dans l'ordre : les 3 adresses IP les plus fréquentes d'un journal d'accès.",
+          "language": "shell",
+          "lines": [
+            "awk '{print $1}' access.log",
+            "| sort",
+            "| uniq -c",
+            "| sort -rn",
+            "| head -3"
+          ],
+          "explanation": "uniq -c ne compte que des lignes identiques consécutives : il faut trier avant.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "bash-outils-q2",
+          "prompt": "Les fichiers dont le nom contient un espace ne sont pas supprimés. Touche la ligne en cause.",
+          "code": "find . -name \"*.log\" | xargs rm",
+          "language": "shell",
+          "bugLines": [
+            1
+          ],
+          "explanation": "xargs découpe aux espaces. On écrit find … -print0 | xargs -0 rm, ou simplement find … -delete.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "bash-outils-q3",
+          "prompt": "Complète : afficher l'e-mail de chaque utilisateur renvoyé par l'API.",
+          "code": "curl -s https://api.ex.fr/users | ___ -r '.[].___'",
+          "language": "shell",
+          "answers": [
+            "jq",
+            "email"
+          ],
+          "distractors": [
+            "grep",
+            "sed",
+            "mail"
+          ],
+          "explanation": "-r affiche les chaînes brutes, sans guillemets JSON.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "bash-outils-q4",
+          "prompt": "Pourquoi un script qui marche dans le terminal échoue-t-il quand cron le lance ?",
+          "choices": [
+            "cron lance un environnement minimal : PATH réduit, aucun profil, autre répertoire courant",
+            "cron n'exécute que du Python",
+            "cron coupe les scripts au bout d'une seconde",
+            "cron ne lit pas le shebang"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chemins absolus et variables explicites règlent la plupart des cas.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "bash-outils-q5",
+          "prompt": "Pourquoi écrire while IFS= read -r ligne plutôt que while read ligne ?",
+          "choices": [
+            "Pour garder les espaces en début et fin de ligne et ne pas interpréter les antislashs",
+            "Pour lire plus vite",
+            "Pour lire en binaire",
+            "Pour lire deux lignes à la fois"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans ces précautions, certaines lignes sont silencieusement modifiées.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "bash-outils-q6",
+          "prompt": "Quels outils servent à filtrer ou transformer du texte ?",
+          "choices": [
+            "grep",
+            "sed",
+            "awk",
+            "chmod"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "chmod change les permissions d'un fichier.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "bash-defi",
+    "title": "Défi entretien : la sauvegarde vide",
+    "summary": "Erreurs silencieuses et surveillance.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "bash-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un script de sauvegarde lancé par cron « réussit » chaque nuit, mais l'archive est vide depuis deux semaines. Premier correctif ?",
+        "choices": [
+          "Faire échouer le script à la moindre erreur (set -euo pipefail) et vérifier le résultat",
+          "Lancer la sauvegarde deux fois",
+          "Augmenter la taille du disque",
+          "Supprimer cron"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un script qui ignore ses erreurs ment sur son résultat.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "bash-defi-q2",
+        "prompt": "Cas pratique 2/3 — La ligne pg_dump base | gzip > sauvegarde.gz renvoie 0 alors que pg_dump a échoué. Pourquoi ?",
+        "choices": [
+          "Sans pipefail, le code d'un pipeline est celui de la dernière commande, gzip, qui a réussi",
+          "pg_dump ne renvoie jamais d'erreur",
+          "gzip masque les erreurs volontairement",
+          "Le fichier est trop gros"
+        ],
+        "answerIndex": 0,
+        "explanation": "gzip compresse une sortie vide sans broncher.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "bash-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment être prévenu si la sauvegarde ne se fait plus du tout (script supprimé, serveur éteint) ?",
+        "choices": [
+          "Un contrôle externe qui alerte s'il ne reçoit pas le signal de réussite attendu chaque nuit",
+          "Un e-mail envoyé seulement en cas d'échec",
+          "Lire les journaux chaque matin",
+          "Faire confiance à cron"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un script qui ne tourne plus n'envoie aucun message d'échec : seule l'absence de signal le révèle.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "bash-defi-q4",
+        "prompt": "Qu'affiche echo $(( 7 / 2 )) ?",
+        "choices": [
+          "3",
+          "3.5",
+          "4",
+          "Une erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'arithmétique de Bash ne travaille qu'en entiers ; pour des décimaux, on utilise bc ou awk.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "bash-defi-q5",
+        "prompt": "Ce test plante avec « unary operator expected » quand statut est vide. Touche la ligne en cause.",
+        "code": "if [ $statut == \"ok\" ]; then\n  echo \"tout va bien\"\nfi",
+        "language": "shell",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Vide et sans guillemets, la variable disparaît : [ == \"ok\" ]. On écrit [[ \"$statut\" == \"ok\" ]].",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "bash-defi-q6",
+        "prompt": "Quand vaut-il mieux écrire le script en Python plutôt qu'en Bash ?",
+        "choices": [
+          "Pour une logique complexe avec des structures de données",
+          "Pour beaucoup de traitement de JSON",
+          "Au-delà de quelques centaines de lignes",
+          "Pour enchaîner trois commandes système"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Bash excelle à orchestrer des commandes ; au-delà, un vrai langage est plus lisible et testable.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

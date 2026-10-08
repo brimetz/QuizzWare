@@ -1,0 +1,439 @@
+{
+  "id": "gcp-ch-essentiel",
+  "title": "Google Cloud : l'essentiel",
+  "summary": "Projets, IAM, services et architecture.",
+  "lessons": [
+    {
+      "id": "gcp-bases",
+      "title": "Projets et IAM",
+      "summary": "L'organisation des ressources et des droits.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La hiérarchie",
+          "body": "Une organisation contient des dossiers, qui contiennent des projets. Le projet est l'unité de base : il porte les ressources, les API activées et la facturation. Les droits accordés à un niveau se transmettent aux niveaux inférieurs."
+        },
+        {
+          "title": "IAM",
+          "body": "On accorde un rôle à un principal (utilisateur, groupe, compte de service) sur une ressource. Les rôles de base (Owner, Editor, Viewer) sont trop larges : Editor permet de modifier presque tout le projet. On préfère les rôles prédéfinis, précis par service, ou des rôles personnalisés.",
+          "code": "gcloud projects add-iam-policy-binding acme-prod \\\n  --member=\"serviceAccount:api@acme-prod.iam.gserviceaccount.com\" \\\n  --role=\"roles/storage.objectViewer\"",
+          "language": "shell"
+        },
+        {
+          "title": "Comptes de service",
+          "body": "Un compte de service est l'identité d'une application. Sur Google Cloud, il est attaché à la ressource (VM, Cloud Run) : pas de clé à manipuler. Les clés JSON téléchargeables sont à éviter ; depuis l'extérieur (GitHub Actions, AWS), la Workload Identity Federation échange un jeton contre des identifiants temporaires."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gcp-bases-q1",
+          "prompt": "Quelle est l'unité de base qui porte les ressources, les API et la facturation ?",
+          "choices": [
+            "Le projet",
+            "Le dossier",
+            "L'organisation",
+            "La région"
+          ],
+          "answerIndex": 0,
+          "explanation": "On sépare souvent un projet par application et par environnement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gcp-bases-q2",
+          "prompt": "Pourquoi éviter le rôle de base Editor ?",
+          "choices": [
+            "Il donne des droits de modification sur presque tout le projet ; un rôle prédéfini précis suffit",
+            "Il ne permet rien",
+            "Il est payant",
+            "Il expire au bout d'un jour"
+          ],
+          "answerIndex": 0,
+          "explanation": "Moindre privilège : roles/storage.objectViewer plutôt qu'Editor pour lire des fichiers.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "gcp-bases-q3",
+          "prompt": "Complète : permettre à l'API de lire les objets de Cloud Storage du projet.",
+          "code": "gcloud ___ add-iam-policy-binding acme-prod \\\n  --member=\"serviceAccount:api@acme-prod.iam.gserviceaccount.com\" \\\n  --role=\"roles/storage.___\"",
+          "language": "shell",
+          "answers": [
+            "projects",
+            "objectViewer"
+          ],
+          "distractors": [
+            "iam",
+            "admin",
+            "owner"
+          ],
+          "explanation": "Mieux encore : accorder le rôle sur le seul bucket concerné plutôt que sur tout le projet.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gcp-bases-q4",
+          "prompt": "Revue de ces commandes : touche la ligne en cause.",
+          "code": "gcloud iam service-accounts keys create cle.json \\\n  --iam-account=api@acme-prod.iam.gserviceaccount.com\ngit add cle.json",
+          "language": "shell",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La clé du compte de service part dans le dépôt : quiconque la lit agit comme l'application. On évite les clés, et on n'en versionne jamais.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gcp-bases-q5",
+          "prompt": "Qu'est-ce que la Workload Identity Federation ?",
+          "choices": [
+            "Un moyen pour une charge extérieure (GitHub Actions, AWS) d'agir comme un compte de service sans clé",
+            "Une fédération d'entreprises clientes",
+            "Un service de messagerie",
+            "Une base de données d'identités"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un jeton signé par le fournisseur extérieur est échangé contre des identifiants temporaires.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "gcp-bases-q6",
+          "prompt": "Quels types de rôles existent dans IAM ?",
+          "choices": [
+            "Les rôles de base",
+            "Les rôles prédéfinis",
+            "Les rôles personnalisés",
+            "Les rôles root temporaires"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On privilégie les rôles prédéfinis.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "gcp-services",
+      "title": "Les services clés",
+      "summary": "Cloud Run, données et BigQuery.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Calcul",
+          "body": "Compute Engine fournit des VM ; GKE, un Kubernetes géré (en mode Autopilot, Google gère aussi les nœuds) ; Cloud Run exécute des conteneurs HTTP sans serveur à gérer, avec mise à l'échelle automatique jusqu'à zéro instance hors trafic. Chaque instance Cloud Run traite plusieurs requêtes en parallèle (concurrency).",
+          "code": "gcloud run deploy api \\\n  --image=europe-docker.pkg.dev/acme/apps/api:1.8.2 \\\n  --region=europe-west9 --min-instances=0",
+          "language": "shell"
+        },
+        {
+          "title": "Données",
+          "body": "Cloud Storage stocke des objets ; Cloud SQL gère PostgreSQL ou MySQL ; Firestore est une base de documents ; Spanner, une base relationnelle distribuée mondialement. Pub/Sub transporte des messages asynchrones, livrés au moins une fois, en mode pull ou push."
+        },
+        {
+          "title": "BigQuery",
+          "body": "BigQuery est un entrepôt de données sans serveur : on interroge des To en SQL sans rien provisionner. En facturation à la demande, on paie le volume de données lu : SELECT * lit toutes les colonnes, et LIMIT ne réduit pas ce volume. On ne sélectionne que les colonnes utiles et on filtre sur les colonnes de partition."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gcp-services-q1",
+          "prompt": "Quel service pour déployer un conteneur HTTP sans gérer de serveurs, qui descend à zéro instance hors trafic ?",
+          "choices": [
+            "Cloud Run",
+            "Compute Engine",
+            "Cloud SQL",
+            "BigQuery"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ne paie que le temps de traitement des requêtes (en mode par défaut).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gcp-services-q2",
+          "prompt": "Avec la facturation à la demande, sur quoi BigQuery facture-t-il une requête ?",
+          "choices": [
+            "Sur le volume de données lu",
+            "Sur le nombre de lignes renvoyées",
+            "Sur la durée de la requête",
+            "Sur le nombre d'utilisateurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une requête qui renvoie 10 lignes peut lire des To.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gcp-services-q3",
+          "prompt": "Cette requête qui n'affiche que 10 lignes lit 4 To. Touche une ligne en cause.",
+          "code": "SELECT *\nFROM `acme.analytics.evenements`\nWHERE DATE(horodatage) = \"2026-10-01\"\nLIMIT 10",
+          "language": "sql",
+          "bugLines": [
+            1,
+            4
+          ],
+          "explanation": "SELECT * lit toutes les colonnes, et LIMIT n'y change rien. On liste les colonnes utiles, et la table doit être partitionnée par date pour que le filtre réduise la lecture.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "gcp-services-q4",
+          "prompt": "Complète : déployer l'image sur Cloud Run, avec une mise à zéro hors trafic.",
+          "code": "gcloud run ___ api \\\n  --image=europe-docker.pkg.dev/acme/apps/api:1.8.2 \\\n  --region=europe-west9 --min-instances=___",
+          "language": "shell",
+          "answers": [
+            "deploy",
+            "0"
+          ],
+          "distractors": [
+            "create",
+            "start",
+            "-1"
+          ],
+          "explanation": "Une instance minimale à 1 éviterait le démarrage à froid, au prix d'un coût permanent.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gcp-services-q5",
+          "prompt": "Qu'est-ce que Pub/Sub ?",
+          "choices": [
+            "Une messagerie asynchrone : des topics, des abonnements, une livraison au moins une fois",
+            "Une base de données relationnelle",
+            "Un service de DNS",
+            "Un outil de facturation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les consommateurs doivent donc être idempotents.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gcp-services-q6",
+          "prompt": "Lesquels sont des services de base de données de Google Cloud ?",
+          "choices": [
+            "Cloud SQL",
+            "Firestore",
+            "Spanner",
+            "Cloud Run"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Cloud Run exécute des conteneurs.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "gcp-architecture",
+      "title": "Réseau, gouvernance et coûts",
+      "summary": "VPC global, politiques et économies.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le réseau",
+          "body": "Particularité de Google Cloud, un VPC est global : ses sous-réseaux sont régionaux, mais tout communique sur le réseau privé de Google. Les règles de pare-feu ciblent des tags ou des comptes de service. Private Google Access permet à des VM sans IP publique d'appeler les API Google ; Cloud NAT leur donne une sortie vers Internet. IAP permet d'administrer des VM en SSH sans ouvrir le port 22 au monde."
+        },
+        {
+          "title": "Exposer et protéger",
+          "body": "Cloud Load Balancing offre un point d'entrée mondial unique, sur une adresse anycast. Cloud Armor y ajoute un pare-feu applicatif et une protection contre les attaques par déni de service. Les règles d'organisation (Organization Policies) interdisent par exemple la création de clés de comptes de service ou certaines régions."
+        },
+        {
+          "title": "Les coûts",
+          "body": "Remises sur engagement d'utilisation (committed use) et remises automatiques sur usage soutenu pour les VM, budgets avec alertes, services qui descendent à zéro (Cloud Run). Dans BigQuery, partitionner les tables par date et les regrouper (clustering) sur les colonnes filtrées réduit fortement les volumes lus."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gcp-architecture-q1",
+          "prompt": "Quelle est la particularité d'un VPC sur Google Cloud ?",
+          "choices": [
+            "Il est global : ses sous-réseaux sont régionaux mais communiquent sur le réseau privé de Google",
+            "Il est limité à une zone",
+            "Il ne peut contenir qu'un sous-réseau",
+            "Il est public par défaut"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chez AWS ou Azure, un VPC ou un VNet est régional.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gcp-architecture-q2",
+          "prompt": "Une table BigQuery de 10 To est presque toujours interrogée sur une période et un client. Comment réduire le coût des requêtes ?",
+          "choices": [
+            "La partitionner par date et la regrouper (clustering) par client",
+            "Ajouter LIMIT 100 à chaque requête",
+            "La copier dans Cloud SQL",
+            "Augmenter le nombre d'utilisateurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "BigQuery ne lit alors que les partitions et blocs concernés.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gcp-architecture-q3",
+          "prompt": "Que fait Cloud Armor ?",
+          "choices": [
+            "Il ajoute un pare-feu applicatif et une protection anti-DDoS devant le répartiteur de charge",
+            "Il chiffre les disques",
+            "Il gère les identités",
+            "Il sauvegarde les bases"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il bloque des adresses, des pays ou des motifs d'attaque connus.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gcp-architecture-q4",
+          "prompt": "À quoi sert Private Google Access ?",
+          "choices": [
+            "À permettre à des VM sans IP publique d'appeler les API Google",
+            "À rendre les buckets privés",
+            "À cacher l'adresse du site",
+            "À créer un VPN vers le bureau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les VM restent inaccessibles depuis Internet tout en utilisant Cloud Storage ou BigQuery.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "gcp-architecture-q5",
+          "prompt": "Revue de cette règle de pare-feu : touche la ligne en cause.",
+          "code": "gcloud compute firewall-rules create ssh \\\n  --network=prod --allow=tcp:22 \\\n  --source-ranges=0.0.0.0/0",
+          "language": "shell",
+          "bugLines": [
+            3
+          ],
+          "explanation": "SSH ouvert au monde entier. Avec IAP, on limite la source à la plage d'IAP (35.235.240.0/20) et on contrôle l'accès par IAM.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "gcp-architecture-q6",
+          "prompt": "Comment réduire la facture Google Cloud ?",
+          "choices": [
+            "Les remises sur engagement d'utilisation",
+            "Des budgets avec alertes",
+            "Cloud Run qui descend à zéro pour les services peu utilisés",
+            "Des VM surdimensionnées par sécurité"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les recommandations de redimensionnement signalent les VM sous-utilisées.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "gcp-defi",
+    "title": "Défi entretien : un déploiement sans clé",
+    "summary": "Fédération d'identité et moindre privilège.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "gcp-defi-q1",
+        "prompt": "Cas pratique 1/3 — GitHub Actions déploie sur Cloud Run avec une clé JSON de compte de service stockée en secret. Que faire ?",
+        "choices": [
+          "Passer à la Workload Identity Federation et supprimer la clé",
+          "Changer la clé tous les ans",
+          "Mettre la clé dans le dépôt, chiffrée en base64",
+          "Utiliser le compte d'un administrateur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le workflow obtient des identifiants temporaires, sans secret durable.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gcp-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le compte de service de déploiement a le rôle Editor sur le projet. Que faire ?",
+        "choices": [
+          "Le remplacer par les rôles prédéfinis nécessaires (déployer sur Cloud Run, utiliser le compte de service d'exécution)",
+          "Lui donner Owner pour plus de simplicité",
+          "Le laisser tel quel",
+          "Supprimer le compte de service"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un pipeline compromis ne pourra alors toucher que ce qu'il déploie.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gcp-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment interdire la création de clés de comptes de service dans toute l'organisation ?",
+        "choices": [
+          "Une règle d'organisation (contrainte iam.disableServiceAccountKeyCreation)",
+          "Un e-mail à toutes les équipes",
+          "Supprimer IAM",
+          "Un audit annuel"
+        ],
+        "answerIndex": 0,
+        "explanation": "La règle s'applique à tous les projets, y compris ceux créés plus tard.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "gcp-defi-q4",
+        "prompt": "Que signifie concurrency=80 pour un service Cloud Run ?",
+        "choices": [
+          "Chaque instance traite jusqu'à 80 requêtes simultanées",
+          "Le service peut avoir au plus 80 instances",
+          "80 % du CPU est réservé",
+          "Les requêtes expirent après 80 secondes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Au-delà, Cloud Run démarre de nouvelles instances.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gcp-defi-q5",
+        "prompt": "Qu'apporte GKE en mode Autopilot ?",
+        "choices": [
+          "Google gère aussi les nœuds, et la facturation suit les ressources demandées par les pods",
+          "Les déploiements se font sans manifeste",
+          "Kubernetes est remplacé par Cloud Run",
+          "Les pods n'ont plus besoin d'images"
+        ],
+        "answerIndex": 0,
+        "explanation": "On ne choisit plus les machines : on décrit seulement les besoins des pods.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "gcp-defi-q6",
+        "prompt": "Lesquels sont des services sans serveur à gérer ?",
+        "choices": [
+          "Cloud Run",
+          "Cloud Functions",
+          "BigQuery",
+          "Compute Engine"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Compute Engine fournit des VM, qu'on administre soi-même.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

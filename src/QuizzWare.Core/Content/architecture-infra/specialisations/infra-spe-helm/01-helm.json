@@ -1,0 +1,443 @@
+{
+  "id": "helm-ch-essentiel",
+  "title": "Helm : l'essentiel",
+  "summary": "Charts, templates et mises à jour.",
+  "lessons": [
+    {
+      "id": "helm-bases",
+      "title": "Charts et releases",
+      "summary": "Installer, mettre à jour, revenir en arrière.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un chart",
+          "body": "Un chart Helm est un paquet de manifestes Kubernetes paramétrables : Chart.yaml (nom, versions), values.yaml (les valeurs par défaut) et un dossier templates/. Installer un chart dans un cluster crée une release, numérotée à chaque mise à jour."
+        },
+        {
+          "title": "Les commandes",
+          "body": "helm upgrade --install installe ou met à jour une release. Les valeurs se surchargent avec -f (un fichier par environnement) et --set ; le dernier fichier cité l'emporte, et --set l'emporte sur les fichiers. helm rollback revient à une révision précédente, helm history les liste.",
+          "code": "helm upgrade --install api ./charts/api \\\n  --namespace api --create-namespace \\\n  -f values-prod.yaml --set image.tag=1.8.2\nhelm history api -n api\nhelm rollback api 3 -n api",
+          "language": "shell"
+        },
+        {
+          "title": "Distribuer",
+          "body": "Les charts se publient dans un dépôt HTTP ou, de plus en plus, dans un registre OCI, à côté des images. Les valeurs sensibles ne vont pas dans les fichiers versionnés : elles viennent d'un gestionnaire de secrets."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "helm-bases-q1",
+          "prompt": "Quelle différence entre un chart et une release ?",
+          "choices": [
+            "Le chart est le paquet paramétrable ; la release est une installation de ce chart dans un cluster",
+            "Ce sont deux noms pour la même chose",
+            "La release est le code source du chart",
+            "Le chart est une image Docker"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un même chart peut être installé plusieurs fois, sous des noms différents.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "helm-bases-q2",
+          "prompt": "Complète : installer ou mettre à jour la release, en forçant la version de l'image.",
+          "code": "helm ___ --install api ./charts/api \\\n  -f values-prod.yaml --___ image.tag=1.8.2",
+          "language": "shell",
+          "answers": [
+            "upgrade",
+            "set"
+          ],
+          "distractors": [
+            "install",
+            "value",
+            "env"
+          ],
+          "explanation": "upgrade --install fonctionne que la release existe ou non : idéal en CI.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "helm-bases-q3",
+          "prompt": "Quelle valeur l'emporte quand elle est définie à plusieurs endroits ?",
+          "choices": [
+            "--set, puis le dernier fichier passé avec -f, puis le values.yaml du chart",
+            "Le values.yaml du chart, toujours",
+            "Le premier fichier passé avec -f",
+            "La valeur la plus grande"
+          ],
+          "answerIndex": 0,
+          "explanation": "Du plus spécifique au plus général.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "helm-bases-q4",
+          "prompt": "Que fait helm rollback api 3 ?",
+          "choices": [
+            "Il revient à la révision 3 de la release api",
+            "Il supprime les 3 dernières révisions",
+            "Il redémarre 3 pods",
+            "Il installe la version 3 du chart"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le retour arrière crée lui-même une nouvelle révision.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "helm-bases-q5",
+          "prompt": "Ce fichier est versionné dans le dépôt. Touche la ligne en cause.",
+          "code": "# values-prod.yaml\nimage:\n  tag: 1.8.2\ndatabase:\n  password: Sup3rS3cret!",
+          "language": "yaml",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Le mot de passe est en clair dans Git. Le chart référence plutôt un Secret alimenté par un gestionnaire de secrets.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "helm-bases-q6",
+          "prompt": "Que contient un chart ?",
+          "choices": [
+            "Chart.yaml",
+            "values.yaml",
+            "Un dossier templates/",
+            "Le Dockerfile de l'application"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le chart déploie une image déjà construite ; il ne la construit pas.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "helm-templates",
+      "title": "Écrire des templates",
+      "summary": "Valeurs, fonctions et helpers.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La syntaxe",
+          "body": "Les templates utilisent le langage de modèles de Go : {{ .Values.replicas }} lit une valeur, {{ .Release.Name }} le nom de la release, {{ .Chart.Version }} la version du chart. Les fonctions s'enchaînent avec | : default fournit une valeur de repli, quote entoure de guillemets, toYaml convertit un objet, nindent indente après un retour à la ligne.",
+          "code": "spec:\n  replicas: {{ .Values.replicas | default 2 }}\n  template:\n    spec:\n      containers:\n        - name: api\n          image: \"{{ .Values.image.repository }}:{{ .Values.image.tag }}\"\n          resources:\n            {{- toYaml .Values.resources | nindent 12 }}",
+          "language": "yaml"
+        },
+        {
+          "title": "Les helpers",
+          "body": "Le fichier templates/_helpers.tpl définit des modèles réutilisables avec define (le nom complet, les étiquettes communes) ; les templates les insèrent avec include. required fait échouer le rendu avec un message clair quand une valeur obligatoire manque."
+        },
+        {
+          "title": "Vérifier",
+          "body": "helm template affiche le YAML produit, sans rien installer ; helm lint signale les erreurs courantes ; helm install --dry-run simule l'installation. Attention à default : 0, false et une chaîne vide sont considérés comme « vides » et remplacés par la valeur par défaut."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "helm-templates-q1",
+          "prompt": "Complète ce template.",
+          "code": "image: \"{{ .___.image.repository }}:{{ .Values.image.tag }}\"\nresources:\n  {{- toYaml .Values.resources | ___ 12 }}",
+          "language": "yaml",
+          "answers": [
+            "Values",
+            "nindent"
+          ],
+          "distractors": [
+            "values",
+            "Chart",
+            "pad"
+          ],
+          "explanation": "Les objets intégrés commencent par une majuscule ; nindent ajoute un retour à la ligne puis indente le bloc.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "helm-templates-q2",
+          "prompt": "Comment voir le YAML généré par un chart sans rien installer ?",
+          "choices": [
+            "helm template (ou helm install --dry-run)",
+            "helm show",
+            "kubectl apply",
+            "helm package"
+          ],
+          "answerIndex": 0,
+          "explanation": "Indispensable pour relire ce qu'un changement de valeurs produit réellement.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "helm-templates-q3",
+          "prompt": "Si dbUrl est oublié dans les valeurs, le pod démarre avec une URL vide. Touche la ligne à corriger.",
+          "code": "env:\n  - name: DB_URL\n    value: {{ .Values.dbUrl | quote }}",
+          "language": "yaml",
+          "bugLines": [
+            3
+          ],
+          "explanation": "On écrit {{ required \"dbUrl est obligatoire\" .Values.dbUrl | quote }} : le rendu échoue avec un message clair, avant tout déploiement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "helm-templates-q4",
+          "prompt": "À quoi sert le fichier _helpers.tpl ?",
+          "choices": [
+            "À définir des modèles réutilisables (noms, étiquettes) avec define, insérés avec include",
+            "À stocker les valeurs par défaut",
+            "À lister les dépendances",
+            "À documenter le chart"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le préfixe _ indique à Helm de ne pas le rendre comme un manifeste.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "helm-templates-q5",
+          "prompt": "Le template contient replicas: {{ .Values.replicas | default 2 }} et les valeurs indiquent replicas: 0. Combien de réplicas sont déployés ?",
+          "choices": [
+            "2",
+            "0",
+            "1",
+            "Le rendu échoue"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour default, 0 est une valeur vide : il la remplace par 2. On teste l'existence de la clé si 0 doit être possible.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "helm-templates-q6",
+          "prompt": "Quelles commandes permettent de vérifier un chart avant de l'installer ?",
+          "choices": [
+            "helm lint",
+            "helm template",
+            "helm install --dry-run",
+            "helm push"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "helm push publie le chart dans un registre OCI.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "helm-pratiques",
+      "title": "Helm en production",
+      "summary": "Versions, dépendances et upgrades sûrs.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Versions et dépendances",
+          "body": "version, dans Chart.yaml, est la version du chart ; appVersion, celle de l'application qu'il déploie : les deux évoluent séparément. Un chart peut dépendre d'autres charts (une base PostgreSQL), déclarés dans Chart.yaml et téléchargés par helm dependency update. Un library chart ne fournit que des helpers partagés."
+        },
+        {
+          "title": "Des mises à jour sûres",
+          "body": "--wait attend que les ressources soient prêtes ; --atomic annule automatiquement la mise à jour si elle échoue ou dépasse le délai. Un hook pre-upgrade lance un Job (une migration) avant la mise à jour. values.schema.json valide les valeurs fournies : une faute de frappe échoue au lieu d'être ignorée.",
+          "code": "helm upgrade --install api ./charts/api \\\n  --atomic --timeout 5m \\\n  -f values-prod.yaml",
+          "language": "shell"
+        },
+        {
+          "title": "Voir avant d'appliquer",
+          "body": "Le plugin helm diff affiche ce qu'une mise à jour changera dans le cluster, comme un plan Terraform. Avec Argo CD, Helm sert seulement à rendre les manifestes : c'est Argo CD qui les applique et suit leur état."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "helm-pratiques-q1",
+          "prompt": "Quelle différence entre version et appVersion dans Chart.yaml ?",
+          "choices": [
+            "version est celle du chart ; appVersion celle de l'application qu'il déploie",
+            "Ce sont deux noms pour la même chose",
+            "appVersion est la version de Helm",
+            "version est la version de Kubernetes"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut corriger un template (nouvelle version du chart) sans changer d'application.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "helm-pratiques-q2",
+          "prompt": "Complète : annuler automatiquement la mise à jour si elle échoue.",
+          "code": "helm upgrade --install api ./charts/api \\\n  --___ --timeout 5m",
+          "language": "shell",
+          "answers": [
+            "atomic"
+          ],
+          "distractors": [
+            "safe",
+            "rollback",
+            "force"
+          ],
+          "explanation": "--atomic implique --wait : il attend que tout soit prêt, sinon il revient en arrière.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "helm-pratiques-q3",
+          "prompt": "À quoi sert values.schema.json ?",
+          "choices": [
+            "À valider les valeurs fournies à l'installation (types, champs obligatoires)",
+            "À générer la documentation",
+            "À chiffrer les valeurs",
+            "À lister les dépendances"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une valeur mal orthographiée ou du mauvais type est refusée immédiatement.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "helm-pratiques-q4",
+          "prompt": "Comment exécuter une migration de base juste avant chaque mise à jour ?",
+          "choices": [
+            "Un Job annoté comme hook pre-upgrade",
+            "Un CronJob toutes les minutes",
+            "Un script lancé à la main",
+            "Un post-delete"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si le hook échoue, la mise à jour s'arrête.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "helm-pratiques-q5",
+          "prompt": "helm install échoue : « found in Chart.yaml, but missing in charts/ directory: postgresql ». Que faire ?",
+          "choices": [
+            "helm dependency update",
+            "Supprimer Chart.yaml",
+            "helm repo remove",
+            "helm rollback"
+          ],
+          "answerIndex": 0,
+          "explanation": "La dépendance est déclarée mais n'a pas été téléchargée dans charts/.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "helm-pratiques-q6",
+          "prompt": "Que faire avant une mise à jour en production ?",
+          "choices": [
+            "Voir les changements avec helm diff",
+            "Utiliser --atomic pour revenir en arrière en cas d'échec",
+            "Valider les valeurs par un schéma",
+            "Utiliser --force systématiquement"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "--force recrée les ressources, au risque d'une interruption.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "helm-defi",
+    "title": "Défi entretien : trois services, trois copies",
+    "summary": "Mutualiser et déployer sans casse.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "helm-defi-q1",
+        "prompt": "Cas pratique 1/3 — Trois microservices ont des manifestes Kubernetes copiés-collés qui divergent. Quelle solution avec Helm ?",
+        "choices": [
+          "Un chart commun (ou un library chart) paramétré par les valeurs de chaque service",
+          "Trois charts copiés-collés",
+          "Un seul gros manifeste pour les trois",
+          "Abandonner Kubernetes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une correction se fait une fois et profite à tous les services.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "helm-defi-q2",
+        "prompt": "Cas pratique 2/3 — Une mise à jour ratée laisse la release en état failed avec la moitié des pods. Comment éviter cela ?",
+        "choices": [
+          "--atomic --wait pour annuler automatiquement ; sinon helm rollback",
+          "Supprimer la release et la réinstaller",
+          "Ne plus jamais mettre à jour",
+          "Utiliser --force"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'annulation automatique ramène la dernière version saine.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "helm-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment savoir à l'avance ce que la mise à jour va changer ?",
+        "choices": [
+          "helm diff upgrade",
+          "helm history",
+          "helm list",
+          "helm status"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est l'équivalent du plan de Terraform pour une release.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "helm-defi-q4",
+        "prompt": "Pourquoi appliquer quote à une valeur dans un template ?",
+        "choices": [
+          "Pour qu'une valeur comme yes, on ou 0123 reste une chaîne en YAML",
+          "Pour la chiffrer",
+          "Pour la rendre obligatoire",
+          "Pour l'afficher dans les journaux"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans guillemets, YAML peut convertir ces valeurs en booléen ou en nombre.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "helm-defi-q5",
+        "prompt": "Le manifeste produit est invalide : les ressources sont mal indentées. Touche la ligne en cause.",
+        "code": "spec:\n  template:\n    spec:\n      containers:\n        - name: api\n          resources:\n{{ toYaml .Values.resources | indent 4 }}",
+        "language": "yaml",
+        "bugLines": [
+          7
+        ],
+        "explanation": "Le bloc doit être indenté de 12 espaces, sous resources. On écrit {{- toYaml .Values.resources | nindent 12 }} à la suite de resources:.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "helm-defi-q6",
+        "prompt": "Où peut-on publier des charts ?",
+        "choices": [
+          "Dans un registre OCI",
+          "Dans un dépôt de charts HTTP",
+          "Dans le dépôt Git de l'application",
+          "Dans un Secret Kubernetes"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un registre OCI permet de stocker charts et images au même endroit.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

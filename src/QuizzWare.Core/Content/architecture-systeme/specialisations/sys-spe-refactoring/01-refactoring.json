@@ -1,0 +1,436 @@
+{
+  "id": "ref-ch-essentiel",
+  "title": "Refactoring et code legacy : l'essentiel",
+  "summary": "Techniques, stratégies de migration et dette technique.",
+  "lessons": [
+    {
+      "id": "ref-techniques",
+      "title": "Les refactorings courants",
+      "summary": "Améliorer la structure sans changer le comportement.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La définition",
+          "body": "Refactorer, c'est changer la structure du code sans changer son comportement observable. Cela se fait par petites étapes, avec des tests verts avant et après chacune, et de préférence avec les outils de l'IDE, qui appliquent ces transformations de façon fiable."
+        },
+        {
+          "title": "Le catalogue",
+          "body": "Extraire une méthode ou une variable au nom explicite, renommer, introduire un objet paramètre à la place d'une longue liste de paramètres, remplacer une conditionnelle par du polymorphisme, supprimer le code mort. Chacun répond à une « odeur » : méthode trop longue, duplication, classe qui change pour de nombreuses raisons.",
+          "code": "// Avant\nif (c.Total > 100 && c.Client.EstFidele && !c.EnPromotion) { /* … */ }\n\n// Après\nvar eligibleRemise = c.Total > 100 && c.Client.EstFidele && !c.EnPromotion;\nif (eligibleRemise) { /* … */ }"
+        },
+        {
+          "title": "Un changement à la fois",
+          "body": "On ne mélange pas un refactoring et un changement de comportement dans la même étape, ni dans le même commit : si un test casse, on sait pourquoi, et la revue est plus simple. Un arrondi ajouté « au passage » n'est plus un refactoring."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "ref-techniques-q1",
+          "prompt": "Complète cette extraction de variable.",
+          "code": "var ___ = c.Total > 100 && c.Client.EstFidele && !c.EnPromotion;\nif (eligibleRemise) { /* … */ }",
+          "answers": [
+            "eligibleRemise"
+          ],
+          "distractors": [
+            "x",
+            "flag",
+            "var1"
+          ],
+          "explanation": "Le nom explique l'intention de la condition.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ref-techniques-q2",
+          "prompt": "Une méthode prend huit paramètres. Quel refactoring ?",
+          "choices": [
+            "Introduire un objet paramètre qui les regroupe",
+            "Ajouter un neuvième paramètre",
+            "Les passer dans des variables globales",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les paramètres liés deviennent un concept nommé, souvent porteur de règles.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ref-techniques-q3",
+          "prompt": "Un refactoring change-t-il le comportement du programme ?",
+          "choices": [
+            "Non : seule la structure change",
+            "Oui, toujours un peu",
+            "Oui, c'est son but",
+            "Seulement la nuit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les tests, inchangés, doivent rester verts.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ref-techniques-q4",
+          "prompt": "Pourquoi utiliser le renommage de l'IDE plutôt qu'un rechercher-remplacer ?",
+          "choices": [
+            "L'IDE met à jour toutes les références en tenant compte du sens, sans toucher aux homonymes",
+            "Il est plus joli",
+            "Il ajoute des tests",
+            "Il n'y a aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un rechercher-remplacer modifie aussi les textes et les variables qui portent le même nom par hasard.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "ref-techniques-q5",
+          "prompt": "Les tests de caractérisation échouent après ce « refactoring ». Touche la ligne en cause.",
+          "code": "// Avant\ndecimal total = 0;\nforeach (var l in lignes) total += l.Prix * l.Quantite;\nreturn total * 1.2m;\n\n// Après\nreturn Math.Round(SousTotal(lignes) * 1.2m, 2);",
+          "bugLines": [
+            7
+          ],
+          "explanation": "L'arrondi ajouté change le résultat : ce n'est plus un refactoring. On extrait d'abord SousTotal, puis on décide séparément de l'arrondi.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ref-techniques-q6",
+          "prompt": "Lesquelles sont des odeurs de code ?",
+          "choices": [
+            "Une méthode très longue",
+            "Du code dupliqué",
+            "Une classe qui change pour de nombreuses raisons",
+            "Un nom de variable explicite"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une odeur n'est pas une erreur, mais un indice qu'un refactoring aiderait.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "ref-strategies",
+      "title": "Remplacer progressivement",
+      "summary": "Strangler fig, branch by abstraction et parallel run.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Pas de réécriture d'un bloc",
+          "body": "Réécrire un système entier d'un coup échoue souvent : rien n'est livré pendant des mois, des règles métier sont oubliées, et l'ancien système continue d'évoluer entre-temps. On préfère remplacer progressivement, fonctionnalité par fonctionnalité, en livrant à chaque étape."
+        },
+        {
+          "title": "Strangler fig et branch by abstraction",
+          "body": "Le motif du figuier étrangleur place une façade (un routage) devant l'ancien système et redirige une fonctionnalité après l'autre vers le nouveau, jusqu'à pouvoir éteindre l'ancien. À l'intérieur d'une même base de code, branch by abstraction introduit une abstraction devant l'ancien code, écrit la nouvelle implémentation derrière, bascule, puis supprime l'ancienne, sans longue branche Git."
+        },
+        {
+          "title": "Vérifier et basculer",
+          "body": "Le parallel run exécute l'ancien et le nouveau calcul, compare leurs résultats et sert l'ancien tant que la confiance n'est pas établie. Un feature toggle bascule progressivement les utilisateurs ; il doit être retiré une fois la migration finie, sinon il devient de la dette.",
+          "code": "var ancien = AncienCalcul(c);\nvar nouveau = NouveauCalcul(c);\nif (ancien != nouveau)\n    log.LogWarning(\"Écart {Id} : {A} / {N}\", c.Id, ancien, nouveau);\nreturn ancien;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ref-strategies-q1",
+          "prompt": "En quoi consiste le motif du figuier étrangleur (strangler fig) ?",
+          "choices": [
+            "Placer une façade devant l'ancien système et lui retirer une fonctionnalité après l'autre au profit du nouveau",
+            "Supprimer l'ancien système d'un coup",
+            "Ajouter des fonctionnalités à l'ancien système",
+            "Copier l'ancien système"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le nouveau système grandit autour de l'ancien jusqu'à le remplacer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ref-strategies-q2",
+          "prompt": "Qu'est-ce que branch by abstraction ?",
+          "choices": [
+            "Introduire une abstraction devant l'ancien code, implémenter le nouveau derrière, basculer, puis supprimer l'ancien, sans longue branche Git",
+            "Créer une branche Git par abstraction",
+            "Supprimer toutes les interfaces",
+            "Abstraire la base de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Tout reste intégré sur la branche principale pendant la transition.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ref-strategies-q3",
+          "prompt": "À quoi sert un parallel run ?",
+          "choices": [
+            "À exécuter l'ancien et le nouveau calcul, comparer les résultats, et servir l'ancien tant que la confiance manque",
+            "À lancer les tests en parallèle",
+            "À doubler les serveurs",
+            "À courir plus vite"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les écarts révèlent les règles oubliées, sur des données réelles.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "ref-strategies-q4",
+          "prompt": "Remets dans l'ordre une migration en figuier étrangleur.",
+          "language": "text",
+          "lines": [
+            "Placer une façade (un routage) devant l'ancien système",
+            "Réécrire une fonctionnalité dans le nouveau système",
+            "Router cette fonctionnalité vers le nouveau système",
+            "Recommencer, fonctionnalité par fonctionnalité",
+            "Éteindre l'ancien système"
+          ],
+          "explanation": "Chaque étape apporte de la valeur et peut être annulée.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "ref-strategies-q5",
+          "prompt": "Revue de code, en 2026 : touche la ligne qui pose problème.",
+          "code": "if (toggles.Actif(\"nouveau-calcul-tva-2019\"))\n    return NouveauCalcul(c);\nreturn AncienCalcul(c);",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Un toggle de migration resté sept ans : deux chemins à maintenir et à tester. Une fois la bascule faite, on retire le toggle et l'ancien code.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ref-strategies-q6",
+          "prompt": "Pourquoi éviter une réécriture complète d'un seul bloc ?",
+          "choices": [
+            "Rien n'est livré pendant des mois",
+            "Des règles métier enfouies sont oubliées",
+            "L'ancien système continue d'évoluer pendant ce temps",
+            "Elle est toujours plus rapide"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les réécritures prennent presque toujours bien plus de temps que prévu.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "ref-dette",
+      "title": "La dette technique",
+      "summary": "La mesurer, la prioriser, la rembourser.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Une dette qui coûte des intérêts",
+          "body": "La dette technique est l'écart entre le code actuel et ce qu'il faudrait pour le faire évoluer facilement. Elle peut être volontaire (livrer vite, en le sachant) ou subie. Ses intérêts se paient à chaque changement : plus de temps, plus de bugs. Elle ne coûte rien là où personne ne touche au code."
+        },
+        {
+          "title": "Trouver les points chauds",
+          "body": "Les hotspots sont les fichiers à la fois complexes et souvent modifiés : c'est là que la dette coûte le plus. L'historique Git donne la fréquence des modifications ; on la croise avec la taille ou la complexité.",
+          "code": "git log --format=format: --name-only --since=12.month \\\n  | sort | uniq -c | sort -rn | head",
+          "language": "shell"
+        },
+        {
+          "title": "Rembourser au fil de l'eau",
+          "body": "La règle du boy-scout : laisser le code un peu plus propre qu'on l'a trouvé, dans les zones où l'on travaille. Pour un changement profond, la méthode Mikado tente le changement, note ce qui casse, annule, et traite d'abord les prérequis. Les ADR (Architecture Decision Records) gardent la trace des décisions et de leurs raisons."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ref-dette-q1",
+          "prompt": "Qu'est-ce qu'un hotspot ?",
+          "choices": [
+            "Un fichier à la fois complexe et souvent modifié : là où la dette coûte le plus",
+            "Un serveur qui chauffe",
+            "Le fichier le plus ancien",
+            "Un fichier jamais modifié"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un code complexe mais stable coûte peu.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "ref-dette-q2",
+          "prompt": "Complète : les fichiers les plus souvent modifiés depuis un an.",
+          "code": "git log --format=format: --name-only --since=12.month \\\n  | sort | uniq -___ | sort -rn | head",
+          "language": "shell",
+          "answers": [
+            "c"
+          ],
+          "distractors": [
+            "n",
+            "d",
+            "u"
+          ],
+          "explanation": "uniq -c compte les occurrences de chaque fichier.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ref-dette-q3",
+          "prompt": "Que dit la règle du boy-scout ?",
+          "choices": [
+            "Laisser le code un peu plus propre qu'on l'a trouvé, à chaque passage",
+            "Réécrire tout le code chaque année",
+            "Ne jamais toucher au code des autres",
+            "Camper dans le code"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les zones les plus modifiées s'améliorent naturellement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ref-dette-q4",
+          "prompt": "En quoi consiste la méthode Mikado ?",
+          "choices": [
+            "Tenter un changement, noter les prérequis qui cassent, annuler, et traiter d'abord ces prérequis",
+            "Tout refactorer en une nuit",
+            "Jouer au mikado pendant les rétrospectives",
+            "Supprimer les tests qui cassent"
+          ],
+          "answerIndex": 0,
+          "explanation": "On construit un graphe de dépendances, et on avance par les feuilles, avec un code toujours fonctionnel.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ref-dette-q5",
+          "prompt": "Qu'est-ce qu'un ADR ?",
+          "choices": [
+            "Un document court qui garde une décision d'architecture, son contexte et ses conséquences",
+            "Un outil de déploiement",
+            "Une base de données",
+            "Un type de test"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans deux ans, on saura pourquoi ce choix a été fait.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ref-dette-q6",
+          "prompt": "Quelles sont de bonnes façons de traiter la dette technique ?",
+          "choices": [
+            "Prioriser les zones souvent modifiées",
+            "L'inclure dans le travail courant",
+            "La rendre visible et chiffrée pour le produit",
+            "Tout réécrire tous les deux ans"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une dette expliquée en temps perdu se défend bien auprès du produit.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "ref-defi",
+    "title": "Défi entretien : remplacer la facturation",
+    "summary": "Migration progressive et sans surprise.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "ref-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un monolithe de quinze ans facture les clients ; la direction veut le remplacer. Quelle approche ?",
+        "choices": [
+          "Un remplacement progressif en figuier étrangleur, fonctionnalité par fonctionnalité",
+          "Une réécriture complète livrée dans deux ans",
+          "Ne rien toucher",
+          "Copier la base et recommencer"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque étape apporte de la valeur et limite le risque.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ref-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le nouveau calcul de facture doit produire exactement les mêmes montants que l'ancien. Comment le vérifier ?",
+        "choices": [
+          "Un parallel run : calculer avec les deux, comparer, et servir l'ancien tant qu'il y a des écarts",
+          "Faire confiance aux nouveaux tests unitaires",
+          "Demander aux clients de vérifier leurs factures",
+          "Comparer sur dix factures à la main"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les données réelles révèlent les cas que personne n'avait documentés.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "ref-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le nouveau calcul est prêt. Comment le mettre en service ?",
+        "choices": [
+          "Un feature toggle progressif : 1 %, puis 10 %, puis tout le monde, et retirer le toggle à la fin",
+          "Tout basculer d'un coup",
+          "Le laisser désactivé indéfiniment",
+          "Demander aux clients de choisir"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un problème ne touche qu'une petite part des clients, et se corrige vite.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ref-defi-q4",
+        "prompt": "Par quels fichiers commencer le nettoyage d'une vieille base de code ?",
+        "choices": [
+          "Les hotspots : complexes et souvent modifiés",
+          "Les plus anciens",
+          "Les plus courts",
+          "Au hasard"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est là que l'effort rapporte le plus vite.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ref-defi-q5",
+        "prompt": "Un commit mélange un refactoring et une nouvelle fonctionnalité. Quel est le problème ?",
+        "choices": [
+          "La revue et la recherche d'une régression deviennent difficiles : il faut deux commits séparés",
+          "Aucun",
+          "Le commit sera refusé par Git",
+          "Il sera plus rapide"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un commit de refactoring pur se relit en vérifiant seulement qu'il ne change rien.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "ref-defi-q6",
+        "prompt": "Qu'est-ce qui indique qu'un refactoring s'est fait en sécurité ?",
+        "choices": [
+          "Des tests verts avant et après",
+          "De petites étapes commitées séparément",
+          "Un comportement vérifié comme identique",
+          "Un changement de comportement glissé au passage"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un changement de comportement mérite son propre commit et sa propre revue.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

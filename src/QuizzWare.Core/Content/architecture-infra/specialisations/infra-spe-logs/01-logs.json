@@ -1,0 +1,442 @@
+{
+  "id": "logs-ch-essentiel",
+  "title": "Centralisation des logs : l'essentiel",
+  "summary": "Journaux structurés, collecte et corrélation.",
+  "lessons": [
+    {
+      "id": "logs-structure",
+      "title": "Des journaux exploitables",
+      "summary": "Structure, niveaux et contenu.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Structurer",
+          "body": "Un journal en texte libre se lit à l'œil, mais se filtre mal. Un journal structuré (JSON) donne chaque information dans un champ : horodatage, niveau, message, identifiant de requête, identifiant de commande. On filtre et on agrège alors par champ, sans expressions régulières fragiles.",
+          "code": "{\"ts\":\"2026-10-08T09:12:44Z\",\"niveau\":\"WARN\",\n \"msg\":\"paiement refusé\",\"commande_id\":\"C-8841\",\n \"trace_id\":\"4bf92f3577b34da6\"}",
+          "language": "text"
+        },
+        {
+          "title": "Niveaux et sortie",
+          "body": "DEBUG pour le développement, INFO pour les événements normaux, WARN pour l'anormal non bloquant, ERROR pour un échec. En production, on reste en INFO, et on active DEBUG ponctuellement. Une application en conteneur écrit simplement sur sa sortie standard : la plateforme collecte."
+        },
+        {
+          "title": "Ce qu'on n'écrit pas",
+          "body": "Jamais de mot de passe, de jeton, de numéro de carte, et le moins possible de données personnelles : les journaux sont copiés partout, conservés longtemps et lus par beaucoup de monde. On y met des identifiants internes plutôt que des e-mails.",
+          "code": "log.warning(\"paiement refusé\", extra={\n    \"commande_id\": cmd.id,\n    \"trace_id\": contexte.trace_id,\n})",
+          "language": "python"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "logs-structure-q1",
+          "prompt": "Pourquoi écrire des journaux structurés en JSON ?",
+          "choices": [
+            "Pour filtrer et agréger par champ, sans expressions régulières fragiles",
+            "Pour qu'ils prennent moins de place, toujours",
+            "Parce que le texte est interdit en production",
+            "Pour les chiffrer"
+          ],
+          "answerIndex": 0,
+          "explanation": "« Toutes les erreurs de la commande C-8841 » devient une simple requête.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "logs-structure-q2",
+          "prompt": "Revue de code : touche la ligne problématique.",
+          "code": "log.info(f\"Commande {cmd.id} payée par {client.email}, carte {carte.numero}\")",
+          "language": "python",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Un numéro de carte et un e-mail dans les journaux : violation de PCI DSS et du principe de minimisation. On ne garde que cmd.id.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "logs-structure-q3",
+          "prompt": "Complète : un avertissement relié à la trace de la requête.",
+          "code": "log.___(\"paiement refusé\", extra={\n    \"commande_id\": cmd.id,\n    \"___\": contexte.trace_id,\n})",
+          "language": "python",
+          "answers": [
+            "warning",
+            "trace_id"
+          ],
+          "distractors": [
+            "print",
+            "secret",
+            "password"
+          ],
+          "explanation": "Le trace_id relie ce journal à toute la requête, de service en service.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "logs-structure-q4",
+          "prompt": "Où une application conteneurisée doit-elle écrire ses journaux ?",
+          "choices": [
+            "Sur sa sortie standard (stdout, stderr), collectée par la plateforme",
+            "Dans un fichier à l'intérieur du conteneur",
+            "Directement dans la base de données",
+            "Dans un e-mail"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un fichier dans le conteneur disparaît avec lui et remplit son disque.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "logs-structure-q5",
+          "prompt": "Quel niveau de journalisation utiliser en production ?",
+          "choices": [
+            "INFO (ou WARN), en activant DEBUG ponctuellement pour enquêter",
+            "DEBUG en permanence",
+            "Aucun journal",
+            "ERROR uniquement, toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "DEBUG en permanence multiplie les volumes et les coûts.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "logs-structure-q6",
+          "prompt": "Quels champs sont utiles dans chaque ligne de journal ?",
+          "choices": [
+            "L'horodatage",
+            "Le niveau",
+            "L'identifiant de requête ou de trace",
+            "Le mot de passe saisi"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le service et l'environnement sont souvent ajoutés par l'agent de collecte.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "logs-pipeline",
+      "title": "Collecter et stocker",
+      "summary": "Agents, Loki, Elasticsearch et coûts.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les agents",
+          "body": "Un agent sur chaque machine ou nœud (Fluent Bit, Vector, le collecteur OpenTelemetry) lit les journaux, les analyse, les enrichit (nom du pod, du service, de l'environnement) et les envoie vers un stockage central. Les applications n'ont qu'à écrire sur leur sortie standard."
+        },
+        {
+          "title": "Les stockages",
+          "body": "Elasticsearch (ou OpenSearch) indexe tout le contenu : la recherche plein texte est rapide, mais le stockage coûte cher. Loki n'indexe que quelques labels (service, environnement) et parcourt le contenu à la demande : bien moins cher, à condition de garder peu de labels, à faible cardinalité.",
+          "code": "{app=\"api\", env=\"prod\"} |= \"timeout\" | json | statut >= 500",
+          "language": "text"
+        },
+        {
+          "title": "Maîtriser les volumes",
+          "body": "Les journaux coûtent à l'ingestion et au stockage. On fixe des rétentions différentes selon l'importance (7 jours pour DEBUG, 90 pour les audits), on échantillonne les journaux répétitifs, et on archive à froid ce qui doit être conservé longtemps."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "logs-pipeline-q1",
+          "prompt": "Quel est le rôle d'un agent comme Fluent Bit ou Vector ?",
+          "choices": [
+            "Collecter, transformer et envoyer les journaux vers un stockage central",
+            "Stocker les journaux pour toujours",
+            "Afficher les tableaux de bord",
+            "Remplacer l'application"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il ajoute aussi le contexte : pod, nœud, service.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "logs-pipeline-q2",
+          "prompt": "Quelle différence principale entre Loki et Elasticsearch ?",
+          "choices": [
+            "Loki n'indexe que quelques labels, ce qui coûte moins cher ; Elasticsearch indexe tout le contenu pour une recherche plein texte rapide",
+            "Loki ne stocke que des métriques",
+            "Elasticsearch n'accepte pas le JSON",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le choix dépend du budget et de la façon dont on cherche dans les journaux.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "logs-pipeline-q3",
+          "prompt": "Complète cette requête LogQL : les timeouts de l'API de production ayant renvoyé une erreur 5xx.",
+          "code": "{app=\"api\", env=\"prod\"} |= \"timeout\" | ___ | statut >= 500",
+          "language": "text",
+          "answers": [
+            "json"
+          ],
+          "distractors": [
+            "grep",
+            "parse",
+            "filter"
+          ],
+          "explanation": "| json extrait les champs de chaque ligne, qu'on peut ensuite filtrer.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "logs-pipeline-q4",
+          "prompt": "Depuis ce changement de configuration de l'agent, Loki ralentit et coûte bien plus cher. Touche la ligne en cause.",
+          "code": "labels:\n  app: api\n  env: prod\n  request_id: ${REQUEST_ID}",
+          "language": "yaml",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Un label par requête crée un flux par requête. L'identifiant de requête reste dans le contenu, où on le filtre.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "logs-pipeline-q5",
+          "prompt": "Comment réduire le coût de stockage des journaux ?",
+          "choices": [
+            "Des rétentions selon l'importance, l'échantillonnage des journaux répétitifs et l'archivage à froid",
+            "Tout garder pour toujours dans le stockage le plus rapide",
+            "Passer tous les journaux en DEBUG",
+            "Supprimer les journaux d'erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les journaux d'audit, eux, ont souvent des durées de conservation imposées.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "logs-pipeline-q6",
+          "prompt": "Lesquels sont des outils de collecte de journaux ?",
+          "choices": [
+            "Fluent Bit",
+            "Vector",
+            "Le collecteur OpenTelemetry",
+            "Prometheus"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Prometheus collecte des métriques.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "logs-correlation",
+      "title": "Corréler et enquêter",
+      "summary": "Traces, alertes et audit.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Relier journaux, métriques et traces",
+          "body": "Une requête traverse plusieurs services. En écrivant le trace_id dans chaque ligne de journal, on passe d'une erreur à la trace complète de la requête, puis aux journaux de tous les services concernés. OpenTelemetry propage ce contexte automatiquement. Les horloges synchronisées (NTP) permettent de reconstituer l'ordre des événements."
+        },
+        {
+          "title": "Alerter sur des métriques",
+          "body": "Compter les erreurs dans des journaux pour alerter est coûteux et fragile. On préfère des métriques (un compteur d'erreurs) pour alerter, et les journaux pour enquêter. Écrire une ligne par élément traité dans une boucle de millions d'éléments fait exploser les volumes : un compteur et une ligne de synthèse suffisent.",
+          "code": "log.error(\"échec du paiement\", exc_info=True,\n          extra={\"commande_id\": cmd.id})",
+          "language": "python"
+        },
+        {
+          "title": "Les journaux d'audit",
+          "body": "Les journaux d'audit répondent à « qui a fait quoi, quand » sur les données et actions sensibles. Ils sont stockés à part, protégés contre la modification, et conservés selon les obligations légales, souvent plus longtemps que les journaux techniques."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "logs-correlation-q1",
+          "prompt": "Comment passer d'une ligne d'erreur à la trace complète de la requête qui l'a causée ?",
+          "choices": [
+            "En écrivant le trace_id dans chaque ligne de journal",
+            "En cherchant par horodatage approximatif",
+            "En demandant à l'utilisateur",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "La plupart des outils créent un lien cliquable à partir de ce champ.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "logs-correlation-q2",
+          "prompt": "Pour alerter sur un taux d'erreurs, vaut-il mieux s'appuyer sur les journaux ou sur les métriques ?",
+          "choices": [
+            "Sur les métriques, moins chères et plus fiables ; les journaux servent à enquêter",
+            "Sur les journaux, toujours",
+            "Sur les deux, en double",
+            "Sur aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une métrique est une simple série de nombres ; un journal doit être stocké, analysé et compté.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "logs-correlation-q3",
+          "prompt": "La facture des journaux a triplé depuis ce traitement par lots. Touche la ligne en cause.",
+          "code": "for ligne in lignes:  # 2 millions de lignes\n    importer(ligne)\n    log.info(\"ligne importée\", extra={\"id\": ligne.id})",
+          "language": "python",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Deux millions de lignes de journal sans intérêt. On compte (métrique) et on écrit une ligne de synthèse, plus une ligne par erreur.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "logs-correlation-q4",
+          "prompt": "Complète : journaliser l'erreur avec sa pile d'appels.",
+          "code": "log.error(\"échec du paiement\", ___=True,\n          extra={\"commande_id\": cmd.id})",
+          "language": "python",
+          "answers": [
+            "exc_info"
+          ],
+          "distractors": [
+            "stack",
+            "trace",
+            "error"
+          ],
+          "explanation": "Dans un bloc except, log.exception(…) fait la même chose.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "logs-correlation-q5",
+          "prompt": "Qu'est-ce qui distingue les journaux d'audit ?",
+          "choices": [
+            "Ils tracent qui a fait quoi sur les données sensibles, sont protégés contre la modification et conservés longtemps",
+            "Ils contiennent les mots de passe",
+            "Ils sont supprimés chaque nuit",
+            "Ils ne concernent que le débogage"
+          ],
+          "answerIndex": 0,
+          "explanation": "On les stocke à part, avec des accès très restreints.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "logs-correlation-q6",
+          "prompt": "Quels sont les trois piliers de l'observabilité ?",
+          "choices": [
+            "Les journaux",
+            "Les métriques",
+            "Les traces",
+            "Les sauvegardes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "OpenTelemetry couvre les trois avec un même modèle de contexte.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "logs-defi",
+    "title": "Défi entretien : l'erreur introuvable",
+    "summary": "Centraliser, corréler, maîtriser les coûts.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "logs-defi-q1",
+        "prompt": "Cas pratique 1/3 — « Erreur 500 sur le paiement » : 12 services, des journaux en texte libre sur chaque machine. Quelle est la principale difficulté ?",
+        "choices": [
+          "Les journaux ne sont ni centralisés ni reliés entre eux : impossible de suivre la requête",
+          "Il y a trop de services",
+          "Les machines sont trop lentes",
+          "Les journaux sont en français"
+        ],
+        "answerIndex": 0,
+        "explanation": "Il faudrait se connecter à 12 machines et deviner quelles lignes vont ensemble.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "logs-defi-q2",
+        "prompt": "Cas pratique 2/3 — Que mettre en place ?",
+        "choices": [
+          "Des journaux JSON sur la sortie standard, une collecte centralisée, et un trace_id propagé entre services",
+          "Un fichier texte partagé sur un serveur NFS",
+          "Des captures d'écran",
+          "Un e-mail par erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "On retrouve alors tous les journaux d'une requête en une recherche.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "logs-defi-q3",
+        "prompt": "Cas pratique 3/3 — Un mois plus tard, la facture des journaux explose. Que faire ?",
+        "choices": [
+          "Revoir les niveaux, échantillonner, ajuster les rétentions, et remplacer les journaux de comptage par des métriques",
+          "Supprimer la collecte",
+          "Passer en DEBUG pour mieux comprendre",
+          "Payer"
+        ],
+        "answerIndex": 0,
+        "explanation": "On mesure d'abord quels services et quels messages produisent le plus de volume.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "logs-defi-q4",
+        "prompt": "Les journaux contiennent les e-mails des clients. Quelle obligation s'applique ?",
+        "choices": [
+          "Minimiser ou masquer ces données, et limiter leur durée de conservation (RGPD)",
+          "Aucune, ce sont des journaux techniques",
+          "Les publier",
+          "Les envoyer aux clients chaque mois"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un identifiant interne suffit presque toujours pour enquêter.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "logs-defi-q5",
+        "prompt": "Configuration de production : touche la ligne problématique.",
+        "code": "logging:\n  level:\n    root: DEBUG",
+        "language": "yaml",
+        "bugLines": [
+          3
+        ],
+        "explanation": "DEBUG en permanence multiplie les volumes et risque d'exposer des données internes. INFO, avec DEBUG ciblé et temporaire.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "logs-defi-q6",
+        "prompt": "Que contient une bonne ligne de journal d'erreur ?",
+        "choices": [
+          "Un message clair",
+          "Le trace_id",
+          "Le contexte métier (identifiant de commande)",
+          "Le corps complet de la requête, mot de passe compris"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Et la pile d'appels, pour une exception.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,442 @@
+{
+  "id": "glci-ch-essentiel",
+  "title": "GitLab CI : l'essentiel",
+  "summary": "Stages, règles et déploiements.",
+  "lessons": [
+    {
+      "id": "glci-bases",
+      "title": "Stages, jobs et runners",
+      "summary": "La structure d'un pipeline.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le fichier .gitlab-ci.yml",
+          "body": "À la racine du dépôt, .gitlab-ci.yml décrit le pipeline. Les stages s'exécutent l'un après l'autre (build, test, deploy) ; les jobs d'un même stage tournent en parallèle. Chaque job exécute son script dans un conteneur (image) sur un runner.",
+          "code": "stages: [build, test, deploy]\n\nbuild:\n  stage: build\n  image: node:22\n  script:\n    - npm ci\n    - npm run build\n  artifacts:\n    paths: [dist/]",
+          "language": "yaml"
+        },
+        {
+          "title": "Artefacts et variables",
+          "body": "Les artefacts transmettent des fichiers aux jobs des stages suivants (un dossier dist, un rapport). Des variables prédéfinies décrivent le contexte : CI_COMMIT_BRANCH, CI_PIPELINE_SOURCE, CI_PROJECT_NAME, CI_REGISTRY_IMAGE…"
+        },
+        {
+          "title": "Les règles",
+          "body": "rules décide si un job s'exécute, et comment : selon la branche, l'origine du pipeline (merge request, push, planification), les fichiers modifiés (changes). C'est la syntaxe actuelle, plus expressive que les anciens only et except."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "glci-bases-q1",
+          "prompt": "Dans quel ordre s'exécutent les jobs d'un pipeline GitLab ?",
+          "choices": [
+            "Stage par stage ; les jobs d'un même stage tournent en parallèle",
+            "Tous en parallèle, sans ordre",
+            "Strictement un par un, dans l'ordre du fichier",
+            "Par ordre alphabétique"
+          ],
+          "answerIndex": 0,
+          "explanation": "needs permet de s'affranchir de cet ordre strict.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "glci-bases-q2",
+          "prompt": "Complète ce job de tests.",
+          "code": "tests:\n  ___: test\n  image: node:22\n  ___:\n    - npm ci\n    - npm test",
+          "language": "yaml",
+          "answers": [
+            "stage",
+            "script"
+          ],
+          "distractors": [
+            "step",
+            "run",
+            "commands"
+          ],
+          "explanation": "run est la syntaxe de GitHub Actions.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "glci-bases-q3",
+          "prompt": "Le job deploy ne trouve pas le dossier dist/. Touche la ligne du job qui aurait dû le transmettre.",
+          "code": "build:\n  stage: build\n  script: npm run build\n\ndeploy:\n  stage: deploy\n  script: ./deploy.sh dist/",
+          "language": "yaml",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Chaque job démarre dans un environnement neuf ; build doit déclarer artifacts: paths: [dist/] pour transmettre son résultat.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "glci-bases-q4",
+          "prompt": "Où s'exécute le script d'un job ?",
+          "choices": [
+            "Dans un conteneur (l'image du job) sur un runner",
+            "Sur le serveur GitLab lui-même",
+            "Dans le navigateur du développeur",
+            "Dans la base de données de GitLab"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les runners peuvent être partagés par GitLab ou installés par l'équipe.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "glci-bases-q5",
+          "prompt": "Pourquoi préférer rules à only et except ?",
+          "choices": [
+            "rules est la syntaxe actuelle, plus expressive : conditions, fichiers modifiés, mode d'exécution",
+            "only et except sont plus rapides",
+            "rules ne fonctionne que sur main",
+            "Il n'y a aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ne peut pas mélanger rules avec only/except dans un même job.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "glci-bases-q6",
+          "prompt": "Lesquelles sont des variables prédéfinies de GitLab CI ?",
+          "choices": [
+            "CI_COMMIT_BRANCH",
+            "CI_PIPELINE_ID",
+            "CI_PROJECT_NAME",
+            "CI_ADMIN_PASSWORD"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les secrets sont des variables définies par l'équipe, protégées et masquées.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "glci-avance",
+      "title": "Règles, cache et dépendances",
+      "summary": "Des pipelines rapides et ciblés.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Cache ou artefacts",
+          "body": "Le cache accélère les jobs en réutilisant des fichiers d'une exécution à l'autre (node_modules, ~/.m2), sans garantie de présence ; sa clé dépend idéalement du fichier de verrouillage. Les artefacts, eux, transmettent de façon fiable les résultats d'un job aux suivants."
+        },
+        {
+          "title": "needs et rules",
+          "body": "needs fait démarrer un job dès que les jobs dont il dépend sont terminés, sans attendre la fin de tout le stage précédent : le pipeline devient un graphe. rules permet de n'exécuter un job que sur certaines branches, dans les merge requests, ou quand certains fichiers changent ; when: manual le transforme en bouton.",
+          "code": "deploy:\n  stage: deploy\n  script: ./deploy.sh\n  rules:\n    - if: $CI_COMMIT_BRANCH == \"main\"\n      when: manual",
+          "language": "yaml"
+        },
+        {
+          "title": "Réutiliser et protéger",
+          "body": "include importe des fichiers de configuration (d'autres dépôts, des modèles), extends hérite d'un job modèle, les ancres YAML évitent les répétitions. Une variable protégée n'est disponible que dans les pipelines des branches et tags protégés ; une variable masquée n'apparaît pas dans les journaux."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "glci-avance-q1",
+          "prompt": "Quelle différence entre cache et artifacts ?",
+          "choices": [
+            "Le cache accélère d'une exécution à l'autre, sans garantie ; les artefacts transmettent de façon fiable les résultats aux jobs suivants",
+            "Aucune",
+            "Les artefacts sont plus rapides que le cache",
+            "Le cache est réservé aux images Docker"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un job ne doit jamais dépendre de la présence du cache pour fonctionner.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "glci-avance-q2",
+          "prompt": "Complète : déployer depuis main seulement après un clic.",
+          "code": "deploy:\n  stage: deploy\n  script: ./deploy.sh\n  rules:\n    - if: $CI_COMMIT_BRANCH == \"main\"\n      when: ___",
+          "language": "yaml",
+          "answers": [
+            "manual"
+          ],
+          "distractors": [
+            "never",
+            "on_success",
+            "always"
+          ],
+          "explanation": "Le job apparaît comme un bouton dans le pipeline.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "glci-avance-q3",
+          "prompt": "À quoi sert needs ?",
+          "choices": [
+            "À démarrer un job dès que ses dépendances sont terminées, sans attendre tout le stage précédent",
+            "À rendre un job obligatoire",
+            "À installer des dépendances npm",
+            "À bloquer le pipeline"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les tests du service A n'attendent plus le build du service B.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "glci-avance-q4",
+          "prompt": "Des déploiements partent depuis des merge requests non relues. Touche la ligne en cause.",
+          "code": "deploy:\n  script: aws s3 sync dist/ s3://site-prod\n  rules:\n    - if: $CI_PIPELINE_SOURCE == \"merge_request_event\"",
+          "language": "yaml",
+          "bugLines": [
+            4
+          ],
+          "explanation": "La règle déclenche le déploiement dans les pipelines de merge request. On le limite à la branche par défaut, après fusion.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "glci-avance-q5",
+          "prompt": "Qu'est-ce qu'une variable protégée ?",
+          "choices": [
+            "Une variable disponible seulement dans les pipelines des branches et tags protégés",
+            "Une variable chiffrée sur le disque du développeur",
+            "Une variable impossible à modifier",
+            "Une variable visible par tous les projets"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une branche de fonctionnalité ne peut donc pas lire les secrets de production.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "glci-avance-q6",
+          "prompt": "Comment éviter de répéter la configuration ?",
+          "choices": [
+            "include",
+            "extends",
+            "Les ancres YAML",
+            "Dupliquer chaque job"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les composants du catalogue CI/CD de GitLab poussent l'idée plus loin.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "glci-production",
+      "title": "Déployer avec GitLab",
+      "summary": "Environnements, OIDC et runners.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Environnements",
+          "body": "Un job de déploiement déclare son environnement (production, staging) : GitLab garde l'historique des déploiements et permet de revenir à une version. Les review apps créent un environnement temporaire par merge request, détruit à sa fermeture. Un environnement protégé exige une approbation."
+        },
+        {
+          "title": "Identifiants sans secret",
+          "body": "Avec id_tokens, un job reçoit un jeton OIDC signé par GitLab, qu'il échange contre des identifiants temporaires chez le fournisseur cloud. On n'a plus de clé longue à stocker en variable.",
+          "code": "deploy:\n  id_tokens:\n    AWS_TOKEN:\n      aud: sts.amazonaws.com\n  script:\n    - ./assume-role.sh",
+          "language": "yaml"
+        },
+        {
+          "title": "Runners et images",
+          "body": "Un runner partagé en mode privilégié permet à un job de prendre le contrôle de la machine, et d'accéder aux données des autres projets. Pour construire des images sans privilège, on utilise kaniko ou buildah plutôt que Docker-in-Docker. Les pipelines parent-enfant découpent un monorepo : un sous-pipeline par service."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "glci-production-q1",
+          "prompt": "Qu'est-ce qu'une review app ?",
+          "choices": [
+            "Un environnement temporaire déployé pour chaque merge request, détruit à sa fermeture",
+            "Une application de revue de code",
+            "Un environnement de production en lecture seule",
+            "Un tableau de bord des pipelines"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les relecteurs testent la modification en conditions réelles avant la fusion.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "glci-production-q2",
+          "prompt": "Complète : demander un jeton OIDC destiné à AWS.",
+          "code": "deploy:\n  ___:\n    AWS_TOKEN:\n      aud: sts.amazonaws.com\n  script:\n    - ./assume-role.sh",
+          "language": "yaml",
+          "answers": [
+            "id_tokens"
+          ],
+          "distractors": [
+            "secrets",
+            "oidc",
+            "tokens"
+          ],
+          "explanation": "Le jeton est fourni dans la variable AWS_TOKEN, avec l'audience demandée.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "glci-production-q3",
+          "prompt": "Comment construire des images de conteneur dans GitLab CI sans mode privilégié ?",
+          "choices": [
+            "Avec kaniko ou buildah",
+            "Avec Docker-in-Docker privilégié",
+            "Directement sur le serveur GitLab",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ces outils construisent l'image sans avoir besoin d'un démon Docker.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "glci-production-q4",
+          "prompt": "Pourquoi un runner partagé en mode privilégié est-il risqué ?",
+          "choices": [
+            "Un job peut prendre le contrôle de la machine et accéder aux données des autres projets",
+            "Il est plus lent",
+            "Il ne gère pas les artefacts",
+            "Il ne peut pas utiliser de cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le mode privilégié lève l'isolation du conteneur.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "glci-production-q5",
+          "prompt": "À quoi servent les pipelines parent-enfant ?",
+          "choices": [
+            "À déclencher des sous-pipelines, par exemple un par service d'un monorepo",
+            "À copier un pipeline dans un autre projet",
+            "À relancer un pipeline échoué",
+            "À fusionner deux branches"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec rules: changes, seuls les services modifiés sont reconstruits.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "glci-production-q6",
+          "prompt": "Quelles sont de bonnes pratiques de déploiement avec GitLab ?",
+          "choices": [
+            "Des variables protégées et masquées pour les secrets",
+            "OIDC plutôt que des clés longues",
+            "Des jobs de production manuels ou limités aux branches protégées",
+            "Un runner partagé privilégié pour tous les projets"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les jobs sensibles tournent sur des runners dédiés, isolés.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "glci-defi",
+    "title": "Défi entretien : le pipeline de 40 minutes",
+    "summary": "Monorepo, dépendances et contrôle.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "glci-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un monorepo de 6 services reconstruit tout à chaque commit : 40 minutes. Premier levier ?",
+        "choices": [
+          "rules: changes par service, ou un pipeline enfant par service, pour ne reconstruire que ce qui change",
+          "Des runners plus puissants uniquement",
+          "Un seul job qui fait tout",
+          "Construire une fois par semaine"
+        ],
+        "answerIndex": 0,
+        "explanation": "La plupart des commits ne touchent qu'un service.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "glci-defi-q2",
+        "prompt": "Cas pratique 2/3 — Les tests du service A attendent la fin du build de tous les services. Que faire ?",
+        "choices": [
+          "Déclarer needs: [build-a] sur le job de tests de A",
+          "Fusionner tous les stages",
+          "Supprimer le stage build",
+          "Mettre allow_failure: true"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le pipeline devient un graphe : chaque chaîne avance à son rythme.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "glci-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment exiger une validation avant chaque déploiement en production ?",
+        "choices": [
+          "Un job manuel ciblant un environnement production protégé, avec approbation",
+          "Un message dans le canal de l'équipe",
+          "Un job automatique sur chaque merge request",
+          "Une variable non protégée"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'approbation et l'historique des déploiements sont tracés par GitLab.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "glci-defi-q4",
+        "prompt": "De quoi doit dépendre la clé du cache de node_modules ?",
+        "choices": [
+          "Du fichier package-lock.json (cache:key:files)",
+          "De la date du jour",
+          "Du nom du développeur",
+          "Du numéro du pipeline"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le cache est réutilisé tant que les dépendances ne changent pas.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "glci-defi-q5",
+        "prompt": "Des merge requests sont fusionnées alors que leurs tests échouent. Touche la ligne en cause.",
+        "code": "tests:\n  stage: test\n  script: npm test\n  allow_failure: true",
+        "language": "yaml",
+        "bugLines": [
+          4
+        ],
+        "explanation": "allow_failure laisse le pipeline réussir malgré l'échec du job : les tests ne protègent plus rien.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "glci-defi-q6",
+        "prompt": "Quels éléments composent un pipeline GitLab CI ?",
+        "choices": [
+          "Des stages",
+          "Des jobs",
+          "Des runners qui les exécutent",
+          "Des fichiers dans .github/workflows"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": ".github/workflows est l'emplacement des workflows de GitHub Actions.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

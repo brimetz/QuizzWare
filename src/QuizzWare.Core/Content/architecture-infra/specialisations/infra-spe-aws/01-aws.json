@@ -1,0 +1,444 @@
+{
+  "id": "aws-ch-essentiel",
+  "title": "AWS : l'essentiel",
+  "summary": "IAM, services clés et architecture.",
+  "lessons": [
+    {
+      "id": "aws-bases",
+      "title": "Régions et IAM",
+      "summary": "Où vivent les ressources, et qui y a droit.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Régions et zones",
+          "body": "AWS est découpé en régions (eu-west-3 à Paris, us-east-1 en Virginie), chacune composée de plusieurs zones de disponibilité : des centres de données indépendants, reliés par un réseau rapide. Une architecture résistante répartit ses ressources sur au moins deux zones."
+        },
+        {
+          "title": "IAM et les politiques",
+          "body": "IAM contrôle qui peut faire quoi. Une politique JSON liste des autorisations : Effect (Allow ou Deny), Action, Resource. Tout est refusé par défaut, et un Deny explicite l'emporte toujours sur un Allow. On applique le moindre privilège : les actions et ressources nécessaires, pas s3:* sur *.",
+          "code": "{\n  \"Effect\": \"Allow\",\n  \"Action\": [\"s3:GetObject\"],\n  \"Resource\": \"arn:aws:s3:::acme-factures/*\"\n}",
+          "language": "text"
+        },
+        {
+          "title": "Rôles plutôt que clés",
+          "body": "Une instance EC2, une fonction Lambda ou un pod obtiennent leurs droits par un rôle IAM, qui fournit des identifiants temporaires renouvelés automatiquement : aucune clé d'accès à stocker. Le compte root est protégé par MFA, sans clé d'accès, et n'est utilisé que pour les rares tâches qui l'exigent."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "aws-bases-q1",
+          "prompt": "Quelle différence entre une région et une zone de disponibilité ?",
+          "choices": [
+            "Une région est une zone géographique qui contient plusieurs zones de disponibilité, des centres de données indépendants",
+            "Ce sont deux noms pour la même chose",
+            "Une zone contient plusieurs régions",
+            "Une région est un seul centre de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une panne de zone ne doit pas arrêter une application répartie sur plusieurs zones.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "aws-bases-q2",
+          "prompt": "Cette application doit seulement lire les factures du bucket acme-factures. Touche une ligne trop permissive.",
+          "code": "{\n  \"Effect\": \"Allow\",\n  \"Action\": \"s3:*\",\n  \"Resource\": \"*\"\n}",
+          "language": "text",
+          "bugLines": [
+            3,
+            4
+          ],
+          "explanation": "Toutes les actions S3 sur tous les buckets : suppression comprise. Il faut s3:GetObject sur arn:aws:s3:::acme-factures/*.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "aws-bases-q3",
+          "prompt": "Comment une fonction Lambda obtient-elle le droit de lire une table DynamoDB, sans clé d'accès ?",
+          "choices": [
+            "Par un rôle IAM d'exécution, qui fournit des identifiants temporaires",
+            "Avec une clé d'accès dans une variable d'environnement",
+            "Avec le mot de passe du compte root",
+            "Les Lambda ont tous les droits par défaut"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des identifiants temporaires limitent l'impact d'une fuite.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "aws-bases-q4",
+          "prompt": "Complète : autoriser seulement la lecture des objets du bucket des factures.",
+          "code": "{\n  \"Effect\": \"___\",\n  \"Action\": [\"s3:___\"],\n  \"Resource\": \"arn:aws:s3:::acme-factures/*\"\n}",
+          "language": "text",
+          "answers": [
+            "Allow",
+            "GetObject"
+          ],
+          "distractors": [
+            "Permit",
+            "Read",
+            "ListBucket"
+          ],
+          "explanation": "ListBucket s'applique au bucket lui-même (arn:aws:s3:::acme-factures), pas aux objets.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "aws-bases-q5",
+          "prompt": "Quelle est la bonne pratique pour le compte root ?",
+          "choices": [
+            "MFA activée, aucune clé d'accès, utilisation réservée aux rares tâches qui l'exigent",
+            "L'utiliser au quotidien pour aller plus vite",
+            "Partager son mot de passe avec l'équipe",
+            "Lui créer des clés d'accès pour la CI"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le root a tous les droits, sans restriction possible par IAM.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "aws-bases-q6",
+          "prompt": "Quelles affirmations sur l'évaluation des politiques IAM sont vraies ?",
+          "choices": [
+            "Par défaut, tout est refusé",
+            "Un Deny explicite l'emporte sur un Allow",
+            "Les SCP d'une organisation peuvent restreindre un compte entier",
+            "Un Allow l'emporte toujours sur un Deny"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un Deny dans une SCP bloque même un administrateur du compte.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "aws-services",
+      "title": "Les services clés",
+      "summary": "Calcul, stockage, bases et messages.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Calcul",
+          "body": "EC2 fournit des machines virtuelles ; ECS et EKS orchestrent des conteneurs, sur des instances ou sans serveur à gérer avec Fargate ; Lambda exécute des fonctions à la demande, facturées à la milliseconde : idéal pour un trafic irrégulier, moins pour une charge continue et élevée."
+        },
+        {
+          "title": "Stockage et bases",
+          "body": "S3 stocke des objets (fichiers) avec une très haute durabilité, des classes de stockage moins chères pour les données froides, le versionnement, et un blocage de l'accès public à activer partout. EBS fournit des disques attachés à une instance dans une zone. RDS et Aurora gèrent des bases relationnelles ; Multi-AZ maintient une copie synchrone dans une autre zone, basculée automatiquement. DynamoDB est une base clé-valeur gérée.",
+          "code": "aws s3 sync ./build s3://acme-site --delete\naws s3api put-public-access-block --bucket acme-site \\\n  --public-access-block-configuration BlockPublicAcls=true",
+          "language": "shell"
+        },
+        {
+          "title": "Messages",
+          "body": "SQS est une file : chaque message est traité par un consommateur, avec une file de messages en erreur pour les échecs répétés. SNS diffuse un message à plusieurs abonnés. EventBridge route des événements selon des règles. Ces services découplent les composants et absorbent les pics."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "aws-services-q1",
+          "prompt": "Complète : publier le site statique en supprimant les fichiers qui n'existent plus localement.",
+          "code": "aws s3 ___ ./build s3://acme-site --delete",
+          "language": "shell",
+          "answers": [
+            "sync"
+          ],
+          "distractors": [
+            "copy",
+            "push",
+            "upload"
+          ],
+          "explanation": "sync n'envoie que les fichiers modifiés ; --delete retire ceux qui ont disparu.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "aws-services-q2",
+          "prompt": "À quoi sert l'option Multi-AZ de RDS ?",
+          "choices": [
+            "À la haute disponibilité : une copie synchrone dans une autre zone, basculée automatiquement",
+            "À répartir les lectures sur plusieurs serveurs",
+            "À chiffrer la base",
+            "À réduire la facture"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les réplicas en lecture, eux, servent à répartir les lectures.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "aws-services-q3",
+          "prompt": "Une API reçoit quelques requêtes par heure, avec de rares pics. Quel service de calcul est le plus économique ?",
+          "choices": [
+            "Lambda",
+            "Une grosse instance EC2 allumée en permanence",
+            "Un cluster EKS dédié",
+            "Une instance réservée sur trois ans"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ne paie que les exécutions ; une instance coûte même quand elle ne fait rien.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "aws-services-q4",
+          "prompt": "Revue de sécurité : ce bucket contient des factures clients. Touche la ligne en cause.",
+          "code": "aws s3api put-bucket-acl --bucket acme-factures \\\n  --acl public-read",
+          "language": "shell",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Les factures deviennent lisibles par n'importe qui sur Internet. On bloque l'accès public et on sert les fichiers par des URL présignées.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "aws-services-q5",
+          "prompt": "Quelle différence entre SQS et SNS ?",
+          "choices": [
+            "SQS est une file où chaque message est traité par un consommateur ; SNS diffuse un message à plusieurs abonnés",
+            "Ce sont deux noms pour le même service",
+            "SNS stocke les messages, SQS non",
+            "SQS envoie des SMS"
+          ],
+          "answerIndex": 0,
+          "explanation": "On les combine souvent : un SNS diffuse vers plusieurs files SQS.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "aws-services-q6",
+          "prompt": "Quels services AWS exécutent du code ?",
+          "choices": [
+            "EC2",
+            "Lambda",
+            "Fargate",
+            "S3"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "S3 stocke des objets ; il peut servir un site statique, mais n'exécute pas de code.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "aws-architecture",
+      "title": "Architecture et coûts",
+      "summary": "VPC, haute disponibilité et facture.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le réseau",
+          "body": "Un VPC est un réseau privé, découpé en sous-réseaux par zone. Les sous-réseaux publics accueillent les répartiteurs de charge ; les sous-réseaux privés, les applications et les bases. Les groupes de sécurité filtrent au niveau de chaque interface et sont à états (une réponse est autorisée automatiquement) ; les NACL filtrent au niveau du sous-réseau, sans état."
+        },
+        {
+          "title": "Bien architecturer",
+          "body": "Le cadre Well-Architected d'AWS repose sur six piliers : excellence opérationnelle, sécurité, fiabilité, efficacité des performances, optimisation des coûts et durabilité. CloudWatch collecte métriques et journaux ; CloudTrail enregistre chaque appel d'API : qui a fait quoi, et quand.",
+          "code": "Excellence opérationnelle\nSécurité\nFiabilité\nEfficacité des performances\nOptimisation des coûts\nDurabilité",
+          "language": "text"
+        },
+        {
+          "title": "Maîtriser la facture",
+          "body": "Des budgets avec alertes, des étiquettes (tags) par équipe et projet, des instances à la bonne taille, des Savings Plans pour la charge stable et des instances Spot (jusqu'à 90 % moins chères, mais reprises avec un court préavis) pour les traitements interruptibles. Les pièges classiques : le trafic sortant vers Internet et les NAT Gateways facturés au Go, et les environnements de test allumés la nuit."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "aws-architecture-q1",
+          "prompt": "Quelle différence entre un groupe de sécurité et une NACL ?",
+          "choices": [
+            "Le groupe de sécurité est à états et s'applique à une interface ; la NACL est sans état et s'applique à un sous-réseau",
+            "Le groupe de sécurité filtre le sous-réseau, la NACL l'instance",
+            "Ce sont deux noms pour la même chose",
+            "Les NACL ne servent qu'à IPv6"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec une NACL, il faut autoriser explicitement le trafic de retour.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "aws-architecture-q2",
+          "prompt": "Dans quel type de sous-réseau placer une base RDS ?",
+          "choices": [
+            "Un sous-réseau privé, accessible seulement depuis l'application",
+            "Un sous-réseau public, pour y accéder facilement",
+            "N'importe lequel, c'est identique",
+            "Hors du VPC"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une base n'a aucune raison d'être joignable depuis Internet.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "aws-architecture-q3",
+          "prompt": "La facture montre un poste NAT Gateway énorme. Cause probable ?",
+          "choices": [
+            "Beaucoup de trafic sortant des sous-réseaux privés (téléchargements, appels vers S3 sans endpoint de VPC), facturé au Go",
+            "Trop d'utilisateurs IAM",
+            "Des buckets S3 vides",
+            "Un nombre trop élevé de groupes de sécurité"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un endpoint de passerelle pour S3 et DynamoDB fait passer ce trafic hors du NAT, gratuitement.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "aws-architecture-q4",
+          "prompt": "Complète les six piliers du cadre Well-Architected.",
+          "code": "Excellence opérationnelle\nSécurité\nFiabilité\nEfficacité des performances\nOptimisation des ___\n___",
+          "language": "text",
+          "answers": [
+            "coûts",
+            "Durabilité"
+          ],
+          "distractors": [
+            "ventes",
+            "Vitesse",
+            "Marketing"
+          ],
+          "explanation": "La durabilité, ajoutée en 2021, vise à réduire l'impact environnemental.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "aws-architecture-q5",
+          "prompt": "Règles entrantes du groupe de sécurité de la base PostgreSQL : touche la ligne en cause.",
+          "code": "Entrée : TCP 5432 depuis 0.0.0.0/0\nEntrée : TCP 5432 depuis sg-application",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "La base est ouverte au monde entier. Seule la seconde règle, limitée au groupe de l'application, est nécessaire.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "aws-architecture-q6",
+          "prompt": "Comment maîtriser les coûts sur AWS ?",
+          "choices": [
+            "Des budgets avec alertes",
+            "Des étiquettes par équipe et projet",
+            "Des Savings Plans ou des instances Spot selon la charge",
+            "Laisser tourner les environnements de test la nuit et le week-end"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Éteindre les environnements hors des heures de travail économise près des deux tiers de leur coût.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "aws-defi",
+    "title": "Défi entretien : la zone qui tombe",
+    "summary": "Haute disponibilité, droits et traçabilité.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "aws-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une startup héberge son API et sa base sur une seule instance EC2, dans une zone. La zone tombe : 4 heures d'arrêt. Quelle architecture viser ?",
+        "choices": [
+          "L'API sur plusieurs zones derrière un répartiteur de charge, et une base RDS Multi-AZ",
+          "Une instance EC2 plus puissante",
+          "Des sauvegardes quotidiennes, sans rien changer d'autre",
+          "Une seconde instance dans la même zone"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque composant doit survivre à la perte d'une zone.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "aws-defi-q2",
+        "prompt": "Cas pratique 2/3 — L'API doit lire des fichiers privés dans S3. Comment lui donner l'accès ?",
+        "choices": [
+          "Un rôle IAM attaché, limité à s3:GetObject sur ce bucket",
+          "Une clé d'accès administrateur dans le code",
+          "Rendre le bucket public",
+          "Le compte root"
+        ],
+        "answerIndex": 0,
+        "explanation": "Moindre privilège et identifiants temporaires.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "aws-defi-q3",
+        "prompt": "Cas pratique 3/3 — Un bucket a été supprimé hier. Comment savoir qui l'a fait ?",
+        "choices": [
+          "Avec CloudTrail, qui enregistre les appels d'API",
+          "Avec CloudWatch Metrics",
+          "En demandant à l'équipe",
+          "C'est impossible"
+        ],
+        "answerIndex": 0,
+        "explanation": "On y trouve l'identité, l'heure, l'adresse IP et la requête.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "aws-defi-q4",
+        "prompt": "Une clé d'accès AWS a été publiée par erreur sur GitHub. Que faire en premier ?",
+        "choices": [
+          "La désactiver immédiatement, puis analyser son utilisation dans CloudTrail",
+          "Supprimer le commit",
+          "Rendre le dépôt privé",
+          "Attendre de voir si elle est utilisée"
+        ],
+        "answerIndex": 0,
+        "explanation": "Des robots exploitent ce genre de clé en quelques minutes, souvent pour miner des cryptomonnaies.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "aws-defi-q5",
+        "prompt": "Pourquoi les instances Spot conviennent-elles à des traitements par lots, mais pas à la base de données principale ?",
+        "choices": [
+          "Elles peuvent être reprises par AWS avec un préavis de deux minutes",
+          "Elles sont plus lentes",
+          "Elles n'ont pas de réseau",
+          "Elles ne fonctionnent que la nuit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un traitement interruptible reprend ailleurs ; une base primaire ne doit pas disparaître.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "aws-defi-q6",
+        "prompt": "Quelles sont de bonnes pratiques de sécurité sur AWS ?",
+        "choices": [
+          "La MFA partout, en particulier sur le compte root",
+          "Des rôles et des identifiants temporaires plutôt que des clés longues",
+          "Le blocage de l'accès public S3 au niveau du compte",
+          "Un seul compte pour la production et le développement"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Des comptes séparés isolent la production des expériences et des erreurs.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

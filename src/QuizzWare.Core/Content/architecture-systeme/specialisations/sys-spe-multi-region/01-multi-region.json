@@ -1,0 +1,439 @@
+{
+  "id": "mr-ch-essentiel",
+  "title": "Multi-régions : l'essentiel",
+  "summary": "Disponibilité et latence à l'échelle mondiale.",
+  "lessons": [
+    {
+      "id": "mr-pourquoi",
+      "title": "Pourquoi plusieurs régions",
+      "summary": "Objectifs, modèles et coûts.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Trois raisons",
+          "body": "La latence : servir les utilisateurs depuis une région proche. La disponibilité : survivre à la panne d'une région entière, ce que plusieurs zones d'une même région ne couvrent pas. La conformité : garder certaines données dans un pays. Sans l'un de ces besoins, plusieurs zones de disponibilité suffisent souvent."
+        },
+        {
+          "title": "RTO et RPO",
+          "body": "Le RTO est la durée d'interruption acceptable ; le RPO, la quantité de données qu'on accepte de perdre, exprimée en temps. Un RPO de 5 minutes accepte de perdre les 5 dernières minutes d'écritures ; un RTO d'une heure exige un service rétabli en moins d'une heure. Ils guident tous les choix qui suivent.",
+          "code": "RPO = 5 min → au plus 5 minutes de données perdues\nRTO = 1 h   → service rétabli en moins d'une heure",
+          "language": "text"
+        },
+        {
+          "title": "Actif-passif ou actif-actif",
+          "body": "En actif-passif, une région sert le trafic et l'autre attend, avec des données répliquées, prête à prendre le relais. En actif-actif, toutes les régions servent en même temps : meilleure latence et pas de bascule à froid, mais des conflits d'écriture à gérer. Dans tous les cas, le coût et la complexité augmentent nettement."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mr-pourquoi-q1",
+          "prompt": "Quelle différence entre RTO et RPO ?",
+          "choices": [
+            "Le RTO est la durée d'interruption acceptable ; le RPO, la perte de données acceptable, en temps",
+            "Ce sont deux noms pour la même chose",
+            "Le RPO concerne le réseau, le RTO le stockage",
+            "Le RTO est un coût, le RPO une latence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Recovery Time Objective et Recovery Point Objective.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mr-pourquoi-q2",
+          "prompt": "Que signifie une architecture actif-passif ?",
+          "choices": [
+            "Une région sert le trafic, l'autre attend en secours avec des données répliquées",
+            "Les deux régions servent en même temps",
+            "Une seule région, sans secours",
+            "Les utilisateurs choisissent leur région"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le modèle le plus simple pour survivre à la panne d'une région.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mr-pourquoi-q3",
+          "prompt": "Quelle raison justifie une architecture multi-régions ?",
+          "choices": [
+            "Devoir survivre à la panne d'une région entière, servir des utilisateurs partout dans le monde, ou garder des données dans un pays",
+            "Avoir plus de serveurs",
+            "Suivre une mode",
+            "Réduire le coût"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le multi-régions coûte cher : il doit répondre à un besoin précis.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mr-pourquoi-q4",
+          "prompt": "Que couvre un déploiement sur plusieurs zones d'une même région ?",
+          "choices": [
+            "La panne d'un centre de données (une zone), pas celle de toute la région",
+            "La panne de toute la région",
+            "La panne de tous les fournisseurs cloud",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le premier niveau de haute disponibilité, bien moins coûteux.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "mr-pourquoi-q5",
+          "prompt": "Complète la signification de ces objectifs.",
+          "code": "RPO = 5 min → on accepte de perdre au plus ___ minutes de données\nRTO = 1 h   → le service est rétabli en moins d'une ___",
+          "language": "text",
+          "answers": [
+            "5",
+            "heure"
+          ],
+          "distractors": [
+            "60",
+            "minute",
+            "journée"
+          ],
+          "explanation": "Un RPO nul exige une réplication synchrone, coûteuse en latence.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "mr-pourquoi-q6",
+          "prompt": "Quels coûts ajoute une architecture multi-régions ?",
+          "choices": [
+            "Une infrastructure dupliquée",
+            "Des transferts de données entre régions",
+            "De la complexité d'exploitation et des tests de bascule",
+            "Aucun coût supplémentaire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une bascule jamais testée a toutes les chances d'échouer le jour venu.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "mr-donnees",
+      "title": "Les données",
+      "summary": "Réplication et conflits.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Synchrone ou asynchrone",
+          "body": "Une réplication synchrone confirme une écriture seulement quand l'autre région l'a reçue : aucune perte, mais chaque écriture attend un aller-retour entre régions, soit 80 ms et plus entre l'Europe et l'Amérique. Une réplication asynchrone confirme tout de suite : écritures rapides, mais les dernières écritures peuvent être perdues en cas de panne."
+        },
+        {
+          "title": "Les conflits en actif-actif",
+          "body": "Si deux régions modifient la même donnée en même temps, il faut une règle : la dernière écriture gagne (au risque de perdre l'autre), une fusion adaptée au type de donnée (CRDT), ou mieux, éviter le conflit en attribuant à chaque utilisateur une région d'origine où s'écrivent ses données.",
+          "code": "Région A, 10:00:00.120  solde 100 → 80   (retrait)\nRégion B, 10:00:00.090  solde 100 → 150  (dépôt)\nRésolution « dernière écriture gagne » → 80",
+          "language": "text"
+        },
+        {
+          "title": "Des bases mondiales",
+          "body": "Spanner, Cosmos DB, DynamoDB Global Tables ou Aurora Global Database répliquent entre régions, avec des garanties et des règles de résolution propres à chacune. Un schéma courant : lire localement, écrire dans une région principale."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mr-donnees-q1",
+          "prompt": "Quel est le coût d'une réplication synchrone entre Paris et la Virginie ?",
+          "choices": [
+            "Chaque écriture attend un aller-retour transatlantique, soit plusieurs dizaines de millisecondes",
+            "Aucun",
+            "La perte des dernières écritures",
+            "La lecture devient impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "En échange, le RPO est nul : aucune écriture confirmée n'est perdue.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mr-donnees-q2",
+          "prompt": "En actif-actif, deux régions modifient la même ligne au même moment. Quel est le problème ?",
+          "choices": [
+            "Un conflit : il faut une règle de résolution, ou l'éviter en écrivant chaque utilisateur dans une seule région",
+            "Aucun, les bases fusionnent tout",
+            "La base s'arrête",
+            "Les deux écritures sont rejetées"
+          ],
+          "answerIndex": 0,
+          "explanation": "« La dernière écriture gagne » peut faire disparaître une écriture légitime.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mr-donnees-q3",
+          "prompt": "Qu'est-ce qu'une région d'origine (home region) pour un utilisateur ?",
+          "choices": [
+            "La seule région où s'écrivent ses données, ce qui évite les conflits",
+            "La région où il a créé son compte, sans conséquence",
+            "La région la moins chère",
+            "Une région de sauvegarde"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les autres régions peuvent servir ses lectures, éventuellement un peu en retard.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mr-donnees-q4",
+          "prompt": "Que proposent des services comme DynamoDB Global Tables ou Cosmos DB ?",
+          "choices": [
+            "Une réplication multi-régions gérée, avec des règles de résolution des conflits",
+            "Un cache de navigateur",
+            "Une sauvegarde sur bande",
+            "Un service de DNS"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il faut lire précisément les garanties de cohérence de chacun.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mr-donnees-q5",
+          "prompt": "Touche la ligne qui montre le problème de cette résolution de conflit.",
+          "code": "Région A, 10:00:00.120  solde 100 → 80   (retrait)\nRégion B, 10:00:00.090  solde 100 → 150  (dépôt)\nRésolution « dernière écriture gagne » → 80",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Le dépôt de 50 disparaît : le solde devrait être 130. Pour de l'argent, on évite les écritures concurrentes (région d'origine) ou on enregistre des mouvements plutôt qu'un solde.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "mr-donnees-q6",
+          "prompt": "Quelles stratégies de données conviennent au multi-régions ?",
+          "choices": [
+            "Lire localement, écrire dans une région principale",
+            "Partitionner les données par région d'origine",
+            "Utiliser une base mondiale gérée",
+            "Écrire partout sans aucune règle de conflit"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Sans règle, les données divergent silencieusement.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mr-trafic",
+      "title": "Le trafic et la bascule",
+      "summary": "Routage, tests et dépendances cachées.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Router les utilisateurs",
+          "body": "Un DNS géographique ou fondé sur la latence envoie chaque utilisateur vers la région la plus proche ; un répartiteur mondial sur adresse anycast fait de même au niveau du réseau. Pour basculer, des sondes de santé retirent une région défaillante. Avec le DNS, le TTL fixe combien de temps les clients gardent l'ancienne adresse : un TTL d'un jour rend la bascule très lente."
+        },
+        {
+          "title": "Tester la bascule",
+          "body": "Une bascule jamais testée échoue presque toujours. On l'exerce régulièrement (game days), avec des procédures écrites et automatisées, et une capacité suffisante dans la région de secours. Ces exercices révèlent les dépendances cachées : un service « global » d'authentification, un registre d'images ou un DNS qui vivent en réalité dans la région principale.",
+          "code": "1. Détecter la panne régionale\n2. Décider de la bascule\n3. Promouvoir la réplique de la région de secours\n4. Rediriger le trafic\n5. Vérifier le service et communiquer",
+          "language": "text"
+        },
+        {
+          "title": "Des cellules",
+          "body": "L'architecture cellulaire découpe le système en cellules indépendantes, chacune servant une partie des utilisateurs : une panne ou un mauvais déploiement ne touche qu'une cellule. Elle se combine bien avec les régions."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mr-trafic-q1",
+          "prompt": "L'enregistrement DNS a un TTL de 24 heures. Quel effet sur une bascule ?",
+          "choices": [
+            "Des clients gardent l'ancienne adresse jusqu'à 24 heures : il faut un TTL court ou un routage anycast",
+            "Aucun",
+            "La bascule est instantanée",
+            "Le DNS refuse de basculer"
+          ],
+          "answerIndex": 0,
+          "explanation": "On abaisse le TTL bien avant d'en avoir besoin.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mr-trafic-q2",
+          "prompt": "Qu'est-ce qu'un game day ?",
+          "choices": [
+            "Un exercice planifié de panne pour vérifier la bascule et les procédures",
+            "Une journée de jeux pour l'équipe",
+            "Un jour sans déploiement",
+            "Une compétition de code"
+          ],
+          "answerIndex": 0,
+          "explanation": "Mieux vaut découvrir les surprises un mardi matin qu'un samedi à 3 h.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mr-trafic-q3",
+          "prompt": "Qu'est-ce qu'une dépendance cachée dans une bascule ?",
+          "choices": [
+            "Un service présenté comme global qui vit en fait dans la région principale, et fait échouer la bascule",
+            "Une bibliothèque npm",
+            "Une variable d'environnement",
+            "Un test unitaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Authentification, registre d'images, gestionnaire de secrets : les suspects habituels.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "mr-trafic-q4",
+          "prompt": "Remets dans l'ordre une bascule régionale.",
+          "language": "text",
+          "lines": [
+            "Détecter la panne régionale",
+            "Décider de la bascule",
+            "Promouvoir la réplique de base de la région de secours",
+            "Rediriger le trafic",
+            "Vérifier le service et communiquer"
+          ],
+          "explanation": "La base de secours doit accepter les écritures avant d'y envoyer le trafic.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mr-trafic-q5",
+          "prompt": "Qu'est-ce qu'une architecture cellulaire ?",
+          "choices": [
+            "Un système découpé en cellules indépendantes servant chacune une partie des utilisateurs, pour limiter l'impact d'une panne",
+            "Une application pour téléphones",
+            "Un réseau cellulaire",
+            "Un tableau de cellules Excel"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un mauvais déploiement commence par une cellule, pas par tout le monde.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "mr-trafic-q6",
+          "prompt": "Comment préparer une bascule fiable ?",
+          "choices": [
+            "Des tests de bascule réguliers",
+            "Des procédures écrites et automatisées",
+            "Une capacité suffisante dans la région de secours",
+            "Découvrir la procédure le jour de la panne"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La région de secours doit pouvoir encaisser tout le trafic d'un coup.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "mr-defi",
+    "title": "Défi entretien : survivre à une région",
+    "summary": "Objectifs, réplication et bascule.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mr-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un site marchand européen vise 99,99 % de disponibilité ; une région cloud entière est tombée six heures l'an dernier. Que faut-il au minimum ?",
+        "choices": [
+          "Une architecture multi-régions, au moins actif-passif",
+          "Plus de serveurs dans la même région",
+          "Une seule zone, mieux surveillée",
+          "Des sauvegardes mensuelles"
+        ],
+        "answerIndex": 0,
+        "explanation": "99,99 % laisse environ 52 minutes d'arrêt par an : six heures en sont très loin.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mr-defi-q2",
+        "prompt": "Cas pratique 2/3 — Un RPO d'une minute est acceptable, et la latence d'écriture est critique. Quelle réplication ?",
+        "choices": [
+          "Asynchrone",
+          "Synchrone",
+          "Aucune",
+          "Une copie manuelle chaque soir"
+        ],
+        "answerIndex": 0,
+        "explanation": "On accepte de perdre quelques secondes d'écritures pour garder des écritures rapides.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mr-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le test de bascule échoue : l'authentification est hébergée dans la région principale. Que faire ?",
+        "choices": [
+          "Rendre l'authentification elle aussi disponible dans la région de secours, puis retester",
+          "Désactiver l'authentification pendant les pannes",
+          "Annuler le projet",
+          "Ne plus tester la bascule"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est exactement le genre de découverte que les exercices doivent provoquer.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mr-defi-q4",
+        "prompt": "Des utilisateurs en Asie subissent 300 ms de latence vers l'Europe, sur des données surtout consultées. Que faire ?",
+        "choices": [
+          "Ajouter des répliques de lecture et un cache (CDN) en Asie, les écritures restant centrales",
+          "Tout migrer en Asie",
+          "Demander aux utilisateurs de patienter",
+          "Rien n'est possible"
+        ],
+        "answerIndex": 0,
+        "explanation": "La plupart des requêtes, en lecture, sont servies localement.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "mr-defi-q5",
+        "prompt": "La bascule par DNS met des heures à être prise en compte. Touche la ligne en cause.",
+        "code": "api.exemple.fr.  86400  IN  A  203.0.113.10",
+        "language": "text",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Un TTL de 86 400 secondes (24 heures) : les résolveurs gardent l'ancienne adresse jusqu'à un jour. On l'abaisse à une minute ou deux.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "mr-defi-q6",
+        "prompt": "Que faut-il pour tenir un RTO court ?",
+        "choices": [
+          "Une bascule automatisée",
+          "Une infrastructure de secours prête",
+          "Des données répliquées en continu",
+          "Une restauration depuis la sauvegarde hebdomadaire"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Restaurer une sauvegarde prend des heures et perd jusqu'à une semaine de données.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

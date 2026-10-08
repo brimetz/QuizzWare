@@ -1,0 +1,446 @@
+{
+  "id": "otel-ch-essentiel",
+  "title": "OpenTelemetry : l'essentiel",
+  "summary": "Traces, instrumentation et Collector.",
+  "lessons": [
+    {
+      "id": "otel-concepts",
+      "title": "Les concepts",
+      "summary": "Traces, spans et contexte.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un standard ouvert",
+          "body": "OpenTelemetry définit comment produire et transporter traces, métriques et journaux, indépendamment de l'outil qui les stockera (Jaeger, Tempo, Prometheus, un fournisseur commercial). Il fournit des API, des SDK par langage, une instrumentation automatique des bibliothèques courantes, le protocole OTLP et le Collector."
+        },
+        {
+          "title": "Traces et spans",
+          "body": "Une trace suit une requête à travers tous les services. Elle se compose de spans : une opération chronométrée (un appel HTTP, une requête SQL), avec un nom, une durée, des attributs et un statut. Les spans s'emboîtent : celui d'une requête entrante contient ceux des appels qu'elle déclenche."
+        },
+        {
+          "title": "La propagation du contexte",
+          "body": "Pour relier les spans de plusieurs services, l'identifiant de trace voyage avec chaque appel, dans l'en-tête W3C traceparent : version, identifiant de trace, identifiant du span parent, indicateurs (01 : échantillonné). L'instrumentation automatique l'injecte et l'extrait d'elle-même pour HTTP et gRPC.",
+          "code": "GET /commandes/42 HTTP/1.1\ntraceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "otel-concepts-q1",
+          "prompt": "Qu'est-ce qu'OpenTelemetry ?",
+          "choices": [
+            "Un standard et des outils ouverts pour produire et transporter traces, métriques et journaux",
+            "Une base de données de métriques",
+            "Un tableau de bord",
+            "Un service de télécommunication"
+          ],
+          "answerIndex": 0,
+          "explanation": "On instrumente une fois, et on choisit librement où envoyer les données.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "otel-concepts-q2",
+          "prompt": "Qu'est-ce qu'un span ?",
+          "choices": [
+            "Une opération chronométrée au sein d'une trace, avec un nom, des attributs et un statut",
+            "Un message d'erreur",
+            "Un serveur",
+            "Une métrique de CPU"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'arbre des spans montre où passe le temps d'une requête.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "otel-concepts-q3",
+          "prompt": "Complète l'en-tête qui propage le contexte de trace.",
+          "code": "GET /commandes/42 HTTP/1.1\n___: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+          "language": "text",
+          "answers": [
+            "traceparent"
+          ],
+          "distractors": [
+            "x-trace",
+            "trace-id",
+            "correlation"
+          ],
+          "explanation": "C'est le format standard du W3C, compris par tous les outils modernes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "otel-concepts-q4",
+          "prompt": "Quel est le rôle du Collector ?",
+          "choices": [
+            "Recevoir la télémétrie, la traiter (filtrer, échantillonner, enrichir) et l'exporter vers les outils de stockage",
+            "Stocker les traces pour toujours",
+            "Remplacer les applications",
+            "Collecter les factures"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il découple les applications des outils : on change de fournisseur sans toucher au code.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "otel-concepts-q5",
+          "prompt": "Qu'est-ce que l'instrumentation automatique ?",
+          "choices": [
+            "Des agents ou bibliothèques qui créent des spans pour HTTP, les bases ou la messagerie sans modifier le code",
+            "La génération automatique de tests",
+            "Un tableau de bord automatique",
+            "La correction automatique des bugs"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ajoute ensuite à la main les spans métier qui comptent.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "otel-concepts-q6",
+          "prompt": "Quels signaux OpenTelemetry couvre-t-il ?",
+          "choices": [
+            "Les traces",
+            "Les métriques",
+            "Les journaux",
+            "Les sauvegardes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Avec un même contexte, qui permet de passer de l'un à l'autre.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "otel-instrumenter",
+      "title": "Instrumenter le code",
+      "summary": "Spans manuels, attributs et propagation.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des spans métier",
+          "body": "L'instrumentation automatique voit les appels HTTP et SQL, pas la logique métier. On ajoute des spans autour des étapes importantes, avec des attributs utiles à l'enquête (identifiant de commande, nombre d'articles).",
+          "code": "from opentelemetry import trace\n\ntracer = trace.get_tracer(\"commandes\")\n\nwith tracer.start_as_current_span(\"calculer_remise\") as span:\n    span.set_attribute(\"commande.id\", cmd.id)\n    remise = calculer(cmd)",
+          "language": "python"
+        },
+        {
+          "title": "Erreurs et conventions",
+          "body": "Un échec se signale sur le span : statut d'erreur et exception enregistrée, sinon la trace passe pour un succès. Les conventions sémantiques fixent des noms d'attributs standard (http.request.method, db.system) que les outils savent interpréter. Pas de données personnelles ni de secrets dans les attributs."
+        },
+        {
+          "title": "Au-delà de HTTP",
+          "body": "Dans une file de messages (Kafka, RabbitMQ), le contexte ne voyage pas tout seul : le producteur l'injecte dans les en-têtes du message, le consommateur l'en extrait. Sinon, la trace s'arrête à la file."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "otel-instrumenter-q1",
+          "prompt": "Complète : créer un span métier et lui ajouter l'identifiant de commande.",
+          "code": "with tracer.___(\"calculer_remise\") as span:\n    span.___(\"commande.id\", cmd.id)\n    remise = calculer(cmd)",
+          "language": "python",
+          "answers": [
+            "start_as_current_span",
+            "set_attribute"
+          ],
+          "distractors": [
+            "start",
+            "add_tag",
+            "log"
+          ],
+          "explanation": "Le span devient le span courant : ceux créés à l'intérieur en seront les enfants.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "otel-instrumenter-q2",
+          "prompt": "Dans les traces, les paiements refusés apparaissent comme des succès. Touche la ligne en cause.",
+          "code": "with tracer.start_as_current_span(\"payer\") as span:\n    try:\n        passerelle.payer(cmd)\n    except PaiementRefuse:\n        return False",
+          "language": "python",
+          "bugLines": [
+            5
+          ],
+          "explanation": "L'exception est avalée sans rien signaler au span. On appelle span.record_exception(e) et span.set_status(StatusCode.ERROR) avant de renvoyer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "otel-instrumenter-q3",
+          "prompt": "La trace s'arrête au producteur Kafka ; le consommateur démarre une nouvelle trace. Pourquoi ?",
+          "choices": [
+            "Le contexte n'est pas propagé : il faut l'injecter dans les en-têtes du message et l'extraire côté consommateur",
+            "Kafka ne supporte pas les traces",
+            "Le consommateur est trop lent",
+            "Les traces expirent au bout d'une seconde"
+          ],
+          "answerIndex": 0,
+          "explanation": "Certaines instrumentations de clients Kafka le font automatiquement.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "otel-instrumenter-q4",
+          "prompt": "À quoi servent les conventions sémantiques ?",
+          "choices": [
+            "À utiliser des noms d'attributs standard que tous les outils comprennent",
+            "À écrire la documentation",
+            "À choisir les couleurs des tableaux de bord",
+            "À chiffrer les spans"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un outil peut alors construire seul une vue « bases de données » ou « HTTP ».",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "otel-instrumenter-q5",
+          "prompt": "Pourquoi l'identifiant de l'utilisateur ne doit-il pas devenir un attribut de métrique ?",
+          "choices": [
+            "Chaque valeur crée une série distincte : la cardinalité exploserait",
+            "Parce que c'est un nombre",
+            "Parce que les métriques n'ont pas d'attributs",
+            "C'est recommandé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sur un span, en revanche, un identifiant interne est utile pour enquêter.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "otel-instrumenter-q6",
+          "prompt": "Quelles informations ajouter à un span ?",
+          "choices": [
+            "Des attributs métier, comme l'identifiant de commande",
+            "Un statut d'erreur en cas d'échec",
+            "Des événements marquant les étapes importantes",
+            "Le mot de passe de l'utilisateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les traces circulent et se conservent comme les journaux : jamais de secret.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "otel-production",
+      "title": "En production",
+      "summary": "Échantillonnage, Collector et corrélation.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "L'échantillonnage",
+          "body": "Tout tracer coûte cher. L'échantillonnage en tête (head sampling) décide au début de chaque trace, par exemple 5 % au hasard : simple, mais il rate des erreurs rares. L'échantillonnage en queue (tail sampling), dans le Collector, attend la fin de la trace pour décider : il garde toutes les traces en erreur ou lentes, et une fraction des autres."
+        },
+        {
+          "title": "Le Collector",
+          "body": "Le Collector s'organise en pipelines : des récepteurs (OTLP), des processeurs (regroupement, filtrage, suppression de données sensibles, échantillonnage), des exportateurs. On le déploie souvent en agent sur chaque nœud, plus une passerelle centrale.",
+          "code": "receivers:\n  otlp:\n    protocols:\n      grpc:\nprocessors:\n  batch:\nexporters:\n  otlphttp:\n    endpoint: https://traces.ex.fr\nservice:\n  pipelines:\n    traces:\n      receivers: [otlp]\n      processors: [batch]\n      exporters: [otlphttp]",
+          "language": "yaml"
+        },
+        {
+          "title": "Relier les signaux",
+          "body": "Les journaux portent le trace_id et le span_id : on passe d'un span à ses journaux. Les exemplars attachent à un point de métrique (une latence élevée) l'identifiant d'une trace exemple : d'un pic sur un graphique, on ouvre directement une trace qui l'illustre."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "otel-production-q1",
+          "prompt": "Quelle différence entre échantillonnage en tête et en queue ?",
+          "choices": [
+            "En tête, on décide au début de la trace ; en queue, après l'avoir vue en entier, ce qui permet de garder les erreurs et les traces lentes",
+            "Ce sont deux noms de la même méthode",
+            "En queue, on ne garde que les premières traces",
+            "En tête, on garde tout"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'échantillonnage en queue demande de garder les spans en mémoire le temps de décider.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "otel-production-q2",
+          "prompt": "On veut garder toutes les traces en erreur et seulement 5 % des autres. Quel mécanisme ?",
+          "choices": [
+            "L'échantillonnage en queue dans le Collector",
+            "L'échantillonnage en tête à 5 %",
+            "Désactiver le traçage",
+            "Garder 100 % et supprimer à la main"
+          ],
+          "answerIndex": 0,
+          "explanation": "Seule une décision prise après coup sait si la trace contient une erreur.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "otel-production-q3",
+          "prompt": "Complète le pipeline de traces du Collector.",
+          "code": "service:\n  pipelines:\n    traces:\n      receivers: [otlp]\n      processors: [___]\n      ___: [otlphttp]",
+          "language": "yaml",
+          "answers": [
+            "batch",
+            "exporters"
+          ],
+          "distractors": [
+            "filter",
+            "outputs",
+            "export"
+          ],
+          "explanation": "Le processeur batch regroupe les données avant l'envoi, ce qui réduit le nombre d'appels.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "otel-production-q4",
+          "prompt": "À quoi servent les exemplars ?",
+          "choices": [
+            "À relier un point de métrique à une trace exemple qui l'illustre",
+            "À donner des exemples de code",
+            "À tester le Collector",
+            "À dupliquer les traces"
+          ],
+          "answerIndex": 0,
+          "explanation": "On passe directement d'un pic de latence à une requête lente précise.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "otel-production-q5",
+          "prompt": "Revue de l'instrumentation : touche une ligne problématique.",
+          "code": "span.set_attribute(\"utilisateur.email\", user.email)\nspan.set_attribute(\"carte.numero\", carte.numero)",
+          "language": "python",
+          "bugLines": [
+            1,
+            2
+          ],
+          "explanation": "Données personnelles et numéro de carte dans les traces : on utilise des identifiants internes, et un processeur du Collector peut masquer ce qui passerait quand même.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "otel-production-q6",
+          "prompt": "Comment déploie-t-on couramment le Collector ?",
+          "choices": [
+            "Un agent sur chaque nœud",
+            "Une passerelle centrale pour l'échantillonnage et l'export",
+            "Avec des processeurs qui retirent les données sensibles",
+            "Un Collector obligatoire dans chaque processus applicatif"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les applications peuvent aussi envoyer directement en OTLP, sans Collector local.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "otel-defi",
+    "title": "Défi entretien : le paiement qui traîne",
+    "summary": "Tracer à travers sept services.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "otel-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un paiement prend parfois 8 secondes ; sept services sont impliqués et personne ne sait où passe le temps. Que mettre en place ?",
+        "choices": [
+          "Le traçage distribué avec OpenTelemetry, dans tous les services",
+          "Plus de journaux en texte libre",
+          "Un serveur plus puissant",
+          "Un chronomètre manuel"
+        ],
+        "answerIndex": 0,
+        "explanation": "La trace montre en un coup d'œil quel span prend les 8 secondes.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "otel-defi-q2",
+        "prompt": "Cas pratique 2/3 — La trace s'interrompt au service de facturation, appelé via RabbitMQ. Que faire ?",
+        "choices": [
+          "Propager le contexte dans les en-têtes du message, et l'extraire côté consommateur",
+          "Remplacer RabbitMQ par HTTP",
+          "Créer une trace par service",
+          "Désactiver la facturation"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les deux morceaux deviennent une seule trace.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "otel-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le volume de traces coûte trop cher. Que faire ?",
+        "choices": [
+          "Échantillonner, en queue de préférence, pour garder les erreurs et les traces lentes",
+          "Tout supprimer",
+          "Garder seulement les traces du lundi",
+          "Passer en DEBUG"
+        ],
+        "answerIndex": 0,
+        "explanation": "On garde les traces utiles à l'enquête, pas toutes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "otel-defi-q4",
+        "prompt": "L'entreprise change de fournisseur d'observabilité. Avec OpenTelemetry, que faut-il modifier ?",
+        "choices": [
+          "Surtout l'exportateur du Collector, sans réinstrumenter les applications",
+          "Tout le code des applications",
+          "Rien ne peut être réutilisé",
+          "Les bases de données"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est l'intérêt majeur d'un standard ouvert.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "otel-defi-q5",
+        "prompt": "Que signifie le 01 à la fin de l'en-tête traceparent 00-<trace-id>-<span-id>-01 ?",
+        "choices": [
+          "L'indicateur « échantillonné » : cette trace est enregistrée",
+          "La version du protocole",
+          "Le numéro du service",
+          "Une erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les services en aval respectent cette décision pour garder des traces complètes.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "otel-defi-q6",
+        "prompt": "Comment relier journaux et traces ?",
+        "choices": [
+          "Écrire trace_id et span_id dans chaque journal",
+          "Utiliser un SDK ou une intégration qui les ajoute automatiquement",
+          "Naviguer d'un span vers les journaux correspondants dans l'outil",
+          "Écrire les traces dans les journaux, en texte libre"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Des identifiants communs suffisent ; on ne recopie pas les traces.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

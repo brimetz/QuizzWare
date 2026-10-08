@@ -1,0 +1,443 @@
+{
+  "id": "slo-ch-essentiel",
+  "title": "SLI, SLO et gestion d'incident",
+  "summary": "Mesurer la fiabilité, et réagir quand elle manque.",
+  "lessons": [
+    {
+      "id": "slo-bases",
+      "title": "SLI, SLO et SLA",
+      "summary": "Des objectifs de fiabilité mesurables.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Trois notions",
+          "body": "Un SLI est une mesure : la proportion de requêtes réussies en moins de 300 ms. Un SLO est un objectif sur cette mesure : 99,9 % sur 30 jours glissants. Un SLA est un engagement contractuel envers un client, avec des pénalités : il est moins exigeant que le SLO interne, pour garder une marge."
+        },
+        {
+          "title": "Le budget d'erreur",
+          "body": "Le budget d'erreur est ce que le SLO autorise à échouer : 100 % − 99,9 % = 0,1 %, soit environ 43 minutes d'indisponibilité totale sur 30 jours. Viser 100 % est impossible, ruineux, et gèle toute évolution ; au-delà d'un certain niveau, les utilisateurs ne perçoivent plus la différence."
+        },
+        {
+          "title": "De bons SLI",
+          "body": "Un bon SLI reflète ce que vivent les utilisateurs : réussite et latence des requêtes, mesurées au plus près d'eux (répartiteur de charge), ou fraîcheur des données pour un traitement. Il s'exprime comme une proportion d'événements « bons » sur le total.",
+          "code": "sum(rate(http_requests_total{statut!~\"5..\"}[30d]))\n  / sum(rate(http_requests_total[30d]))",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "slo-bases-q1",
+          "prompt": "Quelle phrase décrit correctement SLI, SLO et SLA ?",
+          "choices": [
+            "Le SLI mesure, le SLO fixe l'objectif interne, le SLA engage contractuellement envers un client",
+            "Ce sont trois noms pour la même chose",
+            "Le SLA est l'objectif interne, le SLO le contrat",
+            "Le SLI est une pénalité financière"
+          ],
+          "answerIndex": 0,
+          "explanation": "On viole le SLO bien avant d'atteindre les pénalités du SLA.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "slo-bases-q2",
+          "prompt": "Quel est le budget d'erreur d'un SLO de disponibilité de 99,9 % sur 30 jours ?",
+          "choices": [
+            "Environ 43 minutes",
+            "Environ 4 minutes",
+            "Environ 7 heures",
+            "Une journée"
+          ],
+          "answerIndex": 0,
+          "explanation": "0,1 % de 43 200 minutes ; à 99,99 %, il ne reste que 4 minutes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "slo-bases-q3",
+          "prompt": "Pourquoi ne pas viser 100 % de disponibilité ?",
+          "choices": [
+            "C'est impossible, très coûteux, et cela empêche toute évolution ; les utilisateurs ne voient plus la différence",
+            "Parce que les outils ne savent pas mesurer 100 %",
+            "Parce que c'est interdit par la loi",
+            "Parce que 100 % est trop facile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Leur propre connexion et leur téléphone sont bien moins fiables que 99,99 %.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "slo-bases-q4",
+          "prompt": "Complète ce SLI de disponibilité : la part des requêtes qui ne renvoient pas d'erreur 5xx.",
+          "code": "sum(rate(http_requests_total{statut___\"5..\"}[30d]))\n  / ___(rate(http_requests_total[30d]))",
+          "language": "text",
+          "answers": [
+            "!~",
+            "sum"
+          ],
+          "distractors": [
+            "=~",
+            "avg",
+            "max"
+          ],
+          "explanation": "!~ exclut les statuts qui correspondent à l'expression ; on divise par le total de toutes les requêtes.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "slo-bases-q5",
+          "prompt": "Qu'est-ce qui fait un bon SLI ?",
+          "choices": [
+            "Il reflète l'expérience des utilisateurs, mesuré au plus près d'eux, comme une proportion d'événements bons",
+            "Il mesure le CPU des serveurs",
+            "Il compte les lignes de code",
+            "Il est mesuré une fois par an"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un serveur peut être à 20 % de CPU et répondre en erreur à tout le monde.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "slo-bases-q6",
+          "prompt": "Lesquels sont des SLI courants ?",
+          "choices": [
+            "La disponibilité (part des requêtes réussies)",
+            "La latence (part des requêtes assez rapides)",
+            "La fraîcheur des données",
+            "Le nombre de lignes de code"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Pour un traitement par lots, on mesure aussi le taux de complétude.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "slo-budget",
+      "title": "Utiliser le budget d'erreur",
+      "summary": "Politiques et alertes de consommation.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Une politique de budget",
+          "body": "Le budget d'erreur arbitre entre vitesse et fiabilité. Tant qu'il en reste, l'équipe livre à son rythme ; quand il est épuisé, elle ralentit les changements risqués et donne la priorité à la fiabilité. Cette règle, décidée à l'avance avec le produit, évite les débats pendant la crise."
+        },
+        {
+          "title": "Le taux de consommation",
+          "body": "Le burn rate compare le taux d'erreurs observé au taux autorisé : à 1, le budget s'épuise exactement en fin de fenêtre ; à 14,4, il fond en environ deux jours, et une heure en consomme 2 %. On alerte sur ce taux plutôt que sur chaque erreur.",
+          "code": "budget d'erreur = 100 % − SLO\nburn rate = taux d'erreurs observé / (100 % − SLO)",
+          "language": "text"
+        },
+        {
+          "title": "Des alertes multi-fenêtres",
+          "body": "Une bonne alerte combine une fenêtre longue (1 h) pour être significative et une fenêtre courte (5 min) pour cesser vite une fois le problème réglé. Un burn rate élevé sur peu de temps réveille l'astreinte ; un burn rate modéré sur plusieurs heures crée un ticket."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "slo-budget-q1",
+          "prompt": "Que signifie un burn rate de 1 ?",
+          "choices": [
+            "Le budget est consommé exactement au rythme qui l'épuiserait à la fin de la fenêtre",
+            "Une erreur par seconde",
+            "Le service est en panne totale",
+            "Le budget est épuisé"
+          ],
+          "answerIndex": 0,
+          "explanation": "En dessous de 1, il en restera à la fin de la période.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "slo-budget-q2",
+          "prompt": "Pour un SLO sur 30 jours, un burn rate de 14,4 pendant une heure signifie…",
+          "choices": [
+            "2 % du budget mensuel consommé en une heure : à ce rythme, il disparaît en deux jours, il faut réveiller quelqu'un",
+            "14,4 erreurs par heure",
+            "Un fonctionnement normal",
+            "Le SLO est respecté à 14,4 %"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le seuil classique d'une alerte urgente dans les recommandations de Google.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "slo-budget-q3",
+          "prompt": "Le budget d'erreur du mois est épuisé dès le 15. Que prévoit une politique de budget ?",
+          "choices": [
+            "Donner la priorité à la fiabilité : ralentir les changements risqués et traiter les causes",
+            "Continuer comme avant",
+            "Augmenter l'objectif à 100 %",
+            "Supprimer la supervision"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le budget rend visible un arbitrage que tout le monde a accepté à l'avance.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "slo-budget-q4",
+          "prompt": "L'astreinte est réveillée plusieurs fois par nuit, alors que le SLO est largement respecté. Touche la ligne en cause.",
+          "code": "- alert: ErreurDetectee\n  expr: increase(http_requests_total{statut=~\"5..\"}[1m]) > 0\n  labels:\n    severite: page",
+          "language": "yaml",
+          "bugLines": [
+            2
+          ],
+          "explanation": "La moindre erreur déclenche l'alerte. On alerte sur le taux de consommation du budget, sur des fenêtres significatives.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "slo-budget-q5",
+          "prompt": "Complète les définitions.",
+          "code": "budget d'erreur = 100 % − ___\nburn rate = taux d'erreurs observé / ___",
+          "language": "text",
+          "answers": [
+            "SLO",
+            "(100 % − SLO)"
+          ],
+          "distractors": [
+            "SLA",
+            "SLI",
+            "100 %"
+          ],
+          "explanation": "Le taux d'erreurs autorisé est exactement le budget d'erreur.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "slo-budget-q6",
+          "prompt": "Qu'apporte une alerte multi-fenêtres sur le burn rate ?",
+          "choices": [
+            "Une fenêtre longue rend l'alerte significative",
+            "Une fenêtre courte la fait cesser vite une fois le problème réglé",
+            "Des seuils différents distinguent l'urgence (page) du ticket",
+            "Une alerte pour chaque erreur individuelle"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On réduit à la fois les fausses alertes et les alertes tardives.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "slo-incidents",
+      "title": "Gérer un incident",
+      "summary": "Rôles, priorités et post-mortem.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Pendant l'incident",
+          "body": "On déclare l'incident tôt, on nomme un responsable (incident commander) qui coordonne et décide sans déboguer lui-même, et on ouvre un canal dédié. La priorité est d'atténuer l'impact (retour arrière, bascule, désactivation d'une fonction), avant de chercher la cause profonde. Une personne s'occupe de communiquer l'état aux utilisateurs et aux parties prenantes."
+        },
+        {
+          "title": "Après l'incident",
+          "body": "Le post-mortem sans blâme retrace la chronologie, l'impact, les causes contributives (techniques et organisationnelles) et les actions, chacune avec un responsable et une échéance. Sans blâme, parce que chercher un coupable pousse les gens à cacher ce qui s'est vraiment passé."
+        },
+        {
+          "title": "Mesurer et préparer",
+          "body": "Le délai de détection et le délai de rétablissement (MTTR) se suivent dans le temps. Des procédures (runbooks) à jour, des exercices de panne et une astreinte soutenable, avec des alertes actionnables et une récupération après les nuits difficiles, améliorent la réponse."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "slo-incidents-q1",
+          "prompt": "Quelle est la priorité pendant un incident ?",
+          "choices": [
+            "Rétablir le service (retour arrière, bascule), avant de chercher la cause profonde",
+            "Trouver le coupable",
+            "Écrire le post-mortem",
+            "Réécrire le code fautif"
+          ],
+          "answerIndex": 0,
+          "explanation": "On enquête ensuite, au calme, une fois les utilisateurs servis.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "slo-incidents-q2",
+          "prompt": "Quel est le rôle du responsable d'incident ?",
+          "choices": [
+            "Coordonner, décider et déléguer, sans déboguer lui-même",
+            "Corriger le bug seul",
+            "Rédiger le communiqué de presse",
+            "Attendre la fin de l'incident"
+          ],
+          "answerIndex": 0,
+          "explanation": "Quelqu'un doit garder la vue d'ensemble pendant que d'autres creusent.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "slo-incidents-q3",
+          "prompt": "Pourquoi un post-mortem « sans blâme » ?",
+          "choices": [
+            "Pour trouver les causes systémiques, et que chacun raconte honnêtement ce qui s'est passé",
+            "Pour éviter d'écrire un document",
+            "Pour qu'aucune action ne soit décidée",
+            "Pour protéger la direction"
+          ],
+          "answerIndex": 0,
+          "explanation": "« Ana a lancé la mauvaise commande » devient « rien n'empêchait de lancer cette commande en production ».",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "slo-incidents-q4",
+          "prompt": "Remets dans l'ordre les étapes d'un incident.",
+          "language": "text",
+          "lines": [
+            "Détecter et déclarer l'incident",
+            "Nommer un responsable et ouvrir un canal dédié",
+            "Atténuer l'impact (retour arrière, bascule)",
+            "Confirmer le rétablissement et clore l'incident",
+            "Rédiger le post-mortem et suivre les actions"
+          ],
+          "explanation": "La communication aux parties prenantes se fait tout au long de l'incident.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "slo-incidents-q5",
+          "prompt": "Que mesure le MTTR ?",
+          "choices": [
+            "Le temps moyen de rétablissement après un incident",
+            "Le temps moyen entre deux déploiements",
+            "Le nombre de tests",
+            "La mémoire utilisée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le réduire passe souvent par des retours arrière simples et rapides.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "slo-incidents-q6",
+          "prompt": "Que contient un bon post-mortem ?",
+          "choices": [
+            "Une chronologie précise",
+            "Les causes contributives, techniques et organisationnelles",
+            "Des actions avec un responsable et une échéance",
+            "Le nom de la personne fautive"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les actions non suivies font revenir le même incident.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "slo-defi",
+    "title": "Défi entretien : quel objectif de fiabilité ?",
+    "summary": "Choisir un SLO et s'en servir.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "slo-defi-q1",
+        "prompt": "Cas pratique 1/3 — Le produit veut un SLO de 99,99 % pour un outil interne utilisé en heures ouvrées. Quelle réponse ?",
+        "choices": [
+          "Comparer coût et besoin : 99,99 %, c'est 4 minutes par mois ; un objectif comme 99,9 % sur les heures ouvrées suffit sans doute",
+          "Accepter, plus c'est haut mieux c'est",
+          "Viser 100 %",
+          "Refuser tout SLO"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque « 9 » supplémentaire coûte bien plus cher que le précédent.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "slo-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le SLI proposé est « CPU inférieur à 70 % ». Quel est le problème ?",
+        "choices": [
+          "Il ne mesure pas l'expérience des utilisateurs : on lui préfère la réussite et la latence des requêtes",
+          "70 % est trop bas",
+          "Le CPU ne se mesure pas",
+          "Aucun"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le CPU reste utile pour diagnostiquer, pas pour définir la fiabilité.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "slo-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le 10 du mois, 80 % du budget d'erreur est déjà consommé. Que faire ?",
+        "choices": [
+          "Ralentir les mises en production risquées et prioriser les actions de fiabilité",
+          "Augmenter le budget",
+          "Ignorer jusqu'à la fin du mois",
+          "Changer de SLI"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est exactement le rôle de la politique de budget d'erreur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "slo-defi-q4",
+        "prompt": "SLO de 99,9 % sur 30 jours. Quelle part du budget consomme une panne totale de 20 minutes ?",
+        "choices": [
+          "Environ la moitié",
+          "Environ 2 %",
+          "Tout le budget",
+          "Environ 10 %"
+        ],
+        "answerIndex": 0,
+        "explanation": "20 minutes sur environ 43.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "slo-defi-q5",
+        "prompt": "Le SLA client est de 99,5 % et le SLO interne de 99,9 %. Pourquoi cet écart ?",
+        "choices": [
+          "Pour avoir une marge : on réagit sur le SLO bien avant de risquer les pénalités du SLA",
+          "Par erreur",
+          "Parce que le client ne mesure rien",
+          "Pour payer plus de pénalités"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le SLO interne sert d'alerte avancée.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "slo-defi-q6",
+        "prompt": "Qu'est-ce qui rend une astreinte soutenable ?",
+        "choices": [
+          "Des alertes uniquement actionnables",
+          "Des procédures (runbooks) à jour",
+          "Une rotation équitable et de la récupération après les nuits difficiles",
+          "Un réveil pour chaque avertissement"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La fatigue d'alerte fait rater les vraies urgences.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,441 @@
+{
+  "id": "nginx-ch-essentiel",
+  "title": "Nginx : l'essentiel",
+  "summary": "Fichiers statiques, reverse proxy et production.",
+  "lessons": [
+    {
+      "id": "nginx-bases",
+      "title": "Servir un site",
+      "summary": "server, location et fichiers statiques.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les blocs server",
+          "body": "Chaque bloc server décrit un site : listen (le port), server_name (les noms de domaine), root (le dossier des fichiers). Les blocs location choisissent le traitement selon le chemin demandé. try_files essaie des fichiers dans l'ordre : pour une application monopage, toute route inconnue renvoie index.html.",
+          "code": "server {\n    listen 80;\n    server_name exemple.fr;\n    root /var/www/site;\n\n    location / {\n        try_files $uri $uri/ /index.html;\n    }\n}",
+          "language": "text"
+        },
+        {
+          "title": "root et alias",
+          "body": "Avec root, le chemin complet de la requête est ajouté au dossier : location /images/ avec root /srv/medias cherche /srv/medias/images/chat.png. alias, lui, remplace la partie correspondant à la location : alias /srv/photos/ sert /images/chat.png depuis /srv/photos/chat.png."
+        },
+        {
+          "title": "Choix de la location et rechargement",
+          "body": "Nginx prend d'abord une correspondance exacte (=), sinon le plus long préfixe ; si ce préfixe n'est pas marqué ^~, il teste ensuite les expressions régulières dans l'ordre du fichier. Avant d'appliquer une configuration, nginx -t la vérifie ; nginx -s reload la recharge sans couper les connexions en cours."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "nginx-bases-q1",
+          "prompt": "Que fait try_files $uri $uri/ /index.html ?",
+          "choices": [
+            "Il sert le fichier s'il existe, sinon le dossier, sinon index.html : idéal pour une application monopage",
+            "Il essaie trois serveurs différents",
+            "Il renvoie toujours index.html",
+            "Il redirige vers /index.html avec un code 301"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le routeur de l'application prend ensuite le relais côté navigateur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "nginx-bases-q2",
+          "prompt": "Que faire avant de recharger une nouvelle configuration ?",
+          "choices": [
+            "La vérifier avec nginx -t",
+            "Redémarrer le serveur",
+            "Vider le cache du navigateur",
+            "Supprimer les journaux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une configuration invalide n'est pas appliquée, mais mieux vaut le savoir avant.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "nginx-bases-q3",
+          "prompt": "Une requête /images/chat.png cherche /srv/medias/images/images/chat.png. Touche la ligne en cause.",
+          "code": "location /images/ {\n    root /srv/medias/images/;\n}",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "root ajoute tout le chemin de la requête. On écrit root /srv/medias; ou alias /srv/medias/images/;",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "nginx-bases-q4",
+          "prompt": "Complète ce bloc server.",
+          "code": "server {\n    ___ 80;\n    ___ exemple.fr www.exemple.fr;\n    root /var/www/site;\n}",
+          "language": "text",
+          "answers": [
+            "listen",
+            "server_name"
+          ],
+          "distractors": [
+            "port",
+            "host",
+            "domain"
+          ],
+          "explanation": "Nginx choisit le bloc server d'après l'en-tête Host de la requête.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "nginx-bases-q5",
+          "prompt": "Comment Nginx choisit-il la location d'une requête ?",
+          "choices": [
+            "Une correspondance exacte (=) d'abord, sinon le plus long préfixe, puis les expressions régulières dans l'ordre sauf si le préfixe est marqué ^~",
+            "La première location du fichier, toujours",
+            "La plus courte",
+            "Au hasard"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une expression régulière peut donc l'emporter sur un préfixe plus long, sauf avec ^~.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "nginx-bases-q6",
+          "prompt": "Quels rôles Nginx joue-t-il couramment ?",
+          "choices": [
+            "Serveur de fichiers statiques",
+            "Reverse proxy",
+            "Répartiteur de charge",
+            "Base de données"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il termine aussi souvent le TLS devant les applications.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "nginx-proxy",
+      "title": "Reverse proxy",
+      "summary": "proxy_pass, en-têtes et répartition.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "proxy_pass",
+          "body": "proxy_pass transmet la requête à un serveur d'application. Le détail compte : avec une URI dans proxy_pass (http://api/), la partie correspondant à la location est remplacée, /api/users devient /users ; sans URI (http://api), le chemin est transmis tel quel. Les en-têtes X-Forwarded-For et X-Forwarded-Proto donnent à l'application l'adresse du client et le schéma d'origine.",
+          "code": "upstream api {\n    least_conn;\n    server 10.0.1.11:8080;\n    server 10.0.1.12:8080;\n}\nlocation /api/ {\n    proxy_pass http://api/;\n    proxy_set_header Host $host;\n    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    proxy_set_header X-Forwarded-Proto $scheme;\n}",
+          "language": "text"
+        },
+        {
+          "title": "La répartition",
+          "body": "Un bloc upstream liste les serveurs. La répartition se fait à tour de rôle par défaut, ou vers le serveur le moins chargé (least_conn), ou selon l'adresse du client (ip_hash). Nginx open source retire temporairement un serveur après plusieurs échecs (max_fails, fail_timeout) : c'est un contrôle de santé passif."
+        },
+        {
+          "title": "WebSocket et délais",
+          "body": "Un WebSocket commence par une requête HTTP qui demande un changement de protocole : il faut proxy_http_version 1.1 et transmettre les en-têtes Upgrade et Connection. Les délais (proxy_read_timeout, 60 s par défaut) coupent les connexions inactives plus longues."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "nginx-proxy-q1",
+          "prompt": "Pourquoi transmettre l'en-tête X-Forwarded-For ?",
+          "choices": [
+            "Pour que l'application connaisse l'adresse IP du client, et non celle du proxy",
+            "Pour accélérer les requêtes",
+            "Pour chiffrer la requête",
+            "Pour choisir le serveur de destination"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'application doit être configurée pour ne faire confiance à cet en-tête que s'il vient du proxy.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "nginx-proxy-q2",
+          "prompt": "Avec location /api/ et proxy_pass http://api/; (barre finale), quel chemin reçoit le backend pour la requête /api/users ?",
+          "choices": [
+            "/users",
+            "/api/users",
+            "/api/api/users",
+            "/"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'URI de proxy_pass remplace la partie /api/. Sans la barre finale, le backend recevrait /api/users.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "nginx-proxy-q3",
+          "prompt": "Complète : répartir vers le serveur le moins chargé.",
+          "code": "upstream api {\n    ___;\n    server 10.0.1.11:8080;\n    server 10.0.1.12:8080;\n}\nlocation /api/ {\n    ___ http://api/;\n}",
+          "language": "text",
+          "answers": [
+            "least_conn",
+            "proxy_pass"
+          ],
+          "distractors": [
+            "round_robin",
+            "proxy",
+            "forward"
+          ],
+          "explanation": "Le tour de rôle est le comportement par défaut : il n'a pas de directive.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "nginx-proxy-q4",
+          "prompt": "Les connexions WebSocket du chat échouent. Touche la ligne de la location incomplète.",
+          "code": "location /ws/ {\n    proxy_pass http://chat;\n}",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Il manque proxy_http_version 1.1 et les en-têtes Upgrade $http_upgrade et Connection \"upgrade\" pour accepter le changement de protocole.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "nginx-proxy-q5",
+          "prompt": "Un serveur de l'upstream tombe. Que fait Nginx open source ?",
+          "choices": [
+            "Après plusieurs échecs (max_fails), il le retire temporairement (fail_timeout) et envoie le trafic aux autres",
+            "Il s'arrête",
+            "Il continue d'envoyer un tiers des requêtes au serveur mort",
+            "Il redémarre le serveur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les contrôles de santé actifs sont une fonction de la version commerciale ou d'un autre outil.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "nginx-proxy-q6",
+          "prompt": "Quels en-têtes un reverse proxy transmet-il habituellement à l'application ?",
+          "choices": [
+            "Host",
+            "X-Forwarded-For",
+            "X-Forwarded-Proto",
+            "Le mot de passe du serveur Nginx"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "X-Forwarded-Proto indique si le client était en HTTPS, utile pour générer de bonnes URL.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "nginx-production",
+      "title": "Nginx en production",
+      "summary": "TLS, limites et journaux.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "TLS",
+          "body": "Le serveur HTTP (port 80) redirige vers HTTPS avec return 301. Le bloc HTTPS déclare le certificat (souvent obtenu par Let's Encrypt avec certbot) et n'autorise que TLS 1.2 et 1.3. HSTS impose ensuite HTTPS au navigateur.",
+          "code": "server {\n    listen 80;\n    server_name exemple.fr;\n    return 301 https://$host$request_uri;\n}\nserver {\n    listen 443 ssl;\n    ssl_certificate     /etc/ssl/exemple.fr.pem;\n    ssl_certificate_key /etc/ssl/exemple.fr.key;\n    ssl_protocols TLSv1.2 TLSv1.3;\n}",
+          "language": "text"
+        },
+        {
+          "title": "Limiter",
+          "body": "limit_req_zone définit une zone de limitation par adresse IP ; limit_req l'applique à une location, comme /login, contre les essais de mots de passe. client_max_body_size borne la taille des requêtes : au-delà, Nginx répond 413. server_tokens off masque la version de Nginx."
+        },
+        {
+          "title": "Journaux et compression",
+          "body": "Un log_format personnalisé ajoute $request_time (durée totale) et $upstream_response_time (temps de l'application) : on distingue ainsi un backend lent d'un client lent. gzip (ou brotli) compresse les réponses textuelles."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "nginx-production-q1",
+          "prompt": "Complète : au plus 5 tentatives de connexion par minute et par adresse IP.",
+          "code": "limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;\nlocation /login {\n    ___ zone=login burst=3 nodelay;\n    proxy_pass http://api;\n}",
+          "language": "text",
+          "answers": [
+            "limit_req"
+          ],
+          "distractors": [
+            "rate_limit",
+            "limit_conn",
+            "throttle"
+          ],
+          "explanation": "limit_conn limite le nombre de connexions simultanées, pas le débit des requêtes.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "nginx-production-q2",
+          "prompt": "L'envoi d'un fichier de 20 Mo échoue avec 413 Request Entity Too Large. Que régler ?",
+          "choices": [
+            "client_max_body_size",
+            "proxy_read_timeout",
+            "worker_processes",
+            "keepalive_timeout"
+          ],
+          "answerIndex": 0,
+          "explanation": "La valeur par défaut est de 1 Mo.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "nginx-production-q3",
+          "prompt": "Revue de la configuration TLS : touche la ligne en cause.",
+          "code": "ssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3;",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "TLS 1.0 et 1.1 sont obsolètes et vulnérables ; on ne garde que TLSv1.2 et TLSv1.3.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "nginx-production-q4",
+          "prompt": "Comment savoir, dans les journaux, si la lenteur vient de l'application ou du client ?",
+          "choices": [
+            "Ajouter $request_time et $upstream_response_time au format des journaux",
+            "Activer le mode debug",
+            "Compter les lignes du journal",
+            "Regarder la taille des réponses"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un upstream_response_time court avec un request_time long désigne le réseau ou le client.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "nginx-production-q5",
+          "prompt": "Comment rediriger tout le trafic HTTP vers HTTPS ?",
+          "choices": [
+            "Un bloc server sur le port 80 avec return 301 https://$host$request_uri;",
+            "Fermer le port 80",
+            "Une page HTML avec un lien",
+            "rewrite sur chaque location"
+          ],
+          "answerIndex": 0,
+          "explanation": "$request_uri conserve le chemin et les paramètres.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "nginx-production-q6",
+          "prompt": "Comment durcir Nginx ?",
+          "choices": [
+            "N'autoriser que TLS 1.2 et 1.3",
+            "server_tokens off",
+            "Limiter le débit des points sensibles",
+            "autoindex on à la racine du site"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "autoindex liste le contenu des dossiers : une invitation à fouiller.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "nginx-defi",
+    "title": "Défi entretien : une application et son API",
+    "summary": "Routage, adresses et protections.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "nginx-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une application monopage et son API partagent le même domaine. Comment configurer Nginx ?",
+        "choices": [
+          "location / sert les fichiers avec try_files vers index.html ; location /api/ transmet à l'API avec proxy_pass",
+          "Tout transmettre à l'API",
+          "Deux domaines obligatoirement",
+          "Servir l'API comme des fichiers statiques"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un seul domaine évite aussi les problèmes de CORS.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "nginx-defi-q2",
+        "prompt": "Cas pratique 2/3 — L'API voit toutes les requêtes venir de 127.0.0.1. Que faire ?",
+        "choices": [
+          "Transmettre X-Forwarded-For et configurer l'API pour faire confiance au proxy",
+          "Désactiver Nginx",
+          "Lire l'adresse dans le corps de la requête",
+          "Changer le port de l'API"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans cela, journaux et limitation de débit côté API voient tous les clients comme un seul.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "nginx-defi-q3",
+        "prompt": "Cas pratique 3/3 — Un robot essaie des milliers de mots de passe sur /login. Quelle protection dans Nginx ?",
+        "choices": [
+          "limit_req sur /login, avec une zone par adresse IP",
+          "client_max_body_size",
+          "gzip",
+          "try_files"
+        ],
+        "answerIndex": 0,
+        "explanation": "On complète côté application par un verrouillage progressif et la MFA.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "nginx-defi-q4",
+        "prompt": "nginx -s reload coupe-t-il les connexions en cours ?",
+        "choices": [
+          "Non : les anciens processus terminent leurs requêtes, les nouveaux prennent la nouvelle configuration",
+          "Oui, toutes",
+          "Oui, seulement les connexions HTTPS",
+          "Il redémarre la machine"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est ce qui permet de changer la configuration en pleine journée.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "nginx-defi-q5",
+        "prompt": "La page statique /api-docs est envoyée à l'API au lieu d'être servie depuis le disque. Touche la ligne en cause.",
+        "code": "location /api {\n    proxy_pass http://api;\n}",
+        "language": "text",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Le préfixe /api correspond aussi à /api-docs. Avec location /api/, seuls les chemins sous /api/ sont transmis.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "nginx-defi-q6",
+        "prompt": "Lesquelles sont des variables de Nginx ?",
+        "choices": [
+          "$host",
+          "$remote_addr",
+          "$request_uri",
+          "$password"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Elles s'utilisent dans les en-têtes, les redirections et les formats de journaux.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

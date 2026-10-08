@@ -1,0 +1,445 @@
+{
+  "id": "rest-ch-essentiel",
+  "title": "REST en profondeur",
+  "summary": "Ressources, conception et évolution d'une API.",
+  "lessons": [
+    {
+      "id": "rest-ressources",
+      "title": "Ressources, méthodes et statuts",
+      "summary": "La sémantique de HTTP.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des ressources nommées",
+          "body": "Une API REST expose des ressources désignées par des URL faites de noms, au pluriel et hiérarchisées : /commandes, /commandes/42, /commandes/42/lignes. L'action est portée par la méthode HTTP, jamais par un verbe dans l'URL."
+        },
+        {
+          "title": "La sémantique des méthodes",
+          "body": "GET lit sans effet de bord (méthode sûre). PUT remplace entièrement une ressource, PATCH en modifie une partie, DELETE la supprime : GET, PUT et DELETE sont idempotents, les répéter donne le même résultat. POST crée une ressource ou déclenche une action, et n'est pas idempotent.",
+          "code": "GET    /commandes?statut=payee\nPOST   /commandes\nGET    /commandes/42\nPATCH  /commandes/42\nDELETE /commandes/42",
+          "language": "text"
+        },
+        {
+          "title": "Les codes de statut",
+          "body": "200 OK, 201 Created (avec un en-tête Location), 204 No Content. 400 pour une requête mal formée, 401 si l'on n'est pas authentifié, 403 si l'on est authentifié mais pas autorisé, 404 introuvable, 409 en conflit avec l'état actuel, 422 pour une donnée invalide, 429 pour trop de requêtes. 500 et 503 pour les erreurs du serveur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rest-ressources-q1",
+          "prompt": "Quelle différence entre 401 et 403 ?",
+          "choices": [
+            "401 : pas (ou mal) authentifié ; 403 : authentifié, mais pas autorisé",
+            "401 : interdit ; 403 : non trouvé",
+            "Ce sont deux codes équivalents",
+            "403 : le serveur est en panne"
+          ],
+          "answerIndex": 0,
+          "explanation": "Malgré son nom, Unauthorized (401) concerne l'authentification.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rest-ressources-q2",
+          "prompt": "Quelle différence entre PUT et PATCH ?",
+          "choices": [
+            "PUT remplace toute la ressource et est idempotent ; PATCH en modifie une partie",
+            "PUT crée, PATCH supprime",
+            "Ce sont deux noms de la même méthode",
+            "PATCH est réservé aux fichiers"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un PUT sans un champ efface ce champ ; un PATCH le laisse intact.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "rest-ressources-q3",
+          "prompt": "Revue de conception de l'API : touche une ligne qui n'est pas REST.",
+          "code": "POST /api/getCommandes\nPOST /api/commandes/42/delete\nGET  /api/commandes/42",
+          "language": "text",
+          "bugLines": [
+            1,
+            2
+          ],
+          "explanation": "L'action est dans l'URL au lieu de la méthode : GET /api/commandes et DELETE /api/commandes/42.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "rest-ressources-q4",
+          "prompt": "Complète ces échanges.",
+          "code": "___ /commandes/42 HTTP/1.1\n→ 204 No Content\n\nPOST /commandes HTTP/1.1\n→ ___ Created\nLocation: /commandes/43",
+          "language": "text",
+          "answers": [
+            "DELETE",
+            "201"
+          ],
+          "distractors": [
+            "REMOVE",
+            "200",
+            "202"
+          ],
+          "explanation": "204 indique un succès sans contenu à renvoyer ; 201 une création, avec l'adresse de la ressource.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rest-ressources-q5",
+          "prompt": "Quand renvoyer 409 Conflict ?",
+          "choices": [
+            "Quand la requête entre en conflit avec l'état actuel de la ressource (doublon, état incompatible)",
+            "Quand le serveur est surchargé",
+            "Quand l'utilisateur n'est pas connecté",
+            "Quand la ressource n'existe pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Par exemple : annuler une commande déjà expédiée.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rest-ressources-q6",
+          "prompt": "Quelles méthodes HTTP sont idempotentes ?",
+          "choices": [
+            "GET",
+            "PUT",
+            "DELETE",
+            "POST"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Répéter un POST peut créer deux ressources.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "rest-conception",
+      "title": "Concevoir les réponses",
+      "summary": "Pagination, erreurs et concurrence.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Listes et représentations",
+          "body": "Les listes se paginent, de préférence par curseur, stable quand des éléments s'ajoutent ; filtres et tri passent en paramètres (?statut=payee&tri=-date). Les dates suivent ISO 8601 avec fuseau, les montants évitent les nombres à virgule flottante (centimes entiers ou décimal en chaîne)."
+        },
+        {
+          "title": "Des erreurs standard",
+          "body": "Le code de statut dit ce qui s'est passé : renvoyer 200 avec un message d'erreur trompe les clients, les caches et la supervision. Le corps suit le format Problem Details (RFC 9457) : type, titre, statut, détail.",
+          "code": "HTTP/1.1 422 Unprocessable Content\nContent-Type: application/problem+json\n\n{\n  \"type\": \"https://api.ex.fr/erreurs/stock\",\n  \"title\": \"Stock insuffisant\",\n  \"status\": 422,\n  \"detail\": \"Il reste 2 articles, 5 demandés.\"\n}",
+          "language": "text"
+        },
+        {
+          "title": "Concurrence et cache",
+          "body": "Une réponse peut porter un ETag, identifiant de version. Le client le renvoie dans If-Match lors d'une modification : si la ressource a changé entre-temps, le serveur répond 412 Precondition Failed au lieu d'écraser le travail d'un autre. Cache-Control et ETag permettent aussi la mise en cache et les réponses 304."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rest-conception-q1",
+          "prompt": "Pourquoi préférer la pagination par curseur pour un flux d'éléments qui s'ajoutent sans cesse ?",
+          "choices": [
+            "Elle reste stable : pas de doublon ni d'élément sauté quand de nouveaux éléments arrivent",
+            "Elle permet d'aller directement à la page 500",
+            "Elle renvoie tout d'un coup",
+            "Elle est obligatoire en HTTP"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un décalage (offset), chaque ajout décale toutes les pages suivantes.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "rest-conception-q2",
+          "prompt": "Complète cette réponse d'erreur au format Problem Details.",
+          "code": "HTTP/1.1 422 Unprocessable Content\nContent-Type: application/___+json\n\n{\n  \"type\": \"https://api.ex.fr/erreurs/stock\",\n  \"title\": \"Stock insuffisant\",\n  \"status\": 422,\n  \"___\": \"Il reste 2 articles, 5 demandés.\"\n}",
+          "language": "text",
+          "answers": [
+            "problem",
+            "detail"
+          ],
+          "distractors": [
+            "error",
+            "message",
+            "description"
+          ],
+          "explanation": "Un format commun permet aux clients de traiter toutes les erreurs de la même façon.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rest-conception-q3",
+          "prompt": "Comment éviter qu'un utilisateur écrase sans le savoir la modification d'un autre ?",
+          "choices": [
+            "La concurrence optimiste : ETag lu, If-Match à l'écriture, et 412 si la ressource a changé",
+            "Un verrou global sur l'API",
+            "Interdire les modifications simultanées par contrat",
+            "Renvoyer toujours 200"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le second utilisateur recharge et réapplique sa modification en connaissance de cause.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "rest-conception-q4",
+          "prompt": "Revue de conception de cette représentation : touche une ligne problématique.",
+          "code": "{\n  \"montant\": 19.99,\n  \"devise\": \"EUR\",\n  \"date\": \"08/10/2026\"\n}",
+          "language": "text",
+          "bugLines": [
+            2,
+            4
+          ],
+          "explanation": "Un montant en flottant perd en précision, et 08/10/2026 est ambigu (8 octobre ou 10 août ?). Centimes entiers ou décimal en chaîne, et date ISO 8601.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rest-conception-q5",
+          "prompt": "Pourquoi ne pas répondre 200 avec un corps {\"erreur\": …} ?",
+          "choices": [
+            "Clients, caches et supervision se fient au code de statut : l'erreur passerait pour un succès",
+            "Parce que 200 est réservé aux images",
+            "Parce que le JSON l'interdit",
+            "Ce n'est pas un problème"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un taux d'erreurs mesuré sur les codes HTTP serait faux.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "rest-conception-q6",
+          "prompt": "Quelles sont de bonnes pratiques pour les réponses d'une API ?",
+          "choices": [
+            "Des dates ISO 8601 avec fuseau",
+            "Des erreurs au format Problem Details",
+            "Un curseur ou un lien vers la page suivante",
+            "Un code 200 pour toutes les erreurs"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La cohérence entre endpoints compte autant que chaque choix.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "rest-evolution",
+      "title": "Faire vivre une API",
+      "summary": "Versions, dépréciation et opérations longues.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Évoluer sans casser",
+          "body": "Ajouter un champ optionnel ou un endpoint est compatible ; renommer ou supprimer un champ, changer son type ou rendre un paramètre obligatoire ne l'est pas. Les changements incompatibles passent par une nouvelle version (/v2, ou un en-tête), annoncée avec les en-têtes Deprecation et Sunset et accompagnée d'une date de fin."
+        },
+        {
+          "title": "Robustesse",
+          "body": "Une clé d'idempotence (en-tête Idempotency-Key) permet de rejouer un POST sans doublon : le serveur renvoie le résultat de la première exécution. La limitation de débit répond 429 avec Retry-After. Une opération longue (un export) répond 202 Accepted avec l'adresse d'une ressource de suivi.",
+          "code": "POST /exports HTTP/1.1\nIdempotency-Key: 7f1c2e9a\n\n→ 202 Accepted\nLocation: /exports/881\n\nGET /exports/881\n→ 200 {\"statut\": \"en_cours\", \"progression\": 40}",
+          "language": "text"
+        },
+        {
+          "title": "Le contrat",
+          "body": "Un contrat OpenAPI décrit l'API de façon exploitable par des outils : documentation, clients générés, validation, tests de compatibilité. Les droits s'expriment avec OAuth 2 et des scopes (commandes:lecture, commandes:ecriture)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rest-evolution-q1",
+          "prompt": "Lequel de ces changements est compatible avec les clients existants ?",
+          "choices": [
+            "Ajouter un champ optionnel à une réponse",
+            "Renommer un champ",
+            "Changer le type d'un champ",
+            "Rendre un paramètre obligatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les clients bien écrits ignorent les champs qu'ils ne connaissent pas.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rest-evolution-q2",
+          "prompt": "Un export prend dix minutes. Comment le concevoir ?",
+          "choices": [
+            "202 Accepted avec l'adresse d'une ressource de suivi, interrogée jusqu'à la fin",
+            "Une requête qui attend dix minutes",
+            "Un 500 si c'est trop long",
+            "Un e-mail au lieu d'une réponse"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un webhook peut aussi prévenir le client de la fin du traitement.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "rest-evolution-q3",
+          "prompt": "Complète : indiquer au client d'attendre 30 secondes.",
+          "code": "HTTP/1.1 429 Too Many Requests\n___: 30",
+          "language": "text",
+          "answers": [
+            "Retry-After"
+          ],
+          "distractors": [
+            "Wait",
+            "Retry-In",
+            "Cooldown"
+          ],
+          "explanation": "Le client sait quand réessayer, au lieu de marteler le serveur.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "rest-evolution-q4",
+          "prompt": "Après ce déploiement, des applications mobiles en production plantent. Touche la ligne en cause.",
+          "code": "GET /v1/clients/42\n{ \"nom_complet\": \"Ana Martin\" }   // avant : \"nom\"",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Un champ renommé dans la v1 casse les clients existants. On ajoute le nouveau champ en gardant l'ancien, ou on crée une v2.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rest-evolution-q5",
+          "prompt": "À quoi sert l'en-tête Idempotency-Key sur un POST ?",
+          "choices": [
+            "À rejouer la requête sans doublon : le serveur renvoie le résultat de la première exécution",
+            "À authentifier le client",
+            "À chiffrer le corps",
+            "À limiter le débit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Indispensable pour un paiement réessayé après un délai dépassé.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rest-evolution-q6",
+          "prompt": "Comment annoncer la fin d'une ancienne version de l'API ?",
+          "choices": [
+            "Les en-têtes Deprecation et Sunset",
+            "Une communication et une date de fin données aux clients",
+            "Le suivi de l'usage restant de l'ancienne version",
+            "La couper sans prévenir"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On contacte directement les derniers clients qui l'utilisent encore.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "rest-defi",
+    "title": "Défi entretien : annuler une commande",
+    "summary": "Conception, conflits et concurrence.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "rest-defi-q1",
+        "prompt": "Cas pratique 1/3 — Comment exposer l'annulation d'une commande ?",
+        "choices": [
+          "POST /commandes/42/annulation (une action) ou PATCH du statut",
+          "GET /annulerCommande?id=42",
+          "DELETE /commandes",
+          "PUT /commandes/annuler"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une annulation n'est pas une suppression : la commande reste, avec son historique.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rest-defi-q2",
+        "prompt": "Cas pratique 2/3 — La commande est déjà expédiée. Que répondre ?",
+        "choices": [
+          "409 Conflict, avec un Problem Details qui explique pourquoi",
+          "200 OK sans rien faire",
+          "500 Internal Server Error",
+          "404 Not Found"
+        ],
+        "answerIndex": 0,
+        "explanation": "La requête est valide, mais incompatible avec l'état actuel.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rest-defi-q3",
+        "prompt": "Cas pratique 3/3 — Deux agents du support modifient la même commande en même temps. Comment éviter qu'une modification écrase l'autre ?",
+        "choices": [
+          "ETag et If-Match : la seconde écriture reçoit 412 et doit recharger",
+          "La dernière écriture gagne, sans prévenir",
+          "Un verrou global de l'API pendant une minute",
+          "Interdire le travail simultané"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est la concurrence optimiste, sans verrou.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "rest-defi-q4",
+        "prompt": "Que demande cette requête ?",
+        "code": "GET /commandes?statut=payee&tri=-date&limite=50&apres=c_8f2",
+        "language": "text",
+        "choices": [
+          "50 commandes payées, des plus récentes aux plus anciennes, après le curseur c_8f2",
+          "La suppression de 50 commandes",
+          "La commande c_8f2 uniquement",
+          "Toutes les commandes, triées par montant"
+        ],
+        "answerIndex": 0,
+        "explanation": "Filtrage, tri décroissant et pagination par curseur en paramètres.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "rest-defi-q5",
+        "prompt": "Des commandes disparaissent sans que personne ne les supprime. Touche la ligne en cause.",
+        "code": "GET /commandes/42/supprimer",
+        "language": "text",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Un GET doit être sans effet de bord : robots d'indexation, préchargements et caches l'appellent librement. On utilise DELETE /commandes/42.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "rest-defi-q6",
+        "prompt": "Lesquels sont des codes de réussite ?",
+        "choices": [
+          "200",
+          "201",
+          "204",
+          "404"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les codes 4xx signalent une erreur du client.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

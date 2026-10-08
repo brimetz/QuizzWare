@@ -1,0 +1,430 @@
+{
+  "id": "ddd-ch-essentiel",
+  "title": "Domain-Driven Design en profondeur",
+  "summary": "Contextes, agrégats et événements de domaine.",
+  "lessons": [
+    {
+      "id": "ddd-strategique",
+      "title": "La conception stratégique",
+      "summary": "Langage, contextes et sous-domaines.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le langage ubiquitaire",
+          "body": "Experts métier et développeurs partagent un même vocabulaire, utilisé dans les discussions, la documentation et jusque dans le code : si le métier dit « mise en recouvrement », la méthode ne s'appelle pas UpdateStatus. Les malentendus apparaissent alors tôt, en parlant."
+        },
+        {
+          "title": "Les bounded contexts",
+          "body": "Un même mot n'a pas le même sens partout : « client » signifie un plafond de crédit pour la facturation, un niveau de service pour le support, une adresse de livraison pour la logistique. Un bounded context délimite la zone où un modèle et son langage ont un sens précis ; vouloir un modèle unique pour toute l'entreprise produit une classe énorme et confuse."
+        },
+        {
+          "title": "Sous-domaines et relations",
+          "body": "Le sous-domaine cœur différencie l'entreprise : on y met les meilleurs efforts. Les sous-domaines de support et génériques (paie, authentification) peuvent s'acheter ou se simplifier. La carte des contextes décrit leurs relations : partenariat, client-fournisseur, conformiste, ou couche anticorruption qui traduit un modèle externe pour protéger le nôtre."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ddd-strategique-q1",
+          "prompt": "Qu'est-ce que le langage ubiquitaire ?",
+          "choices": [
+            "Un vocabulaire partagé par experts et développeurs, utilisé jusque dans le code",
+            "Un langage de programmation universel",
+            "La documentation de l'API",
+            "Un dictionnaire de traduction"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le code parle la langue du métier.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ddd-strategique-q2",
+          "prompt": "Qu'est-ce qu'un bounded context ?",
+          "choices": [
+            "Une frontière à l'intérieur de laquelle un modèle et son langage ont un sens précis",
+            "Une limite de mémoire",
+            "Un conteneur Docker",
+            "Une transaction de base de données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il correspond souvent à une équipe et à un service, mais pas toujours.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ddd-strategique-q3",
+          "prompt": "À quoi sert une couche anticorruption ?",
+          "choices": [
+            "À traduire le modèle d'un système externe (souvent ancien) pour qu'il ne contamine pas notre modèle",
+            "À détecter la corruption de fichiers",
+            "À lutter contre la fraude",
+            "À chiffrer les échanges"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les concepts confus de l'ancien système s'arrêtent à la frontière.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ddd-strategique-q4",
+          "prompt": "Qu'est-ce que le sous-domaine cœur ?",
+          "choices": [
+            "Ce qui différencie l'entreprise : on y investit le plus, tandis que le générique peut s'acheter",
+            "Le module le plus ancien",
+            "La base de données principale",
+            "Le framework utilisé"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ne réécrit pas un système de paie si ce n'est pas son métier.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "ddd-strategique-q5",
+          "prompt": "Revue de conception : touche une ligne qui révèle des contextes mélangés.",
+          "code": "public class Client\n{\n    public string Nom { get; set; } = \"\";\n    public decimal PlafondDeCredit { get; set; }   // facturation\n    public int NiveauDeSupport { get; set; }       // support\n    public string AdresseEntrepot { get; set; } = \"\"; // logistique\n}",
+          "bugLines": [
+            4,
+            5,
+            6
+          ],
+          "explanation": "Trois contextes partagent une même classe : chaque équipe la modifie pour ses besoins. Chaque contexte a son propre modèle de client.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ddd-strategique-q6",
+          "prompt": "Quelles relations peut-on trouver sur une carte des contextes ?",
+          "choices": [
+            "Partenariat",
+            "Client-fournisseur",
+            "Couche anticorruption",
+            "Héritage de classes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Ce sont des relations entre équipes et modèles, pas entre classes.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "ddd-tactique",
+      "title": "Les briques tactiques",
+      "summary": "Entités, objets valeur et agrégats.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Entités et objets valeur",
+          "body": "Une entité a une identité qui persiste malgré ses changements : une commande reste la même commande. Un objet valeur n'est défini que par ses valeurs : deux montants de 10 € sont identiques. Il est immuable et porte ses propres règles. En C#, un record en est l'expression naturelle.",
+          "code": "public record Montant(decimal Valeur, string Devise)\n{\n    public Montant Ajouter(Montant autre) =>\n        autre.Devise == Devise\n            ? this with { Valeur = Valeur + autre.Valeur }\n            : throw new InvalidOperationException(\"Devises différentes\");\n}"
+        },
+        {
+          "title": "Les agrégats",
+          "body": "Un agrégat regroupe des objets qui doivent rester cohérents ensemble (une commande et ses lignes). On ne le modifie que par sa racine, qui protège les invariants (au plus 50 lignes, total positif). Une transaction modifie un seul agrégat. Il ne faut pas exposer de collection modifiable, qui permettrait de contourner la racine."
+        },
+        {
+          "title": "Références et dépôts",
+          "body": "Un agrégat en référence un autre par son identifiant (ClientId), pas par l'objet : sinon les frontières se brouillent et le chargement s'étend sans fin. Il existe un dépôt par agrégat, qui le charge et l'enregistre en entier."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ddd-tactique-q1",
+          "prompt": "Quelle différence entre une entité et un objet valeur ?",
+          "choices": [
+            "L'entité a une identité durable ; l'objet valeur n'est défini que par ses valeurs et est immuable",
+            "L'objet valeur est stocké en base, pas l'entité",
+            "Ce sont deux noms pour la même chose",
+            "L'entité n'a pas de comportement"
+          ],
+          "answerIndex": 0,
+          "explanation": "On compare deux entités par leur identifiant, deux objets valeur par leur contenu.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "ddd-tactique-q2",
+          "prompt": "Complète cet objet valeur immuable.",
+          "code": "public ___ Montant(decimal Valeur, string Devise)\n{\n    public Montant Ajouter(Montant autre) =>\n        this ___ { Valeur = Valeur + autre.Valeur };\n}",
+          "answers": [
+            "record",
+            "with"
+          ],
+          "distractors": [
+            "class",
+            "new",
+            "clone"
+          ],
+          "explanation": "Un record offre l'égalité par valeur ; with crée une copie modifiée.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "ddd-tactique-q3",
+          "prompt": "La limite de 50 lignes est contournée ailleurs dans le code. Touche la ligne en cause.",
+          "code": "public class Commande\n{\n    public List<Ligne> Lignes { get; } = new();\n\n    public void AjouterLigne(Ligne l)\n    {\n        if (Lignes.Count >= 50) throw new InvalidOperationException();\n        Lignes.Add(l);\n    }\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La liste modifiable est exposée : commande.Lignes.Add(…) contourne la règle. On expose un IReadOnlyList et on garde la liste privée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ddd-tactique-q4",
+          "prompt": "Qu'est-ce qu'un agrégat ?",
+          "choices": [
+            "Un groupe d'objets modifiés ensemble, dont la racine garantit la cohérence, dans une seule transaction",
+            "Une fonction SQL comme SUM",
+            "Une liste de tous les objets du système",
+            "Un microservice"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sa frontière suit les invariants qu'il doit protéger.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ddd-tactique-q5",
+          "prompt": "Comment un agrégat doit-il en référencer un autre ?",
+          "choices": [
+            "Par son identifiant",
+            "Par une référence directe à l'objet",
+            "Par une copie complète",
+            "Il ne doit jamais le référencer"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque agrégat reste chargeable et modifiable indépendamment.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "ddd-tactique-q6",
+          "prompt": "Lesquels sont de bons candidats au rôle d'objet valeur ?",
+          "choices": [
+            "Un montant avec sa devise",
+            "Une adresse",
+            "Une période entre deux dates",
+            "Un client avec son identifiant"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un client a une identité qui dure : c'est une entité.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "ddd-evenements",
+      "title": "Événements et modèles riches",
+      "summary": "Faits du domaine et cohérence entre agrégats.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les événements de domaine",
+          "body": "Un événement de domaine est un fait métier significatif, nommé au passé (CommandePayee), émis par un agrégat quand son état change. Les autres agrégats ou contextes y réagissent ensuite : mise à jour du stock, envoi d'une facture. Entre agrégats, la cohérence devient « à terme ». On publie les événements après l'enregistrement, par exemple avec le motif outbox.",
+          "code": "public void Payer(Paiement p)\n{\n    if (Statut != StatutCommande.EnAttente)\n        throw new InvalidOperationException();\n    Statut = StatutCommande.Payee;\n    _evenements.Add(new CommandePayee(Id, p.Montant));\n}"
+        },
+        {
+          "title": "Un modèle riche",
+          "body": "Dans un modèle riche, les règles vivent dans les objets du domaine : commande.Annuler() refuse l'annulation d'une commande expédiée. Avec un modèle anémique, un service modifie des propriétés publiques, et rien n'empêche un autre code de les modifier autrement. Des agrégats trop gros, eux, provoquent des conflits de concurrence et des chargements lents."
+        },
+        {
+          "title": "Avec discernement",
+          "body": "Les briques tactiques demandent un investissement. Pour un petit outil interne, un prototype ou une application CRUD sans règles riches, elles alourdissent inutilement. On les réserve au sous-domaine cœur, là où la complexité métier le justifie."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ddd-evenements-q1",
+          "prompt": "Qu'est-ce qu'un événement de domaine ?",
+          "choices": [
+            "Un fait métier significatif, nommé au passé, émis par un agrégat",
+            "Un clic dans l'interface",
+            "Une exception",
+            "Une ligne de journal"
+          ],
+          "answerIndex": 0,
+          "explanation": "CommandePayee, StockEpuise, AbonnementResilie.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ddd-evenements-q2",
+          "prompt": "Le stock doit diminuer quand une commande est passée, mais le stock est un autre agrégat. Comment faire ?",
+          "choices": [
+            "La commande émet CommandePassee, traité ensuite par le stock : cohérence à terme",
+            "Modifier les deux agrégats dans la même transaction",
+            "Fusionner commande et stock en un seul agrégat",
+            "Laisser le contrôleur mettre à jour les deux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une transaction ne modifie qu'un agrégat ; les autres suivent par événements.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ddd-evenements-q3",
+          "prompt": "Quel est le risque d'un agrégat trop gros ?",
+          "choices": [
+            "Des conflits de concurrence fréquents et des chargements lents",
+            "Aucun",
+            "Une meilleure cohérence sans contrepartie",
+            "Moins de code"
+          ],
+          "answerIndex": 0,
+          "explanation": "On découpe selon les invariants réellement nécessaires.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "ddd-evenements-q4",
+          "prompt": "Complète : l'agrégat enregistre l'événement correspondant au paiement.",
+          "code": "public void Payer(Paiement p)\n{\n    if (Statut != StatutCommande.EnAttente)\n        throw new InvalidOperationException();\n    Statut = StatutCommande.Payee;\n    _evenements.Add(new ___(Id, p.Montant));\n}",
+          "answers": [
+            "CommandePayee"
+          ],
+          "distractors": [
+            "PayerCommande",
+            "CommandeService",
+            "Paiement"
+          ],
+          "explanation": "Un fait au passé, dans le langage du métier.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "ddd-evenements-q5",
+          "prompt": "Revue DDD : la règle « on n'annule pas une commande expédiée » peut être contournée. Touche la ligne en cause.",
+          "code": "public class ServiceCommandes\n{\n    public void Annuler(Commande c)\n    {\n        if (c.Statut == \"Expediee\") throw new InvalidOperationException();\n        c.Statut = \"Annulee\";\n    }\n}",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Le statut est modifiable de l'extérieur : n'importe quel code peut écrire c.Statut = \"Annulee\". La règle doit vivre dans commande.Annuler(), avec un statut privé.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "ddd-evenements-q6",
+          "prompt": "Dans quels cas les briques tactiques du DDD sont-elles excessives ?",
+          "choices": [
+            "Une application CRUD sans règles métier riches",
+            "Un petit outil interne",
+            "Un prototype jetable",
+            "Un domaine complexe au cœur du métier"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "C'est précisément pour le domaine complexe qu'elles ont été pensées.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "ddd-defi",
+    "title": "Défi entretien : le produit aux trois sens",
+    "summary": "Découper en contextes et protéger les règles.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "ddd-defi-q1",
+        "prompt": "Cas pratique 1/3 — Dans une même base, « produit » désigne un article vendable (catalogue), un objet stocké (entrepôt) et une ligne facturée (comptabilité) ; chaque évolution casse une autre équipe. Que proposer ?",
+        "choices": [
+          "Des bounded contexts séparés, chacun avec son propre modèle de produit",
+          "Une table produit encore plus complète",
+          "Un comité qui valide chaque changement",
+          "Interdire les évolutions"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque équipe fait évoluer son modèle sans casser les autres.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ddd-defi-q2",
+        "prompt": "Cas pratique 2/3 — Comment ces contextes communiquent-ils ?",
+        "choices": [
+          "Par des événements (ProduitPublie, StockEpuise) et des contrats explicites, avec une traduction aux frontières",
+          "En partageant les mêmes tables",
+          "En copiant les classes d'un contexte à l'autre",
+          "Ils ne communiquent jamais"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les échanges sont explicites et versionnés.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ddd-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le vieux logiciel d'entrepôt a un modèle confus qu'on ne peut pas modifier. Comment s'en protéger ?",
+        "choices": [
+          "Une couche anticorruption qui traduit son modèle vers le nôtre",
+          "Adopter son modèle tel quel",
+          "Le réécrire avant toute chose",
+          "Accéder directement à sa base"
+        ],
+        "answerIndex": 0,
+        "explanation": "La confusion reste confinée à la frontière.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "ddd-defi-q4",
+        "prompt": "Que vaut cette comparaison, avec Montant défini comme un record ?",
+        "code": "new Montant(10, \"EUR\") == new Montant(10, \"EUR\")",
+        "choices": [
+          "true",
+          "false",
+          "Une erreur de compilation",
+          "Une exception"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les records comparent leurs valeurs : c'est l'égalité attendue d'un objet valeur.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "ddd-defi-q5",
+        "prompt": "Revue de conception de l'agrégat Commande : touche la ligne en cause.",
+        "code": "public class Commande\n{\n    public Guid Id { get; init; }\n    public Client Client { get; set; } = null!;   // l'agrégat Client complet\n}",
+        "bugLines": [
+          4
+        ],
+        "explanation": "Commande contient tout l'agrégat Client : les frontières se brouillent. On garde un ClientId.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "ddd-defi-q6",
+        "prompt": "Quel est le rôle de la racine d'un agrégat ?",
+        "choices": [
+          "Être le seul point d'entrée pour modifier l'agrégat",
+          "Protéger ses invariants",
+          "Porter l'identité de l'agrégat",
+          "Être partagée par tous les contextes"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Chaque contexte a ses propres agrégats.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

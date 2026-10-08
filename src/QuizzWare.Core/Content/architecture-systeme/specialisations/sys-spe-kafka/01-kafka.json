@@ -1,0 +1,440 @@
+{
+  "id": "kafka-ch-essentiel",
+  "title": "Kafka : l'essentiel",
+  "summary": "Topics, partitions, consommateurs et conception.",
+  "lessons": [
+    {
+      "id": "kafka-modele",
+      "title": "Topics et partitions",
+      "summary": "Un journal distribué.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un journal, pas une file",
+          "body": "Un topic Kafka est un journal d'événements découpé en partitions. Chaque partition est une suite ordonnée de messages, numérotés par un offset, à laquelle on ne fait qu'ajouter. Lire ne supprime rien : les messages restent pendant la durée de rétention, et chaque lecteur peut relire depuis l'offset de son choix."
+        },
+        {
+          "title": "Clés et ordre",
+          "body": "Le producteur choisit la partition à partir de la clé du message : même clé, même partition. L'ordre n'est garanti qu'au sein d'une partition : en utilisant l'identifiant de commande comme clé, tous les événements d'une commande sont lus dans l'ordre.",
+          "code": "producer.send(new ProducerRecord<>(\n    \"commandes\", commandeId, evenementJson));",
+          "language": "java"
+        },
+        {
+          "title": "Groupes de consommateurs",
+          "body": "Les consommateurs d'un même groupe se partagent les partitions : chacune est lue par un seul membre du groupe. Le parallélisme maximal d'un groupe est donc le nombre de partitions. Plusieurs groupes différents lisent chacun tout le topic, à leur rythme. Chaque partition est répliquée sur plusieurs brokers, avec un leader et des suiveurs."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "kafka-modele-q1",
+          "prompt": "Quel ordre Kafka garantit-il ?",
+          "choices": [
+            "L'ordre des messages au sein d'une partition",
+            "L'ordre global de tous les messages d'un topic",
+            "Aucun ordre",
+            "L'ordre alphabétique des clés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour ordonner les événements d'une entité, on leur donne la même clé.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "kafka-modele-q2",
+          "prompt": "Un topic a 6 partitions et un groupe compte 8 consommateurs. Combien travaillent ?",
+          "choices": [
+            "6 ; les 2 autres restent inactifs",
+            "8",
+            "1",
+            "48"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une partition n'est lue que par un membre du groupe à la fois.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "kafka-modele-q3",
+          "prompt": "Pourquoi utiliser l'identifiant de commande comme clé des messages ?",
+          "choices": [
+            "Tous les événements d'une commande vont dans la même partition et sont lus dans l'ordre",
+            "Pour chiffrer les messages",
+            "Pour qu'ils soient supprimés plus vite",
+            "Pour répartir les événements d'une commande sur toutes les partitions"
+          ],
+          "answerIndex": 0,
+          "explanation": "« Créée » ne doit pas être traitée après « payée ».",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "kafka-modele-q4",
+          "prompt": "Arrêté trois heures pour maintenance, le service de facturation a perdu des événements. Touche la ligne en cause.",
+          "code": "cleanup.policy=delete\nretention.ms=3600000",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Une rétention d'une heure supprime les messages avant que le consommateur arrêté ne revienne. On la fixe largement au-delà des interruptions possibles (plusieurs jours).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "kafka-modele-q5",
+          "prompt": "Complète : les événements d'une même commande doivent rester ordonnés.",
+          "code": "producer.send(new ProducerRecord<>(\n    \"commandes\", ___, evenementJson));",
+          "language": "java",
+          "answers": [
+            "commandeId"
+          ],
+          "distractors": [
+            "null",
+            "UUID.randomUUID().toString()",
+            "\"commandes\""
+          ],
+          "explanation": "Sans clé (ou avec une clé aléatoire), les événements sont répartis sur toutes les partitions.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "kafka-modele-q6",
+          "prompt": "En quoi Kafka diffère-t-il d'une file de messages classique ?",
+          "choices": [
+            "Les messages restent après lecture, jusqu'à la fin de la rétention",
+            "Chaque groupe lit tout le topic à son rythme",
+            "On peut relire depuis un ancien offset",
+            "Un message lu est supprimé immédiatement"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "C'est ce qui permet de rejouer l'historique ou d'ajouter un nouveau consommateur plus tard.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "kafka-clients",
+      "title": "Producteurs et consommateurs",
+      "summary": "Accusés, offsets et rééquilibrages.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Écrire sans perdre",
+          "body": "Avec acks=all, le leader n'accuse réception qu'une fois le message écrit par toutes les répliques synchronisées ; min.insync.replicas=2 exige au moins deux copies. enable.idempotence=true évite qu'une nouvelle tentative du producteur crée un doublon dans la partition.",
+          "code": "acks=all\nenable.idempotence=true\nmin.insync.replicas=2",
+          "language": "text"
+        },
+        {
+          "title": "Lire et valider",
+          "body": "Le consommateur lit par lots avec poll, traite, puis valide (commit) son offset. Valider après le traitement donne une livraison « au moins une fois » : après un plantage, un message peut être retraité, donc le traitement doit être idempotent. Valider avant le traitement peut faire perdre des messages.",
+          "code": "while (true) {\n    var records = consumer.poll(Duration.ofMillis(500));\n    for (var r : records) {\n        traiter(r.value());\n    }\n    consumer.commitSync();\n}",
+          "language": "java"
+        },
+        {
+          "title": "Rééquilibrages et retard",
+          "body": "Quand un consommateur rejoint ou quitte le groupe, les partitions sont redistribuées : c'est un rééquilibrage. Un consommateur qui met plus de max.poll.interval.ms entre deux poll est considéré comme mort, ce qui en déclenche un. Le lag (retard) mesure l'écart entre le dernier offset écrit et le dernier offset traité : c'est l'indicateur à surveiller."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "kafka-clients-q1",
+          "prompt": "Que signifie acks=all côté producteur ?",
+          "choices": [
+            "Le leader attend que toutes les répliques synchronisées aient écrit le message avant de confirmer",
+            "Le message est envoyé à tous les consommateurs",
+            "Le producteur n'attend aucune confirmation",
+            "Le message est écrit dans tous les topics"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le réglage par défaut des clients récents ; plus lent qu'acks=1, mais sans perte si le leader tombe.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "kafka-clients-q2",
+          "prompt": "Après un plantage, certains messages ne sont jamais traités. Touche la ligne en cause.",
+          "code": "var records = consumer.poll(Duration.ofMillis(500));\nconsumer.commitSync();\nfor (var r : records) {\n    traiter(r.value());\n}",
+          "language": "java",
+          "bugLines": [
+            2
+          ],
+          "explanation": "L'offset est validé avant le traitement : si le processus plante entre les deux, les messages sont considérés comme lus. On valide après.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "kafka-clients-q3",
+          "prompt": "Avec une livraison « au moins une fois », que doit garantir le consommateur ?",
+          "choices": [
+            "Un traitement idempotent : un même message peut arriver deux fois",
+            "Un traitement plus rapide que le producteur",
+            "Un traitement dans un seul thread",
+            "Rien de particulier"
+          ],
+          "answerIndex": 0,
+          "explanation": "Par exemple, mémoriser l'identifiant de chaque événement traité.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "kafka-clients-q4",
+          "prompt": "Complète la configuration du producteur : durabilité maximale et pas de doublon dû aux nouvelles tentatives.",
+          "code": "acks=___\nenable.___=true",
+          "language": "text",
+          "answers": [
+            "all",
+            "idempotence"
+          ],
+          "distractors": [
+            "1",
+            "retries",
+            "transactions"
+          ],
+          "explanation": "acks=1 perd le message si le leader tombe avant la réplication.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "kafka-clients-q5",
+          "prompt": "Qu'est-ce que le lag d'un groupe de consommateurs ?",
+          "choices": [
+            "L'écart entre le dernier offset écrit et le dernier offset traité",
+            "Le temps de démarrage d'un consommateur",
+            "La latence réseau vers le broker",
+            "Le nombre de partitions"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un lag qui grandit sans cesse signale que les consommateurs ne suivent pas.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "kafka-clients-q6",
+          "prompt": "Qu'est-ce qui provoque des rééquilibrages fréquents ?",
+          "choices": [
+            "Un traitement par lot plus long que max.poll.interval.ms",
+            "Des consommateurs qui redémarrent souvent",
+            "Des déploiements qui ajoutent ou retirent des instances",
+            "L'utilisation de clés de messages"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Pendant un rééquilibrage, le traitement des partitions concernées s'interrompt.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "kafka-conception",
+      "title": "Concevoir avec Kafka",
+      "summary": "Schémas, compaction et outbox.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Schémas et compatibilité",
+          "body": "Producteurs et consommateurs évoluent séparément : on décrit les messages avec un schéma (Avro, Protobuf, JSON Schema) enregistré dans un registre qui vérifie la compatibilité. En compatibilité ascendante (backward), les nouveaux consommateurs savent lire les anciens messages : ajouter un champ avec une valeur par défaut est permis, en supprimer un obligatoire ne l'est pas."
+        },
+        {
+          "title": "Compaction et partitions",
+          "body": "Un topic compacté ne garde que le dernier message de chaque clé : idéal pour publier l'état courant d'entités (le dernier prix de chaque produit). Augmenter le nombre de partitions d'un topic existant change la correspondance clé → partition : l'ordre par clé n'est plus garanti pendant la transition. On le dimensionne donc avec de la marge dès le départ."
+        },
+        {
+          "title": "Publier de façon fiable",
+          "body": "Écrire en base puis publier dans Kafka sont deux opérations séparées : l'une peut réussir sans l'autre. Le motif outbox écrit l'événement dans une table de la même base, dans la même transaction, puis un relais (Debezium, ou une tâche) le publie. Un message impossible à traiter part dans un topic de messages en erreur (DLQ) au lieu de bloquer la partition."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "kafka-conception-q1",
+          "prompt": "Que garde un topic compacté ?",
+          "choices": [
+            "Le dernier message de chaque clé",
+            "Les messages des dernières 24 heures seulement",
+            "Un message sur deux",
+            "Rien, il est vidé à chaque lecture"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un message de valeur nulle (tombstone) supprime finalement la clé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "kafka-conception-q2",
+          "prompt": "Pourquoi augmenter le nombre de partitions d'un topic existant est-il délicat ?",
+          "choices": [
+            "La correspondance clé → partition change : l'ordre par clé n'est plus garanti pendant la transition",
+            "C'est impossible",
+            "Les anciens messages sont supprimés",
+            "Les consommateurs doivent être réécrits"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les nouveaux messages d'une clé peuvent atterrir sur une autre partition que les anciens.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "kafka-conception-q3",
+          "prompt": "Parfois, un événement « commande créée » est publié alors que la transaction a été annulée. Touche la ligne en cause.",
+          "code": "@Transactional\npublic void creer(Commande c) {\n    repo.save(c);\n    kafka.send(\"commandes\", c.id(), toJson(c));\n}",
+          "language": "java",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le message part avant la validation de la transaction, qui peut encore échouer. Le motif outbox écrit l'événement en base dans la même transaction, puis le publie.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "kafka-conception-q4",
+          "prompt": "Un message mal formé fait planter le consommateur en boucle et bloque sa partition. Que faire ?",
+          "choices": [
+            "Après quelques tentatives, l'envoyer dans un topic de messages en erreur (DLQ) et passer au suivant",
+            "Supprimer le topic",
+            "Redémarrer le broker",
+            "Réduire la rétention"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le message reste analysable sans bloquer les suivants.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "kafka-conception-q5",
+          "prompt": "Que signifie la compatibilité ascendante (backward) d'un schéma ?",
+          "choices": [
+            "Les nouveaux consommateurs savent lire les anciens messages",
+            "Les anciens consommateurs savent lire les nouveaux messages",
+            "Le schéma ne change jamais",
+            "Les messages sont lus à l'envers"
+          ],
+          "answerIndex": 0,
+          "explanation": "La compatibilité descendante (forward) est l'inverse ; full combine les deux.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "kafka-conception-q6",
+          "prompt": "Quelles affirmations sur le motif outbox sont vraies ?",
+          "choices": [
+            "L'événement est écrit dans une table outbox dans la même transaction que la donnée",
+            "Un relais publie ensuite la table vers Kafka",
+            "Les consommateurs doivent tolérer les doublons",
+            "Il dispense de toute idempotence"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le relais peut publier deux fois un même événement s'il plante au mauvais moment.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "kafka-defi",
+    "title": "Défi entretien : les paiements en retard",
+    "summary": "Partitions, ordre et idempotence.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "kafka-defi-q1",
+        "prompt": "Cas pratique 1/3 — Le traitement des paiements accumule un retard de 2 millions de messages, sur un topic de 4 partitions lu par 4 consommateurs saturés. Ajouter 4 consommateurs suffit-il ?",
+        "choices": [
+          "Non : 4 partitions limitent le groupe à 4 consommateurs actifs ; il faut plus de partitions ou un traitement plus rapide",
+          "Oui, le retard sera divisé par deux",
+          "Oui, si on ajoute aussi des brokers",
+          "Non, Kafka ne permet qu'un consommateur par topic"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les consommateurs supplémentaires resteraient inactifs.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "kafka-defi-q2",
+        "prompt": "Cas pratique 2/3 — On passe à 12 partitions. Quel risque pour les paiements d'un même compte ?",
+        "choices": [
+          "Pendant la transition, ses messages peuvent être répartis sur deux partitions et traités dans le désordre",
+          "Aucun",
+          "Ils seront tous perdus",
+          "Ils seront tous traités deux fois"
+        ],
+        "answerIndex": 0,
+        "explanation": "On peut vider le retard avant le changement, ou migrer vers un nouveau topic.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "kafka-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment rendre le traitement sûr malgré les doublons possibles ?",
+        "choices": [
+          "Enregistrer l'identifiant de chaque paiement traité et ignorer ceux déjà vus",
+          "Valider l'offset avant le traitement",
+          "Désactiver les nouvelles tentatives",
+          "Utiliser un seul consommateur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le traitement devient idempotent : rejouer un message ne change rien.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "kafka-defi-q4",
+        "prompt": "Avec replication.factor=3, min.insync.replicas=2 et acks=all, combien de brokers d'une partition peuvent tomber sans bloquer les écritures ?",
+        "choices": [
+          "1",
+          "2",
+          "0",
+          "3"
+        ],
+        "answerIndex": 0,
+        "explanation": "Il faut au moins deux répliques synchronisées ; sinon, les producteurs reçoivent une erreur plutôt que de risquer une perte.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "kafka-defi-q5",
+        "prompt": "Remets dans l'ordre le parcours d'un événement.",
+        "language": "text",
+        "lines": [
+          "Le producteur envoie l'événement avec la clé de la commande",
+          "Le leader l'ajoute à la partition et le réplique",
+          "Le consommateur le récupère avec poll",
+          "Le consommateur traite l'événement",
+          "Le consommateur valide son offset"
+        ],
+        "explanation": "Valider après le traitement : au moins une fois.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "kafka-defi-q6",
+        "prompt": "Pour quels besoins Kafka est-il adapté ?",
+        "choices": [
+          "Un journal d'événements qu'on peut rejouer",
+          "Diffuser un même flux à plusieurs services",
+          "Du traitement de flux à grand débit",
+          "Une requête-réponse synchrone à très faible latence"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Pour une requête-réponse, un appel HTTP ou gRPC est plus simple.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

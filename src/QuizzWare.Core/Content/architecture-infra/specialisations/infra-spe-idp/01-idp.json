@@ -1,0 +1,437 @@
+{
+  "id": "idp-ch-essentiel",
+  "title": "Portails développeurs : l'essentiel",
+  "summary": "Platform engineering, catalogue et chemins balisés.",
+  "lessons": [
+    {
+      "id": "idp-principes",
+      "title": "Le platform engineering",
+      "summary": "Une plateforme interne traitée comme un produit.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Réduire la charge cognitive",
+          "body": "Kubernetes, IaC, CI/CD, sécurité, supervision : demander à chaque équipe produit de tout maîtriser la ralentit. Une équipe plateforme construit une plateforme interne qui rend ces sujets accessibles en libre-service : créer un service, un environnement ou une base en quelques minutes, sans ticket."
+        },
+        {
+          "title": "Les chemins balisés",
+          "body": "Un golden path est le chemin recommandé et outillé pour un besoin courant : un modèle de service HTTP avec son dépôt, sa CI, son déploiement, ses tableaux de bord et ses alertes. Les équipes peuvent en sortir quand c'est justifié, mais le suivre est le plus simple."
+        },
+        {
+          "title": "La plateforme comme produit",
+          "body": "Les développeurs sont les clients de la plateforme. On mesure l'adoption, la satisfaction, le délai de création d'un service et les indicateurs DORA (fréquence de déploiement, délai de mise en production, taux d'échec des changements, temps de rétablissement). Une plateforme imposée mais inutile est contournée."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "idp-principes-q1",
+          "prompt": "Qu'est-ce qu'un golden path ?",
+          "choices": [
+            "Le chemin recommandé et outillé pour un besoin courant, que les équipes suivent en libre-service",
+            "Le chemin réseau le plus rapide",
+            "La branche principale du dépôt",
+            "Un parcours de formation obligatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il rend la bonne pratique plus facile que les autres options.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "idp-principes-q2",
+          "prompt": "Que signifie traiter la plateforme comme un produit ?",
+          "choices": [
+            "Les développeurs sont ses clients : on mesure l'adoption et la satisfaction, et on répond à leurs besoins",
+            "On la vend à d'autres entreprises",
+            "On la facture aux équipes",
+            "On impose son usage sans discussion"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une bonne plateforme est adoptée parce qu'elle aide, pas parce qu'elle est obligatoire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "idp-principes-q3",
+          "prompt": "Quel problème une plateforme interne cherche-t-elle d'abord à résoudre ?",
+          "choices": [
+            "La charge cognitive : chaque équipe n'a plus à maîtriser seule toute la chaîne d'infrastructure",
+            "Le manque de serveurs",
+            "Le prix des licences",
+            "Le recrutement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les équipes produit se concentrent sur leur métier.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "idp-principes-q4",
+          "prompt": "Que veut dire « libre-service » pour une plateforme ?",
+          "choices": [
+            "Créer un service, un environnement ou une base soi-même, en quelques minutes, sans ticket",
+            "Que la plateforme est gratuite",
+            "Que n'importe qui peut modifier la production sans contrôle",
+            "Que l'équipe plateforme travaille le week-end"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les contrôles sont intégrés au chemin, au lieu d'être des validations manuelles.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "idp-principes-q5",
+          "prompt": "Comment mesurer l'effet d'une plateforme interne ?",
+          "choices": [
+            "Indicateurs DORA, délai de création d'un service, adoption et satisfaction des développeurs",
+            "Nombre de lignes de YAML écrites",
+            "Nombre de réunions",
+            "Taille de l'équipe plateforme"
+          ],
+          "answerIndex": 0,
+          "explanation": "On compare avant et après, équipe par équipe.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "idp-principes-q6",
+          "prompt": "Que trouve-t-on dans une plateforme interne ?",
+          "choices": [
+            "Des modèles de services",
+            "Des pipelines CI/CD standard",
+            "Une observabilité intégrée",
+            "Un formulaire papier de demande de serveur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le libre-service remplace justement les demandes manuelles.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "idp-backstage",
+      "title": "Backstage",
+      "summary": "Catalogue, modèles et documentation.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le catalogue logiciel",
+          "body": "Backstage, créé par Spotify, est le portail développeur open source le plus répandu. Son catalogue recense les composants (services, sites, bibliothèques), leur propriétaire, leur cycle de vie, leur système et leurs dépendances. Chaque dépôt les décrit dans un fichier catalog-info.yaml.",
+          "code": "apiVersion: backstage.io/v1alpha1\nkind: Component\nmetadata:\n  name: api-commandes\n  annotations:\n    github.com/project-slug: acme/api-commandes\nspec:\n  type: service\n  lifecycle: production\n  owner: equipe-commandes\n  system: commandes",
+          "language": "yaml"
+        },
+        {
+          "title": "Modèles et documentation",
+          "body": "Les Software Templates créent un nouveau composant conforme en quelques clics : dépôt, squelette de code, CI, configuration de déploiement, enregistrement dans le catalogue. TechDocs publie dans le portail la documentation écrite en Markdown à côté du code."
+        },
+        {
+          "title": "Les extensions",
+          "body": "Des extensions affichent, pour chaque service, l'état de ses déploiements Kubernetes, ses pipelines, ses incidents, ses coûts ou ses alertes. Le portail devient le point d'entrée unique pour tout ce qui concerne un service."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "idp-backstage-q1",
+          "prompt": "Complète la déclaration de ce service dans le catalogue.",
+          "code": "apiVersion: backstage.io/v1alpha1\nkind: ___\nmetadata:\n  name: api-commandes\nspec:\n  type: service\n  lifecycle: production\n  ___: equipe-commandes",
+          "language": "yaml",
+          "answers": [
+            "Component",
+            "owner"
+          ],
+          "distractors": [
+            "Service",
+            "maintainer",
+            "team"
+          ],
+          "explanation": "Un service est un Component de type service ; owner désigne l'équipe responsable.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "idp-backstage-q2",
+          "prompt": "Qu'est-ce que le catalogue logiciel de Backstage ?",
+          "choices": [
+            "L'inventaire des composants avec leur propriétaire, leurs dépendances et leur documentation",
+            "Une boutique d'applications",
+            "Un gestionnaire de paquets",
+            "Une base de données de production"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il répond à « qui possède ce service, et de quoi dépend-il ? ».",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "idp-backstage-q3",
+          "prompt": "À quoi servent les Software Templates ?",
+          "choices": [
+            "À créer un nouveau composant conforme (dépôt, code, CI, déploiement) en quelques clics",
+            "À dessiner des maquettes",
+            "À générer des factures",
+            "À modifier la production"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le golden path rendu concret.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "idp-backstage-q4",
+          "prompt": "Qu'est-ce que TechDocs ?",
+          "choices": [
+            "La documentation écrite en Markdown à côté du code, publiée dans le portail",
+            "Un traitement de texte",
+            "Un forum",
+            "Un générateur de code"
+          ],
+          "answerIndex": 0,
+          "explanation": "La documentation vit et évolue avec le code, dans les mêmes pull requests.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "idp-backstage-q5",
+          "prompt": "Pendant un incident, personne ne sait qui contacter pour ce service. Touche la ligne en cause.",
+          "code": "kind: Component\nmetadata:\n  name: api-paiements\nspec:\n  type: service\n  lifecycle: production\n  owner: unknown",
+          "language": "yaml",
+          "bugLines": [
+            7
+          ],
+          "explanation": "Chaque composant en production doit avoir une équipe propriétaire réelle, joignable.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "idp-backstage-q6",
+          "prompt": "Quelles informations sont utiles pour chaque service du catalogue ?",
+          "choices": [
+            "Son équipe propriétaire",
+            "Sa documentation",
+            "Ses dépendances",
+            "Le salaire de l'équipe"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On y ajoute souvent les liens vers les tableaux de bord et les procédures.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "idp-pratiques",
+      "title": "Construire une plateforme utile",
+      "summary": "Commencer petit, guider sans bloquer.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Commencer petit",
+          "body": "La plateforme la plus fine possible (thinnest viable platform) commence par l'utile : une documentation, des modèles, une CI standard. On l'enrichit selon les besoins mesurés, plutôt que de construire pendant un an une plateforme que personne n'utilisera."
+        },
+        {
+          "title": "Guider sans bloquer",
+          "body": "Les garde-fous automatiques (politiques en code, vérifications de CI qui expliquent comment corriger) remplacent les validations manuelles. Des fiches de maturité (scorecards) notent chaque service : propriétaire déclaré, SLO, alertes, dépendances à jour. Des environnements éphémères par pull request permettent de tester une modification dans un système complet."
+        },
+        {
+          "title": "Des API de plateforme",
+          "body": "Des outils comme Crossplane exposent des ressources cloud sous forme d'objets Kubernetes : une équipe demande « une base PostgreSQL de taille moyenne », et la plateforme la crée selon les standards de l'entreprise. Attention aux abstractions qui cachent trop : il faut toujours pouvoir déboguer ce qui se passe en dessous."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "idp-pratiques-q1",
+          "prompt": "Que recommande l'idée de « plateforme la plus fine possible » ?",
+          "choices": [
+            "Commencer par le minimum utile, puis l'enrichir selon les besoins mesurés",
+            "Construire toute la plateforme avant de la montrer",
+            "Ne jamais construire de plateforme",
+            "Acheter la plateforme la plus chère"
+          ],
+          "answerIndex": 0,
+          "explanation": "On livre vite de la valeur, et on apprend des utilisateurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "idp-pratiques-q2",
+          "prompt": "À quoi servent les fiches de maturité (scorecards) dans un portail ?",
+          "choices": [
+            "À noter chaque service sur des critères : propriétaire, SLO, alertes, dépendances à jour",
+            "À classer les développeurs",
+            "À calculer les primes",
+            "À remplacer les tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elles rendent visibles les écarts, et motivent leur correction.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "idp-pratiques-q3",
+          "prompt": "Pourquoi préférer des garde-fous automatiques aux validations manuelles ?",
+          "choices": [
+            "Ils guident immédiatement (une vérification qui explique comment corriger) sans faire attendre une approbation",
+            "Ils sont plus jolis",
+            "Ils évitent d'écrire du code",
+            "Ils suppriment toute règle"
+          ],
+          "answerIndex": 0,
+          "explanation": "La règle est appliquée partout, sans file d'attente.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "idp-pratiques-q4",
+          "prompt": "Que permet Crossplane ?",
+          "choices": [
+            "De décrire des ressources cloud comme des objets Kubernetes, base d'API de plateforme",
+            "De remplacer Kubernetes",
+            "De compiler du code",
+            "De gérer les congés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les équipes demandent des ressources de haut niveau ; la plateforme applique les standards.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "idp-pratiques-q5",
+          "prompt": "Qu'apporte un environnement éphémère par pull request ?",
+          "choices": [
+            "Tester une modification dans un système complet temporaire, détruit après la fusion",
+            "Un environnement de production supplémentaire",
+            "Une sauvegarde",
+            "Un accès gratuit au cloud"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les relecteurs et le produit valident sur du concret.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "idp-pratiques-q6",
+          "prompt": "Quels signes montrent qu'une plateforme ne remplit pas son rôle ?",
+          "choices": [
+            "Une faible adoption et des contournements",
+            "Des tickets toujours nécessaires pour les besoins courants",
+            "Des abstractions qui empêchent de déboguer",
+            "Une hausse de la fréquence de déploiement"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une hausse de la fréquence de déploiement est plutôt un signe de succès.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "idp-defi",
+    "title": "Défi entretien : trois semaines pour un service",
+    "summary": "Libre-service et mesure.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "idp-defi-q1",
+        "prompt": "Cas pratique 1/3 — Créer un nouveau microservice prend trois semaines et douze tickets. Que proposer ?",
+        "choices": [
+          "Un golden path : un modèle en libre-service qui crée dépôt, CI, déploiement et supervision",
+          "Embaucher pour traiter les tickets plus vite",
+          "Interdire les nouveaux services",
+          "Copier un ancien service à la main"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le délai passe de semaines à minutes, avec les standards intégrés.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "idp-defi-q2",
+        "prompt": "Cas pratique 2/3 — Comment savoir si la plateforme aide vraiment ?",
+        "choices": [
+          "Mesurer le délai de création d'un service, les indicateurs DORA, l'adoption et la satisfaction",
+          "Compter les fonctionnalités de la plateforme",
+          "Demander à l'équipe plateforme",
+          "Ce n'est pas mesurable"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avant et après, pour chaque équipe qui l'adopte.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "idp-defi-q3",
+        "prompt": "Cas pratique 3/3 — Plusieurs équipes contournent la plateforme. Comment réagir ?",
+        "choices": [
+          "Comme une équipe produit : comprendre les besoins qu'elle ne couvre pas, et les traiter",
+          "Interdire les contournements",
+          "Ignorer ces équipes",
+          "Supprimer la plateforme"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un contournement est un retour utilisateur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "idp-defi-q4",
+        "prompt": "Un service en production n'a pas de propriétaire dans le catalogue. Que faire ?",
+        "choices": [
+          "Exiger une équipe propriétaire pour chaque composant, par une vérification automatique",
+          "Le supprimer",
+          "Le confier à l'équipe plateforme pour toujours",
+          "Rien"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans propriétaire, personne ne le met à jour ni ne répond aux incidents.",
+        "difficulty": 1
+      },
+      {
+        "type": "order",
+        "id": "idp-defi-q5",
+        "prompt": "Remets dans l'ordre la création d'un service par un golden path.",
+        "language": "text",
+        "lines": [
+          "Choisir le modèle « service HTTP » dans le portail",
+          "Le portail crée le dépôt, la CI et la configuration de déploiement",
+          "Pousser le premier commit",
+          "La CI construit, teste et déploie en recette",
+          "Le service apparaît dans le catalogue avec ses tableaux de bord"
+        ],
+        "explanation": "Tout ce qui est standard est fourni ; l'équipe écrit son code métier.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "idp-defi-q6",
+        "prompt": "Quel est le rôle d'une équipe plateforme ?",
+        "choices": [
+          "Fournir des outils en libre-service",
+          "Réduire la charge cognitive des équipes produit",
+          "Maintenir les golden paths",
+          "Déployer à la place des équipes produit"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les équipes produit gardent la responsabilité de leurs services.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

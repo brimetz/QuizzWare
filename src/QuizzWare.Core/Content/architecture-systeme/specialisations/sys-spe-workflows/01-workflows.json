@@ -1,0 +1,432 @@
+{
+  "id": "wf-ch-essentiel",
+  "title": "Workflows durables : l'essentiel",
+  "summary": "Orchestrer des processus longs et fiables.",
+  "lessons": [
+    {
+      "id": "wf-principes",
+      "title": "Le principe",
+      "summary": "Workflows, activités et minuteurs durables.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des processus qui durent",
+          "body": "Traiter une commande, ouvrir un compte, relancer un abonnement : ces processus s'étalent sur des minutes, des jours ou des semaines, traversent plusieurs services et doivent survivre aux pannes. Les coder avec des tâches planifiées et des tables d'état donne vite un enchevêtrement de cas particuliers."
+        },
+        {
+          "title": "Un workflow durable",
+          "body": "Un moteur de workflows (Temporal, AWS Step Functions, Azure Durable Functions) enregistre chaque étape franchie. Après un crash, le workflow reprend exactement où il en était. Le workflow orchestre ; les activités font le travail avec effets de bord (appeler une API, envoyer un e-mail), avec des nouvelles tentatives automatiques.",
+          "code": "[WorkflowRun]\npublic async Task Executer(Commande c)\n{\n    await Workflow.ExecuteActivityAsync(\n        (Activites a) => a.Debiter(c), Options);\n    await Workflow.DelayAsync(TimeSpan.FromDays(3));\n    await Workflow.ExecuteActivityAsync(\n        (Activites a) => a.EnvoyerRelance(c), Options);\n}"
+        },
+        {
+          "title": "Des minuteurs durables",
+          "body": "Attendre trois jours dans un workflow ne bloque aucun processus : le moteur enregistre un minuteur et réveille le workflow à l'échéance, même si les serveurs ont redémarré entre-temps."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "wf-principes-q1",
+          "prompt": "Qu'est-ce qu'un workflow durable ?",
+          "choices": [
+            "Un processus dont la progression est enregistrée, qui reprend là où il en était après un crash",
+            "Un script qui tourne en boucle",
+            "Une tâche cron",
+            "Un fichier de configuration"
+          ],
+          "answerIndex": 0,
+          "explanation": "La reprise est garantie par le moteur, pas par le code de l'équipe.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "wf-principes-q2",
+          "prompt": "Quelle différence entre un workflow et une activité ?",
+          "choices": [
+            "Le workflow orchestre les étapes ; l'activité fait le travail avec effets de bord et peut être réessayée",
+            "Ce sont deux noms pour la même chose",
+            "L'activité orchestre, le workflow exécute",
+            "Le workflow appelle directement les API externes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les effets de bord vivent dans les activités.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "wf-principes-q3",
+          "prompt": "Lequel n'est pas un moteur de workflows durables ?",
+          "choices": [
+            "Redis Pub/Sub",
+            "Temporal",
+            "AWS Step Functions",
+            "Azure Durable Functions"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pub/Sub diffuse des messages sans rien enregistrer de l'avancement d'un processus.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "wf-principes-q4",
+          "prompt": "Complète ce workflow (Temporal, .NET) : débiter, attendre trois jours, puis relancer.",
+          "code": "await Workflow.___(\n    (Activites a) => a.Debiter(c), Options);\nawait Workflow.___(TimeSpan.FromDays(3));\nawait Workflow.ExecuteActivityAsync(\n    (Activites a) => a.EnvoyerRelance(c), Options);",
+          "answers": [
+            "ExecuteActivityAsync",
+            "DelayAsync"
+          ],
+          "distractors": [
+            "RunAsync",
+            "Task.Delay",
+            "SleepAsync"
+          ],
+          "explanation": "Un Task.Delay ordinaire ne serait pas durable : il faut le minuteur du moteur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "wf-principes-q5",
+          "prompt": "Que se passe-t-il quand un workflow durable attend trois jours ?",
+          "choices": [
+            "Le moteur enregistre un minuteur ; aucun processus n'est bloqué, et le workflow reprend à l'échéance même après des redémarrages",
+            "Un thread dort trois jours",
+            "Le serveur ne doit pas redémarrer pendant trois jours",
+            "Le workflow est annulé"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut ainsi écrire « attendre 30 jours » comme une simple ligne de code.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "wf-principes-q6",
+          "prompt": "Quels cas se prêtent aux workflows durables ?",
+          "choices": [
+            "Le traitement d'une commande en plusieurs étapes",
+            "Des relances d'abonnement sur plusieurs semaines",
+            "Une ouverture de compte avec validations humaines",
+            "La somme de deux nombres en mémoire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Leur intérêt grandit avec la durée, le nombre d'étapes et le risque de panne.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "wf-determinisme",
+      "title": "Le déterminisme",
+      "summary": "Rejeu, activités idempotentes et versions.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le rejeu",
+          "body": "Pour reconstruire l'état d'un workflow, le moteur réexécute son code depuis le début en lui fournissant les résultats déjà enregistrés. Le code du workflow doit donc être déterministe : à mêmes entrées, mêmes décisions. Pas de DateTime.Now, de Random, d'appel réseau ni de thread lancé directement : on utilise les équivalents du moteur (Workflow.UtcNow, Workflow.Random) ou une activité.",
+          "code": "var maintenant = Workflow.UtcNow;\nvar code = Workflow.Random.Next(100000, 999999);"
+        },
+        {
+          "title": "Des activités idempotentes",
+          "body": "Une activité qui dépasse son délai est réessayée : elle a pu réussir sans que le moteur le sache. Un débit, un envoi d'e-mail ou une création doivent donc être idempotents, par exemple grâce à une clé d'idempotence transmise au service appelé."
+        },
+        {
+          "title": "Changer le code en cours de route",
+          "body": "Des milliers d'instances peuvent être en cours quand on modifie le code du workflow ; les rejouer avec la nouvelle logique produirait d'autres décisions. On versionne les changements (patched, GetVersion selon les moteurs) : les anciennes instances gardent l'ancien chemin, les nouvelles prennent le nouveau."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "wf-determinisme-q1",
+          "prompt": "Pourquoi le code d'un workflow doit-il être déterministe ?",
+          "choices": [
+            "Il est rejoué depuis l'historique pour reconstruire son état : une décision différente casserait le rejeu",
+            "Pour aller plus vite",
+            "Parce que les moteurs n'acceptent pas les boucles",
+            "Ce n'est pas nécessaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le moteur détecte d'ailleurs un rejeu incohérent et met le workflow en erreur.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "wf-determinisme-q2",
+          "prompt": "Ce workflow casse parfois au rejeu. Touche la ligne en cause.",
+          "code": "[WorkflowRun]\npublic async Task Executer(Abonnement a)\n{\n    if (DateTime.UtcNow > a.FinLe)\n        await Workflow.ExecuteActivityAsync(\n            (Activites x) => x.Resilier(a), Options);\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "L'heure système change entre l'exécution et le rejeu. Il faut Workflow.UtcNow, enregistré par le moteur.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "wf-determinisme-q3",
+          "prompt": "Une activité de débit est réessayée après un délai dépassé. Quel risque ?",
+          "choices": [
+            "Débiter deux fois : l'activité doit être idempotente, avec une clé d'idempotence",
+            "Aucun",
+            "Le workflow est supprimé",
+            "Le moteur s'arrête"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le premier appel a pu réussir sans que la réponse arrive.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "wf-determinisme-q4",
+          "prompt": "Complète avec les équivalents déterministes fournis par le moteur (Temporal, .NET).",
+          "code": "var maintenant = Workflow.___;\nvar code = Workflow.___.Next(100000, 999999);",
+          "answers": [
+            "UtcNow",
+            "Random"
+          ],
+          "distractors": [
+            "Now",
+            "Guid",
+            "Clock"
+          ],
+          "explanation": "Leurs valeurs sont enregistrées dans l'historique et identiques au rejeu.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "wf-determinisme-q5",
+          "prompt": "On modifie le code d'un workflow alors que 10 000 instances sont en cours. Que faire ?",
+          "choices": [
+            "Versionner le changement, pour que les instances en cours rejouent l'ancien chemin",
+            "Tout annuler et relancer",
+            "Rien, le rejeu s'adapte",
+            "Attendre que plus aucune instance ne tourne, ce qui peut prendre des mois"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux versions cohabitent jusqu'à la fin des anciennes instances.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "wf-determinisme-q6",
+          "prompt": "Qu'est-ce qui est interdit directement dans le code d'un workflow ?",
+          "choices": [
+            "DateTime.Now",
+            "Un appel HTTP",
+            "new Random()",
+            "Lancer une activité"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Lancer une activité est justement la bonne façon de faire un appel HTTP.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "wf-sagas",
+      "title": "Sagas et compensations",
+      "summary": "Revenir en arrière sans transaction globale.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les compensations",
+          "body": "Entre plusieurs services, il n'y a pas de transaction globale. Une saga enchaîne des étapes locales, et associe à chacune une compensation qui annule son effet : si le paiement échoue après la réservation du stock, on libère le stock. Les compensations s'exécutent en ordre inverse."
+        },
+        {
+          "title": "Orchestration ou chorégraphie",
+          "body": "En orchestration, un coordinateur (le workflow) décide de chaque étape et des compensations : le processus se lit en un seul endroit. En chorégraphie, chaque service réagit aux événements des autres : pas de point central, mais un processus éparpillé et difficile à suivre quand il grandit."
+        },
+        {
+          "title": "Humains et délais",
+          "body": "Un workflow peut attendre un signal extérieur, comme la validation d'un responsable, avec un minuteur qui fixe une échéance (refus automatique au bout de sept jours). On peut aussi interroger son état à tout moment."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "wf-sagas-q1",
+          "prompt": "Qu'est-ce qu'une compensation dans une saga ?",
+          "choices": [
+            "Une action qui annule l'effet d'une étape réussie, quand une étape suivante échoue",
+            "Un dédommagement financier au client",
+            "Un rollback de base de données",
+            "Une nouvelle tentative"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle ne remonte pas le temps : elle produit un nouvel effet inverse (libérer, rembourser).",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "wf-sagas-q2",
+          "prompt": "Remets dans l'ordre une saga dont le paiement échoue.",
+          "language": "text",
+          "lines": [
+            "Réserver le stock",
+            "Débiter le client",
+            "Le débit échoue : lancer les compensations",
+            "Libérer le stock réservé",
+            "Marquer la commande comme échouée"
+          ],
+          "explanation": "Seules les étapes déjà réussies sont compensées.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "wf-sagas-q3",
+          "prompt": "Quelle différence entre orchestration et chorégraphie ?",
+          "choices": [
+            "Un coordinateur central décide des étapes, ou chaque service réagit aux événements des autres",
+            "Ce sont deux noms pour la même chose",
+            "L'orchestration n'utilise pas de réseau",
+            "La chorégraphie impose une base partagée"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'orchestration se lit et se débogue plus facilement quand le processus grossit.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "wf-sagas-q4",
+          "prompt": "Un workflow doit attendre la validation d'un responsable, au plus sept jours. Comment faire ?",
+          "choices": [
+            "Attendre un signal envoyé au workflow, avec un minuteur qui refuse automatiquement à l'échéance",
+            "Interroger la base toutes les secondes",
+            "Bloquer un thread sept jours",
+            "Envoyer un e-mail et oublier"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le workflow dort sans rien consommer jusqu'au signal ou à l'échéance.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "wf-sagas-q5",
+          "prompt": "Quand le paiement est refusé, le stock reste réservé indéfiniment. Touche la ligne à compléter.",
+          "code": "await reservations.Reserver(c);\ntry\n{\n    await paiements.Debiter(c);\n}\ncatch (PaiementRefuse)\n{\n    throw;\n}",
+          "bugLines": [
+            8
+          ],
+          "explanation": "La compensation manque : il faut await reservations.Liberer(c) avant de relancer l'exception.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "wf-sagas-q6",
+          "prompt": "Qu'apporte un moteur de workflows par rapport à une machine à états faite maison ?",
+          "choices": [
+            "La reprise automatique après un crash",
+            "Les nouvelles tentatives et les délais intégrés",
+            "Un historique consultable de chaque exécution",
+            "Aucune contrainte sur le code"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "En échange, le code du workflow doit rester déterministe.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "wf-defi",
+    "title": "Défi entretien : l'ouverture de compte",
+    "summary": "Un processus long, fiable et réversible.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "wf-defi-q1",
+        "prompt": "Cas pratique 1/3 — Ouvrir un compte : vérifier l'identité (service externe, parfois deux jours), créer le compte, envoyer la carte, relancer à J+7 si elle n'est pas activée. Aujourd'hui : des tâches planifiées et des tables d'état, et des bugs fréquents. Que proposer ?",
+        "choices": [
+          "Un workflow durable qui décrit tout le processus, avec des activités pour chaque appel",
+          "Plus de tâches planifiées",
+          "Un seul gros script lancé chaque nuit",
+          "Un tableur partagé"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le processus se lit d'un bout à l'autre, et les pannes sont gérées par le moteur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "wf-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le service de vérification d'identité tombe régulièrement. Que faire ?",
+        "choices": [
+          "Une activité avec nouvelles tentatives et délai croissant ; le workflow attend simplement",
+          "Abandonner l'ouverture du compte à la première erreur",
+          "Appeler le service en boucle",
+          "Ignorer la vérification"
+        ],
+        "answerIndex": 0,
+        "explanation": "La politique de nouvelles tentatives se déclare, sans code supplémentaire.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "wf-defi-q3",
+        "prompt": "Cas pratique 3/3 — L'identité est refusée alors que le compte a déjà été créé. Que faire ?",
+        "choices": [
+          "Exécuter une compensation : fermer le compte créé",
+          "Laisser le compte ouvert",
+          "Supprimer l'historique du workflow",
+          "Recommencer la vérification indéfiniment"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque étape réussie a sa compensation, exécutée en ordre inverse.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "wf-defi-q4",
+        "prompt": "Le code d'un workflow envoie un e-mail directement, sans passer par une activité. Quelle conséquence ?",
+        "choices": [
+          "L'e-mail risque d'être renvoyé à chaque rejeu du workflow",
+          "L'e-mail est plus rapide",
+          "Aucune",
+          "Le workflow devient plus fiable"
+        ],
+        "answerIndex": 0,
+        "explanation": "Tout effet de bord passe par une activité, dont le résultat est enregistré.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "wf-defi-q5",
+        "prompt": "Le code envoyé au client change parfois au rejeu du workflow. Touche la ligne en cause.",
+        "code": "[WorkflowRun]\npublic async Task Executer()\n{\n    var code = new Random().Next(100000, 999999);\n    await Workflow.ExecuteActivityAsync(\n        (Activites a) => a.EnvoyerCode(code), Options);\n}",
+        "bugLines": [
+          4
+        ],
+        "explanation": "new Random() n'est pas déterministe. On utilise Workflow.Random, ou on génère le code dans une activité.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "wf-defi-q6",
+        "prompt": "Lesquels sont des moteurs de workflows durables ?",
+        "choices": [
+          "Temporal",
+          "AWS Step Functions",
+          "Azure Durable Functions",
+          "Nginx"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Nginx est un serveur web et un reverse proxy.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

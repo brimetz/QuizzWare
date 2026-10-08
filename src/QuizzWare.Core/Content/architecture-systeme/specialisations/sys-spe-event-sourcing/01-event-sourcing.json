@@ -1,0 +1,442 @@
+{
+  "id": "es-ch-essentiel",
+  "title": "Event sourcing et CQRS : l'essentiel",
+  "summary": "Stocker des faits, construire des vues.",
+  "lessons": [
+    {
+      "id": "es-principes",
+      "title": "Stocker des événements",
+      "summary": "L'état se déduit de l'historique.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des faits plutôt qu'un état",
+          "body": "Une base classique stocke l'état courant : le solde du compte. L'event sourcing stocke la suite des événements qui y ont mené : CompteOuvert, Credite, Debite. Les événements sont des faits passés, nommés au passé, immuables, enregistrés dans un journal en ajout seul. L'état courant se reconstruit en les rejouant dans l'ordre.",
+          "code": "evenements = [Credite(100), Debite(30), Credite(50)]\nsolde = 0\nfor e in evenements:\n    solde += e.montant if isinstance(e, Credite) else -e.montant\nprint(solde)  # 120",
+          "language": "python"
+        },
+        {
+          "title": "Ce que cela apporte",
+          "body": "Un audit complet (on sait ce qui s'est passé, et quand), la possibilité de reconstruire l'état à n'importe quelle date, et de créer plus tard de nouvelles vues en rejouant tout l'historique. Une erreur ne se corrige pas en modifiant un événement passé, mais en ajoutant un événement compensatoire."
+        },
+        {
+          "title": "Les instantanés",
+          "body": "Rejouer des milliers d'événements à chaque lecture coûte cher. Un instantané (snapshot) enregistre l'état à un moment donné : on repart de lui et on ne rejoue que les événements suivants."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "es-principes-q1",
+          "prompt": "Qu'est-ce que l'event sourcing ?",
+          "choices": [
+            "Stocker la suite des événements, et reconstruire l'état actuel en les rejouant",
+            "Envoyer des événements par e-mail",
+            "Stocker uniquement l'état courant",
+            "Journaliser les erreurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le journal d'événements devient la source de vérité.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "es-principes-q2",
+          "prompt": "Quel nom convient le mieux à un événement ?",
+          "choices": [
+            "CommandePayee",
+            "PayerCommande",
+            "ServicePaiement",
+            "CommandeDTO"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un événement est un fait métier passé ; PayerCommande serait une commande (une intention).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "es-principes-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "evenements = [Credite(100), Debite(30), Credite(50)]\nsolde = 0\nfor e in evenements:\n    solde += e.montant if isinstance(e, Credite) else -e.montant\nprint(solde)",
+          "language": "python",
+          "choices": [
+            "120",
+            "180",
+            "20",
+            "70"
+          ],
+          "answerIndex": 0,
+          "explanation": "100 − 30 + 50 : l'état est le résultat du rejeu des événements.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "es-principes-q4",
+          "prompt": "Un débit a été saisi à tort. Revue de la correction : touche la ligne en cause.",
+          "code": "UPDATE evenements SET montant = 90\nWHERE id = 'evt-881';  -- erreur de saisie",
+          "language": "sql",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Les événements sont immuables : modifier l'historique détruit l'audit. On ajoute un événement compensatoire, comme DebitCorrige.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "es-principes-q5",
+          "prompt": "À quoi sert un instantané (snapshot) ?",
+          "choices": [
+            "À repartir d'un état enregistré, pour ne rejouer que les événements suivants",
+            "À supprimer les vieux événements",
+            "À chiffrer le journal",
+            "À photographier l'écran"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une optimisation : on peut toujours le recalculer depuis les événements.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "es-principes-q6",
+          "prompt": "Qu'apporte l'event sourcing ?",
+          "choices": [
+            "Un audit complet",
+            "La reconstruction de l'état à une date passée",
+            "La création de nouvelles vues à partir de l'historique",
+            "Des requêtes ad hoc simples sur l'état courant, sans aucune projection"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Pour interroger l'état courant, il faut construire des projections.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "es-cqrs",
+      "title": "CQRS et projections",
+      "summary": "Écrire d'un côté, lire de l'autre.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Séparer écriture et lecture",
+          "body": "CQRS sépare le modèle qui traite les commandes (valider les règles métier, émettre des événements) des modèles de lecture, des projections dénormalisées taillées pour chaque écran ou requête. Les projections sont mises à jour en consommant les événements, souvent de façon asynchrone : elles ont un léger retard, c'est la cohérence à terme."
+        },
+        {
+          "title": "Concurrence optimiste",
+          "body": "Chaque flux d'événements (un compte, une commande) a une version. Pour écrire, on indique la version attendue : si un autre a écrit entre-temps, l'écriture échoue, et la commande est rejouée sur l'état à jour.",
+          "code": "def ajouter(flux_id, evenements, version_attendue):\n    if version_courante(flux_id) != version_attendue:\n        raise ConflitDeVersion()\n    store.append(flux_id, evenements)",
+          "language": "python"
+        },
+        {
+          "title": "Reconstruire les projections",
+          "body": "Une nouvelle vue (des statistiques inédites) se crée en rejouant tout l'historique. Un projecteur retient la position du dernier événement traité, et doit être idempotent : après un redémarrage, il peut revoir des événements déjà traités."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "es-cqrs-q1",
+          "prompt": "Qu'est-ce que CQRS ?",
+          "choices": [
+            "Séparer le modèle qui traite les commandes des modèles qui servent les lectures",
+            "Un protocole réseau",
+            "Une base de données",
+            "Un format d'événement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Command Query Responsibility Segregation.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "es-cqrs-q2",
+          "prompt": "Juste après une modification, l'écran de consultation ne l'affiche pas encore. Pourquoi ?",
+          "choices": [
+            "La projection de lecture est mise à jour de façon asynchrone : c'est la cohérence à terme",
+            "La modification a échoué",
+            "Le cache du navigateur",
+            "Un bug de l'event store"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'interface doit en tenir compte, par exemple en affichant la valeur envoyée.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "es-cqrs-q3",
+          "prompt": "Complète cette écriture avec concurrence optimiste.",
+          "code": "def ajouter(flux_id, evenements, version_attendue):\n    if version_courante(flux_id) != ___:\n        raise ConflitDeVersion()\n    store.___(flux_id, evenements)",
+          "language": "python",
+          "answers": [
+            "version_attendue",
+            "append"
+          ],
+          "distractors": [
+            "0",
+            "update",
+            "replace"
+          ],
+          "explanation": "On ne fait qu'ajouter au flux, jamais remplacer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "es-cqrs-q4",
+          "prompt": "Il faut une nouvelle page de statistiques, qui exige une vue jamais calculée. Comment faire ?",
+          "choices": [
+            "Créer la projection et rejouer tout l'historique des événements",
+            "Attendre que de nouveaux événements arrivent",
+            "Modifier les anciens événements",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'un des grands atouts de l'event sourcing.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "es-cqrs-q5",
+          "prompt": "Après un redémarrage du projecteur, le total des ventes a compté certaines ventes deux fois. Touche la ligne en cause.",
+          "code": "def sur_commande_payee(evt):\n    stats.total_ventes += evt.montant",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le projecteur a revu des événements déjà traités. Il doit enregistrer sa position avec la mise à jour, ou ignorer les événements déjà appliqués.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "es-cqrs-q6",
+          "prompt": "Dans quels cas CQRS est-il utile ?",
+          "choices": [
+            "Les lectures et les écritures diffèrent beaucoup en forme ou en volume",
+            "Plusieurs vues spécialisées des mêmes données sont nécessaires",
+            "La lecture doit passer à l'échelle séparément",
+            "Un simple formulaire qui modifie une table"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Pour un CRUD simple, CQRS ajoute de la complexité sans bénéfice.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "es-pieges",
+      "title": "Les pièges",
+      "summary": "Évolution, effacement et complexité.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Faire évoluer les événements",
+          "body": "Les événements sont stockés pour toujours, mais leur format évolue. On ne réécrit pas l'historique : on versionne les événements et on convertit les anciennes versions à la lecture (upcasting). Un événement doit garder son intention métier : un CompteModifie générique avec un « nouvel état » ne dit plus ce qui s'est passé."
+        },
+        {
+          "title": "Effacer des données personnelles",
+          "body": "Le droit à l'effacement se heurte à l'immuabilité. Une solution : chiffrer les données personnelles de chaque personne avec sa propre clé, et supprimer la clé quand il faut effacer (crypto-shredding). Les événements restent, devenus illisibles pour cette personne.",
+          "code": "class PaiementAccepte(Evenement):\n    commande_id: str\n    montant_centimes: int",
+          "language": "python"
+        },
+        {
+          "title": "Avec mesure",
+          "body": "Un processus qui traverse plusieurs agrégats ou services (réserver, payer, expédier) est piloté par une saga, qui réagit aux événements et compense en cas d'échec. L'event sourcing apporte beaucoup là où l'historique a de la valeur (finance, logistique) ; pour un simple CRUD, il ajoute surtout de la complexité."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "es-pieges-q1",
+          "prompt": "Le format d'un événement stocké depuis trois ans doit évoluer. Comment faire ?",
+          "choices": [
+            "Versionner l'événement et convertir les anciennes versions à la lecture (upcasting)",
+            "Réécrire tous les anciens événements",
+            "Supprimer les anciens événements",
+            "Interdire toute évolution"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'historique reste intact ; le code sait lire toutes les versions.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "es-pieges-q2",
+          "prompt": "Comment respecter le droit à l'effacement avec des événements immuables ?",
+          "choices": [
+            "Chiffrer les données personnelles avec une clé par personne, et supprimer cette clé (crypto-shredding)",
+            "Supprimer le journal entier",
+            "Ignorer la demande",
+            "Remplacer les noms par « anonyme » dans les événements"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans clé, les données de la personne deviennent illisibles partout, sauvegardes comprises.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "es-pieges-q3",
+          "prompt": "Qu'est-ce qu'une saga ?",
+          "choices": [
+            "Un processus qui orchestre plusieurs étapes en réagissant aux événements, avec des compensations en cas d'échec",
+            "Une très longue histoire d'événements",
+            "Un type de base de données",
+            "Un format de sérialisation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Par exemple, annuler la réservation si le paiement échoue.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "es-pieges-q4",
+          "prompt": "Quand vaut-il mieux éviter l'event sourcing ?",
+          "choices": [
+            "Pour un domaine simple de type CRUD, sans besoin d'historique",
+            "Pour un système bancaire",
+            "Pour un suivi logistique",
+            "Quand l'audit est obligatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sa complexité doit être justifiée par la valeur de l'historique.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "es-pieges-q5",
+          "prompt": "Complète avec le nom d'événement qui convient pour un paiement accepté.",
+          "code": "class ___(Evenement):\n    commande_id: str\n    montant_centimes: int",
+          "language": "python",
+          "answers": [
+            "PaiementAccepte"
+          ],
+          "distractors": [
+            "AccepterPaiement",
+            "PaiementService",
+            "Payer"
+          ],
+          "explanation": "Un fait métier, au passé.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "es-pieges-q6",
+          "prompt": "Quelles sont les difficultés de l'event sourcing ?",
+          "choices": [
+            "L'évolution du format des événements",
+            "La cohérence à terme, à expliquer aux utilisateurs",
+            "L'effacement des données personnelles",
+            "L'impossibilité d'avoir un historique"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'historique est justement ce qu'il fournit le mieux.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "es-defi",
+    "title": "Défi entretien : expliquer chaque solde",
+    "summary": "Événements, projections et concurrence.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "es-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une banque doit pouvoir expliquer à un auditeur le solde de chaque compte, à n'importe quelle date. Quelle approche ?",
+        "choices": [
+          "L'event sourcing : chaque mouvement est un événement, et le solde se reconstruit à toute date",
+          "Stocker le solde courant et le mettre à jour",
+          "Une sauvegarde mensuelle",
+          "Un journal texte des erreurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'historique est la donnée elle-même, pas un à-côté.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "es-defi-q2",
+        "prompt": "Cas pratique 2/3 — L'écran de consultation des comptes est lent : il rejoue des milliers d'événements à chaque affichage. Que faire ?",
+        "choices": [
+          "Une projection de lecture (CQRS) tenue à jour par les événements, et des instantanés pour l'écriture",
+          "Supprimer les vieux événements",
+          "Augmenter la mémoire",
+          "Afficher moins de comptes"
+        ],
+        "answerIndex": 0,
+        "explanation": "La lecture interroge une vue prête à l'emploi.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "es-defi-q3",
+        "prompt": "Cas pratique 3/3 — Deux retraits simultanés pourraient mettre le compte à découvert. Comment l'éviter ?",
+        "choices": [
+          "La concurrence optimiste : chaque écriture indique la version attendue, la seconde échoue et se rejoue sur l'état à jour",
+          "Un verrou sur toute la base",
+          "Accepter le découvert",
+          "Traiter les retraits la nuit"
+        ],
+        "answerIndex": 0,
+        "explanation": "La règle « pas de découvert » est revérifiée sur l'état réel.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "es-defi-q4",
+        "prompt": "Pourquoi ajouter un événement de correction plutôt que modifier l'événement fautif ?",
+        "choices": [
+          "L'historique reste vrai et auditable : on voit l'erreur et sa correction",
+          "Parce que c'est plus rapide",
+          "Parce que SQL interdit les UPDATE",
+          "Ça n'a aucune importance"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est ainsi que fonctionne la comptabilité depuis des siècles.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "es-defi-q5",
+        "prompt": "Revue de conception : touche une ligne problématique.",
+        "code": "class CompteModifie(Evenement):\n    nouvel_etat: dict",
+        "language": "python",
+        "bugLines": [
+          1,
+          2
+        ],
+        "explanation": "Un événement générique contenant tout l'état perd l'intention métier : on ne sait plus si c'était un dépôt, un retrait ou un changement d'adresse. On préfère Credite, Debite, AdresseChangee.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "es-defi-q6",
+        "prompt": "Quels composants trouve-t-on dans un système fondé sur l'event sourcing ?",
+        "choices": [
+          "Un magasin d'événements en ajout seul",
+          "Des projections pour la lecture",
+          "Des commandes qui valident les règles métier",
+          "Des UPDATE sur les événements"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les événements ne se modifient jamais.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

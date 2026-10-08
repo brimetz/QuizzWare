@@ -1,0 +1,432 @@
+{
+  "id": "pat-ch-essentiel",
+  "title": "Design patterns en profondeur",
+  "summary": "Les patterns du Gang of Four, et quand s'en passer.",
+  "lessons": [
+    {
+      "id": "pat-creation",
+      "title": "Créer des objets",
+      "summary": "Fabriques, Builder et Singleton.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les fabriques",
+          "body": "Une méthode fabrique centralise le choix de la classe concrète à créer : l'appelant ne dépend que de l'interface. Une fabrique abstraite crée une famille d'objets cohérents (les composants d'un thème clair ou sombre). En C#, une simple expression switch suffit souvent.",
+          "code": "public static class FabriqueNotification\n{\n    public static INotification Creer(string canal) => canal switch\n    {\n        \"email\" => new NotificationEmail(),\n        \"sms\" => new NotificationSms(),\n        _ => throw new ArgumentException(canal),\n    };\n}"
+        },
+        {
+          "title": "Le Builder",
+          "body": "Quand un objet a beaucoup de paramètres optionnels ou se construit en plusieurs étapes, un Builder rend la construction lisible et produit un objet final immuable. En C#, les records avec init et les paramètres nommés couvrent une partie de ce besoin."
+        },
+        {
+          "title": "Le Singleton, avec prudence",
+          "body": "Le Singleton classique (une propriété statique Instance) crée un état global caché : les dépendances ne se voient plus et les tests s'influencent. On préfère une instance unique gérée par le conteneur d'injection (AddSingleton). Si un singleton statique est vraiment nécessaire, Lazy<T> garantit une initialisation unique, même entre threads.",
+          "code": "private static readonly Lazy<Config> _instance = new(() => new Config());\npublic static Config Instance => _instance.Value;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pat-creation-q1",
+          "prompt": "Pourquoi le Singleton classique est-il souvent déconseillé ?",
+          "choices": [
+            "Il crée un état global caché, qui couple le code et complique les tests ; le conteneur d'injection gère mieux une instance unique",
+            "Il consomme trop de mémoire",
+            "Il est interdit en C#",
+            "Il empêche l'héritage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec l'injection, la dépendance est visible dans le constructeur et remplaçable en test.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "pat-creation-q2",
+          "prompt": "Complète cette fabrique.",
+          "code": "public static ___ Creer(string canal) => canal ___\n{\n    \"email\" => new NotificationEmail(),\n    \"sms\" => new NotificationSms(),\n    _ => throw new ArgumentException(canal),\n};",
+          "answers": [
+            "INotification",
+            "switch"
+          ],
+          "distractors": [
+            "object",
+            "case",
+            "match"
+          ],
+          "explanation": "L'appelant reçoit l'interface et ignore la classe concrète.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "pat-creation-q3",
+          "prompt": "Sous forte charge, deux instances de Config sont parfois créées. Touche une ligne en cause.",
+          "code": "public sealed class Config\n{\n    private static Config? _instance;\n    public static Config Instance\n    {\n        get\n        {\n            if (_instance == null)\n                _instance = new Config();\n            return _instance;\n        }\n    }\n}",
+          "bugLines": [
+            8,
+            9
+          ],
+          "explanation": "Deux threads peuvent passer le test avant que l'un d'eux n'affecte _instance. Lazy<Config> rend l'initialisation sûre.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pat-creation-q4",
+          "prompt": "Quand un Builder est-il utile ?",
+          "choices": [
+            "Pour un objet avec beaucoup de paramètres optionnels ou construit en étapes, qu'on veut immuable à la fin",
+            "Pour tout objet, systématiquement",
+            "Pour remplacer l'héritage",
+            "Pour accélérer l'exécution"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un constructeur à douze paramètres positionnels est illisible et source d'erreurs.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "pat-creation-q5",
+          "prompt": "Quelle différence entre une fabrique abstraite et une méthode fabrique ?",
+          "choices": [
+            "La fabrique abstraite crée une famille d'objets cohérents ; la méthode fabrique crée un seul produit",
+            "Ce sont deux noms du même pattern",
+            "La méthode fabrique est réservée aux tests",
+            "La fabrique abstraite n'a pas d'interface"
+          ],
+          "answerIndex": 0,
+          "explanation": "Exemple : FabriqueThemeSombre crée le bouton, le menu et la barre du thème sombre.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "pat-creation-q6",
+          "prompt": "En C# moderne, qu'est-ce qui remplace ou simplifie les patterns de création ?",
+          "choices": [
+            "L'injection de dépendances pour gérer les durées de vie",
+            "Les records et init pour les objets immuables",
+            "Lazy<T> pour une initialisation paresseuse et sûre",
+            "Des variables globales modifiables"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les variables globales recréent tous les problèmes du Singleton.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "pat-comportement",
+      "title": "Structure et comportement",
+      "summary": "Decorator, Strategy, Adapter et compagnie.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Decorator",
+          "body": "Un décorateur implémente la même interface que l'objet qu'il enveloppe, et ajoute un comportement autour (cache, journal, nouvelles tentatives) sans le modifier. On peut empiler plusieurs décorateurs.",
+          "code": "public class DepotAvecCache(IDepotProduits interne, IMemoryCache cache)\n    : IDepotProduits\n{\n    public Produit? Trouver(int id) =>\n        cache.GetOrCreate(id, _ => interne.Trouver(id));\n}"
+        },
+        {
+          "title": "Strategy, Adapter, chaîne de responsabilité",
+          "body": "Strategy remplace une cascade de if par des implémentations interchangeables d'une même interface (ou de simples délégués Func<>). Adapter traduit l'interface d'une bibliothèque tierce vers celle qu'attend notre code. La chaîne de responsabilité fait passer une requête par une suite de maillons : c'est le modèle des middlewares d'ASP.NET Core."
+        },
+        {
+          "title": "Observer",
+          "body": "Observer notifie des abonnés d'un changement : les événements C# en sont l'implémentation directe. Piège : un abonné qui ne se désabonne pas reste référencé par la source, et ne peut pas être libéré."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pat-comportement-q1",
+          "prompt": "Comment ajouter un cache à un IDepotProduits sans modifier sa classe ?",
+          "choices": [
+            "Un décorateur qui implémente IDepotProduits et enveloppe le dépôt existant",
+            "Hériter du dépôt et réécrire toutes ses méthodes",
+            "Ajouter un if dans chaque méthode du dépôt",
+            "Un singleton global"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le conteneur d'injection peut fournir le décorateur à la place du dépôt.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "pat-comportement-q2",
+          "prompt": "Complète ce décorateur.",
+          "code": "public class DepotAvecCache(IDepotProduits interne, IMemoryCache cache)\n    : ___\n{\n    public Produit? Trouver(int id) =>\n        cache.GetOrCreate(id, _ => ___.Trouver(id));\n}",
+          "answers": [
+            "IDepotProduits",
+            "interne"
+          ],
+          "distractors": [
+            "DepotProduits",
+            "base",
+            "this"
+          ],
+          "explanation": "Il implémente l'interface et délègue au dépôt enveloppé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pat-comportement-q3",
+          "prompt": "Quel pattern les middlewares d'ASP.NET Core illustrent-ils ?",
+          "choices": [
+            "La chaîne de responsabilité",
+            "Le Singleton",
+            "La fabrique abstraite",
+            "Le Prototype"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque middleware traite la requête ou la passe au suivant (next).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "pat-comportement-q4",
+          "prompt": "Les tableaux fermés restent en mémoire tant que la bourse existe. Touche la ligne en cause.",
+          "code": "public class Tableau\n{\n    public Tableau(Bourse bourse)\n    {\n        bourse.CoursChange += Rafraichir;\n    }\n\n    void Rafraichir(object? s, EventArgs e) { /* ... */ }\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "L'événement garde une référence vers chaque tableau abonné. Il faut se désabonner (-=) à la fermeture, par exemple dans Dispose.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "pat-comportement-q5",
+          "prompt": "Comment s'écrit souvent une Strategy en C# moderne ?",
+          "choices": [
+            "Avec une interface injectée, ou simplement un délégué Func<>",
+            "Avec une classe abstraite obligatoire",
+            "Avec une énumération et un switch partout",
+            "Avec de la réflexion"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour une seule méthode, un délégué évite une hiérarchie de classes.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "pat-comportement-q6",
+          "prompt": "Lesquels sont des patterns de structure ?",
+          "choices": [
+            "Adapter",
+            "Decorator",
+            "Facade",
+            "Observer"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Observer est un pattern de comportement.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "pat-discernement",
+      "title": "Savoir s'en passer",
+      "summary": "Sur-ingénierie et anti-patterns.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Un vocabulaire, pas un objectif",
+          "body": "Les patterns donnent des noms à des solutions éprouvées : dire « c'est un décorateur » suffit en revue. Mais chaque pattern ajoute des abstractions ; appliqué sans besoin réel de variation, il complique le code (YAGNI : you aren't gonna need it). Une fabrique pour une seule implémentation qui ne changera pas n'apporte rien."
+        },
+        {
+          "title": "Des anti-patterns",
+          "body": "L'objet dieu sait et fait tout ; on le découpe par responsabilités. Le Service Locator résout les dépendances à l'intérieur des classes : elles deviennent invisibles et difficiles à tester. Les hiérarchies d'héritage profondes sont fragiles : on préfère composer des objets injectés."
+        },
+        {
+          "title": "Quand y penser",
+          "body": "Un pattern s'impose quand le code résiste au changement : le même switch modifié à chaque nouveau cas, une bibliothèque tierce qui fuit partout, des comportements transverses copiés dans chaque méthode. On refactore alors vers le pattern, au moment où le besoin apparaît."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pat-discernement-q1",
+          "prompt": "Quand un pattern est-il de trop ?",
+          "choices": [
+            "Quand il ajoute des couches d'abstraction sans besoin réel de variation",
+            "Quand il a un nom",
+            "Quand il est utilisé dans une bibliothèque",
+            "Jamais, plus il y en a, mieux c'est"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le code le plus simple qui répond au besoin est le plus facile à faire évoluer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "pat-discernement-q2",
+          "prompt": "Quel est le problème du Service Locator ?",
+          "choices": [
+            "Les dépendances sont résolues à l'intérieur des classes : invisibles, et difficiles à remplacer en test",
+            "Il est trop rapide",
+            "Il ne fonctionne qu'avec Java",
+            "Il oblige à écrire des interfaces"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'injection par constructeur rend ces dépendances explicites.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "pat-discernement-q3",
+          "prompt": "Revue de conception : il n'existe qu'un calcul de TVA, et aucune variation n'est prévue. Touche une ligne d'abstraction inutile.",
+          "code": "public interface IFabriqueCalculateurTva { ICalculateurTva Creer(); }\npublic class FabriqueCalculateurTva : IFabriqueCalculateurTva\n{\n    public ICalculateurTva Creer() => new CalculateurTva();\n}",
+          "bugLines": [
+            1,
+            2
+          ],
+          "explanation": "Une fabrique et son interface pour une seule implémentation fixe n'apportent que de l'indirection. On injecte directement le calculateur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pat-discernement-q4",
+          "prompt": "Que signifie « préférer la composition à l'héritage » ?",
+          "choices": [
+            "Assembler des comportements à partir d'objets injectés plutôt que d'une hiérarchie de classes rigide",
+            "Ne jamais utiliser d'interfaces",
+            "Tout mettre dans une seule classe",
+            "Hériter de plusieurs classes à la fois"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un changement dans une classe de base fragilise toute la hiérarchie.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pat-discernement-q5",
+          "prompt": "Qu'est-ce qu'un objet dieu ?",
+          "choices": [
+            "Une classe qui sait et fait tout, et change pour de nombreuses raisons",
+            "Une classe abstraite",
+            "Un singleton bien écrit",
+            "La classe Program"
+          ],
+          "answerIndex": 0,
+          "explanation": "On la découpe selon ses responsabilités.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "pat-discernement-q6",
+          "prompt": "Quels sont de bons usages des patterns ?",
+          "choices": [
+            "Un vocabulaire commun pendant les revues",
+            "Une réponse à un besoin de variation réel",
+            "Une piste quand le code devient difficile à étendre",
+            "Un objectif en soi : en placer le plus possible"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On les fait apparaître au moment où le code les réclame.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "pat-defi",
+    "title": "Défi entretien : les frais de livraison",
+    "summary": "Strategy, Decorator et Adapter en situation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "pat-defi-q1",
+        "prompt": "Cas pratique 1/3 — Le calcul des frais de livraison enchaîne 14 if selon le transporteur ; chaque nouveau transporteur modifie la même méthode. Quel pattern ?",
+        "choices": [
+          "Strategy : une implémentation par transporteur, derrière une même interface",
+          "Singleton",
+          "Builder",
+          "Prototype"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ajouter un transporteur, c'est ajouter une classe, sans toucher aux autres.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pat-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le calcul de certains transporteurs doit être journalisé et mis en cache. Quel pattern ?",
+        "choices": [
+          "Decorator : envelopper la stratégie sans la modifier",
+          "Adapter",
+          "Fabrique abstraite",
+          "Observer"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le journal et le cache restent séparés du calcul.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pat-defi-q3",
+        "prompt": "Cas pratique 3/3 — Un transporteur fournit un SDK dont l'API ne ressemble pas à notre interface. Quel pattern ?",
+        "choices": [
+          "Adapter : traduire son API vers notre interface",
+          "Decorator",
+          "Singleton",
+          "Template method"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le reste du code ne voit jamais le SDK tiers.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pat-defi-q4",
+        "prompt": "Combien d'instances de Config ce code crée-t-il, même sous forte concurrence ?",
+        "code": "private static readonly Lazy<Config> _instance =\n    new(() => new Config());\npublic static Config Instance => _instance.Value;",
+        "choices": [
+          "Une seule",
+          "Une par thread",
+          "Deux au maximum",
+          "Aucune"
+        ],
+        "answerIndex": 0,
+        "explanation": "Par défaut, Lazy<T> est sûr entre threads (ExecutionAndPublication).",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "pat-defi-q5",
+        "prompt": "Depuis l'ajout de ce décorateur, les commandes ne sont plus enregistrées. Touche la ligne en cause.",
+        "code": "public class DepotJournalise(IDepot interne, ILogger log) : IDepot\n{\n    public void Enregistrer(Commande c)\n    {\n        log.LogInformation(\"Enregistrement {Id}\", c.Id);\n    }\n}",
+        "bugLines": [
+          5
+        ],
+        "explanation": "Le décorateur journalise mais oublie de déléguer : il manque interne.Enregistrer(c).",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "pat-defi-q6",
+        "prompt": "Lesquels sont des patterns de comportement ?",
+        "choices": [
+          "Strategy",
+          "Observer",
+          "Command",
+          "Adapter"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Adapter est un pattern de structure.",
+        "difficulty": 2
+      }
+    ]
+  }
+}
