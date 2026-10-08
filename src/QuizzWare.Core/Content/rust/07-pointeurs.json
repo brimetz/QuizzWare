@@ -1,0 +1,447 @@
+{
+  "id": "rust-ch-pointeurs",
+  "title": "Pointeurs intelligents",
+  "summary": "Box, Rc, RefCell et Drop.",
+  "lessons": [
+    {
+      "id": "rust-box-dyn",
+      "title": "Box et dyn Trait",
+      "summary": "Allocation sur le tas et dispatch dynamique.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Box<T>",
+          "body": "Box<T> place une valeur sur le tas et en garde la possession unique : quand la Box est détruite, la valeur l'est aussi. On s'en sert pour les types récursifs, dont la taille serait sinon infinie, pour les objets de trait, et pour déplacer une très grosse valeur sans la recopier.",
+          "code": "enum Liste {\n    Cons(i32, Box<Liste>),\n    Nil,\n}\nuse Liste::*;\nlet l = Cons(1, Box::new(Cons(2, Box::new(Nil))));"
+        },
+        {
+          "title": "Des types sans taille connue",
+          "body": "dyn Forme désigne « une valeur d'un type quelconque qui implémente Forme » : sa taille n'est pas connue à la compilation. On la manipule toujours derrière un pointeur (Box<dyn Forme>, &dyn Forme), qui transporte l'adresse de la donnée et celle de sa table de méthodes (vtable). On peut alors ranger des types différents dans un même Vec.",
+          "code": "let formes: Vec<Box<dyn Forme>> = vec![\n    Box::new(Cercle { r: 1.0 }),\n    Box::new(Carre { c: 2.0 }),\n];\nlet total: f64 = formes.iter().map(|f| f.aire()).sum();"
+        },
+        {
+          "title": "Générique ou dyn ?",
+          "body": "Avec un générique <T: Forme>, le compilateur crée une version de la fonction par type concret (monomorphisation) : appels directs, possibilité d'inlining, mais un seul type par instance. Avec dyn Forme, un seul code et des types mélangés, au prix d'un appel indirect. Un trait n'est utilisable en dyn que s'il est compatible : pas de méthode générique, pas de Self renvoyé par valeur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "rust-box-dyn-q1",
+          "prompt": "Ce code ne compile pas : « recursive type has infinite size ». Touche la ligne en cause.",
+          "code": "enum Liste {\n    Cons(i32, Liste),\n    Nil,\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Une Liste contiendrait une Liste, qui contiendrait une Liste… Avec Box<Liste>, la variante ne contient qu'un pointeur, de taille fixe.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-box-dyn-q2",
+          "prompt": "Pourquoi écrit-on Vec<Box<dyn Forme>> et pas Vec<dyn Forme> ?",
+          "choices": [
+            "dyn Forme n'a pas de taille connue à la compilation : il faut passer par un pointeur",
+            "Pour que les formes soient copiées",
+            "Parce que Vec n'accepte que des Box",
+            "Pour activer le ramasse-miettes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un Vec range des éléments de taille identique ; toutes les Box<dyn Forme> ont la même taille (deux pointeurs).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "rust-box-dyn-q3",
+          "prompt": "Complète : une liste de formes de types différents.",
+          "code": "let formes: Vec<Box<___ Forme>> = vec![\n    Box::___(Cercle { r: 1.0 }),\n    Box::new(Carre { c: 2.0 }),\n];",
+          "answers": [
+            "dyn",
+            "new"
+          ],
+          "distractors": [
+            "impl",
+            "alloc",
+            "&"
+          ],
+          "explanation": "impl Forme désigne un seul type concret caché ; pour mélanger les types, il faut dyn Forme.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-box-dyn-q4",
+          "prompt": "Quelle différence entre fn total<T: Forme>(v: &[T]) et fn total(v: &[Box<dyn Forme>]) ?",
+          "choices": [
+            "Le générique est compilé par type et appelé directement, mais n'accepte qu'un type à la fois ; dyn accepte des types mélangés via une vtable",
+            "Aucune, le compilateur produit le même code",
+            "Le générique est toujours plus lent",
+            "dyn n'est possible qu'avec unsafe"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le compromis entre dispatch statique (monomorphisation) et dispatch dynamique.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "rust-box-dyn-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "let b = Box::new(5);\nlet c = *b + 1;\nprintln!(\"{b} {c}\");",
+          "choices": [
+            "5 6",
+            "Une erreur : b a été déplacée",
+            "6 6",
+            "Une adresse mémoire et 6"
+          ],
+          "answerIndex": 0,
+          "explanation": "*b lit l'entier, qui est Copy : la Box reste intacte. Display affiche la valeur pointée.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "rust-box-dyn-q6",
+          "prompt": "Dans quels cas Box est-elle la bonne solution ?",
+          "choices": [
+            "Un type récursif, comme une liste ou un arbre",
+            "Ranger des types différents derrière un même trait",
+            "Partager une valeur entre plusieurs propriétaires",
+            "Déplacer une très grosse valeur sans recopier ses octets"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            3
+          ],
+          "explanation": "Box a un seul propriétaire ; pour partager la possession, on utilise Rc ou Arc.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "rust-rc-refcell",
+      "title": "Rc et RefCell",
+      "summary": "Partage et mutabilité intérieure.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Rc<T> : plusieurs propriétaires",
+          "body": "Rc<T> compte les références : Rc::clone ne copie pas la donnée, il incrémente un compteur, et la valeur est libérée quand le dernier Rc disparaît. La donnée partagée est en lecture seule. Le compteur n'est pas atomique : Rc est réservé à un seul thread ; entre threads, on utilise Arc.",
+          "code": "let a = Rc::new(String::from(\"x\"));\nlet b = Rc::clone(&a);\nprintln!(\"{}\", Rc::strong_count(&a)); // 2"
+        },
+        {
+          "title": "RefCell<T> : emprunts vérifiés à l'exécution",
+          "body": "RefCell permet de modifier une valeur à travers une référence partagée : c'est la mutabilité intérieure. borrow() et borrow_mut() appliquent les règles habituelles (plusieurs lecteurs ou un seul écrivain), mais à l'exécution : une violation provoque une panique au lieu d'une erreur de compilation. On combine souvent Rc<RefCell<T>> pour une donnée partagée et modifiable.",
+          "code": "let partage = Rc::new(RefCell::new(0));\nlet autre = Rc::clone(&partage);\n*autre.borrow_mut() += 1;\nprintln!(\"{}\", partage.borrow()); // 1"
+        },
+        {
+          "title": "Les cycles et Weak",
+          "body": "Deux Rc qui se référencent mutuellement ne descendent jamais à zéro : la mémoire fuit, sans erreur. Weak<T> est une référence qui ne compte pas pour la durée de vie ; upgrade() renvoie Some(Rc) si la valeur existe encore. Dans un arbre, les enfants sont des Rc et le lien vers le parent est un Weak."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-rc-refcell-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "let a = Rc::new(String::from(\"x\"));\nlet b = Rc::clone(&a);\n{\n    let c = Rc::clone(&a);\n    println!(\"{}\", Rc::strong_count(&a));\n}\nprintln!(\"{}\", Rc::strong_count(&b));",
+          "choices": [
+            "3 puis 2",
+            "3 puis 3",
+            "1 puis 1",
+            "2 puis 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "a, b et c pointent vers la même chaîne ; c disparaît à la fin du bloc et le compteur redescend.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-rc-refcell-q2",
+          "prompt": "Que se passe-t-il ?",
+          "code": "let c = RefCell::new(vec![1]);\nlet lecture = c.borrow();\nc.borrow_mut().push(2);\nprintln!(\"{lecture:?}\");",
+          "choices": [
+            "Une panique à l'exécution : la valeur est déjà empruntée",
+            "Une erreur de compilation",
+            "[1, 2]",
+            "[1]"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le code compile : RefCell repousse la vérification à l'exécution. borrow_mut échoue tant que lecture est vivante.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "rust-rc-refcell-q3",
+          "prompt": "Pourquoi ne peut-on pas envoyer un Rc<T> à un autre thread ?",
+          "choices": [
+            "Son compteur n'est pas atomique : Rc n'implémente pas Send, il faut Arc",
+            "Les threads n'acceptent que des Box",
+            "Rc est trop gros pour être envoyé",
+            "On peut, avec move"
+          ],
+          "answerIndex": 0,
+          "explanation": "Deux threads qui incrémentent le même compteur non atomique pourraient le corrompre ; le compilateur l'interdit.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "rust-rc-refcell-q4",
+          "prompt": "Complète : un compteur partagé et modifiable dans un seul thread.",
+          "code": "let partage = Rc::new(___::new(0));\nlet autre = Rc::clone(&partage);\n*autre.___() += 1;",
+          "answers": [
+            "RefCell",
+            "borrow_mut"
+          ],
+          "distractors": [
+            "Box",
+            "borrow",
+            "lock"
+          ],
+          "explanation": "lock est la méthode d'un Mutex, l'équivalent multithread ; borrow ne donne qu'un accès en lecture.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "rust-rc-refcell-q5",
+          "prompt": "Cet arbre ne libère jamais sa mémoire. Touche la ligne en cause.",
+          "code": "struct Noeud {\n    valeur: i32,\n    parent: RefCell<Option<Rc<Noeud>>>,\n    enfants: RefCell<Vec<Rc<Noeud>>>,\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Le parent garde ses enfants en vie, et chaque enfant garde son parent : cycle de Rc. Le lien vers le parent doit être un Weak<Noeud>.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "rust-rc-refcell-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "RefCell vérifie les règles d'emprunt à l'exécution",
+            "Rc::clone incrémente un compteur sans copier la donnée",
+            "Un Weak ne maintient pas la valeur en vie",
+            "RefCell peut être partagé entre threads"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "RefCell n'est pas Sync ; entre threads, on utilise Mutex ou RwLock.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "rust-drop",
+      "title": "Drop et RAII",
+      "summary": "Libérer automatiquement.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le trait Drop",
+          "body": "Quand une valeur sort de portée, Rust appelle son destructeur : la méthode drop du trait Drop si le type l'implémente, puis la destruction de ses champs. C'est ainsi qu'un File ferme son fichier, qu'un MutexGuard déverrouille, qu'un Vec libère sa mémoire : la ressource est liée à la durée de vie d'une valeur (RAII).",
+          "code": "struct Connexion { id: u32 }\n\nimpl Drop for Connexion {\n    fn drop(&mut self) {\n        println!(\"fermeture {}\", self.id);\n    }\n}"
+        },
+        {
+          "title": "L'ordre de destruction",
+          "body": "Les variables locales sont détruites dans l'ordre inverse de leur déclaration. Les champs d'une struct, eux, sont détruits dans l'ordre de leur déclaration. Attention : let _ = valeur détruit la valeur immédiatement, alors que let _x = valeur la garde jusqu'à la fin du bloc."
+        },
+        {
+          "title": "Libérer plus tôt",
+          "body": "On ne peut pas appeler x.drop() soi-même. Pour libérer une ressource avant la fin du bloc (relâcher un verrou avant un appel long, par exemple), on appelle std::mem::drop(x), qui prend possession de x. Un type ne peut pas être à la fois Copy et Drop. Enfin, Drop n'est pas garanti : mem::forget ou un cycle de Rc peuvent l'empêcher, sans unsafe.",
+          "code": "let mut g = compteur.lock().unwrap();\n*g += 1;\ndrop(g); // déverrouille maintenant\nappel_long();"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-drop-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "struct Bruit(&'static str);\nimpl Drop for Bruit {\n    fn drop(&mut self) { print!(\"{} \", self.0); }\n}\n\nfn main() {\n    let _a = Bruit(\"a\");\n    let _b = Bruit(\"b\");\n    print!(\"fin \");\n}",
+          "choices": [
+            "fin b a",
+            "fin a b",
+            "a b fin",
+            "b a fin"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les variables locales sont détruites à la fin de main, dans l'ordre inverse de leur déclaration.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-drop-q2",
+          "prompt": "Avec le même type Bruit, qu'affiche ce programme ?",
+          "code": "fn main() {\n    let _ = Bruit(\"x\");\n    let _y = Bruit(\"y\");\n    print!(\"fin \");\n}",
+          "choices": [
+            "x fin y",
+            "fin y x",
+            "fin x y",
+            "x y fin"
+          ],
+          "answerIndex": 0,
+          "explanation": "let _ ne lie rien : la valeur temporaire est détruite tout de suite. _y est un vrai nom, gardé jusqu'à la fin du bloc. Le piège classique : let _ = mutex.lock() ne garde pas le verrou.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "rust-drop-q3",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "let f = File::create(\"log.txt\")?;\necrire(&f)?;\nf.drop();\nrenommer(\"log.txt\")?;",
+          "bugLines": [
+            3
+          ],
+          "explanation": "L'appel explicite d'un destructeur est interdit (« explicit use of destructor method ») : on écrit drop(f), qui prend possession de f.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "rust-drop-q4",
+          "prompt": "Complète : relâcher le verrou avant un appel long.",
+          "code": "let mut g = compteur.lock().unwrap();\n*g += 1;\n___(g);\nappel_long();",
+          "answers": [
+            "drop"
+          ],
+          "distractors": [
+            "free",
+            "delete",
+            "unlock"
+          ],
+          "explanation": "Le MutexGuard déverrouille quand il est détruit ; il n'a pas de méthode unlock.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-drop-q5",
+          "prompt": "Pourquoi un type ne peut-il pas implémenter à la fois Copy et Drop ?",
+          "choices": [
+            "Une copie bit à bit dupliquerait la ressource, qui serait libérée deux fois",
+            "Pour des raisons de performance",
+            "Copy et Drop ont des méthodes de même nom",
+            "C'est possible avec unsafe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un type qui gère une ressource doit contrôler ses copies : il implémente Clone, explicitement.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-drop-q6",
+          "prompt": "Quelles affirmations sur RAII en Rust sont vraies ?",
+          "choices": [
+            "Un fichier est fermé quand son File sort de portée",
+            "Un MutexGuard déverrouille quand il sort de portée",
+            "Les variables locales sont détruites dans l'ordre inverse de leur déclaration",
+            "Drop est garanti de s'exécuter dans tous les cas"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "mem::forget, un cycle de Rc ou process::exit empêchent l'appel de Drop : la sûreté mémoire de Rust n'en dépend pas.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "rust-defi-pointeurs",
+    "title": "Défi entretien : un graphe en Rust",
+    "summary": "Partage, mutation et cycles.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "rust-defi-pointeurs-q1",
+        "prompt": "Cas pratique 1/3 — Dans un éditeur de graphes monothread, plusieurs nœuds référencent le même nœud et doivent pouvoir le modifier. Quel type ?",
+        "choices": [
+          "Rc<RefCell<Noeud>>",
+          "Box<Noeud>",
+          "&mut Noeud",
+          "Arc<Mutex<Noeud>>"
+        ],
+        "answerIndex": 0,
+        "explanation": "Box n'a qu'un propriétaire, &mut est exclusif ; Arc<Mutex> fonctionnerait mais paierait une synchronisation inutile.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-pointeurs-q2",
+        "prompt": "Cas pratique 2/3 — Chaque nœud garde aussi un lien vers son parent. Quel type pour ce lien ?",
+        "choices": [
+          "Weak<RefCell<Noeud>> : sinon parent et enfants se maintiennent en vie mutuellement",
+          "Rc<RefCell<Noeud>>, comme pour les enfants",
+          "Box<Noeud>",
+          "Un indice usize vers un tableau global, toujours"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un cycle de Rc fuit. (Stocker les nœuds dans un Vec et utiliser des indices est une autre solution courante, mais pas la seule.)",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-pointeurs-q3",
+        "prompt": "Cas pratique 3/3 — Que se passe-t-il à l'exécution ?",
+        "code": "let n = Rc::new(RefCell::new(Noeud::new()));\nfor _v in n.borrow().voisins.iter() {\n    n.borrow_mut().visites += 1;\n}",
+        "choices": [
+          "Une panique : l'emprunt en lecture dure toute la boucle, borrow_mut échoue",
+          "visites est incrémenté pour chaque voisin",
+          "Une erreur de compilation",
+          "Une boucle infinie"
+        ],
+        "answerIndex": 0,
+        "explanation": "La valeur temporaire renvoyée par borrow() vit jusqu'à la fin de la boucle. On compte d'abord les voisins dans une variable, puis on emprunte en écriture.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-pointeurs-q4",
+        "prompt": "Qu'affiche ce programme ?",
+        "code": "struct Bruit(&'static str);\nimpl Drop for Bruit {\n    fn drop(&mut self) { print!(\"{} \", self.0); }\n}\nstruct Paire { a: Bruit, b: Bruit }\n\nfn main() {\n    let _p = Paire { a: Bruit(\"a\"), b: Bruit(\"b\") };\n}",
+        "choices": [
+          "a b",
+          "b a",
+          "Rien",
+          "Paire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les champs d'une struct sont détruits dans l'ordre de leur déclaration, contrairement aux variables locales.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "rust-defi-pointeurs-q5",
+        "prompt": "Remets dans l'ordre un type qui journalise sa fermeture.",
+        "lines": [
+          "struct Connexion {",
+          "    id: u32,",
+          "}",
+          "impl Drop for Connexion {",
+          "    fn drop(&mut self) {",
+          "        println!(\"fermeture {}\", self.id);",
+          "    }",
+          "}"
+        ],
+        "explanation": "drop reçoit &mut self : la valeur est encore valide pendant l'appel, ses champs seront détruits juste après.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "rust-defi-pointeurs-q6",
+        "prompt": "Quelles associations sont correctes ?",
+        "choices": [
+          "Rc<RefCell<T>> : partage modifiable dans un seul thread",
+          "Arc<Mutex<T>> : partage modifiable entre threads",
+          "Box<dyn Trait> : propriétaire unique d'un objet de trait",
+          "Rc<T> : partage entre threads"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Rc n'est pas Send : le compilateur refuse de l'envoyer à un autre thread.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,330 @@
+{
+  "id": "qa-ch-services",
+  "title": "Tester des services",
+  "summary": "Contrats et données de test.",
+  "lessons": [
+    {
+      "id": "qa-contrats",
+      "title": "Tests de contrat",
+      "summary": "Vérifier les échanges entre services.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le problème",
+          "body": "Un service consommateur s'appuie sur la réponse d'un service fournisseur. Si le fournisseur renomme un champ, ses propres tests passent, et le consommateur casse en production. Les tests de bout en bout détecteraient le problème, mais ils exigent de déployer tous les services ensemble, sont lents et instables."
+        },
+        {
+          "title": "Les contrats pilotés par le consommateur",
+          "body": "Avec Pact, le consommateur décrit dans ses tests les requêtes qu'il envoie et la partie de la réponse qu'il utilise, en testant contre un fournisseur simulé. Ce contrat est publié (sur un broker). Dans sa propre CI, le fournisseur rejoue chaque contrat contre sa vraie implémentation. Avant un déploiement, can-i-deploy vérifie la compatibilité des versions.",
+          "code": "provider\n  .given(\"le client 42 existe\")\n  .uponReceiving(\"une demande de client\")\n  .withRequest({ method: \"GET\", path: \"/clients/42\" })\n  .willRespondWith({\n    status: 200,\n    body: { id: like(42), nom: like(\"Ana\") },\n  });",
+          "language": "javascript"
+        },
+        {
+          "title": "Ne vérifier que ce qui compte",
+          "body": "Un contrat ne décrit que ce que le consommateur utilise : le fournisseur reste libre d'ajouter des champs. On vérifie les types et les formats (like, regex) plutôt que des valeurs exactes comme une date de création, qui changeraient à chaque exécution. L'alternative côté fournisseur : publier un schéma OpenAPI et vérifier automatiquement que chaque version reste compatible."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-contrats-q1",
+          "prompt": "Quel problème les tests de contrat résolvent-ils ?",
+          "choices": [
+            "Détecter qu'un fournisseur casse ce qu'un consommateur utilise, sans déployer tout le système",
+            "Mesurer les performances d'une API",
+            "Vérifier l'interface graphique",
+            "Remplacer les tests unitaires"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ils vérifient chaque interaction séparément, en quelques secondes, dans la CI de chaque service.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-contrats-q2",
+          "prompt": "Avec Pact, qui produit le contrat ?",
+          "choices": [
+            "Le consommateur, à partir de ses propres tests",
+            "Le fournisseur",
+            "L'équipe d'exploitation",
+            "Le broker, automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "D'où le nom : contrats pilotés par le consommateur (consumer-driven contracts).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-contrats-q3",
+          "prompt": "Le fournisseur ajoute un champ facultatif à sa réponse. Le contrat du consommateur échoue-t-il ?",
+          "choices": [
+            "Non : le contrat ne vérifie que les champs que le consommateur utilise",
+            "Oui, toute modification casse le contrat",
+            "Oui, si le champ est une chaîne",
+            "Cela dépend du jour"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ajouter est compatible ; renommer ou supprimer un champ utilisé ne l'est pas.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "qa-contrats-q4",
+          "prompt": "Ce contrat échoue à chaque vérification chez le fournisseur. Touche la ligne en cause.",
+          "code": "{\n  \"request\": { \"method\": \"GET\", \"path\": \"/clients/42\" },\n  \"response\": {\n    \"status\": 200,\n    \"body\": { \"id\": 42, \"nom\": \"Ana\",\n      \"cree_le\": \"2026-03-05T10:12:45Z\" }\n  }\n}",
+          "language": "text",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Une date exacte change à chaque exécution chez le fournisseur. On vérifie le format (une date ISO) avec un matcher, pas la valeur.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "qa-contrats-q5",
+          "prompt": "Complète cette interaction Pact.",
+          "code": "provider\n  .given(\"le client 42 existe\")\n  .___(\"une demande de client\")\n  .withRequest({ method: \"GET\", path: \"/clients/42\" })\n  .___({ status: 200, body: { id: like(42) } });",
+          "language": "javascript",
+          "answers": [
+            "uponReceiving",
+            "willRespondWith"
+          ],
+          "distractors": [
+            "respondWith",
+            "onRequest",
+            "expect"
+          ],
+          "explanation": "given fixe l'état du fournisseur, uponReceiving nomme l'interaction, willRespondWith décrit la réponse attendue.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "qa-contrats-q6",
+          "prompt": "Quels avantages ont les tests de contrat sur les tests de bout en bout ?",
+          "choices": [
+            "Ils s'exécutent vite, sans déployer les autres services",
+            "Un échec désigne précisément l'interaction cassée",
+            "Chaque équipe peut livrer de façon indépendante",
+            "Ils remplacent tous les tests d'intégration"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Ils ne testent pas la logique interne du fournisseur ni ses accès à la base : ils complètent les autres tests.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "qa-donnees-test",
+      "title": "Données de test",
+      "summary": "Fixtures, builders et isolation.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des builders",
+          "body": "Un test lisible ne montre que les données qui comptent pour lui. Un builder (ou une fabrique) fournit des valeurs par défaut valides, et le test ne surcharge que ce qui l'intéresse. factory_boy, en Python, généralise l'idée.",
+          "code": "def un_client(**surcharges):\n    valeurs = {\"nom\": \"Ana\", \"pays\": \"FR\", \"actif\": True}\n    return Client(**(valeurs | surcharges))\n\ndef test_client_inactif_sans_remise():\n    assert remise(un_client(actif=False)) == 0",
+          "language": "python"
+        },
+        {
+          "title": "Des fixtures",
+          "body": "Une fixture pytest prépare une ressource et la nettoie après le test : le code avant yield prépare, celui après nettoie. Sa portée (scope) dit combien de tests la partagent ; une ressource modifiée par les tests ne doit pas être partagée, sinon le résultat dépend de l'ordre d'exécution.",
+          "code": "@pytest.fixture\ndef base():\n    b = creer_base_vide()\n    yield b\n    b.detruire()",
+          "language": "python"
+        },
+        {
+          "title": "Isoler",
+          "body": "Chaque test crée ses propres données : transaction annulée à la fin, base neuve dans un conteneur (Testcontainers), ou identifiants uniques. On évite les gros scripts de données partagés, dont personne ne sait quel test dépend de quelle ligne. Avec des données générées (Faker), on fixe la graine pour pouvoir reproduire un échec."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-donnees-test-q1",
+          "prompt": "Quel est l'intérêt d'un builder de données de test ?",
+          "choices": [
+            "Chaque test n'indique que ce qui compte pour lui ; le reste a des valeurs par défaut valides",
+            "Générer des millions de lignes",
+            "Accélérer la base de données",
+            "Remplacer les assertions"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si un champ obligatoire est ajouté au modèle, on ne modifie que le builder, pas cent tests.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "qa-donnees-test-q2",
+          "prompt": "Le second test échoue quand il s'exécute après le premier. Touche la ligne en cause.",
+          "code": "@pytest.fixture(scope=\"session\")\ndef db():\n    return charger_base(42)\n\ndef test_supprimer(db):\n    db.supprimer(client_id=1)\n    assert db.compter() == 41\n\ndef test_lister(db):\n    assert db.compter() == 42",
+          "language": "python",
+          "bugLines": [
+            1
+          ],
+          "explanation": "La base est partagée par toute la session, et le premier test la modifie. Une portée par test (la valeur par défaut) ou une transaction annulée isole chaque test.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "qa-donnees-test-q3",
+          "prompt": "Complète : une fixture qui prépare une base, puis la détruit après le test.",
+          "code": "@pytest.___\ndef base():\n    b = creer_base_vide()\n    ___ b\n    b.detruire()",
+          "language": "python",
+          "answers": [
+            "fixture",
+            "yield"
+          ],
+          "distractors": [
+            "setup",
+            "return",
+            "mark"
+          ],
+          "explanation": "Avec return, la ligne de nettoyage ne serait jamais exécutée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-donnees-test-q4",
+          "prompt": "Les tests utilisent des données générées aléatoirement (Faker). Quelle précaution prendre ?",
+          "choices": [
+            "Fixer la graine (et l'afficher) pour pouvoir reproduire un échec",
+            "Ne jamais relancer un test qui échoue",
+            "Générer des données différentes à chaque assertion",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un échec qu'on ne peut pas reproduire est presque impossible à corriger.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-donnees-test-q5",
+          "prompt": "Un test dépend d'une cliente « Ana » insérée par un script SQL partagé de 5 000 lignes. Quel est le problème ?",
+          "choices": [
+            "On ne voit pas d'où viennent les données, et toute modification du script casse des tests ailleurs",
+            "Le script est trop court",
+            "Le SQL est interdit dans les tests",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le test devrait créer lui-même la cliente dont il a besoin.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "qa-donnees-test-q6",
+          "prompt": "Comment isoler les données entre les tests ?",
+          "choices": [
+            "Annuler une transaction à la fin de chaque test",
+            "Démarrer une base neuve dans un conteneur",
+            "Faire créer ses données par chaque test",
+            "Imposer un ordre d'exécution"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Imposer un ordre masque les dépendances au lieu de les supprimer ; l'exécution en parallèle les ferait réapparaître.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "qa-defi-services",
+    "title": "Défi entretien : le champ renommé",
+    "summary": "Contrats et évolutions compatibles.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "qa-defi-services-q1",
+        "prompt": "Cas pratique 1/3 — L'équipe Commandes renomme le champ prix en prix_ttc. Le site et le service Facturation cassent en production. Quel test l'aurait détecté avant ?",
+        "choices": [
+          "Des tests de contrat des consommateurs, vérifiés dans la CI du service Commandes",
+          "Plus de tests unitaires dans le service Commandes",
+          "Un test de charge",
+          "Une revue de code plus longue"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les tests de Commandes ignoraient que d'autres utilisaient prix ; les contrats le leur apprennent.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-services-q2",
+        "prompt": "Cas pratique 2/3 — Comment renommer ce champ sans casser les consommateurs ?",
+        "choices": [
+          "Ajouter prix_ttc, garder prix pendant que les consommateurs migrent, puis le retirer",
+          "Renommer d'un coup un vendredi soir",
+          "Demander à tous de déployer en même temps",
+          "Renommer prix en Prix"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est le schéma « étendre puis contracter » : chaque étape reste compatible.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-services-q3",
+        "prompt": "Cas pratique 3/3 — Comment savoir quand prix peut être retiré ?",
+        "choices": [
+          "Quand plus aucun contrat de consommateur déployé ne l'utilise, ce que can-i-deploy vérifie",
+          "Au bout d'une semaine",
+          "Quand l'équipe Commandes le décide seule",
+          "Jamais"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le broker sait quelles versions de chaque consommateur sont en production et ce qu'elles utilisent.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-services-q4",
+        "prompt": "Les tests d'intégration utilisent une base partagée par toute l'équipe. Conséquence ?",
+        "choices": [
+          "Des tests instables : les données changent selon qui lance quoi",
+          "Des tests plus rapides et fiables",
+          "Aucune",
+          "Une meilleure couverture"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une base jetable par exécution (conteneur) rend les tests reproductibles.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "qa-defi-services-q5",
+        "prompt": "Ce test échoue : le total vaut 0. Touche la ligne en cause.",
+        "code": "def une_commande(**s):\n    valeurs = {\"quantite\": 0, \"prix\": 10}\n    return Commande(**(valeurs | s))\n\ndef test_total():\n    assert une_commande(prix=5).total() == 5",
+        "language": "python",
+        "bugLines": [
+          2
+        ],
+        "explanation": "Les valeurs par défaut d'un builder doivent décrire un objet valide et typique : une quantité de 1, pas 0.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "qa-defi-services-q6",
+        "prompt": "Quelles affirmations sur Pact sont vraies ?",
+        "choices": [
+          "Le consommateur génère le contrat en testant contre un fournisseur simulé",
+          "Le fournisseur rejoue le contrat contre sa vraie implémentation",
+          "Un broker partage les contrats et les résultats de vérification",
+          "Il faut déployer tous les services ensemble pour vérifier"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Tout l'intérêt est justement d'éviter le déploiement commun.",
+        "difficulty": 3
+      }
+    ]
+  }
+}

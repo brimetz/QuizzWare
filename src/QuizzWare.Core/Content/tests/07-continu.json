@@ -1,0 +1,326 @@
+{
+  "id": "qa-ch-continu",
+  "title": "Tester en continu",
+  "summary": "CI, couverture et tests instables.",
+  "lessons": [
+    {
+      "id": "qa-ci",
+      "title": "Tests en intégration continue",
+      "summary": "Rapides, parallèles et fiables.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Un retour rapide",
+          "body": "À chaque push, la CI construit et teste le code. Pour être utile, elle doit répondre vite, idéalement en moins d'une dizaine de minutes : au-delà, on enchaîne d'autres changements sans attendre, et les erreurs s'accumulent. On ordonne les étapes du plus rapide au plus lent (analyse statique, unitaires, intégration, bout en bout) pour échouer tôt."
+        },
+        {
+          "title": "Accélérer",
+          "body": "Mettre en cache les dépendances, ne relancer que ce qui est concerné, et répartir la suite de tests sur plusieurs machines (sharding). Une règle de branche protégée exige une CI verte avant toute fusion : main reste toujours livrable.",
+          "code": "jobs:\n  tests:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        partie: [1, 2, 3, 4]\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci\n      - run: npm test -- --shard=${{ matrix.partie }}/4",
+          "language": "yaml"
+        },
+        {
+          "title": "Les tests instables",
+          "body": "Un test qui échoue de temps en temps (flaky) détruit la confiance : on finit par ignorer les échecs, y compris les vrais. Causes fréquentes : attentes fixes au lieu d'attendre une condition, données partagées, dépendance à l'heure, au réseau ou à l'ordre des tests. Relancer automatiquement jusqu'au succès masque le problème ; on met le test en quarantaine visible et on corrige vite."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-ci-q1",
+          "prompt": "Pourquoi garder la CI sous une dizaine de minutes ?",
+          "choices": [
+            "Pour un retour rapide : sinon on enchaîne les changements sans attendre et les erreurs s'accumulent",
+            "Parce que les serveurs de CI s'arrêtent après dix minutes",
+            "Pour économiser de l'électricité uniquement",
+            "Ce n'est pas important"
+          ],
+          "answerIndex": 0,
+          "explanation": "Plus l'erreur est signalée tôt, plus elle est facile à relier à sa cause.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-ci-q2",
+          "prompt": "Un test échoue environ une fois sur vingt. Quelle est la bonne réaction ?",
+          "choices": [
+            "Le mettre en quarantaine visible et corriger rapidement la cause",
+            "Le relancer automatiquement jusqu'à ce qu'il passe",
+            "Le supprimer sans rien dire",
+            "Ignorer ses échecs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un échec intermittent révèle parfois un vrai bug de concurrence du code testé.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "qa-ci-q3",
+          "prompt": "Remets les étapes d'une CI dans l'ordre le plus efficace.",
+          "language": "text",
+          "lines": [
+            "Analyse statique (lint, format)",
+            "Tests unitaires",
+            "Tests d'intégration",
+            "Tests de bout en bout"
+          ],
+          "explanation": "Du plus rapide au plus lent : une faute de format échoue en quelques secondes, avant de lancer les étapes coûteuses.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "qa-ci-q4",
+          "prompt": "La CI est toujours verte, même quand des tests échouent. Touche la ligne en cause.",
+          "code": "name: ci\non: [push]\njobs:\n  tests:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci\n      - run: npm test || true",
+          "language": "yaml",
+          "bugLines": [
+            9
+          ],
+          "explanation": "|| true transforme tout échec en succès. La CI ne protège plus rien.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-ci-q5",
+          "prompt": "Que fait le sharding des tests ?",
+          "choices": [
+            "Il répartit la suite de tests sur plusieurs machines qui travaillent en parallèle",
+            "Il supprime les tests lents",
+            "Il chiffre les résultats",
+            "Il trie les tests par ordre alphabétique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une suite de 40 minutes répartie sur 4 machines en prend environ 10.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "qa-ci-q6",
+          "prompt": "Quelles sont des causes fréquentes de tests instables ?",
+          "choices": [
+            "Des attentes fixes (sleep) au lieu d'attendre une condition",
+            "Des données partagées entre tests",
+            "Une dépendance à l'heure ou au réseau",
+            "Une assertion sur une addition d'entiers"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un calcul déterministe donne toujours le même résultat.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "qa-couverture",
+      "title": "La couverture de code",
+      "summary": "Ce qu'elle dit, ce qu'elle cache.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Ce qu'elle mesure",
+          "body": "La couverture indique quelles lignes (ou quelles branches de chaque if) ont été exécutées pendant les tests. La couverture des branches est plus exigeante : un if dont seul le cas vrai a été testé compte pour moitié. Elle est précieuse pour repérer le code que rien ne teste.",
+          "code": "pytest --cov=src --cov-branch --cov-report=html",
+          "language": "shell"
+        },
+        {
+          "title": "Ce qu'elle ne dit pas",
+          "body": "Exécuté ne veut pas dire vérifié : un test sans assertion donne 100 % de couverture sans rien contrôler. Imposer un chiffre fait apparaître des tests creux écrits pour atteindre l'objectif (« quand une mesure devient un objectif, elle cesse d'être une bonne mesure »)."
+        },
+        {
+          "title": "Un usage raisonnable",
+          "body": "On regarde surtout la couverture du code modifié dans chaque pull request (diff coverage), sans bloquer sur le vieux code. On lit les zones non couvertes pour décider si elles méritent un test. Et on complète par des tests de mutation, qui vérifient que les tests détectent vraiment les erreurs."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "qa-couverture-q1",
+          "prompt": "Ce test fait monter la couverture, mais ne vérifie rien. Touche la ligne en cause.",
+          "code": "def test_calcul_tva():\n    calculer_tva(100, taux=0.2)",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Il manque une assertion : assert calculer_tva(100, taux=0.2) == 20. Le code est exécuté, son résultat jamais contrôlé.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-couverture-q2",
+          "prompt": "Une couverture de lignes de 100 % garantit-elle l'absence de bugs ?",
+          "choices": [
+            "Non : elle dit que les lignes ont été exécutées, pas que leur résultat a été vérifié",
+            "Oui",
+            "Oui, si les tests passent",
+            "Seulement pour du code Python"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle ne dit rien non plus des cas que le code ne gère pas du tout.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-couverture-q3",
+          "prompt": "On n'écrit qu'un seul test : signe(5). Quelle couverture obtient-on ?",
+          "code": "def signe(x):\n    if x < 0:\n        return -1\n    return 1",
+          "language": "python",
+          "choices": [
+            "75 % des instructions, 50 % des branches",
+            "100 % des instructions et des branches",
+            "50 % des instructions, 100 % des branches",
+            "25 % des instructions"
+          ],
+          "answerIndex": 0,
+          "explanation": "Trois instructions sur quatre sont exécutées (le return -1 ne l'est pas), et un seul des deux chemins du if.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "qa-couverture-q4",
+          "prompt": "Pourquoi imposer 90 % de couverture peut-il nuire ?",
+          "choices": [
+            "On finit par écrire des tests qui exécutent le code sans le vérifier, pour atteindre le chiffre",
+            "Parce que 90 % est impossible à atteindre",
+            "Parce que la couverture ralentit la production",
+            "Ça ne nuit jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "La mesure reste utile comme indicateur ; c'est en faire un objectif qui la dégrade.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "qa-couverture-q5",
+          "prompt": "Complète : mesurer la couverture du dossier src et produire un rapport HTML.",
+          "code": "pytest --___=src --cov-___=html",
+          "language": "shell",
+          "answers": [
+            "cov",
+            "report"
+          ],
+          "distractors": [
+            "coverage",
+            "output",
+            "format"
+          ],
+          "explanation": "Ces options viennent du plugin pytest-cov ; --cov-branch ajoute la couverture des branches.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "qa-couverture-q6",
+          "prompt": "Quels usages de la couverture sont raisonnables ?",
+          "choices": [
+            "Repérer le code que rien ne teste",
+            "Surveiller la couverture du code modifié dans les pull requests",
+            "La compléter par des tests de mutation",
+            "Classer les développeurs selon leur couverture"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un classement pousse exactement aux tests creux qu'on veut éviter.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "qa-defi-continu",
+    "title": "Défi entretien : la CI de 45 minutes",
+    "summary": "Accélérer et fiabiliser.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "qa-defi-continu-q1",
+        "prompt": "Cas pratique 1/3 — La CI dure 45 minutes ; les développeurs n'attendent plus son résultat et main est souvent rouge. Premier levier ?",
+        "choices": [
+          "Mesurer la durée de chaque étape, mettre en cache, paralléliser et lancer d'abord les tests rapides",
+          "Supprimer la CI",
+          "Ne lancer la CI qu'une fois par semaine",
+          "Acheter une machine plus puissante sans rien mesurer"
+        ],
+        "answerIndex": 0,
+        "explanation": "On mesure d'abord : souvent, une seule étape représente l'essentiel du temps.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-continu-q2",
+        "prompt": "Cas pratique 2/3 — La suite de bout en bout prend 30 minutes à elle seule. Que faire ?",
+        "choices": [
+          "Garder quelques parcours critiques en bout en bout, et déplacer les autres vérifications vers des tests unitaires ou d'intégration",
+          "La doubler pour plus de sécurité",
+          "La supprimer entièrement",
+          "La lancer deux fois pour vérifier"
+        ],
+        "answerIndex": 0,
+        "explanation": "On revient à la forme de la pyramide : peu de tests lents, beaucoup de tests rapides.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-continu-q3",
+        "prompt": "Cas pratique 3/3 — Trois tests de bout en bout échouent au hasard. Quelle approche ?",
+        "choices": [
+          "Les mettre en quarantaine visible, chercher la cause (attentes fixes, données partagées) et corriger",
+          "Relancer la CI jusqu'à ce qu'elle passe",
+          "Les commenter définitivement",
+          "Ajouter des sleep plus longs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Des sleep plus longs ralentissent tout sans supprimer l'instabilité.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-continu-q4",
+        "prompt": "Quel est l'intérêt de mesurer la couverture du seul code modifié (diff coverage) ?",
+        "choices": [
+          "Exiger des tests sur ce qu'on change, sans bloquer à cause de l'ancien code non testé",
+          "Accélérer la compilation",
+          "Remplacer les revues de code",
+          "Cacher le code non testé"
+        ],
+        "answerIndex": 0,
+        "explanation": "La qualité progresse à chaque changement, sans chantier de rattrapage.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "qa-defi-continu-q5",
+        "prompt": "Revue de la configuration de CI : touche la ligne problématique.",
+        "code": "pytest --reruns 5 tests/",
+        "language": "shell",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Relancer jusqu'à 5 fois chaque test qui échoue masque les tests instables, et parfois de vrais bugs.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "qa-defi-continu-q6",
+        "prompt": "Qu'exige généralement une branche protégée ?",
+        "choices": [
+          "Une CI verte",
+          "Une revue de code approuvée",
+          "Une branche à jour avec main avant la fusion",
+          "Le vote de toute l'entreprise"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Ces règles gardent main livrable à tout moment.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

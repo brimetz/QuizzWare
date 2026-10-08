@@ -1,0 +1,329 @@
+{
+  "id": "java-ch-api",
+  "title": "Fichiers et dates",
+  "summary": "NIO et java.time.",
+  "lessons": [
+    {
+      "id": "java-fichiers",
+      "title": "Fichiers avec NIO",
+      "summary": "Path, Files et encodages.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Path et Files",
+          "body": "Le paquet java.nio.file remplace l'ancien java.io.File. Path.of construit un chemin, resolve et normalize le combinent ; la classe Files fournit les opérations : readString, writeString, readAllLines, exists, createDirectories, copy, move.",
+          "code": "Path p = Path.of(\"config\", \"app.properties\");\nString contenu = Files.readString(p);\nFiles.writeString(Path.of(\"sortie.txt\"), \"ok\");"
+        },
+        {
+          "title": "Les gros fichiers",
+          "body": "readString et readAllLines chargent tout en mémoire. Files.lines renvoie un Stream<String> paresseux, ligne par ligne : idéal pour un gros fichier. Mais ce stream tient le fichier ouvert : on le ferme avec try-with-resources, sinon les descripteurs de fichiers s'épuisent sur un serveur.",
+          "code": "try (Stream<String> lignes = Files.lines(p)) {\n    long nb = lignes\n        .filter(l -> l.contains(\"ERROR\"))\n        .count();\n}"
+        },
+        {
+          "title": "Les encodages",
+          "body": "Depuis Java 18, UTF-8 est l'encodage par défaut de ces API, quel que soit le système. Avant, il dépendait de la plateforme, source de bugs entre Windows et Linux. Pour un fichier venant d'ailleurs, on précise quand même l'encodage attendu (StandardCharsets)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "java-fichiers-q1",
+          "prompt": "Complète : lire un fichier de configuration en entier.",
+          "code": "Path p = Path.___(\"config\", \"app.properties\");\nString contenu = Files.___(p);",
+          "answers": [
+            "of",
+            "readString"
+          ],
+          "distractors": [
+            "get",
+            "read",
+            "load"
+          ],
+          "explanation": "Path.of (Java 11) remplace Paths.get ; Files.readString lit tout le fichier en UTF-8.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "java-fichiers-q2",
+          "prompt": "Sur un serveur, ce code finit par provoquer « Too many open files ». Touche la ligne en cause.",
+          "code": "long nb = Files.lines(Path.of(\"log.txt\"))\n    .filter(l -> l.contains(\"ERROR\"))\n    .count();",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Le stream de Files.lines garde le fichier ouvert tant qu'il n'est pas fermé : il faut un try-with-resources.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-fichiers-q3",
+          "prompt": "Pourquoi préférer Files.lines à Files.readAllLines pour un fichier de 10 Go ?",
+          "choices": [
+            "Files.lines lit à la demande, ligne par ligne ; readAllLines charge tout en mémoire",
+            "readAllLines ne lit que les 1 000 premières lignes",
+            "Files.lines est plus précis",
+            "Il n'y a aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "10 Go de lignes en mémoire provoqueraient une OutOfMemoryError.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-fichiers-q4",
+          "prompt": "Depuis Java 18, quel est l'encodage par défaut des API de fichiers ?",
+          "choices": [
+            "UTF-8, sur toutes les plateformes",
+            "Celui du système d'exploitation",
+            "ISO-8859-1",
+            "UTF-16"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la JEP 400 : un même programme lit désormais les fichiers de la même façon sous Windows et Linux.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-fichiers-q5",
+          "prompt": "Sous Linux, qu'affiche ce code ?",
+          "code": "Path p = Path.of(\"/data\")\n    .resolve(\"../etc\")\n    .normalize();\nSystem.out.println(p);",
+          "choices": [
+            "/etc",
+            "/data/../etc",
+            "/data/etc",
+            "../etc"
+          ],
+          "answerIndex": 0,
+          "explanation": "resolve accole les chemins, normalize retire les « .. » et « . ».",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "java-fichiers-q6",
+          "prompt": "Quelles sont de bonnes pratiques ?",
+          "choices": [
+            "Fermer les streams de fichiers avec try-with-resources",
+            "Préciser l'encodage d'un fichier venu d'un autre système",
+            "Construire les chemins avec Path.of et resolve",
+            "Concaténer les chemins avec \"/\""
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Path gère les séparateurs de chaque système et les cas limites (double barre, chemin absolu).",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "java-dates",
+      "title": "Dates et heures",
+      "summary": "java.time et ses pièges.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les bons types",
+          "body": "java.time (Java 8) remplace Date et Calendar. LocalDate est une date sans heure ni fuseau (un anniversaire), LocalDateTime une date et une heure sans fuseau, ZonedDateTime une date et une heure dans un fuseau (« 9 h à Paris »), Instant un point précis sur la ligne du temps, en UTC : le type à utiliser pour horodater un événement."
+        },
+        {
+          "title": "Immuables",
+          "body": "Tous ces objets sont immuables : plusDays, withMonth et consorts renvoient un nouvel objet. Les mois vont de 1 à 12 (et non de 0 à 11 comme dans Calendar). DateTimeFormatter est sûr entre threads, contrairement à SimpleDateFormat.",
+          "code": "LocalDate d = LocalDate.of(2026, 1, 31);\nLocalDate fin = d.plusMonths(1);  // 2026-02-28\nString s = fin.format(\n    DateTimeFormatter.ofPattern(\"dd/MM/yyyy\"));"
+        },
+        {
+          "title": "Durées et tests",
+          "body": "Duration mesure un temps exact (secondes, nanosecondes) ; Period mesure des jours, mois, années du calendrier. La différence se voit lors d'un changement d'heure : un jour de calendrier peut durer 23 ou 25 heures. Pour tester du code qui dépend de l'heure, on injecte une Clock au lieu d'appeler Instant.now() directement."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "java-dates-q1",
+          "prompt": "La date affichée est toujours janvier. Touche la ligne en cause.",
+          "code": "LocalDate d = LocalDate.of(2026, 1, 31);\nd.plusMonths(1);\nSystem.out.println(d); // attendu : février",
+          "bugLines": [
+            2
+          ],
+          "explanation": "LocalDate est immuable : plusMonths renvoie une nouvelle date, ignorée ici. Il faut d = d.plusMonths(1).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-dates-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "System.out.println(\n    LocalDate.of(2026, 1, 31).plusMonths(1));",
+          "choices": [
+            "2026-02-28",
+            "2026-03-03",
+            "2026-02-31",
+            "Une DateTimeException"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le 31 février n'existe pas : java.time ramène au dernier jour valide du mois.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-dates-q3",
+          "prompt": "Pour horodater une commande dans une application serveur, quel type utiliser ?",
+          "choices": [
+            "Instant",
+            "LocalDateTime",
+            "LocalDate",
+            "String"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un LocalDateTime n'a pas de fuseau : « 14:00 » ne dit pas à quel moment réel la commande a eu lieu.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-dates-q4",
+          "prompt": "Le 29 mars 2026, la France passe à l'heure d'été. À partir du 29 mars à 00:00 (Europe/Paris), on ajoute Period.ofDays(1) ou Duration.ofDays(1). Quels résultats ?",
+          "choices": [
+            "Period : 30 mars à 00:00 ; Duration : 30 mars à 01:00",
+            "Les deux donnent 30 mars à 00:00",
+            "Les deux donnent 30 mars à 01:00",
+            "Period : 30 mars à 01:00 ; Duration : 30 mars à 00:00"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ce jour-là ne dure que 23 heures. Period ajoute un jour de calendrier ; Duration ajoute exactement 24 heures.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "java-dates-q5",
+          "prompt": "Complète pour obtenir « 05/03/2026 ».",
+          "code": "DateTimeFormatter f =\n    DateTimeFormatter.___(\"dd/MM/yyyy\");\nString texte = LocalDate.of(2026, 3, 5).___(f);",
+          "answers": [
+            "ofPattern",
+            "format"
+          ],
+          "distractors": [
+            "pattern",
+            "toString",
+            "parse"
+          ],
+          "explanation": "Attention à la casse : MM désigne le mois, mm les minutes.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "java-dates-q6",
+          "prompt": "Quels avantages a java.time sur Date et Calendar ?",
+          "choices": [
+            "Des objets immuables",
+            "Des mois numérotés de 1 à 12",
+            "Des formateurs sûrs entre threads",
+            "Un fuseau horaire toujours ignoré"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les fuseaux sont au contraire explicites : ZoneId, ZonedDateTime, OffsetDateTime.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "java-defi-api",
+    "title": "Défi entretien : des rendez-vous à l'heure",
+    "summary": "Fuseaux, horloges et chemins.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "java-defi-api-q1",
+        "prompt": "Cas pratique 1/3 — Une application de rendez-vous stocke des LocalDateTime. Un patient à Montréal et un médecin à Paris ne voient pas la même heure. Pourquoi ?",
+        "choices": [
+          "LocalDateTime n'a pas de fuseau : il faut stocker un instant (Instant ou OffsetDateTime) et convertir à l'affichage",
+          "Le serveur n'est pas à l'heure",
+          "Les deux appareils ont des versions de Java différentes",
+          "Il faut utiliser LocalDate"
+        ],
+        "answerIndex": 0,
+        "explanation": "« 10:00 » n'est un moment précis qu'une fois associé à un fuseau.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi-api-q2",
+        "prompt": "Cas pratique 2/3 — Comment tester « un rendez-vous non confirmé expire au bout de 24 heures » sans attendre 24 heures ?",
+        "choices": [
+          "Injecter une Clock dans le service et utiliser Clock.fixed ou Clock.offset dans le test",
+          "Changer l'heure de la machine de test",
+          "Thread.sleep pendant 24 heures",
+          "Ne pas tester ce cas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le temps devient une dépendance comme une autre, contrôlable dans les tests.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "java-defi-api-q3",
+        "prompt": "Cas pratique 3/3 — Complète le service.",
+        "code": "class Rappels {\n    private final Clock horloge;\n    Rappels(Clock h) { this.horloge = h; }\n\n    boolean expire(Instant creation) {\n        return Instant.now(___).isAfter(\n            creation.plus(Duration.___(24)));\n    }\n}",
+        "answers": [
+          "horloge",
+          "ofHours"
+        ],
+        "distractors": [
+          "Clock",
+          "ofDays",
+          "hours"
+        ],
+        "explanation": "Instant.now(clock) lit l'heure de l'horloge injectée : l'horloge système en production, une horloge fixe en test.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi-api-q4",
+        "prompt": "Sous Linux, qu'affiche ce code ?",
+        "code": "Path base = Path.of(\"/srv/uploads\");\nPath f = base.resolve(\"../../etc/passwd\")\n    .normalize();\nSystem.out.println(f.startsWith(base));",
+        "choices": [
+          "false",
+          "true",
+          "Une exception",
+          "/etc/passwd"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le chemin normalisé est /etc/passwd. C'est le contrôle à faire avant de servir un fichier dont le nom vient d'un utilisateur.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "java-defi-api-q5",
+        "prompt": "Appelé depuis plusieurs threads, ce journal produit des dates corrompues. Touche la ligne en cause.",
+        "code": "public class Journal {\n    private static final SimpleDateFormat FMT =\n        new SimpleDateFormat(\"yyyy-MM-dd HH:mm\");\n\n    public String ligne(Date d, String msg) {\n        return FMT.format(d) + \" \" + msg;\n    }\n}",
+        "bugLines": [
+          2,
+          3
+        ],
+        "explanation": "SimpleDateFormat garde un état interne et n'est pas sûr entre threads. DateTimeFormatter, immuable, peut être partagé.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "java-defi-api-q6",
+        "prompt": "Quelles affirmations sont vraies ?",
+        "choices": [
+          "Instant représente un point précis sur la ligne du temps",
+          "Period compte des jours, mois et années de calendrier",
+          "Duration mesure une durée exacte",
+          "LocalDate contient un fuseau horaire"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "LocalDate n'a ni heure ni fuseau.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

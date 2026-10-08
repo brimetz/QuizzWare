@@ -1,0 +1,327 @@
+{
+  "id": "sec-ch-avancees",
+  "title": "Vulnérabilités avancées",
+  "summary": "Désérialisation, fichiers et configuration.",
+  "lessons": [
+    {
+      "id": "sec-deserialisation",
+      "title": "Désérialisation et fichiers",
+      "summary": "Des données qui deviennent du code.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La désérialisation non sûre",
+          "body": "Certains formats ne transportent pas seulement des données, mais des objets à reconstruire : pickle en Python, la sérialisation native de Java, BinaryFormatter en .NET (désormais retiré), yaml.load avec un chargeur complet. Un attaquant qui fournit les octets peut faire appeler n'importe quelle fonction pendant la reconstruction : exécution de code à distance. Pour des données venues de l'extérieur, on utilise un format de données (JSON, yaml.safe_load) validé par un schéma.",
+          "code": "pickle.loads(donnees)   # dangereux si non fiable\njson.loads(texte)       # des données seulement\nyaml.safe_load(texte)   # des données seulement",
+          "language": "python"
+        },
+        {
+          "title": "Les fichiers",
+          "body": "Un nom de fichier fourni par l'utilisateur peut contenir ../ et sortir du dossier prévu (traversée de répertoire) : on résout le chemin et on vérifie qu'il reste dans le dossier autorisé. Pour un envoi de fichier : taille limitée, type vérifié sur le contenu (pas sur l'extension), nom généré par le serveur, stockage hors de la racine web, jamais d'exécution."
+        },
+        {
+          "title": "XXE",
+          "body": "Un document XML peut déclarer des entités externes : <!ENTITY x SYSTEM \"file:///etc/passwd\">. Un analyseur qui les résout lit alors des fichiers locaux ou appelle des URL internes pour l'attaquant. On désactive la résolution des entités externes et des DTD, ou on utilise une bibliothèque sûre par défaut (defusedxml en Python)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "sec-deserialisation-q1",
+          "prompt": "Cet endpoint permet d'exécuter du code sur le serveur. Touche la ligne en cause.",
+          "code": "@app.post(\"/import\")\ndef importer():\n    objet = pickle.loads(request.data)\n    return traiter(objet)",
+          "language": "python",
+          "bugLines": [
+            3
+          ],
+          "explanation": "pickle reconstruit des objets arbitraires ; un fichier forgé déclenche l'appel de fonctions comme os.system. On importe du JSON validé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-deserialisation-q2",
+          "prompt": "Pourquoi pickle.loads sur des données reçues permet-il d'exécuter du code ?",
+          "choices": [
+            "Le format peut demander l'appel de n'importe quelle fonction pour reconstruire l'objet",
+            "Parce que pickle est écrit en C",
+            "Parce que les données sont compressées",
+            "Ce n'est possible qu'avec Python 2"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un objet peut définir __reduce__ pour indiquer « appelle telle fonction avec tels arguments » ; la documentation de pickle le signale explicitement.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "sec-deserialisation-q3",
+          "prompt": "Complète : lire un YAML et un JSON venus de l'extérieur, sans risque d'exécution.",
+          "code": "config = yaml.___(texte)\ndonnees = json.___(corps)",
+          "language": "python",
+          "answers": [
+            "safe_load",
+            "loads"
+          ],
+          "distractors": [
+            "unsafe_load",
+            "eval",
+            "load_all"
+          ],
+          "explanation": "safe_load ne construit que des types simples (dictionnaires, listes, chaînes, nombres).",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sec-deserialisation-q4",
+          "prompt": "Avec ?fichier=../../etc/passwd, cet endpoint sert un fichier système. Touche la ligne en cause.",
+          "code": "@app.get(\"/telecharger\")\ndef telecharger():\n    nom = request.args[\"fichier\"]\n    return send_file(f\"/srv/exports/{nom}\")",
+          "language": "python",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le nom est collé au chemin sans contrôle. On utilise send_from_directory, ou on résout le chemin et on vérifie qu'il reste sous /srv/exports.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-deserialisation-q5",
+          "prompt": "Qu'est-ce qu'une attaque XXE ?",
+          "choices": [
+            "Un document XML déclare une entité externe (fichier local, URL interne) que l'analyseur va lire et inclure",
+            "Un script injecté dans une page HTML",
+            "Un fichier XML trop gros",
+            "Une erreur de syntaxe XML"
+          ],
+          "answerIndex": 0,
+          "explanation": "XML External Entity : l'analyseur devient un outil de lecture de fichiers ou de SSRF.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "sec-deserialisation-q6",
+          "prompt": "Quelles sont de bonnes pratiques pour l'envoi de fichiers ?",
+          "choices": [
+            "Limiter la taille",
+            "Vérifier le type réel du contenu",
+            "Renommer avec un identifiant généré et stocker hors de la racine web",
+            "Conserver le nom de fichier fourni par l'utilisateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le nom fourni peut contenir ../, des caractères spéciaux ou une extension exécutable.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "sec-configuration",
+      "title": "Mauvaises configurations",
+      "summary": "En-têtes, erreurs et valeurs par défaut.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les erreurs classiques",
+          "body": "Mode debug activé en production (avec ses pages d'erreur détaillées, voire une console interactive), clé secrète laissée à sa valeur d'exemple, comptes et mots de passe par défaut, bases ou consoles d'administration exposées sans authentification (Redis, Elasticsearch), stockage cloud public par erreur, listing de répertoires. Beaucoup d'incidents réels viennent de là plutôt que de failles subtiles."
+        },
+        {
+          "title": "Les erreurs côté client",
+          "body": "Une erreur 500 qui affiche la pile d'appels, la requête SQL ou des variables révèle l'architecture, des noms de tables, parfois des secrets. Le client reçoit un message générique avec un identifiant de corrélation ; les détails vont dans les journaux."
+        },
+        {
+          "title": "Les en-têtes de sécurité",
+          "body": "Strict-Transport-Security impose HTTPS au navigateur pour la durée indiquée. Content-Security-Policy limite les sources de scripts et, avec frame-ancestors, qui peut afficher le site dans une iframe (contre le clickjacking). X-Content-Type-Options: nosniff empêche le navigateur de deviner le type d'un fichier et de l'exécuter comme script.",
+          "code": "Strict-Transport-Security: max-age=31536000\nX-Content-Type-Options: nosniff\nContent-Security-Policy: frame-ancestors 'none'",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "sec-configuration-q1",
+          "prompt": "Revue avant mise en production : touche une ligne problématique.",
+          "code": "app = Flask(__name__)\napp.config[\"SECRET_KEY\"] = \"dev\"\n\nif __name__ == \"__main__\":\n    app.run(host=\"0.0.0.0\", debug=True)",
+          "language": "python",
+          "bugLines": [
+            2,
+            5
+          ],
+          "explanation": "Une clé secrète connue permet de forger des sessions ; le débogueur de Werkzeug exposé permet d'exécuter du code. Clé lue depuis l'environnement, debug désactivé, et un vrai serveur d'application.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-configuration-q2",
+          "prompt": "Que fait l'en-tête Strict-Transport-Security ?",
+          "choices": [
+            "Le navigateur n'utilise plus que HTTPS pour ce site, pendant la durée indiquée",
+            "Il chiffre les cookies",
+            "Il bloque les scripts externes",
+            "Il impose un mot de passe fort"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il empêche qu'un attaquant intercepte une première requête en HTTP pour rétrograder la connexion.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-configuration-q3",
+          "prompt": "En production, une erreur 500 affiche la pile d'appels et la requête SQL. Quel est le risque ?",
+          "choices": [
+            "Révéler l'architecture, des noms de tables, voire des secrets : message générique au client, détails dans les journaux",
+            "Aucun, c'est utile pour l'utilisateur",
+            "Un ralentissement du serveur",
+            "Une erreur de cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un identifiant de corrélation dans le message générique permet de retrouver les détails côté serveur.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "sec-configuration-q4",
+          "prompt": "Complète : empêcher la détection du type de contenu, et interdire tout affichage du site dans une iframe.",
+          "code": "Strict-Transport-Security: max-age=31536000\nX-Content-Type-Options: ___\nContent-Security-Policy: frame-ancestors '___'",
+          "language": "text",
+          "answers": [
+            "nosniff",
+            "none"
+          ],
+          "distractors": [
+            "sniff",
+            "deny",
+            "block"
+          ],
+          "explanation": "frame-ancestors 'none' remplace l'ancien X-Frame-Options: DENY.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-configuration-q5",
+          "prompt": "Une instance Redis sans mot de passe écoute sur 0.0.0.0:6379, accessible depuis Internet. Quel est le risque ?",
+          "choices": [
+            "N'importe qui peut lire et effacer les données, voire obtenir l'exécution de code sur le serveur",
+            "Aucun, Redis est un simple cache",
+            "Seulement un ralentissement",
+            "Le risque n'existe que si le serveur est sous Windows"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des robots scannent Internet en permanence à la recherche de ces services ouverts.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sec-configuration-q6",
+          "prompt": "Lesquels sont des exemples de mauvaise configuration ?",
+          "choices": [
+            "Le mode debug activé en production",
+            "Des identifiants par défaut jamais changés",
+            "Un espace de stockage cloud rendu public par erreur",
+            "Des mots de passe hachés avec Argon2"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Argon2 est justement la bonne pratique pour stocker des mots de passe.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "sec-defi-avancees",
+    "title": "Défi entretien : la sauvegarde piégée",
+    "summary": "Import de fichiers et configuration.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sec-defi-avancees-q1",
+        "prompt": "Cas pratique 1/3 — Une application permet de réimporter une sauvegarde qu'elle a elle-même produite, au format pickle. Un attaquant peut-il en abuser ?",
+        "choices": [
+          "Oui : il fabrique un fichier pickle malveillant et l'importe ; tout ce qui vient de l'utilisateur est non fiable",
+          "Non, le fichier a été produit par l'application",
+          "Seulement s'il connaît le mot de passe administrateur",
+          "Seulement si le fichier dépasse 1 Go"
+        ],
+        "answerIndex": 0,
+        "explanation": "Rien ne garantit que le fichier réimporté est celui que l'application a produit.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-avancees-q2",
+        "prompt": "Cas pratique 2/3 — Quel correctif ?",
+        "choices": [
+          "Exporter et importer en JSON validé par un schéma (ou signer le fichier avec une clé du serveur et vérifier la signature)",
+          "Renommer l'extension du fichier",
+          "Compresser le fichier",
+          "Limiter la taille du fichier"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un format de données ne peut pas déclencher d'exécution ; une signature garantit l'origine du fichier.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-avancees-q3",
+        "prompt": "Cas pratique 3/3 — La sauvegarde contient aussi les chemins des pièces jointes. Quelle précaution ?",
+        "choices": [
+          "Résoudre chaque chemin et vérifier qu'il reste dans le dossier des pièces jointes",
+          "Les utiliser tels quels",
+          "Les mettre en majuscules",
+          "Supprimer les espaces"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sinon, un chemin comme ../../config/secrets.yaml permettrait de lire ou d'écraser n'importe quel fichier.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-avancees-q4",
+        "prompt": "À quoi sert X-Content-Type-Options: nosniff ?",
+        "choices": [
+          "À empêcher le navigateur de deviner le type et d'exécuter comme script un fichier servi comme texte ou image",
+          "À compresser les réponses",
+          "À bloquer les robots d'indexation",
+          "À imposer HTTPS"
+        ],
+        "answerIndex": 0,
+        "explanation": "Utile quand des utilisateurs peuvent déposer des fichiers servis ensuite par le site.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "sec-defi-avancees-q5",
+        "prompt": "Ce service analyse des documents XML envoyés par les clients. Touche la ligne qui ouvre une faille XXE.",
+        "code": "from lxml import etree\n\nparser = etree.XMLParser(resolve_entities=True)\ndoc = etree.fromstring(requete.body, parser)",
+        "language": "python",
+        "bugLines": [
+          3
+        ],
+        "explanation": "Les entités externes sont résolues : un document peut faire lire /etc/passwd. On désactive resolve_entities (et le réseau), ou on utilise defusedxml.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "sec-defi-avancees-q6",
+        "prompt": "Que faut-il désactiver en production ?",
+        "choices": [
+          "Le mode debug",
+          "Les comptes de démonstration",
+          "L'affichage des piles d'appels aux clients",
+          "La journalisation des erreurs"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les erreurs doivent au contraire être journalisées, côté serveur.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,325 @@
+{
+  "id": "go-ch-performance",
+  "title": "Runtime et performance",
+  "summary": "Ordonnanceur, mémoire et profilage.",
+  "lessons": [
+    {
+      "id": "go-runtime",
+      "title": "Le runtime",
+      "summary": "Ordonnanceur et ramasse-miettes.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "L'ordonnanceur G-M-P",
+          "body": "Le runtime répartit les goroutines (G) sur des threads système (M) par l'intermédiaire de processeurs logiques (P). GOMAXPROCS fixe le nombre de P, donc le nombre de goroutines qui exécutent du code Go en même temps ; il vaut par défaut le nombre de CPU (et, depuis Go 1.25, tient compte de la limite CPU d'un conteneur). Une goroutine bloquée sur un appel système libère son P pour les autres."
+        },
+        {
+          "title": "Le ramasse-miettes",
+          "body": "Le GC de Go est concurrent : il marque les objets vivants pendant que le programme tourne, avec de très courtes pauses. Il n'est ni générationnel ni compactant. GOGC (100 par défaut) déclenche un cycle quand le tas a grandi de 100 % depuis le dernier ; GOMEMLIMIT fixe une limite souple de mémoire, utile dans un conteneur."
+        },
+        {
+          "title": "Pile ou tas",
+          "body": "Une variable dont l'adresse survit à la fonction (renvoyée, capturée par une closure, stockée dans une interface ou une structure globale) échappe sur le tas. Le reste vit sur la pile, gratuitement. go build -gcflags=-m affiche ces décisions. Moins d'allocations sur le tas, c'est moins de travail pour le GC.",
+          "code": "// go build -gcflags=-m\n// ./main.go:8:2: moved to heap: x\nfunc nouveau() *int {\n    x := 42\n    return &x\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-runtime-q1",
+          "prompt": "Que règle GOMAXPROCS ?",
+          "choices": [
+            "Le nombre de goroutines qui exécutent du code Go simultanément (les P)",
+            "Le nombre maximal de goroutines",
+            "La taille maximale du tas",
+            "Le nombre de processus lancés"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut lancer des millions de goroutines ; GOMAXPROCS borne seulement le parallélisme effectif.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-runtime-q2",
+          "prompt": "Que signifie GOGC=100 ?",
+          "choices": [
+            "Un cycle de GC se déclenche quand le tas a grandi de 100 % depuis le dernier cycle",
+            "Le GC tourne toutes les 100 ms",
+            "Le tas est limité à 100 Mo",
+            "Le GC utilise 100 % d'un CPU"
+          ],
+          "answerIndex": 0,
+          "explanation": "GOGC=200 réduit la fréquence du GC au prix de plus de mémoire ; GOGC=off le désactive.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "go-runtime-q3",
+          "prompt": "Un service en conteneur limité à 512 Mo est tué (OOM) alors que ses données vivantes n'occupent que 300 Mo. Quel réglage aide ?",
+          "choices": [
+            "GOMEMLIMIT=450MiB : le GC devient plus agressif à l'approche de la limite",
+            "GOMAXPROCS=1",
+            "GOGC=400",
+            "Désactiver le GC"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec GOGC=100, le tas peut atteindre environ le double des données vivantes avant un cycle, soit 600 Mo ici.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "go-runtime-q4",
+          "prompt": "Qu'est-ce qui peut faire échapper une variable sur le tas ?",
+          "choices": [
+            "Renvoyer son adresse",
+            "La stocker dans une valeur d'interface",
+            "La capturer dans une closure qui survit à la fonction",
+            "La déclarer avec :="
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La syntaxe de déclaration n'a aucune influence : seule compte la durée de vie de la variable.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "go-runtime-q5",
+          "prompt": "Complète la commande qui affiche les décisions d'échappement du compilateur.",
+          "code": "go build -gcflags=___ ./...",
+          "language": "shell",
+          "answers": [
+            "-m"
+          ],
+          "distractors": [
+            "-race",
+            "-v",
+            "-cover"
+          ],
+          "explanation": "-m (ou -m -m pour plus de détails) affiche « moved to heap » et « does not escape ».",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "go-runtime-q6",
+          "prompt": "Le service garde des centaines de Mo en mémoire pour quelques en-têtes. Touche la ligne en cause.",
+          "code": "func entete(nom string) []byte {\n    data, _ := os.ReadFile(nom) // 100 Mo\n    return data[:64]\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La sous-slice pointe toujours sur le tableau de 100 Mo, qui ne peut pas être libéré. On copie : return bytes.Clone(data[:64]).",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "go-profilage",
+      "title": "Profilage",
+      "summary": "pprof et allocations.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Mesurer d'abord",
+          "body": "On n'optimise pas à l'intuition. Un benchmark (fonction BenchmarkX(b *testing.B)) mesure une portion de code ; go test -bench=. -benchmem affiche le temps par opération, les octets et le nombre d'allocations. Depuis Go 1.24, b.Loop() remplace la boucle sur b.N.",
+          "code": "func BenchmarkParse(b *testing.B) {\n    b.ReportAllocs()\n    for b.Loop() {\n        Parse(entree)\n    }\n}"
+        },
+        {
+          "title": "pprof",
+          "body": "pprof échantillonne un programme en cours : profil CPU (où passe le temps), heap (qui alloue, ce qui reste en mémoire), goroutine (les piles de toutes les goroutines), block et mutex (les attentes). Dans un serveur, importer net/http/pprof expose ces profils ; go tool pprof les affiche, notamment en flame graph."
+        },
+        {
+          "title": "Réduire les allocations",
+          "body": "Les gains classiques : préallouer les slices et les maps quand la taille est connue (make([]T, 0, n)), utiliser strings.Builder, éviter les conversions string ↔ []byte répétées, réutiliser des tampons avec sync.Pool. Puis on re-mesure : une optimisation qui ne se voit pas dans le benchmark ne vaut pas sa complexité."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-profilage-q1",
+          "prompt": "Un endpoint est lent en production. Quelle est la première étape ?",
+          "choices": [
+            "Profiler (pprof CPU) en conditions réalistes pour trouver où le temps passe",
+            "Réécrire la fonction qui semble la plus lente",
+            "Augmenter GOMAXPROCS",
+            "Remplacer toutes les slices par des tableaux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le point chaud réel est rarement celui qu'on imagine ; souvent, c'est une requête SQL ou une sérialisation.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "go-profilage-q2",
+          "prompt": "Complète ce benchmark (Go 1.24+) qui compte les allocations.",
+          "code": "func BenchmarkParse(b *testing.B) {\n    b.___()\n    for b.___() {\n        Parse(entree)\n    }\n}",
+          "answers": [
+            "ReportAllocs",
+            "Loop"
+          ],
+          "distractors": [
+            "Next",
+            "Run",
+            "Allocs"
+          ],
+          "explanation": "ReportAllocs équivaut à -benchmem pour ce benchmark ; b.Loop() gère le nombre d'itérations et empêche le compilateur d'éliminer l'appel.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-profilage-q3",
+          "prompt": "Que signifie « 3 allocs/op » dans cette ligne ?",
+          "code": "BenchmarkJoin-8  3000000  412 ns/op\n    96 B/op  3 allocs/op",
+          "language": "text",
+          "choices": [
+            "Chaque appel fait 3 allocations sur le tas",
+            "Le benchmark a tourné sur 3 CPU",
+            "3 goroutines ont été lancées",
+            "3 Mo ont été alloués au total"
+          ],
+          "answerIndex": 0,
+          "explanation": "B/op est le nombre d'octets alloués par appel ; -8 est la valeur de GOMAXPROCS.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-profilage-q4",
+          "prompt": "Comment réduire les allocations de cette fonction ?",
+          "code": "func carres(n int) []int {\n    var r []int\n    for i := range n {\n        r = append(r, i*i)\n    }\n    return r\n}",
+          "choices": [
+            "Préallouer : r := make([]int, 0, n)",
+            "Utiliser un pointeur vers la slice",
+            "Lancer une goroutine par élément",
+            "Remplacer append par copy"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans capacité initiale, append réalloue et recopie plusieurs fois à mesure que la slice grandit.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "go-profilage-q5",
+          "prompt": "Quels profils pprof existent ?",
+          "choices": [
+            "CPU",
+            "heap : allocations et mémoire vivante",
+            "goroutine : les piles de toutes les goroutines",
+            "disk : les lectures du disque"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il existe aussi block, mutex, allocs et threadcreate, mais pas de profil disque.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "go-profilage-q6",
+          "prompt": "Sous charge, des réponses contiennent parfois les données d'une autre requête. Touche la ligne en cause.",
+          "code": "var pool = sync.Pool{New: func() any {\n    return new(bytes.Buffer)\n}}\n\nfunc rendu(d Data) []byte {\n    buf := pool.Get().(*bytes.Buffer)\n    buf.Reset()\n    defer pool.Put(buf)\n    ecrire(buf, d)\n    return buf.Bytes()\n}",
+          "bugLines": [
+            8,
+            10
+          ],
+          "explanation": "buf.Bytes() pointe dans le tampon remis dans le pool : une autre goroutine le réutilise et l'écrase. Il faut copier (bytes.Clone) avant de rendre le tampon.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "go-defi-performance",
+    "title": "Défi entretien : un service qui gonfle",
+    "summary": "Trouver une fuite de mémoire.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "go-defi-performance-q1",
+        "prompt": "Cas pratique 1/3 — La mémoire d'un service grimpe pendant des heures sans redescendre. Quels profils regarder d'abord ?",
+        "choices": [
+          "heap et goroutine : des objets retenus ou des goroutines bloquées qui s'accumulent",
+          "CPU uniquement",
+          "Aucun : il suffit de redémarrer chaque nuit",
+          "Le profil mutex"
+        ],
+        "answerIndex": 0,
+        "explanation": "En Go, une « fuite de mémoire » est très souvent une fuite de goroutines, chacune retenant sa pile et ce qu'elle référence.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-performance-q2",
+        "prompt": "Cas pratique 2/3 — Le profil goroutine montre 200 000 goroutines bloquées sur la même ligne : un envoi sur un channel. Cause probable ?",
+        "choices": [
+          "Plus personne ne lit ce channel : le receveur est parti, par exemple après un délai dépassé",
+          "Le GC est désactivé",
+          "GOMAXPROCS est trop faible",
+          "Le channel est fermé"
+        ],
+        "answerIndex": 0,
+        "explanation": "Envoyer sur un channel fermé provoquerait une panique, pas un blocage.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "go-defi-performance-q3",
+        "prompt": "Cas pratique 3/3 — Voici le code en cause. Touche la ligne à corriger.",
+        "code": "func chercher(ctx context.Context,\n    q string) (R, error) {\n    c := make(chan R)\n    go func() { c <- requete(q) }()\n    select {\n    case r := <-c:\n        return r, nil\n    case <-ctx.Done():\n        return R{}, ctx.Err()\n    }\n}",
+        "bugLines": [
+          3
+        ],
+        "explanation": "Après un délai dépassé, plus personne ne reçoit : la goroutine reste bloquée sur l'envoi pour toujours. Un tampon d'une place (make(chan R, 1)) lui permet d'envoyer et de se terminer.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-performance-q4",
+        "prompt": "Le profil CPU montre 40 % du temps dans runtime.mallocgc et le marquage du GC. Quelle piste ?",
+        "choices": [
+          "Réduire les allocations : préallocation, réutilisation de tampons, moins de conversions",
+          "Ajouter des goroutines",
+          "Passer GOGC à 10",
+          "Ajouter des mutex"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le coût du GC est proportionnel à la quantité allouée : moins allouer est le levier principal. GOGC=10 rendrait le GC encore plus fréquent.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "go-defi-performance-q5",
+        "prompt": "Quelles affirmations sur le GC de Go sont vraies ?",
+        "choices": [
+          "Il marque pendant que le programme continue de tourner",
+          "Il ne déplace pas les objets en mémoire",
+          "GOMEMLIMIT fixe une limite souple de mémoire",
+          "Il est générationnel, comme celui de la JVM"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Go mise sur l'analyse d'échappement (beaucoup d'objets restent sur la pile) plutôt que sur des générations.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-performance-q6",
+        "prompt": "En entretien : « Comment optimiseriez-vous un programme Go ? »",
+        "choices": [
+          "Mesurer (benchmarks, pprof), corriger le point chaud, puis re-mesurer",
+          "Réécrire les fonctions critiques en assembleur",
+          "Désactiver le GC",
+          "Mettre des pointeurs partout"
+        ],
+        "answerIndex": 0,
+        "explanation": "La démarche compte plus que l'astuce : l'intervieweur attend une méthode guidée par les mesures.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

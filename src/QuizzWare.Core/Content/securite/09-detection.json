@@ -1,0 +1,216 @@
+{
+  "id": "sec-ch-detection",
+  "title": "Détecter et réagir",
+  "summary": "Journaux de sécurité et incidents.",
+  "lessons": [
+    {
+      "id": "sec-journalisation",
+      "title": "Journaliser pour la sécurité",
+      "summary": "Quoi enregistrer, quoi surveiller.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Quoi journaliser",
+          "body": "Les connexions réussies et échouées, les changements de mot de passe et de droits, les accès aux données sensibles, les refus d'autorisation, les actions d'administration. Chaque événement dit qui, quoi, quand (horodatage précis, horloges synchronisées par NTP), d'où (adresse IP) et avec quel résultat. Jamais de mot de passe, de jeton ni de numéro de carte.",
+          "code": "log.info(\"connexion\", extra={\n    \"evenement\": \"auth.echec\",\n    \"utilisateur\": nom,\n    \"ip\": request.remote_addr,\n})",
+          "language": "python"
+        },
+        {
+          "title": "Centraliser et protéger",
+          "body": "Les journaux sont envoyés hors des serveurs, vers une plateforme centrale (SIEM) : un attaquant qui compromet une machine ne doit pas pouvoir effacer ses traces. On les écrit en format structuré (JSON) : une entrée utilisateur contenant un retour à la ligne ne peut pas fabriquer de fausses lignes. On définit une durée de conservation."
+        },
+        {
+          "title": "Alerter",
+          "body": "Des journaux que personne ne regarde ne protègent rien. On définit des alertes sur des signaux précis : pic d'échecs de connexion sur un compte ou depuis une adresse, connexion depuis un pays inhabituel, création d'un compte administrateur, désactivation de la journalisation. Chaque alerte doit mener à une action."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-journalisation-q1",
+          "prompt": "Quel événement journaliser en priorité ?",
+          "choices": [
+            "Les connexions réussies et échouées, avec l'utilisateur, l'adresse IP et l'heure",
+            "Chaque affichage de la page d'accueil",
+            "Le mot de passe saisi lors des échecs",
+            "Le contenu complet de chaque requête"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les attaques sur les comptes sont parmi les plus fréquentes ; ces événements permettent de les voir.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sec-journalisation-q2",
+          "prompt": "Un attaquant parvient à ajouter de fausses lignes dans le journal. Touche la ligne en cause.",
+          "code": "nom = request.form[\"utilisateur\"]\nlog.warning(\"Échec de connexion pour \" + nom)",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Un nom contenant un retour à la ligne suivi d'un faux message crée une nouvelle ligne. On journalise en format structuré (JSON) ou on échappe les caractères de contrôle.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sec-journalisation-q3",
+          "prompt": "Pourquoi envoyer les journaux hors des serveurs qui les produisent ?",
+          "choices": [
+            "Un attaquant qui compromet un serveur pourrait effacer ses traces locales",
+            "Pour libérer de l'espace disque uniquement",
+            "Parce que les serveurs ne savent pas écrire de fichiers",
+            "Pour accélérer l'application"
+          ],
+          "answerIndex": 0,
+          "explanation": "La centralisation permet aussi de corréler les événements de plusieurs machines.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "sec-journalisation-q4",
+          "prompt": "Complète cet événement structuré (Flask).",
+          "code": "log.info(\"connexion\", extra={\n    \"evenement\": \"auth.echec\",\n    \"utilisateur\": nom,\n    \"ip\": request.___,\n})",
+          "language": "python",
+          "answers": [
+            "remote_addr"
+          ],
+          "distractors": [
+            "ip",
+            "host",
+            "origin"
+          ],
+          "explanation": "Derrière un proxy, il faut configurer l'application pour lire l'adresse réelle (X-Forwarded-For) depuis un proxy de confiance.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-journalisation-q5",
+          "prompt": "Quelle règle d'alerte est utile ?",
+          "choices": [
+            "Plus de 20 échecs de connexion en une minute sur un même compte ou depuis une même adresse",
+            "Une alerte à chaque connexion réussie",
+            "Une alerte par requête HTTP",
+            "Aucune, on lit les journaux en cas de problème"
+          ],
+          "answerIndex": 0,
+          "explanation": "Trop d'alertes et l'équipe finit par les ignorer : chacune doit être rare et mener à une action.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sec-journalisation-q6",
+          "prompt": "Que ne faut-il jamais écrire dans les journaux ?",
+          "choices": [
+            "Les mots de passe",
+            "Les jetons de session",
+            "Les numéros de carte complets",
+            "L'identifiant interne de l'utilisateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'identifiant de l'utilisateur est au contraire indispensable pour savoir qui a fait quoi.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "sec-defi-detection",
+    "title": "Défi entretien : une vague de connexions",
+    "summary": "Détecter, contenir, durcir.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sec-defi-detection-q1",
+        "prompt": "Cas pratique 1/3 — Le SIEM montre 4 000 échecs de connexion en dix minutes, sur 4 000 comptes différents, depuis une centaine d'adresses. Quelle attaque ?",
+        "choices": [
+          "Du bourrage d'identifiants (identifiants volés ailleurs) ou une pulvérisation de mots de passe courants",
+          "Une injection SQL",
+          "Un déni de service sur le réseau",
+          "Une XSS stockée"
+        ],
+        "answerIndex": 0,
+        "explanation": "Peu de tentatives par compte et beaucoup de comptes : l'attaque évite les verrouillages par compte.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-detection-q2",
+        "prompt": "Cas pratique 2/3 — Quelles mesures immédiates ?",
+        "choices": [
+          "Limiter le débit par adresse et par compte, ajouter un défi (CAPTCHA), et surveiller les connexions réussies depuis ces adresses",
+          "Couper le site pour une semaine",
+          "Supprimer les 4 000 comptes",
+          "Ignorer, ce ne sont que des échecs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les quelques connexions réussies sont les plus graves : ce sont des comptes compromis.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-detection-q3",
+        "prompt": "Cas pratique 3/3 — Et à plus long terme ?",
+        "choices": [
+          "Généraliser l'authentification multifacteur et refuser les mots de passe connus pour avoir fuité",
+          "Obliger à changer de mot de passe chaque semaine",
+          "Interdire les caractères spéciaux",
+          "Masquer la page de connexion"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un mot de passe volé ne suffit plus avec un second facteur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-detection-q4",
+        "prompt": "Les horloges des serveurs dérivent de plusieurs minutes. Quel impact pour la sécurité ?",
+        "choices": [
+          "Impossible de reconstituer la chronologie d'un incident entre plusieurs machines : il faut synchroniser par NTP",
+          "Aucun",
+          "Les mots de passe expirent plus vite",
+          "Les certificats deviennent plus sûrs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une horloge très décalée peut aussi faire rejeter des certificats ou des jetons à durée de vie courte.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "sec-defi-detection-q5",
+        "prompt": "Remets dans l'ordre les étapes de réponse à un incident.",
+        "language": "text",
+        "lines": [
+          "Détecter et qualifier l'incident",
+          "Contenir : isoler, révoquer les accès",
+          "Éradiquer la cause",
+          "Restaurer le service",
+          "Tirer les leçons (post-mortem)"
+        ],
+        "explanation": "Contenir avant d'éradiquer : on limite d'abord les dégâts, sans détruire les preuves.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sec-defi-detection-q6",
+        "prompt": "Que contient un bon événement de sécurité ?",
+        "choices": [
+          "Qui a agi",
+          "Ce qui a été fait, et avec quel résultat",
+          "Quand, avec un horodatage précis",
+          "Le mot de passe saisi"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "On ajoute aussi d'où (adresse, appareil), mais jamais les secrets.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

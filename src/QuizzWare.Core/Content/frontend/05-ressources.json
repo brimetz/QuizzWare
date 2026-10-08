@@ -1,0 +1,444 @@
+{
+  "id": "fe-ch-ressources",
+  "title": "Chargement des ressources",
+  "summary": "Images, scripts et cache.",
+  "lessons": [
+    {
+      "id": "fe-images",
+      "title": "Images et polices",
+      "summary": "Formats, srcset et chargement différé.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le bon format, la bonne taille",
+          "body": "Les images pèsent souvent plus que tout le reste d'une page. AVIF et WebP compressent bien mieux que JPEG et PNG ; SVG convient aux icônes et logos, nets à toutes les tailles. srcset propose plusieurs largeurs et sizes indique la place occupée : le navigateur télécharge la plus petite image suffisante pour l'écran.",
+          "code": "<img src=\"photo-800.jpg\"\n     srcset=\"photo-400.jpg 400w,\n             photo-800.jpg 800w,\n             photo-1600.jpg 1600w\"\n     sizes=\"(max-width: 600px) 100vw, 50vw\"\n     width=\"800\" height=\"533\"\n     alt=\"La plage au coucher du soleil\">",
+          "language": "text"
+        },
+        {
+          "title": "Réserver la place, différer le reste",
+          "body": "Les attributs width et height donnent au navigateur le ratio de l'image avant son chargement : il réserve la place et la page ne saute pas (CLS). loading=\"lazy\" retarde les images situées sous la ligne de flottaison. L'image principale du haut de page, au contraire, ne doit pas être différée : fetchpriority=\"high\" la fait passer en premier."
+        },
+        {
+          "title": "Les polices web",
+          "body": "On sert les polices en WOFF2, limitées aux caractères utiles. font-display: swap affiche immédiatement le texte avec une police de repli, puis bascule quand la police web arrive : le texte n'est jamais invisible. Une police indispensable peut être préchargée avec <link rel=\"preload\" as=\"font\" crossorigin>."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-images-q1",
+          "prompt": "Pourquoi indiquer width et height sur une balise <img> ?",
+          "choices": [
+            "Le navigateur réserve la place avant le chargement : la page ne saute pas (CLS)",
+            "Pour forcer l'image à cette taille sur tous les écrans",
+            "Pour que l'image se télécharge plus vite",
+            "C'est obligatoire en HTML"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le navigateur en déduit le ratio ; le CSS peut ensuite rendre l'image fluide (max-width: 100%; height: auto).",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "fe-images-q2",
+          "prompt": "Complète : proposer deux tailles et différer le chargement.",
+          "code": "<img src=\"photo-800.jpg\"\n     ___=\"photo-400.jpg 400w,\n          photo-800.jpg 800w\"\n     sizes=\"(max-width: 600px) 100vw, 50vw\"\n     ___=\"lazy\" alt=\"Plage\">",
+          "language": "text",
+          "answers": [
+            "srcset",
+            "loading"
+          ],
+          "distractors": [
+            "srcs",
+            "defer",
+            "lazyload"
+          ],
+          "explanation": "srcset liste les fichiers et leur largeur (w) ; loading=\"lazy\" est natif, sans JavaScript.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "fe-images-q3",
+          "prompt": "La grande image du haut de page s'affiche tard et dégrade le LCP. Touche la ligne en cause.",
+          "code": "<header>\n  <img src=\"hero.avif\" loading=\"lazy\"\n       width=\"1200\" height=\"600\"\n       alt=\"Nouvelle collection\">\n</header>",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Une image visible dès l'arrivée ne doit pas être différée : on retire loading=\"lazy\" et on ajoute fetchpriority=\"high\".",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-images-q4",
+          "prompt": "Quel format pour une icône simple qui doit rester nette à toutes les tailles ?",
+          "choices": [
+            "SVG",
+            "JPEG",
+            "GIF",
+            "BMP"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un format vectoriel décrit des formes, pas des pixels : il est net à toute résolution et souvent très léger.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-images-q5",
+          "prompt": "Que fait font-display: swap ?",
+          "choices": [
+            "Le texte s'affiche tout de suite avec une police de repli, puis bascule quand la police web est chargée",
+            "Le texte reste invisible jusqu'au chargement de la police",
+            "La police web n'est jamais utilisée sur mobile",
+            "La police est chargée après tout le reste de la page"
+          ],
+          "answerIndex": 0,
+          "explanation": "On évite ainsi le texte invisible (FOIT), au prix d'un léger changement d'apparence ; des métriques de repli ajustées limitent le décalage.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fe-images-q6",
+          "prompt": "Quelles pratiques accélèrent l'affichage des images ?",
+          "choices": [
+            "Servir AVIF ou WebP",
+            "Proposer plusieurs tailles avec srcset",
+            "Différer les images sous la ligne de flottaison",
+            "Réduire en CSS un original de 4000 pixels de large"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Réduire en CSS ne réduit pas le téléchargement : le téléphone reçoit toujours l'image entière.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "fe-scripts",
+      "title": "Charger les scripts",
+      "summary": "defer, async, modules et découpage.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Un script classique bloque",
+          "body": "Quand l'analyseur HTML rencontre un <script src> classique, il s'arrête, télécharge et exécute le script, puis reprend : la page s'affiche plus tard. C'est pourquoi on plaçait autrefois les scripts juste avant </body>. Aujourd'hui, on utilise defer ou async dans le <head>."
+        },
+        {
+          "title": "defer, async et modules",
+          "body": "defer télécharge en parallèle et exécute après l'analyse du document, dans l'ordre des balises : pour le code de l'application. async exécute dès que le fichier arrive, dans n'importe quel ordre : pour des scripts indépendants comme une mesure d'audience. Un <script type=\"module\"> est différé par défaut.",
+          "code": "<script src=\"vendor.js\" defer></script>\n<script src=\"app.js\" defer></script>\n<script src=\"stats.js\" async></script>",
+          "language": "text"
+        },
+        {
+          "title": "Charger moins, plus tard",
+          "body": "Le JavaScript coûte deux fois : au téléchargement et à l'exécution, sur le thread principal. Le découpage du code charge à la demande ce qui n'est pas utile au démarrage, avec import() dynamique. Le tree shaking retire le code jamais importé. Les scripts tiers (chat, publicité) se chargent après le contenu essentiel.",
+          "code": "bouton.addEventListener(\"click\", async () => {\n  const { ouvrirEditeur } = await import(\"./editeur.js\");\n  ouvrirEditeur();\n});"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-scripts-q1",
+          "prompt": "Quelle est la différence entre defer et async ?",
+          "choices": [
+            "defer exécute après l'analyse du HTML, dans l'ordre ; async exécute dès réception, sans ordre garanti",
+            "async exécute après l'analyse du HTML ; defer tout de suite",
+            "Aucune, ce sont deux noms pour la même chose",
+            "defer ne télécharge le script qu'au premier clic"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux téléchargent en parallèle de l'analyse ; seul le moment d'exécution diffère.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "fe-scripts-q2",
+          "prompt": "app.js, qui utilise jQuery, plante parfois : « $ is not defined ». Touche une ligne en cause.",
+          "code": "<head>\n  <script src=\"jquery.js\" async></script>\n  <script src=\"app.js\" async></script>\n</head>",
+          "language": "text",
+          "bugLines": [
+            2,
+            3
+          ],
+          "explanation": "Avec async, app.js peut s'exécuter avant jquery.js s'il arrive en premier. defer garantit l'ordre.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-scripts-q3",
+          "prompt": "Comment se comporte un <script type=\"module\"> sans attribut ?",
+          "choices": [
+            "Comme defer : téléchargé en parallèle, exécuté après l'analyse du document",
+            "Comme un script classique bloquant",
+            "Comme async",
+            "Il n'est exécuté qu'à l'appel d'un import()"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut ajouter async à un module pour l'exécuter dès qu'il est prêt.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "fe-scripts-q4",
+          "prompt": "Complète : ne charger l'éditeur qu'au clic.",
+          "code": "bouton.addEventListener(\"click\", async () => {\n  const { ouvrirEditeur } =\n    await ___(\"./editeur.js\");\n  ouvrirEditeur();\n});",
+          "answers": [
+            "import"
+          ],
+          "distractors": [
+            "require",
+            "fetch",
+            "load"
+          ],
+          "explanation": "import() renvoie une promesse du module ; le bundler en fait un fichier séparé, téléchargé seulement à ce moment.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-scripts-q5",
+          "prompt": "Un vieux script classique, sans defer ni async, doit rester. Où le placer pour qu'il retarde le moins l'affichage ?",
+          "choices": [
+            "Juste avant </body>",
+            "En premier dans le <head>",
+            "Dans un commentaire HTML",
+            "Peu importe, l'effet est le même"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le contenu situé avant lui est déjà analysé et peut s'afficher.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "fe-scripts-q6",
+          "prompt": "Quelles techniques réduisent le JavaScript chargé au démarrage ?",
+          "choices": [
+            "Le découpage du code avec import() dynamique",
+            "Le tree shaking du bundler",
+            "Différer les scripts tiers non essentiels",
+            "Tout regrouper dans un seul gros fichier"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un gros fichier unique force à tout télécharger et analyser avant que la page ne réagisse.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "fe-cache",
+      "title": "Cache HTTP et service workers",
+      "summary": "Ne pas retélécharger.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Cache-Control",
+          "body": "max-age=N autorise à réutiliser la réponse pendant N secondes sans contacter le serveur. no-cache autorise le stockage, mais impose de revalider avant chaque réutilisation. no-store interdit tout stockage. Pour revalider, le navigateur envoie l'ETag de sa copie (If-None-Match) ; si rien n'a changé, le serveur répond 304 Not Modified, sans corps."
+        },
+        {
+          "title": "La stratégie classique",
+          "body": "Les fichiers produits par le build portent un hash dans leur nom (app.3f9a2c.js) : un nouveau contenu donne un nouveau nom. On peut donc les mettre en cache un an, en immutable. Le HTML, lui, garde toujours le même nom : on le sert en no-cache pour que chaque visite découvre les nouveaux noms de fichiers.",
+          "code": "/index.html\n  Cache-Control: no-cache\n\n/assets/app.3f9a2c.js\n  Cache-Control: max-age=31536000, immutable",
+          "language": "text"
+        },
+        {
+          "title": "Les service workers",
+          "body": "Un service worker est un script qui s'installe dans le navigateur et intercepte les requêtes de la page : il peut répondre depuis un cache qu'il gère lui-même, même hors ligne. Stratégies courantes : cache d'abord, réseau d'abord, ou réponse en cache puis mise à jour en arrière-plan (stale-while-revalidate). Il exige HTTPS et n'a pas accès au DOM.",
+          "code": "self.addEventListener(\"fetch\", (event) => {\n  event.respondWith(\n    caches.match(event.request)\n      .then((r) => r || fetch(event.request))\n  );\n});"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-cache-q1",
+          "prompt": "Que signifie Cache-Control: no-cache ?",
+          "choices": [
+            "La réponse peut être stockée, mais doit être revalidée auprès du serveur avant chaque réutilisation",
+            "La réponse ne doit jamais être stockée",
+            "La réponse est gardée indéfiniment",
+            "Le cache est vidé à chaque visite"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le piège classique : c'est no-store qui interdit le stockage. no-cache permet des 304 très légers.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-cache-q2",
+          "prompt": "Quelle politique de cache pour app.3f9a2c.js, dont le nom change à chaque build ?",
+          "choices": [
+            "Cache-Control: max-age=31536000, immutable",
+            "Cache-Control: no-store",
+            "Cache-Control: no-cache",
+            "Aucun en-tête"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le contenu d'un nom donné ne change jamais : inutile de revalider. Une nouvelle version aura un autre nom.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "fe-cache-q3",
+          "prompt": "Après un déploiement, des utilisateurs voient l'ancienne version pendant des jours, et le JS est retéléchargé à chaque visite. Touche une ligne en cause.",
+          "code": "/index.html\n  Cache-Control: max-age=31536000\n\n/assets/app.3f9a2c.js\n  Cache-Control: no-store",
+          "language": "text",
+          "bugLines": [
+            2,
+            5
+          ],
+          "explanation": "Les politiques sont inversées : le HTML doit être revalidé (no-cache), les fichiers versionnés gardés longtemps.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "fe-cache-q4",
+          "prompt": "Le navigateur envoie If-None-Match avec l'ETag de sa copie, et le fichier n'a pas changé. Que répond le serveur ?",
+          "choices": [
+            "304 Not Modified, sans corps",
+            "200 avec le fichier complet",
+            "404 Not Found",
+            "412 Precondition Failed"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le navigateur réutilise sa copie : un aller-retour, mais presque aucun octet transféré.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "fe-cache-q5",
+          "prompt": "Complète ce service worker « cache d'abord ».",
+          "code": "self.addEventListener(\"___\", (event) => {\n  event.___(\n    caches.match(event.request)\n      .then((r) => r || fetch(event.request))\n  );\n});",
+          "answers": [
+            "fetch",
+            "respondWith"
+          ],
+          "distractors": [
+            "request",
+            "waitUntil",
+            "install"
+          ],
+          "explanation": "L'événement fetch intercepte chaque requête ; respondWith fournit la réponse. waitUntil sert à prolonger les événements install et activate.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "fe-cache-q6",
+          "prompt": "Quelles affirmations sur les service workers sont vraies ?",
+          "choices": [
+            "Ils interceptent les requêtes réseau de la page",
+            "Ils exigent HTTPS (sauf sur localhost)",
+            "Ils permettent un fonctionnement hors ligne",
+            "Ils ont accès au DOM de la page"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un service worker tourne dans son propre contexte ; il communique avec la page par messages.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "fe-defi-ressources",
+    "title": "Défi entretien : une page produit lente",
+    "summary": "Image principale, priorités et cache.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "fe-defi-ressources-q1",
+        "prompt": "Cas pratique 1/3 — Le LCP d'une page produit est de 4,8 s. L'image principale est un JPEG de 4000 pixels et 2,5 Mo. Premier levier ?",
+        "choices": [
+          "Servir l'image en AVIF ou WebP, à la bonne taille, avec srcset",
+          "Ajouter loading=\"lazy\" à l'image",
+          "Minifier le CSS",
+          "Passer l'image en PNG"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'élément LCP est cette image : la réduire de plusieurs Mo est le gain le plus direct. La différer aggraverait le LCP.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-ressources-q2",
+        "prompt": "Cas pratique 2/3 — L'image est légère, mais le navigateur la découvre tard : c'est un background-image dans un CSS injecté par JavaScript. Que faire ?",
+        "choices": [
+          "La mettre dans une <img> du HTML avec fetchpriority=\"high\", ou la précharger avec <link rel=\"preload\">",
+          "Augmenter sa compression",
+          "La convertir en SVG",
+          "Charger le JavaScript en async"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le scanner de préchargement du navigateur ne voit que ce qui est dans le HTML initial.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-ressources-q3",
+        "prompt": "Cas pratique 3/3 — Après le déploiement du correctif, certains utilisateurs voient encore l'ancienne page. Que vérifier ?",
+        "choices": [
+          "Que le HTML est servi en no-cache et que les ressources ont des noms versionnés",
+          "Que le serveur est assez puissant",
+          "Que les utilisateurs ont la bonne version du navigateur",
+          "Que les images sont en lazy"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un HTML mis en cache longtemps continue de référencer les anciens fichiers.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-ressources-q4",
+        "prompt": "Trois scripts defer : a.js, b.js et c.js, dans cet ordre ; c.js est le plus petit et arrive en premier. Dans quel ordre s'exécutent-ils ?",
+        "choices": [
+          "a, b, c",
+          "c, a, b",
+          "Dans l'ordre d'arrivée",
+          "Dans un ordre aléatoire"
+        ],
+        "answerIndex": 0,
+        "explanation": "defer conserve l'ordre du document, quel que soit l'ordre de téléchargement. Avec async, c.js aurait pu s'exécuter en premier.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "fe-defi-ressources-q5",
+        "prompt": "Cette police préchargée est téléchargée deux fois. Touche la ligne à corriger.",
+        "code": "<link rel=\"preload\" href=\"/f/inter.woff2\"\n      as=\"font\" type=\"font/woff2\">",
+        "language": "text",
+        "bugLines": [
+          1,
+          2
+        ],
+        "explanation": "Les polices sont toujours demandées en mode CORS : sans l'attribut crossorigin, le préchargement ne correspond pas à la requête réelle et n'est pas réutilisé.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "fe-defi-ressources-q6",
+        "prompt": "Coche les bonnes pratiques.",
+        "choices": [
+          "Un cache long et immuable pour les fichiers versionnés",
+          "Un HTML revalidé à chaque visite",
+          "loading=\"lazy\" pour les images sous la ligne de flottaison",
+          "Des scripts tiers synchrones dans le <head>"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un script tiers synchrone bloque l'affichage de toute la page, et sa panne devient la vôtre.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

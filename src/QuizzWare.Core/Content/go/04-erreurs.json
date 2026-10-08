@@ -1,0 +1,329 @@
+{
+  "id": "go-ch-erreurs",
+  "title": "Erreurs en profondeur",
+  "summary": "Envelopper, comparer et concevoir.",
+  "lessons": [
+    {
+      "id": "go-erreurs-wrap",
+      "title": "Envelopper les erreurs",
+      "summary": "%w, errors.Is et errors.As.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Ajouter du contexte",
+          "body": "Une erreur qui remonte gagne à dire ce que l'on faisait : « lecture config : open app.yaml : no such file ». fmt.Errorf avec le verbe %w crée une nouvelle erreur qui enveloppe l'originale : le message est enrichi et l'erreur d'origine reste accessible. Avec %v, seul le texte est conservé.",
+          "code": "data, err := os.ReadFile(chemin)\nif err != nil {\n    return fmt.Errorf(\"lecture config : %w\", err)\n}"
+        },
+        {
+          "title": "errors.Is",
+          "body": "Une fois l'erreur enveloppée, err == fs.ErrNotExist devient faux. errors.Is parcourt toute la chaîne d'enveloppes et compare chaque maillon à la valeur cherchée. On l'utilise avec les erreurs sentinelles : io.EOF, fs.ErrNotExist, sql.ErrNoRows, context.Canceled.",
+          "code": "if errors.Is(err, fs.ErrNotExist) {\n    return configParDefaut(), nil\n}"
+        },
+        {
+          "title": "errors.As et errors.Join",
+          "body": "errors.As cherche dans la chaîne une erreur d'un type donné et la place dans une variable : on récupère ainsi ses champs, comme le chemin d'un *fs.PathError. errors.Join (Go 1.20) combine plusieurs erreurs en une seule ; errors.Is et errors.As les examinent toutes.",
+          "code": "var pe *fs.PathError\nif errors.As(err, &pe) {\n    log.Println(\"fichier :\", pe.Path)\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-erreurs-wrap-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "err := fmt.Errorf(\"config : %w\",\n    fs.ErrNotExist)\nfmt.Println(err == fs.ErrNotExist,\n    errors.Is(err, fs.ErrNotExist))",
+          "choices": [
+            "false true",
+            "true true",
+            "false false",
+            "true false"
+          ],
+          "answerIndex": 0,
+          "explanation": "err est une nouvelle valeur qui enveloppe fs.ErrNotExist : l'égalité directe échoue, errors.Is remonte la chaîne.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-erreurs-wrap-q2",
+          "prompt": "Une erreur est créée avec fmt.Errorf(\"config : %v\", fs.ErrNotExist). Que renvoie errors.Is(err, fs.ErrNotExist) ?",
+          "choices": [
+            "false : %v ne garde que le texte, pas l'erreur d'origine",
+            "true : le message contient l'erreur",
+            "true : %v et %w sont équivalents",
+            "Le code ne compile pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Seul %w enveloppe. On choisit %v volontairement quand on ne veut pas exposer l'erreur interne dans son API.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "go-erreurs-wrap-q3",
+          "prompt": "Complète : récupérer le chemin du fichier en cause.",
+          "code": "var pe *fs.PathError\nif errors.___(err, ___pe) {\n    log.Println(\"fichier :\", pe.Path)\n}",
+          "answers": [
+            "As",
+            "&"
+          ],
+          "distractors": [
+            "Is",
+            "*",
+            "Unwrap"
+          ],
+          "explanation": "errors.As reçoit un pointeur vers la variable à remplir : ici un **fs.PathError, d'où le &.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "go-erreurs-wrap-q4",
+          "prompt": "L'appelant ne détecte jamais le fichier manquant. Touche la ligne en cause.",
+          "code": "func charger(nom string) error {\n    f, err := os.Open(nom)\n    if err != nil {\n        return fmt.Errorf(\"charger : %v\", err)\n    }\n    defer f.Close()\n    return decoder(f)\n}\n\n// appelant\nif errors.Is(err, fs.ErrNotExist) {\n    creerParDefaut()\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Avec %v, l'erreur d'origine est perdue et errors.Is renvoie false. Il faut %w.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-erreurs-wrap-q5",
+          "prompt": "Comment rédiger le contexte ajouté à une erreur en Go ?",
+          "choices": [
+            "En minuscules, sans ponctuation finale, en nommant l'opération : « lecture config : … »",
+            "En majuscules avec un point d'exclamation",
+            "Avec la trace de pile complète",
+            "En répétant « erreur : » à chaque niveau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les messages s'enchaînent de couche en couche : « charger profil : lecture config : open app.yaml : no such file or directory ».",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "go-erreurs-wrap-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "errors.Is parcourt toute la chaîne d'erreurs enveloppées",
+            "errors.As cherche une erreur d'un type donné et la récupère",
+            "errors.Join combine plusieurs erreurs, et errors.Is les teste toutes",
+            "== suffit encore après avoir enveloppé une erreur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Dès qu'une erreur peut être enveloppée, on compare avec errors.Is plutôt qu'avec ==.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "go-erreurs-conception",
+      "title": "Concevoir ses erreurs",
+      "summary": "Sentinelles, types d'erreurs et panique.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Sentinelles et types d'erreurs",
+          "body": "Une erreur sentinelle est une variable exportée (var ErrIntrouvable = errors.New(\"introuvable\")) que l'appelant teste avec errors.Is : elle fait partie de l'API. Quand l'appelant a besoin de détails (le champ invalide, un code HTTP), on définit plutôt un type qui implémente l'interface error, et l'appelant le récupère avec errors.As.",
+          "code": "type ErrValidation struct{ Champ string }\n\nfunc (e *ErrValidation) Error() string {\n    return \"champ invalide : \" + e.Champ\n}"
+        },
+        {
+          "title": "Le piège de l'interface nil",
+          "body": "Une valeur d'interface est nil seulement si son type et sa valeur sont tous deux nil. Une fonction qui renvoie un *ErrValidation nil dans une valeur error renvoie une interface non nil (type *ErrValidation, valeur nil) : err != nil est vrai. On renvoie toujours nil explicitement quand il n'y a pas d'erreur."
+        },
+        {
+          "title": "Traiter ou renvoyer",
+          "body": "À chaque niveau, une erreur est soit traitée (journalisée, convertie en réponse 404, remplacée par une valeur par défaut), soit renvoyée avec du contexte, pas les deux : journaliser puis renvoyer fait apparaître la même erreur plusieurs fois dans les journaux. Le haut de la pile (handler, main) décide du traitement final."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-erreurs-conception-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "type ErrV struct{ Champ string }\n\nfunc (e *ErrV) Error() string {\n    return \"invalide : \" + e.Champ\n}\n\nfunc valider() error {\n    var e *ErrV\n    return e\n}\n\nfunc main() {\n    fmt.Println(valider() == nil)\n}",
+          "choices": [
+            "false",
+            "true",
+            "Une panique",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'interface renvoyée contient le type *ErrV et un pointeur nil : elle n'est pas nil. Il faut écrire return nil.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "go-erreurs-conception-q2",
+          "prompt": "valider renvoie une erreur non nil même pour un utilisateur valide. Touche la ligne en cause.",
+          "code": "func valider(u User) error {\n    var err *ErrValidation\n    if u.Nom == \"\" {\n        err = &ErrValidation{\"nom\"}\n    }\n    return err\n}",
+          "bugLines": [
+            2,
+            6
+          ],
+          "explanation": "Le pointeur nil typé devient une interface error non nil. On déclare var err error, ou on renvoie nil explicitement dans le cas valide.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "go-erreurs-conception-q3",
+          "prompt": "Quand exporter une erreur sentinelle comme ErrIntrouvable ?",
+          "choices": [
+            "Quand l'appelant doit pouvoir réagir à ce cas précis avec errors.Is",
+            "Pour chaque erreur possible de la fonction",
+            "Jamais, il faut comparer les messages",
+            "Uniquement dans le paquet main"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une sentinelle exportée est un engagement d'API : on n'en crée que pour les cas que l'appelant doit distinguer.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-erreurs-conception-q4",
+          "prompt": "Chaque couche d'un service journalise l'erreur reçue, puis la renvoie. Quel est le problème ?",
+          "choices": [
+            "La même erreur apparaît plusieurs fois dans les journaux : on la traite ou on la renvoie, pas les deux",
+            "Aucun, plus il y a de journaux, mieux c'est",
+            "L'erreur est perdue",
+            "Le programme panique"
+          ],
+          "answerIndex": 0,
+          "explanation": "On renvoie l'erreur enrichie de contexte, et c'est le niveau qui la traite (souvent le handler) qui la journalise une seule fois.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "go-erreurs-conception-q5",
+          "prompt": "Complète pour que *ErrHTTP implémente l'interface error.",
+          "code": "type ErrHTTP struct{ Code int }\n\nfunc (e ___) ___() string {\n    return fmt.Sprintf(\"HTTP %d\", e.Code)\n}",
+          "answers": [
+            "*ErrHTTP",
+            "Error"
+          ],
+          "distractors": [
+            "&ErrHTTP",
+            "String",
+            "Err"
+          ],
+          "explanation": "L'interface error n'a qu'une méthode : Error() string. L'implémentation est implicite, aucun mot-clé implements.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "go-erreurs-conception-q6",
+          "prompt": "Quelles pratiques sont idiomatiques en Go ?",
+          "choices": [
+            "Renvoyer error en dernière valeur de retour",
+            "Vérifier l'erreur juste après l'appel",
+            "Réserver panic aux erreurs de programmation",
+            "Renvoyer -1 pour signaler un échec"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les codes magiques comme -1 se confondent avec des valeurs valides ; Go préfère une valeur error explicite.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "go-defi-erreurs",
+    "title": "Défi entretien : erreurs en Go",
+    "summary": "Du repository à la réponse HTTP.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "go-defi-erreurs-q1",
+        "prompt": "Cas pratique 1/3 — Un repository renvoie ErrIntrouvable quand l'utilisateur n'existe pas ; le handler doit répondre 404. Quel test écrire ?",
+        "choices": [
+          "errors.Is(err, ErrIntrouvable)",
+          "err.Error() == \"introuvable\"",
+          "err == ErrIntrouvable",
+          "strings.Contains(err.Error(), \"introuvable\")"
+        ],
+        "answerIndex": 0,
+        "explanation": "Comparer les messages est fragile ; == casse dès qu'une couche enveloppe l'erreur.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-erreurs-q2",
+        "prompt": "Cas pratique 2/3 — Le service enveloppe l'erreur : fmt.Errorf(\"profil %d : %w\", id, err). Le handler détecte-t-il encore le cas ?",
+        "choices": [
+          "Oui : %w garde ErrIntrouvable dans la chaîne, que errors.Is parcourt",
+          "Non, le message a changé",
+          "Seulement si l'id vaut 0",
+          "Non, il faut errors.As"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est tout l'intérêt de %w : ajouter du contexte sans casser la détection.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "go-defi-erreurs-q3",
+        "prompt": "Cas pratique 3/3 — Le 404 n'est jamais renvoyé. Touche la ligne en cause.",
+        "code": "u, err := svc.Profil(ctx, id)\nif err != nil {\n    http.Error(w, \"erreur\", 500)\n    return\n}\nif errors.Is(err, ErrIntrouvable) {\n    http.Error(w, \"introuvable\", 404)\n    return\n}\njson.NewEncoder(w).Encode(u)",
+        "bugLines": [
+          2,
+          6
+        ],
+        "explanation": "Le cas général err != nil répond 500 et sort avant le test spécifique, qui devient inatteignable. On teste le cas particulier d'abord.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-erreurs-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "e1 := errors.New(\"a\")\ne2 := errors.New(\"b\")\nerr := errors.Join(e1, e2)\nfmt.Println(errors.Is(err, e2))\nfmt.Println(err)",
+        "choices": [
+          "true, puis a et b sur deux lignes",
+          "false, puis a; b",
+          "true, puis a: b",
+          "false, puis a"
+        ],
+        "answerIndex": 0,
+        "explanation": "errors.Is examine chaque erreur jointe ; le message de Join sépare les messages par des retours à la ligne.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "go-defi-erreurs-q5",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "func lire(p string) ([]byte, error) {\n    data, err := os.ReadFile(p)\n    if err != nil {\n        log.Println(err)\n        return nil, errors.New(\"échec\")\n    }\n    return data, nil\n}",
+        "choices": [
+          "L'erreur est journalisée puis renvoyée",
+          "L'erreur d'origine est perdue : il faudrait l'envelopper avec %w",
+          "Le message renvoyé ne dit pas ce qui a échoué",
+          "La fonction devrait paniquer"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Mieux : return nil, fmt.Errorf(\"lecture %s : %w\", p, err), sans journaliser ici.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-erreurs-q6",
+        "prompt": "En entretien : « Pourquoi Go n'a-t-il pas d'exceptions ? »",
+        "choices": [
+          "Les erreurs sont des valeurs explicites dans la signature : le chemin d'erreur est visible et traité sur place",
+          "Parce que les exceptions sont trop lentes à compiler",
+          "Go a des exceptions, appelées panic, pour toutes les erreurs",
+          "Pour économiser de la mémoire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le prix est une certaine verbosité (if err != nil) ; panic existe, mais pour l'exceptionnel.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

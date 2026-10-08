@@ -1,0 +1,330 @@
+{
+  "id": "qa-ch-conception",
+  "title": "Concevoir des tests",
+  "summary": "Choisir les cas et rendre le code testable.",
+  "lessons": [
+    {
+      "id": "qa-cas-limites",
+      "title": "Choisir ses cas de test",
+      "summary": "Classes d'équivalence et valeurs limites.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les classes d'équivalence",
+          "body": "On ne peut pas tester toutes les entrées. On les regroupe en classes que le code doit traiter de la même façon : pour une fonction d'éligibilité de 18 à 65 ans, les moins de 18 ans, les 18 à 65 ans, les plus de 65 ans. Un représentant par classe suffit à couvrir chaque comportement, plus les entrées invalides (négatif, vide, absent)."
+        },
+        {
+          "title": "Les valeurs limites",
+          "body": "Les bugs se cachent aux frontières : un < au lieu d'un <=, un indice décalé d'un. On teste donc chaque borne et ses voisines immédiates : 17, 18, 65 et 66. Un test paramétré décrit tous ces cas d'un coup.",
+          "code": "@pytest.mark.parametrize(\"age, attendu\", [\n    (17, False), (18, True), (65, True), (66, False),\n])\ndef test_eligible(age, attendu):\n    assert eligible(age) == attendu",
+          "language": "python"
+        },
+        {
+          "title": "Les cas spéciaux",
+          "body": "Collection vide ou à un seul élément, valeur nulle, très grands nombres, chaînes avec accents ou emojis, et les dates piégeuses : 29 février, changement d'heure, passage à la nouvelle année, fuseaux horaires. Quand plusieurs conditions se combinent, une table de décision liste les combinaisons à couvrir."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-cas-limites-q1",
+          "prompt": "Une fonction accepte un âge de 18 à 65 ans inclus. Quelles valeurs limites tester ?",
+          "choices": [
+            "17, 18, 65 et 66",
+            "18 et 65",
+            "0, 50 et 100",
+            "20, 30, 40 et 50"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque borne et sa voisine de l'autre côté : c'est là que se cachent les erreurs de comparaison.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-cas-limites-q2",
+          "prompt": "Qu'est-ce qu'une classe d'équivalence ?",
+          "choices": [
+            "Un ensemble d'entrées que le code doit traiter de la même façon : un représentant suffit",
+            "Une classe Python qui implémente __eq__",
+            "Deux tests qui vérifient la même chose",
+            "Un groupe de développeurs de même niveau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Tester 25, 30 et 40 ans n'apporte rien de plus que tester 30 ans.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "qa-cas-limites-q3",
+          "prompt": "Règle métier : 10 % de remise dès 100 €. Un test avec 100 € échoue. Touche la ligne en cause.",
+          "code": "def remise(montant):\n    if montant > 100:\n        return montant * 0.9\n    return montant",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "« Dès 100 € » inclut 100 : il faut >=. Seul un test à la valeur limite exacte le révèle.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "qa-cas-limites-q4",
+          "prompt": "Complète ce test paramétré.",
+          "code": "@pytest.mark.___(\"age, attendu\", [\n    (17, False), (18, True), (65, True), (66, False),\n])\ndef test_eligible(age, attendu):\n    assert eligible(age) == ___",
+          "language": "python",
+          "answers": [
+            "parametrize",
+            "attendu"
+          ],
+          "distractors": [
+            "parameterize",
+            "params",
+            "True"
+          ],
+          "explanation": "Attention à l'orthographe : pytest écrit parametrize, sans « e » après le « t ».",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-cas-limites-q5",
+          "prompt": "Quels cas spéciaux tester pour une fonction qui calcule la moyenne d'une liste ?",
+          "choices": [
+            "La liste vide, un seul élément, des valeurs négatives et très grandes",
+            "Uniquement une liste de dix éléments positifs",
+            "Uniquement la liste vide",
+            "Aucun, la moyenne est simple"
+          ],
+          "answerIndex": 0,
+          "explanation": "La liste vide provoque souvent une division par zéro ; il faut décider du comportement attendu.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "qa-cas-limites-q6",
+          "prompt": "Quelles dates sont piégeuses à tester ?",
+          "choices": [
+            "Le 29 février",
+            "Le jour du passage à l'heure d'été",
+            "Le 31 décembre à minuit",
+            "Un mardi ordinaire de mai"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Années bissextiles, jours de 23 ou 25 heures, changement d'année : autant de cas rarement prévus.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "qa-testabilite",
+      "title": "Du code testable",
+      "summary": "Dépendances, temps et hasard.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les dépendances cachées",
+          "body": "Un code est difficile à tester quand il va chercher lui-même ce dont il a besoin : l'heure (datetime.now()), le hasard (random), le réseau, la base, une variable globale. Le résultat change d'une exécution à l'autre, ou exige une infrastructure complète. Le test devient lent, instable, voire impossible."
+        },
+        {
+          "title": "Les rendre explicites",
+          "body": "On passe ces dépendances en paramètre ou par le constructeur : une horloge, un générateur aléatoire, un client HTTP. En production, on fournit les vrais ; en test, des versions contrôlées. Un paramètre avec une valeur par défaut permet d'introduire cette couture sans changer les appels existants.",
+          "code": "def est_expire(jeton, maintenant=None):\n    maintenant = maintenant or datetime.now(timezone.utc)\n    return jeton.expire_le < maintenant\n\ndef test_jeton_expire():\n    j = Jeton(expire_le=datetime(2026, 1, 1, tzinfo=timezone.utc))\n    assert est_expire(j, maintenant=datetime(2026, 1, 2, tzinfo=timezone.utc))",
+          "language": "python"
+        },
+        {
+          "title": "Un cœur pur, une coquille d'effets",
+          "body": "Une architecture testable sépare un cœur de fonctions pures (calculs, décisions, sans E/S) d'une fine coquille qui lit, écrit et appelle le réseau. Le cœur se teste par centaines de tests unitaires rapides ; la coquille, par quelques tests d'intégration. C'est le principe « functional core, imperative shell »."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "qa-testabilite-q1",
+          "prompt": "Le test du message du vendredi ne passe que le vendredi. Touche la ligne en cause.",
+          "code": "def message_du_jour():\n    if datetime.now().weekday() == 4:\n        return \"Bon week-end !\"\n    return \"Bonne journée\"",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "La fonction lit elle-même l'heure. On lui passe la date (ou une horloge) en paramètre.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-testabilite-q2",
+          "prompt": "Comment rendre testable une fonction qui tire un nombre au hasard ?",
+          "choices": [
+            "Lui passer le générateur aléatoire (ou une graine) en paramètre",
+            "Lancer le test mille fois",
+            "Ne pas la tester",
+            "Remplacer random par une constante dans le code de production"
+          ],
+          "answerIndex": 0,
+          "explanation": "En test, un random.Random(42) donne une suite reproductible.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "qa-testabilite-q3",
+          "prompt": "Que signifie « functional core, imperative shell » ?",
+          "choices": [
+            "Garder la logique dans des fonctions pures, et les entrées / sorties dans une fine couche autour",
+            "Écrire le cœur du programme en langage fonctionnel et le reste en shell",
+            "Tester uniquement les scripts shell",
+            "Mettre toute la logique dans les contrôleurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le cœur, sans effets de bord, se teste sans doublures.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "qa-testabilite-q4",
+          "prompt": "Complète : la facturation reçoit son horloge et son service de paiement.",
+          "code": "class Facturation:\n    def __init__(self, horloge, ___):\n        self.horloge = horloge\n        self.paiements = paiements\n\n# en test :\nf = Facturation(HorlogeFixe(\"2026-01-31\"), ___())",
+          "language": "python",
+          "answers": [
+            "paiements",
+            "FauxPaiements"
+          ],
+          "distractors": [
+            "StripeClient",
+            "self",
+            "None"
+          ],
+          "explanation": "En test, une doublure remplace le vrai prestataire de paiement : pas d'appel réseau, pas de vrai débit.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-testabilite-q5",
+          "prompt": "Une méthode appelle directement requests.get vers une API externe. Quel problème pour les tests ?",
+          "choices": [
+            "Impossible de la tester sans réseau, sauf à remplacer des globales : on injecte plutôt le client",
+            "Aucun, le réseau est toujours disponible",
+            "Le test sera plus rapide",
+            "requests ne fonctionne pas dans les tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "Patcher fonctionne, mais lie le test aux détails d'implémentation ; une dépendance explicite est plus robuste.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "qa-testabilite-q6",
+          "prompt": "Quelles sources de non-déterminisme faut-il isoler ?",
+          "choices": [
+            "L'heure courante",
+            "Le hasard",
+            "Le réseau",
+            "L'addition de deux entiers"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un calcul pur donne toujours le même résultat : rien à isoler.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "qa-defi-conception",
+    "title": "Défi entretien : les frais de livraison",
+    "summary": "Couture, limites et paramétrage.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "qa-defi-conception-q1",
+        "prompt": "Cas pratique 1/3 — Les frais de livraison sont gratuits dès 50 €, sinon 4,90 €, plus 2 € le dimanche ; la fonction appelle datetime.now(). Qu'est-ce qui la rend difficile à tester ?",
+        "choices": [
+          "Sa dépendance cachée à l'heure courante",
+          "Les montants en euros",
+          "Le nombre de règles",
+          "Rien, elle est facile à tester"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le résultat dépend du jour où le test s'exécute.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-conception-q2",
+        "prompt": "Cas pratique 2/3 — Quel changement la rend testable ?",
+        "choices": [
+          "Passer le jour (ou une horloge) en paramètre",
+          "Ne lancer les tests que le dimanche",
+          "Supprimer la règle du dimanche",
+          "Changer l'heure de la machine de CI"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec une valeur par défaut, le code existant continue de fonctionner sans modification.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-conception-q3",
+        "prompt": "Cas pratique 3/3 — Quels cas de test écrire ?",
+        "choices": [
+          "49,99 €, 50 € et 50,01 €, en semaine puis un dimanche",
+          "Seulement 100 €",
+          "Seulement un dimanche",
+          "Tous les montants de 0 à 1000 €"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les valeurs limites autour du seuil, croisées avec les deux classes de jours.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-conception-q4",
+        "prompt": "Combien de cas ce test exécute-t-il ?",
+        "code": "@pytest.mark.parametrize(\"montant, attendu\", [\n    (49.99, 4.90), (50, 0), (120, 0),\n])\ndef test_frais(montant, attendu):\n    assert frais(montant, jour=MARDI) == attendu",
+        "language": "python",
+        "choices": [
+          "3",
+          "1",
+          "6",
+          "2"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un cas par tuple de la liste, chacun rapporté séparément.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "qa-defi-conception-q5",
+        "prompt": "Ce test échoue alors que le calcul semble juste. Touche la ligne en cause.",
+        "code": "def test_total():\n    assert 0.1 + 0.2 == 0.3",
+        "language": "python",
+        "bugLines": [
+          2
+        ],
+        "explanation": "En virgule flottante, 0.1 + 0.2 vaut 0.30000000000000004. On compare avec pytest.approx, ou on utilise Decimal pour les montants.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "qa-defi-conception-q6",
+        "prompt": "Quelles caractéristiques rendent un code facile à tester ?",
+        "choices": [
+          "Des dépendances explicites",
+          "Des fonctions courtes et pures quand c'est possible",
+          "Peu d'état global",
+          "Des appels directs à l'heure système un peu partout"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Ce qui rend un code testable le rend aussi plus simple à comprendre et à modifier.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

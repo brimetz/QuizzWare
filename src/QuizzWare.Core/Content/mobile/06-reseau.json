@@ -1,0 +1,328 @@
+{
+  "id": "mob-ch-reseau",
+  "title": "Réseau et API",
+  "summary": "Appeler un serveur depuis un téléphone.",
+  "lessons": [
+    {
+      "id": "mob-api",
+      "title": "Consommer une API",
+      "summary": "Délais, nouvelles tentatives et pagination.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Un réseau hostile",
+          "body": "Sur mobile, le réseau est lent, variable et souvent coupé : ascenseur, métro, passage du Wi-Fi à la 4G. Chaque requête a donc un délai raisonnable ; celui de HttpClient vaut 100 secondes par défaut, bien trop pour un utilisateur qui attend. On réutilise une même instance de HttpClient, et on affiche ce qu'on a en cache pendant le chargement.",
+          "code": "var http = new HttpClient\n{\n    BaseAddress = new Uri(\"https://api.exemple.fr\"),\n    Timeout = TimeSpan.FromSeconds(15),\n};",
+          "language": "csharp"
+        },
+        {
+          "title": "Réessayer intelligemment",
+          "body": "Une requête qui échoue peut être rejouée si l'opération est idempotente : un GET, un PUT, ou un POST accompagné d'une clé d'idempotence que le serveur reconnaît. On espace les tentatives de façon exponentielle (1 s, 2 s, 4 s…) avec un peu d'aléa, pour ne pas surcharger un serveur qui redémarre. La connectivité annoncée par le système n'est qu'un indice : une requête peut échouer même « en ligne »."
+        },
+        {
+          "title": "Charger peu, longtemps compatible",
+          "body": "On ne charge que ce qui s'affiche : pagination (de préférence par curseur pour un fil qui bouge), champs utiles, réponses compressées. Et l'API doit rester compatible longtemps : contrairement à un site web, d'anciennes versions de l'application restent installées pendant des mois. On ajoute des champs, on n'en retire pas, et on versionne quand il le faut."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-api-q1",
+          "prompt": "Pourquoi une API utilisée par une application mobile doit-elle rester rétrocompatible longtemps ?",
+          "choices": [
+            "D'anciennes versions de l'application restent installées pendant des mois",
+            "Les stores l'exigent",
+            "Les téléphones ne savent pas lire les nouveaux formats",
+            "Ce n'est pas nécessaire, l'application se met à jour en même temps que l'API"
+          ],
+          "answerIndex": 0,
+          "explanation": "Beaucoup d'utilisateurs désactivent les mises à jour automatiques ; on peut aussi imposer une version minimale, en dernier recours.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-api-q2",
+          "prompt": "Quand peut-on rejouer automatiquement une requête qui a échoué ?",
+          "choices": [
+            "Quand l'opération est idempotente (GET, PUT, POST avec clé d'idempotence), avec un délai croissant",
+            "Toujours, immédiatement, jusqu'à ce qu'elle réussisse",
+            "Jamais",
+            "Seulement pour les POST"
+          ],
+          "answerIndex": 0,
+          "explanation": "Rejouer un POST non idempotent peut créer un doublon : deux commandes, deux paiements.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "mob-api-q3",
+          "prompt": "Complète : abandonner une requête au bout de 15 secondes.",
+          "code": "var http = new HttpClient\n{\n    ___ = TimeSpan.FromSeconds(15),\n};",
+          "language": "csharp",
+          "answers": [
+            "Timeout"
+          ],
+          "distractors": [
+            "Delay",
+            "Expiration",
+            "MaxTime"
+          ],
+          "explanation": "Au-delà, la requête est annulée (TaskCanceledException) : on affiche un message et on propose de réessayer.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "mob-api-q4",
+          "prompt": "Un client a été débité trois fois. Touche la ligne en cause.",
+          "code": "for (var i = 0; i < 5; i++)\n{\n    try { return await _api.PayerAsync(cmd); }\n    catch (HttpRequestException) { }\n}",
+          "language": "csharp",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Le paiement est rejoué sans clé d'idempotence : si le serveur l'avait traité avant que la réponse se perde, il le refait. Et les tentatives s'enchaînent sans délai.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mob-api-q5",
+          "prompt": "Pour un fil d'actualité, quel avantage a la pagination par curseur sur la pagination par numéro de page ?",
+          "choices": [
+            "Pas de doublons ni d'éléments sautés quand de nouveaux éléments arrivent pendant le défilement",
+            "Elle permet d'aller directement à la page 50",
+            "Elle charge tout d'un coup",
+            "Elle évite de passer des paramètres"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec ?page=2, l'arrivée de nouveaux messages décale tout ; « les 20 éléments après tel identifiant » reste stable.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "mob-api-q6",
+          "prompt": "Quelles pratiques réseau sont recommandées sur mobile ?",
+          "choices": [
+            "Un délai raisonnable sur chaque requête",
+            "Des tentatives espacées de façon exponentielle, avec un peu d'aléa",
+            "Réutiliser une même instance de HttpClient",
+            "Ne gérer l'erreur réseau que si le système signale l'absence de connexion"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un Wi-Fi d'hôtel « connecté » mais bloqué par un portail fait échouer les requêtes : il faut toujours gérer l'échec.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mob-securite",
+      "title": "Sécurité mobile",
+      "summary": "Jetons, TLS et rétro-ingénierie.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "L'application est chez l'attaquant",
+          "body": "Un APK ou une IPA se décompile ; l'obfuscation (R8, ProGuard) ralentit l'analyse mais ne l'empêche pas. Tout secret embarqué dans l'application (clé d'API privée, mot de passe de service) doit être considéré comme public. Les vraies vérifications (droits, prix, abonnement) se font côté serveur ; l'application peut être modifiée pour sauter les siennes."
+        },
+        {
+          "title": "Stocker et transporter",
+          "body": "Les jetons vont dans le stockage sécurisé : Keychain sur iOS, Keystore sur Android, SecureStorage en .NET MAUI. Jamais dans les préférences ni dans les journaux. Tout passe en HTTPS : iOS (App Transport Security) et Android (depuis la version 9) bloquent le HTTP en clair par défaut. L'épinglage de certificat (pinning) protège d'une autorité de certification compromise, mais peut bloquer l'application si le certificat change sans clé de secours prévue.",
+          "code": "await SecureStorage.Default.SetAsync(\"jeton\", jeton);\nvar lu = await SecureStorage.Default.GetAsync(\"jeton\");",
+          "language": "csharp"
+        },
+        {
+          "title": "Se connecter avec OAuth",
+          "body": "Une application mobile est un client public : elle ne peut pas garder de secret client. On utilise le flux Authorization Code avec PKCE, dans le navigateur système (ASWebAuthenticationSession sur iOS, Custom Tabs sur Android, WebAuthenticator en MAUI), pas dans une WebView : l'utilisateur voit la vraie page du fournisseur et l'application ne voit jamais son mot de passe."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-securite-q1",
+          "prompt": "Une clé d'API secrète est stockée, obfusquée, dans le code de l'application. Est-elle protégée ?",
+          "choices": [
+            "Non : le binaire se décompile et la clé s'extrait ; un secret reste sur le serveur",
+            "Oui, l'obfuscation la rend illisible",
+            "Oui, si l'application est signée",
+            "Oui, sur iOS uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "On passe par son propre serveur, qui détient la clé et applique ses contrôles.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-securite-q2",
+          "prompt": "Quel flux OAuth utiliser dans une application mobile ?",
+          "choices": [
+            "Authorization Code avec PKCE, dans le navigateur système",
+            "Implicit, dans une WebView",
+            "Resource Owner Password : l'application demande le mot de passe",
+            "Client Credentials, avec le secret embarqué"
+          ],
+          "answerIndex": 0,
+          "explanation": "PKCE remplace le secret client qu'une application publique ne peut pas protéger.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "mob-securite-q3",
+          "prompt": "Revue de sécurité : touche la ligne problématique.",
+          "code": "var jeton = await _auth.ConnecterAsync(email, mdp);\nPreferences.Default.Set(\"jeton\", jeton.Acces);\nawait Shell.Current.GoToAsync(\"//accueil\");",
+          "language": "csharp",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Les préférences ne sont pas chiffrées : sur un appareil compromis ou dans une sauvegarde, le jeton se lit. Il va dans SecureStorage.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-securite-q4",
+          "prompt": "Quel est le principal risque de l'épinglage de certificat ?",
+          "choices": [
+            "Si le certificat du serveur change sans clé de secours épinglée, l'application ne peut plus se connecter jusqu'à sa mise à jour",
+            "Il ralentit chaque requête de plusieurs secondes",
+            "Il désactive HTTPS",
+            "Il empêche la publication sur les stores"
+          ],
+          "answerIndex": 0,
+          "explanation": "On épingle la clé publique plutôt que le certificat, avec au moins une clé de secours.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "mob-securite-q5",
+          "prompt": "Complète : enregistrer puis relire un jeton de façon sûre.",
+          "code": "await ___.Default.SetAsync(\"jeton\", jeton);\nvar lu = await SecureStorage.Default.___(\"jeton\");",
+          "language": "csharp",
+          "answers": [
+            "SecureStorage",
+            "GetAsync"
+          ],
+          "distractors": [
+            "Preferences",
+            "ReadAsync",
+            "LoadAsync"
+          ],
+          "explanation": "SecureStorage s'appuie sur Keychain et Keystore ; la lecture renvoie null si la clé n'existe pas.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "mob-securite-q6",
+          "prompt": "Quelles vérifications doivent se faire côté serveur ?",
+          "choices": [
+            "Les droits de l'utilisateur sur une ressource",
+            "Le prix d'un achat",
+            "La validité d'un abonnement",
+            "Le thème clair ou sombre choisi"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Tout ce qui a un enjeu doit être vérifié là où l'attaquant n'a pas la main ; le thème n'en a aucun.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "mob-defi-reseau",
+    "title": "Défi entretien : commander dans le métro",
+    "summary": "Délais, nouvelles tentatives et doublons.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mob-defi-reseau-q1",
+        "prompt": "Cas pratique 1/3 — Dans une application de livraison, dans le métro, l'indicateur de chargement tourne sans fin. Cause probable ?",
+        "choices": [
+          "Aucun délai n'est configuré : celui de HttpClient est de 100 secondes par défaut",
+          "Le serveur est en panne",
+          "L'application n'a pas la permission Internet",
+          "Le cache est plein"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une requête sans réponse attend jusqu'au délai ; l'utilisateur, lui, abandonne bien avant.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-reseau-q2",
+        "prompt": "Cas pratique 2/3 — Avec un délai de 15 s, les erreurs se multiplient sur réseau faible. Que faire ?",
+        "choices": [
+          "Réessayer les requêtes idempotentes avec un délai croissant, et afficher les données en cache en attendant",
+          "Supprimer le délai",
+          "Afficher une erreur et fermer l'application",
+          "Réessayer en boucle sans attendre"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'application reste utile hors ligne et se rattrape quand le réseau revient.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-reseau-q3",
+        "prompt": "Cas pratique 3/3 — La validation de commande (POST) expire, mais la commande a peut-être été créée. Comment réessayer sans doublon ?",
+        "choices": [
+          "Envoyer une clé d'idempotence générée par l'application, identique pour chaque tentative",
+          "Ne jamais réessayer un POST",
+          "Demander à l'utilisateur de vérifier ses e-mails",
+          "Réessayer avec un nouvel identifiant à chaque fois"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le serveur reconnaît la clé et renvoie le résultat de la première exécution au lieu de recréer la commande.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-reseau-q4",
+        "prompt": "Un attaquant modifie l'application pour sauter la vérification « abonnement premium ». Quelle défense ?",
+        "choices": [
+          "Le serveur vérifie l'abonnement (reçu validé auprès de l'App Store ou de Google Play) avant de servir le contenu premium",
+          "Obfusquer davantage le code",
+          "Détecter les téléphones rootés et refuser de démarrer",
+          "Cacher le bouton premium"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les détections côté client se contournent ; seul le serveur décide de ce qu'il envoie.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "mob-defi-reseau-q5",
+        "prompt": "Revue de sécurité : touche la ligne problématique.",
+        "code": "public static class Config\n{\n    public const string ApiUrl =\n        \"https://api.exemple.fr\";\n    public const string StripeSecretKey =\n        \"sk_live_51H8xQ2...\";\n}",
+        "language": "csharp",
+        "bugLines": [
+          5,
+          6
+        ],
+        "explanation": "Une clé secrète de paiement embarquée sera extraite et utilisée par d'autres. Seule la clé publiable a sa place dans l'application.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "mob-defi-reseau-q6",
+        "prompt": "Coche les pratiques sûres.",
+        "choices": [
+          "Jetons stockés dans Keychain ou Keystore",
+          "HTTPS pour toutes les requêtes",
+          "Connexion OAuth dans le navigateur système",
+          "Mot de passe stocké en clair pour se reconnecter automatiquement"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Pour se reconnecter, on garde un jeton de rafraîchissement dans le stockage sécurisé, jamais le mot de passe.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

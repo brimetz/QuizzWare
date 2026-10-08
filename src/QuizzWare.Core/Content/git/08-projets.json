@@ -1,0 +1,325 @@
+{
+  "id": "git-ch-projets",
+  "title": "Projets et versions",
+  "summary": "Tags, sous-modules et gros dépôts.",
+  "lessons": [
+    {
+      "id": "git-tags",
+      "title": "Tags et releases",
+      "summary": "Marquer les versions.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Léger ou annoté",
+          "body": "Un tag léger est un simple nom posé sur un commit. Un tag annoté est un objet à part entière, avec auteur, date, message, et éventuellement une signature : c'est celui qu'on utilise pour une version publiée. Un tag ne bouge pas, contrairement à une branche.",
+          "code": "git tag -a v1.4.0 -m \"Version 1.4.0\"\ngit push origin v1.4.0\ngit tag --list \"v1.*\""
+        },
+        {
+          "title": "Publier un tag",
+          "body": "git push n'envoie pas les tags : on pousse un tag par son nom, ou on utilise --follow-tags pour envoyer les tags annotés des commits poussés. Sur GitHub ou GitLab, une release s'appuie sur un tag ; un pipeline peut se déclencher à la création d'un tag de version."
+        },
+        {
+          "title": "Ne pas déplacer un tag publié",
+          "body": "Si un tag publié pointe vers le mauvais commit, on publie une nouvelle version (v2.0.1) plutôt que de le déplacer : d'autres l'ont peut-être déjà récupéré, et Git ne met pas à jour un tag existant lors d'un fetch ordinaire. git describe nomme un commit par rapport au dernier tag : v1.4.0-3-g9e1f0aa signifie « 3 commits après v1.4.0 »."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-tags-q1",
+          "prompt": "Quelle est la différence entre un tag léger et un tag annoté ?",
+          "choices": [
+            "L'annoté est un objet avec auteur, date et message, signable ; le léger n'est qu'un nom sur un commit",
+            "Le léger est plus récent",
+            "L'annoté ne peut pas être poussé",
+            "Le léger se déplace à chaque commit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour une version publiée, on veut savoir qui l'a marquée, quand et pourquoi : tag annoté.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "git-tags-q2",
+          "prompt": "Complète : créer un tag annoté et le publier.",
+          "code": "git tag ___ v1.4.0 -m \"Version 1.4.0\"\ngit push origin ___",
+          "answers": [
+            "-a",
+            "v1.4.0"
+          ],
+          "distractors": [
+            "-l",
+            "--all",
+            "main"
+          ],
+          "explanation": "-a crée un tag annoté ; on pousse ensuite le tag par son nom.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-tags-q3",
+          "prompt": "Après un git push, les collègues ne voient pas le nouveau tag. Pourquoi ?",
+          "choices": [
+            "git push n'envoie pas les tags par défaut",
+            "Les tags sont privés",
+            "Il faut attendre une heure",
+            "Le tag doit d'abord être fusionné"
+          ],
+          "answerIndex": 0,
+          "explanation": "git push origin v1.4.0, ou la configuration push.followTags true.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-tags-q4",
+          "prompt": "Le tag v2.0.0, déjà publié, pointe vers le mauvais commit. Que faire ?",
+          "choices": [
+            "Publier une version corrective v2.0.1 plutôt que de déplacer le tag",
+            "Le déplacer en force et ne rien dire",
+            "Supprimer toutes les versions",
+            "Renommer le dépôt"
+          ],
+          "answerIndex": 0,
+          "explanation": "Deux personnes ne doivent jamais avoir deux contenus différents sous le même numéro de version.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-tags-q5",
+          "prompt": "Que renvoie git describe sur un commit situé 3 commits après le tag v1.4.0 ?",
+          "choices": [
+            "v1.4.0-3-g suivi du hash court du commit",
+            "v1.4.3",
+            "v1.4.0",
+            "3"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pratique pour donner un numéro de version unique à un build intermédiaire.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "git-tags-q6",
+          "prompt": "Pourquoi tagger les versions ?",
+          "choices": [
+            "Retrouver exactement le code d'une version livrée",
+            "Déclencher le pipeline de publication",
+            "Générer les notes de version entre deux tags",
+            "Remplacer les branches"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "git log v1.3.0..v1.4.0 liste ce qui a changé entre deux versions.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "git-submodules",
+      "title": "Sous-modules et subtree",
+      "summary": "Inclure un autre dépôt.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les sous-modules",
+          "body": "Un sous-module inclut un autre dépôt dans un dossier. Le dépôt parent enregistre son URL (dans .gitmodules) et le hash exact du commit utilisé : pas une branche, un commit précis. Après un clone ou un pull, il faut récupérer ce commit : git clone --recurse-submodules, ou git submodule update --init --recursive.",
+          "code": "git submodule add https://ex.fr/moteur.git libs/moteur\ngit clone --recurse-submodules https://ex.fr/app.git\ngit submodule update --init --recursive"
+        },
+        {
+          "title": "Les pièges",
+          "body": "Dans un sous-module, on est par défaut en HEAD détaché : un commit fait sans créer de branche se perd facilement. Mettre à jour le sous-module, c'est aussi commiter le nouveau hash dans le parent. Et il faut pousser le sous-module avant le parent : sinon le parent référence un commit que personne d'autre ne peut récupérer."
+        },
+        {
+          "title": "subtree et alternatives",
+          "body": "git subtree copie le code de l'autre dépôt directement dans le parent, avec son historique : les utilisateurs du dépôt n'ont rien de particulier à faire, au prix d'un dépôt plus gros et de synchronisations plus manuelles. Souvent, la meilleure option reste de publier la bibliothèque comme un paquet versionné (npm, Maven, NuGet)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-submodules-q1",
+          "prompt": "Que stocke le dépôt parent pour un sous-module ?",
+          "choices": [
+            "Son URL (dans .gitmodules) et le hash du commit exact utilisé",
+            "Une copie de tous ses fichiers",
+            "Le nom de sa branche principale uniquement",
+            "Rien, tout est dans le sous-module"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le parent épingle une version précise : c'est reproductible, mais il faut la mettre à jour explicitement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-submodules-q2",
+          "prompt": "Juste après un clone, le dossier du sous-module est vide. Pourquoi ?",
+          "choices": [
+            "Les sous-modules ne sont pas récupérés par défaut : il faut git submodule update --init",
+            "Le sous-module est corrompu",
+            "Le dossier est dans .gitignore",
+            "Le clone a échoué"
+          ],
+          "answerIndex": 0,
+          "explanation": "git clone --recurse-submodules fait les deux en une fois.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "git-submodules-q3",
+          "prompt": "Complète : cloner avec les sous-modules, ou les récupérer après coup.",
+          "code": "git clone ___ https://ex.fr/app.git\ngit submodule ___ --init --recursive",
+          "answers": [
+            "--recurse-submodules",
+            "update"
+          ],
+          "distractors": [
+            "--all",
+            "sync",
+            "pull"
+          ],
+          "explanation": "git submodule sync existe aussi, mais il met seulement à jour les URL enregistrées.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "git-submodules-q4",
+          "prompt": "En mettant à jour, les collègues obtiennent une erreur : le commit du sous-module est introuvable. Touche la ligne en cause.",
+          "code": "cd libs/moteur\ngit commit -am \"fix: calcul\"\ncd ../..\ngit add libs/moteur\ngit commit -m \"maj moteur\"\ngit push",
+          "bugLines": [
+            2,
+            6
+          ],
+          "explanation": "Le commit du sous-module n'a jamais été poussé : le parent référence un commit qui n'existe que sur cette machine. Il fallait pousser le sous-module d'abord (git push --recurse-submodules=check le vérifie).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "git-submodules-q5",
+          "prompt": "Quelle différence principale entre un sous-module et git subtree ?",
+          "choices": [
+            "subtree copie le code dans le dépôt parent ; le sous-module n'y garde qu'un lien vers un commit d'un autre dépôt",
+            "Aucune, ce sont deux noms pour la même chose",
+            "subtree ne fonctionne qu'avec GitHub",
+            "Le sous-module copie l'historique, pas subtree"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec subtree, un simple clone suffit ; avec un sous-module, chacun doit penser à le mettre à jour.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "git-submodules-q6",
+          "prompt": "Quels sont des pièges classiques des sous-modules ?",
+          "choices": [
+            "Oublier git submodule update après un pull",
+            "Commiter en HEAD détaché dans le sous-module, puis perdre ce travail",
+            "Pousser le parent avant le sous-module",
+            "Ne jamais pouvoir changer de version du sous-module"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Changer de version est simple : on se place sur le commit voulu dans le sous-module, puis on commite le nouveau hash dans le parent.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "git-defi-projets",
+    "title": "Défi entretien : une bibliothèque partagée",
+    "summary": "Paquets, sous-modules et versions.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "git-defi-projets-q1",
+        "prompt": "Cas pratique 1/3 — Trois applications utilisent une bibliothèque interne, copiée à la main dans chaque dépôt. Quelle solution est la plus simple à maintenir ?",
+        "choices": [
+          "Publier la bibliothèque comme un paquet versionné dans un registre interne",
+          "Continuer les copies manuelles",
+          "Fusionner les trois applications en une seule",
+          "Envoyer la bibliothèque par e-mail à chaque version"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque application choisit sa version dans son fichier de dépendances, avec l'outillage habituel.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi-projets-q2",
+        "prompt": "Cas pratique 2/3 — Le registre de paquets n'est pas une option. Quand préférer un sous-module à un subtree ?",
+        "choices": [
+          "Quand on veut épingler un commit précis et garder des historiques séparés, en acceptant une étape de mise à jour",
+          "Quand les utilisateurs ne doivent rien apprendre de nouveau",
+          "Quand on veut un dépôt le plus gros possible",
+          "Jamais"
+        ],
+        "answerIndex": 0,
+        "explanation": "subtree est plus transparent pour les utilisateurs ; le sous-module garde les dépôts nettement séparés.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "git-defi-projets-q3",
+        "prompt": "Cas pratique 3/3 — La version 3.2.0 de la bibliothèque est prête. Comment la marquer ?",
+        "choices": [
+          "git tag -a v3.2.0 -m \"Version 3.2.0\", puis git push origin v3.2.0",
+          "Créer une branche v3.2.0",
+          "git commit -m \"v3.2.0\"",
+          "Renommer main en v3.2.0"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un tag annoté, poussé explicitement.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "git-defi-projets-q4",
+        "prompt": "Le pipeline de publication, déclenché par les tags de version poussés, ne démarre pas. Touche une ligne en cause.",
+        "code": "git tag v3.2.0\ngit push",
+        "bugLines": [
+          1,
+          2
+        ],
+        "explanation": "Le tag est léger (sans -a ni message) et git push ne l'envoie pas : il faut git tag -a … puis git push origin v3.2.0.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "git-defi-projets-q5",
+        "prompt": "Remets dans l'ordre la publication d'une version.",
+        "lines": [
+          "git switch main",
+          "git pull",
+          "git tag -a v3.2.0 -m \"Version 3.2.0\"",
+          "git push origin v3.2.0"
+        ],
+        "explanation": "On tague le main à jour, celui qui a passé la CI.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "git-defi-projets-q6",
+        "prompt": "Quelles sont de bonnes pratiques de versionnement ?",
+        "choices": [
+          "Des tags annotés pour les versions publiées",
+          "Le versionnement sémantique",
+          "Ne jamais déplacer un tag publié",
+          "Réutiliser un numéro de version pour corriger une release"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un numéro de version doit désigner un contenu unique et immuable.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

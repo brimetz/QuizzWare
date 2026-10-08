@@ -1,0 +1,450 @@
+{
+  "id": "go-ch-stdlib",
+  "title": "La bibliothèque standard",
+  "summary": "io, JSON et HTTP.",
+  "lessons": [
+    {
+      "id": "go-io",
+      "title": "io.Reader et io.Writer",
+      "summary": "Des flux composables.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Deux petites interfaces",
+          "body": "io.Reader n'a qu'une méthode : Read(p []byte) (n int, err error), qui remplit p avec au plus len(p) octets. io.Writer a Write(p []byte). Fichiers, connexions réseau, corps de requêtes HTTP, tampons mémoire, compresseurs : tout les implémente, et tout se combine.",
+          "code": "type Reader interface {\n    Read(p []byte) (n int, err error)\n}\ntype Writer interface {\n    Write(p []byte) (n int, err error)\n}"
+        },
+        {
+          "title": "Lire correctement",
+          "body": "Read peut renvoyer moins d'octets que demandé : seuls p[:n] sont valides. Il peut renvoyer n > 0 et io.EOF dans le même appel : on traite d'abord les n octets, puis l'erreur. En pratique, on passe par des aides : io.Copy, io.ReadAll, bufio.Scanner pour lire ligne par ligne.",
+          "code": "sc := bufio.NewScanner(f)\nfor sc.Scan() {\n    traiter(sc.Text())\n}\nif err := sc.Err(); err != nil {\n    return err\n}"
+        },
+        {
+          "title": "Composer",
+          "body": "On empile les flux comme des tuyaux : gzip.NewWriter(f) compresse ce qu'on y écrit avant de l'envoyer au fichier, io.TeeReader copie ce qu'on lit vers un hash, io.MultiReader enchaîne plusieurs sources. Une fonction qui accepte un io.Reader plutôt qu'un nom de fichier se teste avec strings.NewReader."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-io-q1",
+          "prompt": "Pourquoi io.Reader est-il si répandu en Go ?",
+          "choices": [
+            "Une seule méthode : fichiers, réseau, compression et mémoire l'implémentent et se combinent",
+            "C'est la seule façon de lire un fichier",
+            "Il est plus rapide que les tableaux",
+            "Il charge toujours tout le contenu en mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les petites interfaces sont le cœur du style Go : plus une interface est petite, plus elle a d'implémentations.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-io-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "r := strings.NewReader(\"a\\nbb\\nccc\")\nsc := bufio.NewScanner(r)\nn := 0\nfor sc.Scan() {\n    n += len(sc.Text())\n}\nfmt.Println(n)",
+          "choices": [
+            "6",
+            "8",
+            "3",
+            "9"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le Scanner découpe en lignes et retire le retour à la ligne : 1 + 2 + 3 = 6.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "go-io-q3",
+          "prompt": "Le traitement reçoit parfois des octets en trop. Touche la ligne en cause.",
+          "code": "buf := make([]byte, 1024)\nfor {\n    n, err := r.Read(buf)\n    traiter(buf)\n    if err == io.EOF {\n        break\n    }\n    if err != nil {\n        return err\n    }\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Seuls les n premiers octets sont valides : il faut traiter(buf[:n]). Le reste contient les données d'une lecture précédente.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "go-io-q4",
+          "prompt": "Complète : enregistrer une page web dans un fichier f.",
+          "code": "resp, err := http.Get(url)\nif err != nil {\n    return err\n}\ndefer resp.Body.___()\n_, err = io.___(f, resp.Body)",
+          "answers": [
+            "Close",
+            "Copy"
+          ],
+          "distractors": [
+            "Flush",
+            "ReadAll",
+            "Write"
+          ],
+          "explanation": "io.Copy transfère par blocs sans tout charger en mémoire ; le corps de la réponse doit toujours être fermé.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-io-q5",
+          "prompt": "Comment écrire un fichier compressé en gzip ?",
+          "choices": [
+            "Créer zw := gzip.NewWriter(f), écrire dans zw, puis fermer zw avant f",
+            "Écrire dans f, puis appeler gzip.Compress(f)",
+            "Renommer le fichier en .gz",
+            "Lire tout le fichier en mémoire et le compresser à la main"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le writer gzip enveloppe le fichier ; le fermer écrit la fin du flux compressé. L'oublier produit une archive tronquée.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "go-io-q6",
+          "prompt": "Quels types implémentent io.Reader ?",
+          "choices": [
+            "*os.File",
+            "*bytes.Buffer",
+            "Le Body d'une *http.Response",
+            "string"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une string n'a pas de méthode Read : on l'enveloppe avec strings.NewReader.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "go-json",
+      "title": "encoding/json",
+      "summary": "Struct tags et décodage.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Marshal et Unmarshal",
+          "body": "json.Marshal transforme une valeur Go en JSON, json.Unmarshal remplit une valeur à partir de JSON ; il faut lui passer un pointeur. Seuls les champs exportés (commençant par une majuscule) sont pris en compte : un champ en minuscule est ignoré, sans erreur.",
+          "code": "type User struct {\n    Nom   string `json:\"nom\"`\n    Email string `json:\"email,omitempty\"`\n    Mdp   string `json:\"-\"`\n}"
+        },
+        {
+          "title": "Les struct tags",
+          "body": "Le tag json:\"nom\" fixe le nom du champ dans le JSON. omitempty omet le champ s'il a sa valeur zéro (\"\", 0, nil). json:\"-\" exclut le champ, utile pour un secret. À la lecture, les champs JSON inconnus sont ignorés par défaut, et la correspondance des noms ne tient pas compte de la casse."
+        },
+        {
+          "title": "Flux et valeurs inconnues",
+          "body": "json.NewDecoder lit directement depuis un io.Reader, comme le corps d'une requête ; DisallowUnknownFields rejette les champs inattendus. Décodé dans une map[string]any, un nombre JSON devient un float64 : on préfère une struct, ou json.Number si les grands entiers comptent."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-json-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "type User struct {\n    Nom   string `json:\"nom\"`\n    email string\n    Age   int `json:\"age,omitempty\"`\n}\n\nb, _ := json.Marshal(User{\"Ana\", \"a@x.fr\", 0})\nfmt.Println(string(b))",
+          "choices": [
+            "{\"nom\":\"Ana\"}",
+            "{\"nom\":\"Ana\",\"email\":\"a@x.fr\"}",
+            "{\"nom\":\"Ana\",\"age\":0}",
+            "{\"Nom\":\"Ana\",\"email\":\"a@x.fr\",\"Age\":0}"
+          ],
+          "answerIndex": 0,
+          "explanation": "email n'est pas exporté, donc ignoré ; Age vaut 0 et omitempty l'omet.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "go-json-q2",
+          "prompt": "Le port lu vaut toujours 0, alors que le JSON contient \"port\": 8080. Touche la ligne en cause.",
+          "code": "type Config struct {\n    port int    `json:\"port\"`\n    Host string `json:\"host\"`\n}\n\nvar c Config\njson.Unmarshal(data, &c)\nfmt.Println(c.port)",
+          "bugLines": [
+            2
+          ],
+          "explanation": "encoding/json n'accède qu'aux champs exportés : il faut Port. Le tag ne suffit pas. (Et l'erreur de Unmarshal devrait être vérifiée.)",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-json-q3",
+          "prompt": "On décode {\"n\": 3} dans une map[string]any. Quel est le type dynamique de m[\"n\"] ?",
+          "choices": [
+            "float64",
+            "int",
+            "string",
+            "json.Number"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans type cible, tout nombre JSON devient float64. Au-delà de 2⁵³, des entiers perdent en précision : d'où les structs typées ou UseNumber.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "go-json-q4",
+          "prompt": "Complète : le JSON doit utiliser « id » et omettre le prix quand il vaut 0.",
+          "code": "type Produit struct {\n    ID   int     `___:\"id\"`\n    Prix float64 `json:\"prix,___\"`\n}",
+          "answers": [
+            "json",
+            "omitempty"
+          ],
+          "distractors": [
+            "JSON",
+            "optional",
+            "skip"
+          ],
+          "explanation": "La clé du tag est json, en minuscules ; les options suivent le nom, séparées par des virgules.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-json-q5",
+          "prompt": "Pourquoi écrit-on json.Unmarshal(data, &c) et non json.Unmarshal(data, c) ?",
+          "choices": [
+            "Unmarshal doit modifier c : sans pointeur, il renvoie une erreur (InvalidUnmarshalError)",
+            "Par convention seulement",
+            "Pour aller plus vite",
+            "Parce que c est une interface"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une valeur passée sans pointeur serait une copie : rien ne remonterait à l'appelant.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "go-json-q6",
+          "prompt": "Quelles affirmations sur encoding/json sont vraies ?",
+          "choices": [
+            "Seuls les champs exportés sont encodés et décodés",
+            "Les noms JSON se règlent avec les struct tags",
+            "Les champs JSON inconnus sont ignorés par défaut",
+            "Une chaîne reçue pour un champ int est ignorée sans erreur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un type incompatible produit une *json.UnmarshalTypeError.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "go-http",
+      "title": "Serveur HTTP",
+      "summary": "net/http et ses handlers.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Handlers et routage",
+          "body": "Un handler implémente ServeHTTP(w http.ResponseWriter, r *http.Request), ou s'écrit comme une simple fonction avec HandleFunc. Depuis Go 1.22, le ServeMux standard accepte la méthode et des paramètres dans le motif : « GET /users/{id} », lus avec r.PathValue(\"id\").",
+          "code": "mux := http.NewServeMux()\nmux.HandleFunc(\"GET /users/{id}\",\n    func(w http.ResponseWriter, r *http.Request) {\n        fmt.Fprintf(w, \"user %s\", r.PathValue(\"id\"))\n    })\nhttp.ListenAndServe(\":8080\", mux)"
+        },
+        {
+          "title": "Une goroutine par requête",
+          "body": "Le serveur traite chaque requête dans sa propre goroutine : un état partagé entre handlers doit être protégé. Le statut s'écrit avec w.WriteHeader avant le corps ; le premier Write envoie implicitement 200. Après http.Error, il faut un return, sinon le handler continue."
+        },
+        {
+          "title": "Les délais",
+          "body": "http.ListenAndServe n'impose aucun délai : un client lent garde une connexion ouverte indéfiniment. En production, on configure un http.Server avec ReadHeaderTimeout, ReadTimeout, WriteTimeout et IdleTimeout. Côté client, http.DefaultClient n'a pas de délai non plus : on crée un http.Client{Timeout: …} ou on passe un context.",
+          "code": "srv := &http.Server{\n    Addr:              \":8080\",\n    Handler:           mux,\n    ReadHeaderTimeout: 5 * time.Second,\n    WriteTimeout:      10 * time.Second,\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "go-http-q1",
+          "prompt": "Complète ce serveur.",
+          "code": "mux := http.NewServeMux()\nmux.HandleFunc(\"GET /users/{id}\",\n    func(w http.ResponseWriter, r *http.Request) {\n        id := r.___(\"id\")\n        fmt.Fprintf(w, \"user %s\", id)\n    })\nhttp.ListenAndServe(\":8080\", ___)",
+          "answers": [
+            "PathValue",
+            "mux"
+          ],
+          "distractors": [
+            "FormValue",
+            "nil",
+            "Param"
+          ],
+          "explanation": "Avec nil, le serveur utiliserait http.DefaultServeMux, où la route n'est pas enregistrée. FormValue lit la query string ou le formulaire, pas le chemin.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-http-q2",
+          "prompt": "net/http traite chaque requête dans sa propre goroutine. Conséquence pour un compteur de visites global ?",
+          "choices": [
+            "Il doit être protégé (mutex ou atomic), sinon les accès concurrents le corrompent",
+            "Aucune, les requêtes sont traitées l'une après l'autre",
+            "Il faut un compteur par goroutine",
+            "Le compteur est copié automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "go test -race ou go run -race détecte ce genre de course dans les handlers.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "go-http-q3",
+          "prompt": "Un JSON invalide est quand même enregistré. Touche la ligne en cause.",
+          "code": "func creer(w http.ResponseWriter, r *http.Request) {\n    var c Commande\n    err := json.NewDecoder(r.Body).Decode(&c)\n    if err != nil {\n        http.Error(w, \"JSON invalide\", 400)\n    }\n    enregistrer(c)\n    w.WriteHeader(201)\n}",
+          "bugLines": [
+            5,
+            6
+          ],
+          "explanation": "http.Error écrit la réponse mais ne termine pas la fonction : il manque return après.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-http-q4",
+          "prompt": "Quel est le risque de http.Get(url) dans un service en production ?",
+          "choices": [
+            "Le client par défaut n'a pas de délai : un serveur qui ne répond pas bloque la goroutine indéfiniment",
+            "http.Get ne gère pas HTTPS",
+            "http.Get ne suit pas les redirections",
+            "Aucun risque"
+          ],
+          "answerIndex": 0,
+          "explanation": "On utilise un http.Client avec Timeout, ou une requête créée avec NewRequestWithContext et un context à échéance.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "go-http-q5",
+          "prompt": "Quel code HTTP reçoit le client ?",
+          "code": "func h(w http.ResponseWriter, r *http.Request) {\n    fmt.Fprint(w, \"créé\")\n    w.WriteHeader(201)\n}",
+          "choices": [
+            "200",
+            "201",
+            "500",
+            "204"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le premier Write envoie les en-têtes avec un statut 200 implicite ; le WriteHeader suivant est ignoré (le serveur journalise « superfluous WriteHeader call »).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "go-http-q6",
+          "prompt": "Que configurer sur un http.Server de production ?",
+          "choices": [
+            "ReadHeaderTimeout ou ReadTimeout",
+            "WriteTimeout",
+            "IdleTimeout",
+            "Un GOMAXPROCS par requête"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Sans délais, des clients lents (volontairement, comme l'attaque Slowloris) épuisent les connexions.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "go-defi-stdlib",
+    "title": "Défi entretien : une API en Go",
+    "summary": "Se protéger des requêtes abusives.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "go-defi-stdlib-q1",
+        "prompt": "Cas pratique 1/3 — Un client malveillant envoie un corps JSON de 5 Go à un handler. Que faire ?",
+        "choices": [
+          "Limiter la taille du corps avec http.MaxBytesReader avant de décoder",
+          "Lire tout le corps avec io.ReadAll, puis vérifier sa taille",
+          "Augmenter la mémoire du serveur",
+          "Rien, json.Decoder s'arrête tout seul"
+        ],
+        "answerIndex": 0,
+        "explanation": "MaxBytesReader renvoie une erreur dès que la limite est dépassée, sans tout charger en mémoire.",
+        "difficulty": 2
+      },
+      {
+        "type": "fill",
+        "id": "go-defi-stdlib-q2",
+        "prompt": "Cas pratique 2/3 — Complète : limiter à 1 Mo et refuser les champs inconnus.",
+        "code": "r.Body = http.___(w, r.Body, 1<<20)\ndec := json.NewDecoder(r.Body)\ndec.___()\nif err := dec.Decode(&req); err != nil {\n    http.Error(w, err.Error(), 400)\n    return\n}",
+        "answers": [
+          "MaxBytesReader",
+          "DisallowUnknownFields"
+        ],
+        "distractors": [
+          "LimitReader",
+          "Strict",
+          "ReadAll"
+        ],
+        "explanation": "io.LimitReader existe, mais tronque silencieusement au lieu de signaler l'erreur ; MaxBytesReader prévient aussi le serveur de fermer la connexion.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-stdlib-q3",
+        "prompt": "Cas pratique 3/3 — Pourquoi refuser les champs inconnus ?",
+        "choices": [
+          "Un champ mal orthographié (« quantite » au lieu de « quantité ») serait sinon ignoré silencieusement",
+          "Pour accélérer le décodage",
+          "C'est obligatoire en HTTP",
+          "Pour économiser la mémoire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le client reçoit une erreur 400 claire au lieu d'un comportement inattendu.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-stdlib-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "r := io.MultiReader(\n    strings.NewReader(\"ab\"),\n    strings.NewReader(\"cd\"))\nb, _ := io.ReadAll(r)\nfmt.Println(string(b), len(b))",
+        "choices": [
+          "abcd 4",
+          "ab 2",
+          "cd 2",
+          "ab cd 5"
+        ],
+        "answerIndex": 0,
+        "explanation": "MultiReader lit chaque source jusqu'à sa fin, puis passe à la suivante.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "go-defi-stdlib-q5",
+        "prompt": "Remets dans l'ordre un handler de création.",
+        "lines": [
+          "func creer(w http.ResponseWriter, r *http.Request) {",
+          "    var c Commande",
+          "    if err := json.NewDecoder(r.Body).Decode(&c); err != nil {",
+          "        http.Error(w, \"JSON invalide\", 400)",
+          "        return",
+          "    }",
+          "    w.WriteHeader(http.StatusCreated)",
+          "    json.NewEncoder(w).Encode(c)",
+          "}"
+        ],
+        "explanation": "Le statut s'écrit avant le corps : après le premier Write, il serait trop tard.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "go-defi-stdlib-q6",
+        "prompt": "Revue de code : coche tous les problèmes de ce client.",
+        "code": "func statut(url string) int {\n    resp, err := http.Get(url)\n    if err != nil {\n        return 0\n    }\n    return resp.StatusCode\n}",
+        "choices": [
+          "Le corps n'est jamais fermé : la connexion n'est pas réutilisée et fuit",
+          "http.Get utilise un client sans délai",
+          "Aucun context : impossible d'annuler l'appel",
+          "StatusCode n'existe pas sur la réponse"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "On crée la requête avec NewRequestWithContext, on l'envoie avec un client à délai, et on fait defer resp.Body.Close().",
+        "difficulty": 3
+      }
+    ]
+  }
+}

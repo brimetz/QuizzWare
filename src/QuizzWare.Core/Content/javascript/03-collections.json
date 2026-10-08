@@ -1,0 +1,330 @@
+{
+  "id": "js-ch-collections",
+  "title": "Collections et itération",
+  "summary": "Tableaux, Map, Set et générateurs.",
+  "lessons": [
+    {
+      "id": "js-tableaux",
+      "title": "Méthodes de tableaux",
+      "summary": "map, filter, reduce et mutations.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Transformer sans modifier",
+          "body": "map transforme chaque élément, filter garde ceux qui passent un test, reduce les combine en une valeur, find renvoie le premier qui correspond, some et every répondent par un booléen. Toutes renvoient un nouveau résultat et laissent le tableau d'origine intact : on peut les enchaîner.",
+          "code": "const prix = [12, 5, 30];\nconst total = prix\n  .filter((p) => p > 10)\n  .map((p) => p * 2)\n  .reduce((s, p) => s + p, 0);\n// 84"
+        },
+        {
+          "title": "Les méthodes qui modifient",
+          "body": "sort, reverse, splice, push, pop, shift et fill modifient le tableau sur place. Trier le tableau reçu en paramètre modifie donc celui de l'appelant. Depuis ES2023, toSorted, toReversed, toSpliced et with renvoient une copie modifiée ; sinon, on copie d'abord avec [...arr]."
+        },
+        {
+          "title": "Les pièges",
+          "body": "Sans fonction de comparaison, sort compare des chaînes : [10, 9, 1].sort() donne [1, 10, 9]. reduce sans valeur initiale lève une TypeError sur un tableau vide. forEach ne peut pas être interrompu et n'attend pas les fonctions async : pour du code asynchrone séquentiel, on utilise for...of avec await.",
+          "code": "[10, 9, 1].sort();               // [1, 10, 9]\n[10, 9, 1].sort((a, b) => a - b); // [1, 9, 10]"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-tableaux-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "console.log([10, 9, 1, 100].sort());",
+          "choices": [
+            "[1, 10, 100, 9]",
+            "[1, 9, 10, 100]",
+            "[100, 10, 9, 1]",
+            "[10, 9, 1, 100]"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans comparateur, les éléments sont convertis en chaînes et comparés dans l'ordre lexicographique : « 100 » < « 9 ».",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-tableaux-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const prix = [12, 5, 30];\nconst total = prix\n  .filter((p) => p > 10)\n  .map((p) => p * 2)\n  .reduce((s, p) => s + p, 0);\nconsole.log(total);",
+          "choices": [
+            "84",
+            "94",
+            "42",
+            "47"
+          ],
+          "answerIndex": 0,
+          "explanation": "On garde 12 et 30, on les double (24 et 60), puis on additionne.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "js-tableaux-q3",
+          "prompt": "Le tableau de l'appelant ne doit pas changer, mais il change. Touche la ligne en cause.",
+          "code": "function trier(notes) {\n  return notes.sort((a, b) => a - b);\n}\nconst notes = [15, 8, 12];\nconst triees = trier(notes);\nconsole.log(notes); // attendu : [15, 8, 12]",
+          "bugLines": [
+            2
+          ],
+          "explanation": "sort trie sur place et renvoie le même tableau. On écrit notes.toSorted(...) ou [...notes].sort(...).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "js-tableaux-q4",
+          "prompt": "Complète : tous les utilisateurs actifs, puis le premier administrateur.",
+          "code": "const actifs = users.___((u) => u.actif);\nconst premier = users.___((u) => u.admin);",
+          "answers": [
+            "filter",
+            "find"
+          ],
+          "distractors": [
+            "map",
+            "some",
+            "forEach"
+          ],
+          "explanation": "filter renvoie un tableau ; find renvoie un élément (ou undefined) ; some ne renverrait qu'un booléen.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-tableaux-q5",
+          "prompt": "Que se passe-t-il ?",
+          "code": "const total = [].reduce((s, x) => s + x);",
+          "choices": [
+            "Une TypeError : reduce d'un tableau vide sans valeur initiale",
+            "total vaut 0",
+            "total vaut undefined",
+            "total vaut NaN"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans valeur initiale, reduce prend le premier élément comme accumulateur ; il n'y en a pas. Avec reduce(..., 0), total vaudrait 0.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "js-tableaux-q6",
+          "prompt": "Quelles méthodes modifient le tableau d'origine ?",
+          "choices": [
+            "sort",
+            "reverse",
+            "splice",
+            "toSorted"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "toSorted, toReversed et toSpliced sont leurs équivalents non mutants.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "js-iterateurs",
+      "title": "Map, Set et générateurs",
+      "summary": "Le protocole d'itération.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Map et Set",
+          "body": "Une Map associe des clés de n'importe quel type (objets compris) à des valeurs, garde l'ordre d'insertion et connaît sa taille (size). Un Set contient des valeurs uniques. Les objets sont comparés par référence : deux objets littéraux identiques sont deux clés différentes. [...new Set(tableau)] supprime les doublons.",
+          "code": "const vus = new Set([\"a\", \"b\", \"a\"]);\nvus.size;          // 2\n\nconst stock = new Map();\nstock.set(\"pomme\", 3);\nstock.get(\"pomme\"); // 3"
+        },
+        {
+          "title": "Le protocole d'itération",
+          "body": "Un objet est itérable s'il a une méthode Symbol.iterator qui renvoie un itérateur, dont next() renvoie { value, done }. Tableaux, chaînes, Map, Set en sont. for...of, l'opérateur ... et la déstructuration s'appuient dessus. À ne pas confondre avec for...in, qui parcourt les noms de propriétés (les indices, en chaînes, pour un tableau)."
+        },
+        {
+          "title": "Les générateurs",
+          "body": "Une fonction function* renvoie un générateur : à chaque appel de next(), elle reprend jusqu'au yield suivant. Les valeurs sont produites à la demande, ce qui permet des séquences très longues, voire infinies, sans tout calculer à l'avance.",
+          "code": "function* compter() {\n  let i = 0;\n  while (true) yield i++;\n}\nconst it = compter();\nit.next().value; // 0\nit.next().value; // 1"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-iterateurs-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const s = new Set([1, 2, 2, \"2\", NaN, NaN]);\nconsole.log(s.size);",
+          "choices": [
+            "4",
+            "3",
+            "5",
+            "6"
+          ],
+          "answerIndex": 0,
+          "explanation": "1, 2, \"2\" et NaN. Le nombre 2 et la chaîne \"2\" sont différents ; pour un Set, NaN est égal à NaN (algorithme SameValueZero).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "js-iterateurs-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const m = new Map();\nm.set({ id: 1 }, \"a\");\nconsole.log(m.get({ id: 1 }));",
+          "choices": [
+            "undefined",
+            "a",
+            "Une erreur",
+            "{ id: 1 }"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux objets littéraux sont deux références différentes : il faut réutiliser le même objet pour retrouver l'entrée.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "js-iterateurs-q3",
+          "prompt": "Complète : un tableau sans doublons.",
+          "code": "const uniques = [___new ___(tags)];",
+          "answers": [
+            "...",
+            "Set"
+          ],
+          "distractors": [
+            "Map",
+            "Array",
+            "&"
+          ],
+          "explanation": "Le Set élimine les doublons, l'opérateur ... le reconvertit en tableau, dans l'ordre de première apparition.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-iterateurs-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "function* compter() {\n  let i = 0;\n  while (true) yield i++;\n}\nconst it = compter();\nit.next();\nconsole.log(it.next().value, it.next().value);",
+          "choices": [
+            "1 2",
+            "0 1",
+            "0 0",
+            "Le programme boucle à l'infini"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le premier next() consomme 0. La boucle infinie ne pose pas de problème : le générateur s'arrête à chaque yield.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "js-iterateurs-q5",
+          "prompt": "Ce code affiche « 0 » et « 1 » au lieu des noms de fruits. Touche la ligne en cause.",
+          "code": "const fruits = [\"pomme\", \"poire\"];\nfor (const f in fruits) {\n  console.log(f.toUpperCase());\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "for...in parcourt les clés (les indices, sous forme de chaînes). for...of parcourt les valeurs.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "js-iterateurs-q6",
+          "prompt": "Quels avantages a une Map sur un objet simple pour un dictionnaire ?",
+          "choices": [
+            "Les clés peuvent être de n'importe quel type",
+            "size donne directement le nombre d'entrées",
+            "Aucune collision avec des propriétés héritées comme toString",
+            "JSON.stringify la sérialise directement"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "JSON.stringify(new Map(...)) donne {} : on passe par Object.fromEntries(map).",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "js-defi-collections",
+    "title": "Défi entretien : totaux par client",
+    "summary": "Map, itération et sérialisation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "js-defi-collections-q1",
+        "prompt": "Cas pratique 1/3 — Un tableau de 50 000 commandes { client, montant }. Comment calculer le total par client ?",
+        "choices": [
+          "Un seul parcours qui cumule dans une Map client → total",
+          "Pour chaque client, un filter puis un reduce sur tout le tableau",
+          "Trier puis comparer chaque commande avec toutes les autres",
+          "Un Set des montants"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un passage en O(n) ; un filter par client donnerait O(n × clients).",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "js-defi-collections-q2",
+        "prompt": "Cas pratique 2/3 — Remets le code dans l'ordre.",
+        "lines": [
+          "const totaux = new Map();",
+          "for (const { client, montant } of commandes) {",
+          "  const actuel = totaux.get(client) ?? 0;",
+          "  totaux.set(client, actuel + montant);",
+          "}"
+        ],
+        "explanation": "?? 0 donne une valeur de départ aux clients pas encore vus.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi-collections-q3",
+        "prompt": "Cas pratique 3/3 — L'API doit renvoyer un objet JSON. Que donne JSON.stringify(totaux) ?",
+        "choices": [
+          "{} : une Map n'est pas sérialisée, il faut Object.fromEntries(totaux)",
+          "Un objet avec un client par propriété",
+          "Un tableau de paires",
+          "Une erreur"
+        ],
+        "answerIndex": 0,
+        "explanation": "JSON.stringify ne voit que les propriétés propres énumérables ; les entrées d'une Map n'en sont pas.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "js-defi-collections-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "const a = [1, 2, 3];\nconst b = a;\nb.push(4);\nconst c = [...a];\nc.push(5);\nconsole.log(a.length, c.length);",
+        "choices": [
+          "4 5",
+          "3 5",
+          "4 4",
+          "3 4"
+        ],
+        "answerIndex": 0,
+        "explanation": "b est le même tableau que a ; c est une copie, indépendante.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "js-defi-collections-q5",
+        "prompt": "« tout est envoyé » s'affiche avant la fin des envois. Touche la ligne en cause.",
+        "code": "async function envoyerTous(messages) {\n  messages.forEach(async (m) => {\n    await envoyer(m);\n  });\n  console.log(\"tout est envoyé\");\n}",
+        "bugLines": [
+          2
+        ],
+        "explanation": "forEach ignore les promesses renvoyées par le callback. On écrit for (const m of messages) await envoyer(m); ou await Promise.all(messages.map(envoyer)).",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "js-defi-collections-q6",
+        "prompt": "Quelles expressions renvoient un nouveau tableau sans modifier arr ?",
+        "choices": [
+          "arr.toSorted()",
+          "[...arr].reverse()",
+          "arr.map((x) => x)",
+          "arr.sort()"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "[...arr].reverse() modifie la copie, pas arr.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

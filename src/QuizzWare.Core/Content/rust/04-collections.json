@@ -1,0 +1,326 @@
+{
+  "id": "rust-ch-collections",
+  "title": "Collections et chaînes",
+  "summary": "Vec, HashMap, String et &str.",
+  "lessons": [
+    {
+      "id": "rust-vec-hashmap",
+      "title": "Vec et HashMap",
+      "summary": "Les collections de base.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Vec<T>",
+          "body": "Un Vec<T> stocke des éléments du même type, contigus sur le tas, et grandit avec push. v[i] panique si l'indice est hors limites ; v.get(i) renvoie une Option<&T>, à préférer quand l'indice vient de l'extérieur. Le Vec possède ses éléments : quand il est détruit, eux aussi.",
+          "code": "let mut v = vec![10, 20, 30];\nv.push(40);\nmatch v.get(10) {\n    Some(x) => println!(\"{x}\"),\n    None => println!(\"absent\"),\n}"
+        },
+        {
+          "title": "Emprunts et réallocation",
+          "body": "Tant qu'une référence vers un élément est vivante, on ne peut pas modifier le Vec : un push peut réallouer le tableau et déplacer les éléments, ce qui rendrait la référence pendante. Le vérificateur d'emprunts refuse ce code à la compilation, là où C++ aurait un comportement indéfini."
+        },
+        {
+          "title": "HashMap<K, V>",
+          "body": "insert ajoute ou remplace, get renvoie une Option<&V>. L'API entry évite une double recherche : entry(cle).or_insert(defaut) renvoie une référence mutable vers la valeur, existante ou créée. Une HashMap prend possession des clés et valeurs insérées : une String insérée n'est plus utilisable ensuite.",
+          "code": "let mut compte = HashMap::new();\nfor mot in texte.split_whitespace() {\n    *compte.entry(mot).or_insert(0) += 1;\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-vec-hashmap-q1",
+          "prompt": "Que se passe-t-il à l'exécution ?",
+          "code": "let v = vec![10, 20, 30];\nprintln!(\"{:?}\", v.get(5));\nprintln!(\"{}\", v[5]);",
+          "choices": [
+            "None s'affiche, puis le programme panique (index hors limites)",
+            "None, puis 0",
+            "Deux paniques",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "get renvoie None sans paniquer ; l'indexation directe vérifie les bornes et panique.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "rust-vec-hashmap-q2",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "let mut v = vec![1, 2, 3];\nlet premier = &v[0];\nv.push(4);\nprintln!(\"{premier}\");",
+          "bugLines": [
+            3
+          ],
+          "explanation": "push emprunte v mutablement alors que premier l'emprunte encore : push pourrait réallouer et rendre premier pendante. Il faut utiliser premier avant le push, ou copier la valeur (let premier = v[0];).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "rust-vec-hashmap-q3",
+          "prompt": "Complète : compter les occurrences de chaque mot.",
+          "code": "let mut compte = HashMap::new();\nfor mot in texte.split_whitespace() {\n    *compte.___(mot).___(0) += 1;\n}",
+          "answers": [
+            "entry",
+            "or_insert"
+          ],
+          "distractors": [
+            "get",
+            "insert",
+            "unwrap_or"
+          ],
+          "explanation": "entry trouve ou prépare l'emplacement ; or_insert(0) y place 0 si la clé est nouvelle et renvoie un &mut à incrémenter.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-vec-hashmap-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "let mut m = HashMap::new();\nm.insert(\"a\", 1);\nm.insert(\"a\", 2);\nprintln!(\"{} {:?}\", m.len(), m.get(\"a\"));",
+          "choices": [
+            "1 Some(2)",
+            "2 Some(1)",
+            "1 Some(1)",
+            "2 Some(2)"
+          ],
+          "answerIndex": 0,
+          "explanation": "insert remplace la valeur d'une clé existante (et renvoie l'ancienne, Some(1)).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-vec-hashmap-q5",
+          "prompt": "Après map.insert(cle, valeur), où cle est une String, peut-on encore utiliser cle ?",
+          "choices": [
+            "Non : la HashMap a pris possession de la String",
+            "Oui, insert la copie",
+            "Oui, mais en lecture seule",
+            "Seulement si la valeur est un entier"
+          ],
+          "answerIndex": 0,
+          "explanation": "String n'est pas Copy : elle est déplacée dans la map. On insère cle.clone() si l'on en a encore besoin.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-vec-hashmap-q6",
+          "prompt": "Quelles affirmations sur Vec sont vraies ?",
+          "choices": [
+            "v[i] panique hors des limites",
+            "v.get(i) renvoie une Option",
+            "Les éléments sont stockés de façon contiguë sur le tas",
+            "Un Vec peut mélanger des éléments de types différents"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Pour mélanger des types, on passe par un enum ou par des Box<dyn Trait>.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "rust-chaines",
+      "title": "String et &str",
+      "summary": "Chaînes possédées et empruntées.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Deux types de chaînes",
+          "body": "String possède son contenu, alloué sur le tas, et peut grandir. &str est une tranche empruntée : une vue sur des octets qui appartiennent à quelqu'un d'autre. Un littéral \"abc\" est un &'static str, inscrit dans le binaire. Une fonction qui ne fait que lire prend un &str : elle accepte les littéraux et, par conversion automatique, les &String.",
+          "code": "fn saluer(nom: &str) -> String {\n    format!(\"Bonjour, {nom} !\")\n}\nsaluer(\"Ana\");\nlet s = String::from(\"Léo\");\nsaluer(&s);"
+        },
+        {
+          "title": "UTF-8, sans indexation",
+          "body": "Les chaînes Rust sont toujours de l'UTF-8 valide. s.len() compte les octets. s[0] ne compile pas : un indice entier ne correspond pas forcément à un caractère. Une tranche &s[a..b] est permise, mais panique si une borne tombe au milieu d'un caractère. Pour les caractères, on utilise s.chars()."
+        },
+        {
+          "title": "Concaténer",
+          "body": "a + &b consomme a (qui est réutilisée comme tampon) et emprunte b : a n'est plus utilisable ensuite. push_str ajoute à une String existante. format! construit une nouvelle String sans rien consommer, c'est souvent le plus lisible."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-chaines-q1",
+          "prompt": "Quel type de paramètre choisir pour une fonction qui lit seulement une chaîne ?",
+          "choices": [
+            "&str : il accepte les littéraux et les &String",
+            "String : c'est le type principal",
+            "&String : plus précis",
+            "Vec<char>"
+          ],
+          "answerIndex": 0,
+          "explanation": "Prendre String forcerait l'appelant à céder ou cloner sa chaîne ; &String refuserait les littéraux.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-chaines-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "let s = String::from(\"héllo\");\nprintln!(\"{} {}\", s.len(), s.chars().count());",
+          "choices": [
+            "6 5",
+            "5 5",
+            "5 6",
+            "6 6"
+          ],
+          "answerIndex": 0,
+          "explanation": "« é » occupe 2 octets en UTF-8 : 6 octets pour 5 caractères.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "rust-chaines-q3",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "let s = String::from(\"bonjour\");\nlet c = s[0];\nprintln!(\"{c}\");",
+          "bugLines": [
+            2
+          ],
+          "explanation": "String ne s'indexe pas par un entier. On écrit s.chars().next() pour le premier caractère, ou s.as_bytes()[0] pour le premier octet.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-chaines-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "let a = String::from(\"Bon\");\nlet b = String::from(\"jour\");\nlet c = a + &b;\nprintln!(\"{c} {b}\");",
+          "choices": [
+            "Bonjour jour",
+            "Une erreur de compilation : b a été déplacée",
+            "Bonjour Bonjour",
+            "Une erreur de compilation : + n'existe pas pour String"
+          ],
+          "answerIndex": 0,
+          "explanation": "+ consomme a et emprunte seulement b. C'est a qui n'est plus utilisable après.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-chaines-q5",
+          "prompt": "Que se passe-t-il ?",
+          "code": "let s = \"été\";\nlet t = &s[0..1];\nprintln!(\"{t}\");",
+          "choices": [
+            "Une panique : l'indice 1 tombe au milieu du caractère « é »",
+            "Le programme affiche é",
+            "Le programme affiche e",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "« é » occupe les octets 0 et 1 : la tranche doit s'arrêter sur une frontière de caractère, ici 2.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "rust-chaines-q6",
+          "prompt": "Complète pour que les deux appels compilent.",
+          "code": "fn saluer(nom: ___) -> String {\n    ___!(\"Bonjour, {nom} !\")\n}\nsaluer(\"Ana\");\nsaluer(&String::from(\"Léo\"));",
+          "answers": [
+            "&str",
+            "format"
+          ],
+          "distractors": [
+            "String",
+            "&String",
+            "print"
+          ],
+          "explanation": "&String refuserait le littéral \"Ana\" ; print! affiche mais renvoie (), pas une String.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "rust-defi-collections",
+    "title": "Défi entretien : compter des mots",
+    "summary": "HashMap, tri et chaînes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "rust-defi-collections-q1",
+        "prompt": "Cas pratique 1/3 — On veut les 3 mots les plus fréquents d'un texte. Quelle approche ?",
+        "choices": [
+          "Une HashMap<&str, usize> remplie avec entry().or_insert(0), puis triée dans un Vec",
+          "Un Vec de tous les mots, trié, puis parcouru trois fois",
+          "Une String concaténant tous les mots",
+          "Un BTreeMap trié par fréquence dès l'insertion"
+        ],
+        "answerIndex": 0,
+        "explanation": "Comptage en O(n), puis tri des mots distincts seulement. Une map triée par clé ne trie pas par fréquence.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "rust-defi-collections-q2",
+        "prompt": "Cas pratique 2/3 — Remets le code dans l'ordre.",
+        "lines": [
+          "let mut compte = HashMap::new();",
+          "for mot in texte.split_whitespace() {",
+          "    *compte.entry(mot).or_insert(0) += 1;",
+          "}",
+          "let mut freq: Vec<_> = compte.into_iter().collect();",
+          "freq.sort_by(|a, b| b.1.cmp(&a.1));",
+          "freq.truncate(3);"
+        ],
+        "explanation": "into_iter consomme la map et produit des paires (mot, nombre) ; le tri compare les nombres dans l'ordre décroissant.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-collections-q3",
+        "prompt": "Cas pratique 3/3 — « Rust » et « rust » doivent compter ensemble. Que change-t-on ?",
+        "choices": [
+          "On insère mot.to_lowercase() : les clés deviennent des String possédées",
+          "Rien, HashMap ignore la casse",
+          "On compare avec == après coup",
+          "On utilise mot.len() comme clé"
+        ],
+        "answerIndex": 0,
+        "explanation": "to_lowercase crée une nouvelle String : la map ne peut plus se contenter d'emprunter des &str du texte.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "rust-defi-collections-q4",
+        "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+        "code": "let mut v = vec![1, 2, 3];\nfor x in &v {\n    if *x == 2 {\n        v.push(4);\n    }\n}",
+        "bugLines": [
+          4
+        ],
+        "explanation": "La boucle emprunte v pendant tout le parcours : impossible de le modifier en même temps. On collecte d'abord ce qu'il faut ajouter, puis on l'ajoute après la boucle.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-collections-q5",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "let mut v = Vec::with_capacity(10);\nv.push(1);\nprintln!(\"{} {}\", v.len(), v.capacity() >= 10);",
+        "choices": [
+          "1 true",
+          "10 true",
+          "1 false",
+          "0 true"
+        ],
+        "answerIndex": 0,
+        "explanation": "La capacité est la place réservée ; la longueur, le nombre d'éléments réellement présents.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "rust-defi-collections-q6",
+        "prompt": "Quelles affirmations sur String et &str sont vraies ?",
+        "choices": [
+          "Un littéral \"abc\" est un &'static str",
+          "Un &String se convertit automatiquement en &str",
+          "s.len() compte les octets",
+          "s[0] renvoie le premier caractère"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "s[0] ne compile pas : on passe par chars() ou as_bytes().",
+        "difficulty": 2
+      }
+    ]
+  }
+}

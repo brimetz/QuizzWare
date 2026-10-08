@@ -519,20 +519,29 @@
 #ch 02 js-ch-objets | Objets et prototypes | Le modèle objet de JavaScript.
 - js-objets | Objets et déstructuration | Spread et rest. | 1
 - js-prototypes | Prototypes et classes | L'héritage prototypal. | 3
-#ch 03 js-ch-asynchrone | Asynchrone | Boucle d'événements, promesses et async/await.
+#ch 03 js-ch-collections | Collections et itération | Tableaux, Map, Set et générateurs.
+- js-tableaux | Méthodes de tableaux | map, filter, reduce et mutations. | 1
+- js-iterateurs | Map, Set et générateurs | Le protocole d'itération. | 2
+#ch 04 js-ch-asynchrone | Asynchrone | Boucle d'événements, promesses et async/await.
 - js-event-loop | La boucle d'événements | Tâches et microtâches. | 3
 - js-promesses | Promesses | then, catch et Promise.all. | 2
 - js-async-await | async / await | Du code asynchrone lisible. | 2
-#ch 04 js-ch-typescript | TypeScript | Typer JavaScript.
+#ch 05 js-ch-erreurs | Erreurs et mémoire | Gérer les erreurs, éviter les fuites.
+- js-erreurs | Gestion des erreurs | try, catch et erreurs asynchrones. | 2
+- js-memoire | Mémoire et fuites | Ramasse-miettes, WeakMap et fuites classiques. | 3
+#ch 06 js-ch-typescript | TypeScript | Typer JavaScript.
 - ts-bases | Types de base | Annotations et inférence. | 1
 - ts-avance | Types avancés | Unions, génériques et types utilitaires. | 3
 - ts-narrowing | Narrowing | Affiner les types. | 2
-#ch 05 js-ch-modules | Modules et outillage | ESM, npm et bundlers.
+#ch 07 js-ch-modules | Modules et outillage | ESM, npm et bundlers.
 - js-modules | Modules | import, export, ESM et CommonJS. | 2
 - js-npm | npm et les dépendances | package.json et versions. | 1
-#ch 06 js-ch-navigateur | Le navigateur | DOM, événements et stockage.
+#ch 08 js-ch-navigateur | Le navigateur | DOM, événements et stockage.
 - js-dom | Le DOM | Sélectionner et modifier la page. | 1
 - js-evenements | Événements | Propagation et délégation. | 2
+#ch 09 js-ch-node | Node.js | JavaScript côté serveur.
+- js-node | Le runtime Node.js | Boucle d'événements, process et modules. | 2
+- js-node-fichiers | Fichiers, flux et HTTP | fs/promises, streams et serveur. | 2
 + js-spe-frontend | Frameworks frontend | Construire des interfaces riches. | FE
 * js-spe-react | React | Composants, hooks, état et rendu. | RCT | techno
 * js-spe-vue | Vue | Composants, réactivité et Composition API. | VUE | techno
@@ -558,19 +567,28 @@
 #ch 02 java-ch-poo | Orienté objet | Héritage, interfaces et records.
 - java-heritage | Héritage et interfaces | abstract et méthodes par défaut. | 2
 - java-records | Records et sealed classes | Le Java moderne. | 2
-#ch 03 java-ch-collections | Collections et génériques | List, Map, Set et Streams.
+#ch 03 java-ch-generiques | Génériques et lambdas | Typer et passer du comportement.
+- java-generiques | Génériques | Effacement de type et jokers. | 3
+- java-lambdas | Lambdas et interfaces fonctionnelles | Function, Supplier et références de méthodes. | 2
+#ch 04 java-ch-collections | Collections et génériques | List, Map, Set et Streams.
 - java-collections | Le framework Collections | Choisir la bonne collection. | 1
 - java-equals-hashcode | equals et hashCode | Le contrat à respecter. | 2
 - java-streams | Streams | map, filter et collect. | 2
-#ch 04 java-ch-exceptions | Exceptions | Checked et unchecked.
+#ch 05 java-ch-exceptions | Exceptions | Checked et unchecked.
 - java-exceptions | Exceptions | try-with-resources et bonnes pratiques. | 1
-#ch 05 java-ch-concurrence | Concurrence | Threads, executors et virtual threads.
+#ch 06 java-ch-api | Fichiers et dates | NIO et java.time.
+- java-fichiers | Fichiers avec NIO | Path, Files et encodages. | 1
+- java-dates | Dates et heures | java.time et ses pièges. | 2
+#ch 07 java-ch-concurrence | Concurrence | Threads, executors et virtual threads.
 - java-threads | Threads et synchronized | Visibilité et verrous. | 3
 - java-executors | Executors et CompletableFuture | La programmation asynchrone. | 3
 - java-virtual-threads | Virtual threads | Le projet Loom. | 2
-#ch 06 java-ch-jvm | La JVM | Mémoire, GC et bytecode.
+#ch 08 java-ch-jvm | La JVM | Mémoire, GC et bytecode.
 - java-memoire | Mémoire et garbage collectors | Heap, stack et GC. | 3
 - java-bytecode | Bytecode et JIT | De la source à l'exécution. | 3
+#ch 09 java-ch-outillage | Outillage et tests | Build, JUnit et Mockito.
+- java-build | Maven et Gradle | Dépendances et cycle de build. | 1
+- java-tests | JUnit 5 et Mockito | Tester en Java. | 2
 + java-spe-spring | Écosystème Spring | Le framework phare de Java. | SPR
 * java-spe-spring-boot | Spring Boot | Applications autoconfigurées, starters et Actuator. | BOOT | techno
 * java-spe-spring-data | Spring Data JPA | Des dépôts générés au-dessus de JPA. | JPA | lib
@@ -597,13 +615,27 @@
 - go-structs | Structs et méthodes | Receveurs valeur ou pointeur. | 2
 - go-interfaces | Interfaces | Une implémentation implicite. | 2
 - go-generiques | Génériques | Paramètres de type. | 3
-#ch 03 go-ch-concurrence | Concurrence | Goroutines et channels.
+#ch 03 go-ch-idiomes | Idiomes du langage | defer, pointeurs et chaînes.
+- go-defer-panic | defer, panic et recover | Nettoyer et survivre aux paniques. | 2
+- go-pointeurs | Pointeurs et valeurs | Copies, partage et échappement. | 2
+- go-chaines | Chaînes, octets et runes | UTF-8 en Go. | 2
+#ch 04 go-ch-erreurs | Erreurs en profondeur | Envelopper, comparer et concevoir.
+- go-erreurs-wrap | Envelopper les erreurs | %w, errors.Is et errors.As. | 2
+- go-erreurs-conception | Concevoir ses erreurs | Sentinelles, types d'erreurs et panique. | 3
+#ch 05 go-ch-concurrence | Concurrence | Goroutines et channels.
 - go-goroutines | Goroutines | Lancer du travail concurrent. | 2
 - go-channels | Channels et select | Communiquer plutôt que partager. | 3
 - go-sync | sync et context | Mutex, WaitGroup et annulation. | 3
-#ch 04 go-ch-outillage | Outillage et tests | Modules, tests et benchmarks.
+#ch 06 go-ch-stdlib | La bibliothèque standard | io, JSON et HTTP.
+- go-io | io.Reader et io.Writer | Des flux composables. | 2
+- go-json | encoding/json | Struct tags et décodage. | 2
+- go-http | Serveur HTTP | net/http et ses handlers. | 2
+#ch 07 go-ch-outillage | Outillage et tests | Modules, tests et benchmarks.
 - go-modules | Modules | go.mod et dépendances. | 1
 - go-tests | Tests et benchmarks | go test. | 2
+#ch 08 go-ch-performance | Runtime et performance | Ordonnanceur, mémoire et profilage.
+- go-runtime | Le runtime | Ordonnanceur et ramasse-miettes. | 3
+- go-profilage | Profilage | pprof et allocations. | 3
 + go-spe-web | Services web | Des API performantes en Go. | WEB
 * go-spe-net-http | net/http | Le serveur HTTP de la bibliothèque standard. | HTTP | lib
 * go-spe-gin | Gin | Un framework web minimaliste et rapide. | GIN | lib
@@ -627,12 +659,25 @@
 #ch 03 rust-ch-types | Structs, enums et traits | Modéliser avec les types.
 - rust-structs-enums | Structs et enums | Option et Result. | 1
 - rust-traits | Traits | Comportements partagés et génériques. | 2
-#ch 04 rust-ch-erreurs | Gestion des erreurs | Result et l'opérateur ?.
+#ch 04 rust-ch-collections | Collections et chaînes | Vec, HashMap, String et &str.
+- rust-vec-hashmap | Vec et HashMap | Les collections de base. | 1
+- rust-chaines | String et &str | Chaînes possédées et empruntées. | 2
+#ch 05 rust-ch-erreurs | Gestion des erreurs | Result et l'opérateur ?.
 - rust-result | Result et ? | Propager les erreurs. | 2
 - rust-panic | panic! et unwrap | Quand les utiliser. | 1
-#ch 05 rust-ch-concurrence | Concurrence | Threads, Send, Sync et async.
+#ch 06 rust-ch-iterateurs | Closures et itérateurs | Le style fonctionnel de Rust.
+- rust-closures | Closures | Fn, FnMut, FnOnce et move. | 2
+- rust-iterateurs | Itérateurs | Adaptateurs paresseux et collect. | 2
+#ch 07 rust-ch-pointeurs | Pointeurs intelligents | Box, Rc, RefCell et Drop.
+- rust-box-dyn | Box et dyn Trait | Allocation sur le tas et dispatch dynamique. | 2
+- rust-rc-refcell | Rc et RefCell | Partage et mutabilité intérieure. | 3
+- rust-drop | Drop et RAII | Libérer automatiquement. | 2
+#ch 08 rust-ch-concurrence | Concurrence | Threads, Send, Sync et async.
 - rust-threads | Threads, Arc et Mutex | Partager en sécurité. | 3
 - rust-async | async et Tokio | L'asynchrone en Rust. | 3
+#ch 09 rust-ch-outillage | Modules et outillage | Cargo, modules et tests.
+- rust-modules | Modules et crates | mod, pub et use. | 1
+- rust-cargo-tests | Cargo et tests | cargo test, clippy et fmt. | 1
 + rust-spe-web | Web et services | Des services rapides et sûrs. | WEB
 * rust-spe-axum | Axum | Le framework web de l'écosystème Tokio. | AXUM | lib
 * rust-spe-tokio | Tokio | Le runtime asynchrone de référence. | TOK | lib
@@ -656,16 +701,27 @@
 - sec-injections | Injections | SQL, commandes système et autres. | 2
 - sec-xss | XSS | Des scripts injectés dans les pages. | 2
 - sec-csrf-ssrf | CSRF et SSRF | Des requêtes falsifiées. | 3
-#ch 03 sec-ch-authentification | Authentification et autorisation | Identités, sessions et jetons.
+#ch 03 sec-ch-api | Sécurité des API | Contrôle d'accès et abus.
+- sec-controle-acces | Contrôle d'accès | IDOR et autorisations cassées. | 2
+- sec-api-abus | Abus d'API | Mass assignment, quotas et validation. | 2
+#ch 04 sec-ch-authentification | Authentification et autorisation | Identités, sessions et jetons.
 - sec-mots-de-passe | Mots de passe | Hachage et authentification multifacteur. | 1
 - sec-sessions-jwt | Sessions et JWT | Avantages et pièges. | 2
 - sec-oauth-oidc | OAuth 2 et OpenID Connect | Déléguer l'authentification. | 3
-#ch 04 sec-ch-cryptographie | Cryptographie appliquée | Utiliser la cryptographie sans se tromper.
+#ch 05 sec-ch-cryptographie | Cryptographie appliquée | Utiliser la cryptographie sans se tromper.
 - sec-chiffrement | Chiffrement symétrique et asymétrique | AES, RSA et courbes elliptiques. | 2
 - sec-hachage-signatures | Hachage et signatures | SHA-256, HMAC et signatures numériques. | 2
-#ch 05 sec-ch-devsecops | Sécurité dans le cycle de développement | DevSecOps.
+#ch 06 sec-ch-avancees | Vulnérabilités avancées | Désérialisation, fichiers et configuration.
+- sec-deserialisation | Désérialisation et fichiers | Des données qui deviennent du code. | 3
+- sec-configuration | Mauvaises configurations | En-têtes, erreurs et valeurs par défaut. | 2
+#ch 07 sec-ch-donnees | Protéger les données | Secrets et données personnelles.
+- sec-secrets | Gestion des secrets | Ni dans le code, ni dans les journaux. | 1
+- sec-donnees-perso | Données personnelles | Minimiser, chiffrer et effacer. | 2
+#ch 08 sec-ch-devsecops | Sécurité dans le cycle de développement | DevSecOps.
 - sec-dependances | Dépendances et supply chain | CVE et SBOM. | 2
 - sec-analyses | Analyses automatiques | SAST, DAST et détection de secrets. | 2
+#ch 09 sec-ch-detection | Détecter et réagir | Journaux de sécurité et incidents.
+- sec-journalisation | Journaliser pour la sécurité | Quoi enregistrer, quoi surveiller. | 2
 + sec-spe-offensif | Sécurité offensive | Penser comme un attaquant. | RED
 * sec-spe-pentest | Tests d'intrusion | Méthodologie et outils du pentest. | PEN | concept
 * sec-spe-ctf | CTF | S'entraîner sur des challenges de sécurité. | CTF | concept
@@ -696,12 +752,23 @@
 - os-sections-critiques | Sections critiques | Les conditions de course. | 2
 - os-primitives | Primitives de synchronisation | Mutex, sémaphores et variables de condition. | 3
 - os-deadlocks | Interblocages | Conditions et prévention. | 3
-#ch 04 os-ch-fichiers | Systèmes de fichiers | Stocker durablement.
+#ch 04 os-ch-ipc | Communication entre processus | Tubes, signaux et mémoire partagée.
+- os-tubes-signaux | Tubes et signaux | Les mécanismes historiques d'Unix. | 2
+- os-memoire-partagee | Mémoire partagée et sockets | Échanger vite, échanger loin. | 3
+#ch 05 os-ch-fichiers | Systèmes de fichiers | Stocker durablement.
 - os-inodes | Fichiers et inodes | L'organisation sur disque. | 2
 - os-journalisation | Journalisation | Survivre aux crashs. | 3
-#ch 05 os-ch-es | Entrées / sorties | Interruptions et E/S asynchrones.
+#ch 06 os-ch-es | Entrées / sorties | Interruptions et E/S asynchrones.
 - os-appels-systeme | Interruptions et appels système | Passer en mode noyau. | 2
 - os-io-async | E/S asynchrones | epoll et io_uring. | 3
+#ch 07 os-ch-noyau | Le noyau et le démarrage | De la mise sous tension au premier processus.
+- os-demarrage | Le démarrage | Firmware, chargeur, noyau et init. | 1
+- os-architecture-noyau | Architecture du noyau | Monolithique, micro-noyau et pilotes. | 2
+#ch 08 os-ch-isolation | Isolation et virtualisation | Machines virtuelles et conteneurs.
+- os-virtualisation | Machines virtuelles | Hyperviseurs et virtualisation matérielle. | 2
+- os-conteneurs | Les briques des conteneurs | Namespaces, cgroups et capabilities. | 3
+#ch 09 os-ch-observation | Observer un système | Comprendre ce qui se passe.
+- os-outils | Les outils d'observation | top, /proc, strace et perf. | 2
 + os-spe-linux | Linux | Le système qui fait tourner le cloud. | LNX
 * os-spe-noyau | Noyau Linux | Modules, pilotes, espace noyau et espace utilisateur. | KRNL | techno | link=c/c-spe-noyau
 * os-spe-admin | Administration Linux | Processus, systemd, permissions, disques et journaux. | SYSD | concept | link=architecture-infra/infra-spe-admin-linux
@@ -723,16 +790,28 @@
 - git-branches | Branches | Créer, basculer et supprimer. | 1
 - git-merge-rebase | merge ou rebase | Deux façons d'intégrer. | 2
 - git-conflits | Résoudre les conflits | Méthode et outils. | 2
-#ch 03 git-ch-distant | Travail à distance | Remotes, push et pull.
+#ch 03 git-ch-quotidien | Outils du quotidien | stash, cherry-pick et historique.
+- git-stash-cherry-pick | stash, cherry-pick et worktree | Mettre de côté et reprendre. | 2
+- git-historique | Fouiller l'historique | log, blame et recherche de code. | 2
+#ch 04 git-ch-distant | Travail à distance | Remotes, push et pull.
 - git-remotes | Remotes | fetch, pull et push. | 1
 - git-pull-requests | Pull requests et revue de code | Collaborer sur GitHub ou GitLab. | 1
-#ch 04 git-ch-avance | Git avancé | Réparer et réécrire l'historique.
+#ch 05 git-ch-avance | Git avancé | Réparer et réécrire l'historique.
 - git-reset-revert | reset, revert et reflog | Annuler proprement. | 2
 - git-rebase-interactif | Rebase interactif | Nettoyer une branche. | 3
 - git-bisect | bisect | Trouver le commit fautif. | 2
-#ch 05 git-ch-workflows | Workflows d'équipe | Organiser le travail.
+#ch 06 git-ch-internes | Les coulisses de Git | Objets, références et configuration.
+- git-objets-refs | Objets et références | Ce que contient le dossier .git. | 3
+- git-config-hooks | Configuration et hooks | Alias, .gitattributes et hooks. | 2
+#ch 07 git-ch-workflows | Workflows d'équipe | Organiser le travail.
 - git-strategies | Stratégies de branches | Git flow et trunk-based development. | 2
 - git-conventions | Conventions | Messages de commit et versioning sémantique. | 1
+#ch 08 git-ch-projets | Projets et versions | Tags, sous-modules et gros dépôts.
+- git-tags | Tags et releases | Marquer les versions. | 1
+- git-submodules | Sous-modules et subtree | Inclure un autre dépôt. | 3
+#ch 09 git-ch-securite | Sécurité et hygiène | Secrets, signatures et nettoyage.
+- git-secrets | Un secret dans l'historique | Réagir et prévenir. | 2
+- git-signatures | Signer ses commits | GPG, SSH et vérification. | 2
 + git-spe-plateformes | Plateformes | Héberger et collaborer. | PLT
 * git-spe-github | GitHub | Pull requests, issues, protections de branches. | GH | techno
 * git-spe-gitlab | GitLab | Merge requests, groupes et intégration continue. | GL | techno
@@ -752,17 +831,28 @@
 - qa-aaa | Arrange, Act, Assert | Structurer un test. | 1
 - qa-doublures | Doublures de test | Stubs, mocks et fakes. | 2
 - qa-tdd | TDD | Écrire le test d'abord. | 2
-#ch 03 qa-ch-integration | Tests d'intégration et de bout en bout | Tester l'ensemble.
+#ch 03 qa-ch-conception | Concevoir des tests | Choisir les cas et rendre le code testable.
+- qa-cas-limites | Choisir ses cas de test | Classes d'équivalence et valeurs limites. | 1
+- qa-testabilite | Du code testable | Dépendances, temps et hasard. | 2
+#ch 04 qa-ch-integration | Tests d'intégration et de bout en bout | Tester l'ensemble.
 - qa-integration | Tests d'intégration | Bases de données et conteneurs de test. | 2
 - qa-e2e | Tests de bout en bout | Des navigateurs automatisés. | 2
-#ch 04 qa-ch-qualite | Qualité du code | Lisibilité, revue et dette technique.
+#ch 05 qa-ch-services | Tester des services | Contrats et données de test.
+- qa-contrats | Tests de contrat | Vérifier les échanges entre services. | 3
+- qa-donnees-test | Données de test | Fixtures, builders et isolation. | 2
+#ch 06 qa-ch-qualite | Qualité du code | Lisibilité, revue et dette technique.
 - qa-code-lisible | Code lisible | Nommage, fonctions et duplication. | 1
 - qa-revue | Revue de code | Donner et recevoir des retours. | 1
 - qa-refactoring | Refactoring | Améliorer sans casser. | 2
-#ch 05 qa-ch-avance | Tests avancés | Propriétés, mutations et performance.
+#ch 07 qa-ch-continu | Tester en continu | CI, couverture et tests instables.
+- qa-ci | Tests en intégration continue | Rapides, parallèles et fiables. | 2
+- qa-couverture | La couverture de code | Ce qu'elle dit, ce qu'elle cache. | 1
+#ch 08 qa-ch-avance | Tests avancés | Propriétés, mutations et performance.
 - qa-proprietes | Tests par propriétés | Générer des cas de test. | 3
 - qa-mutation | Tests de mutation | Tester les tests. | 3
 - qa-charge | Tests de charge | Mesurer sous pression. | 2
+#ch 09 qa-ch-legacy | Code existant | Tester ce qui n'a jamais été testé.
+- qa-legacy | Tests de caractérisation | Figer le comportement avant de changer. | 3
 + qa-spe-frameworks | Frameworks de test | Les outils de chaque langage. | FW
 * qa-spe-xunit | xUnit (C#) | Tests unitaires et d'intégration en .NET. | XU | lib | link=csharp/cs-spe-tests
 * qa-spe-pytest | pytest (Python) | Fixtures, paramétrage, mocks et couverture. | PYT | lib | link=python/py-spe-pytest
@@ -786,15 +876,29 @@
 - fe-cascade | Cascade et spécificité | Quelle règle l'emporte ? | 2
 - fe-flexbox-grid | Flexbox et Grid | Les mises en page modernes. | 2
 - fe-responsive | Responsive design | Media queries et unités relatives. | 1
-#ch 03 fe-ch-accessibilite | Accessibilité | Des interfaces pour tous.
+#ch 03 fe-ch-css-avance | CSS avancé | Positionnement, variables et animations.
+- fe-positionnement | Positionnement et empilement | position, z-index et contextes d'empilement. | 2
+- fe-variables-css | Variables CSS et thèmes | Propriétés personnalisées et mode sombre. | 2
+- fe-animations | Transitions et animations | Animer sans saccades. | 2
+#ch 04 fe-ch-accessibilite | Accessibilité | Des interfaces pour tous.
 - fe-wcag | Principes WCAG | Perceptible, utilisable, compréhensible, robuste. | 1
 - fe-aria | ARIA et navigation au clavier | Quand et comment. | 2
-#ch 04 fe-ch-performance | Performance web | Des pages rapides.
+#ch 05 fe-ch-ressources | Chargement des ressources | Images, scripts et cache.
+- fe-images | Images et polices | Formats, srcset et chargement différé. | 1
+- fe-scripts | Charger les scripts | defer, async, modules et découpage. | 2
+- fe-cache | Cache HTTP et service workers | Ne pas retélécharger. | 3
+#ch 06 fe-ch-performance | Performance web | Des pages rapides.
 - fe-rendu | Le rendu du navigateur | Chemin critique et reflow. | 3
 - fe-web-vitals | Core Web Vitals | LCP, INP et CLS. | 2
-#ch 05 fe-ch-architecture | Architecture frontend | Rendu et gestion de l'état.
+#ch 07 fe-ch-securite | Sécurité frontend | Ce que le navigateur protège, et ce qu'il ne protège pas.
+- fe-csp | XSS et Content Security Policy | Bloquer les scripts injectés. | 2
+- fe-cors-cookies | CORS et cookies | Same-origin, SameSite et credentials. | 3
+#ch 08 fe-ch-architecture | Architecture frontend | Rendu et gestion de l'état.
 - fe-modes-rendu | CSR, SSR et SSG | Où la page est-elle rendue ? | 2
 - fe-etat | Gestion de l'état | Local, global et serveur. | 2
+#ch 09 fe-ch-outillage | Outillage | Construire et déboguer.
+- fe-build | La chaîne de build | Transpiler, regrouper et minifier. | 2
+- fe-devtools | Les DevTools | Inspecter, mesurer et déboguer. | 1
 + fe-spe-frameworks | Frameworks | Les grandes bibliothèques d'interface. | FW
 * fe-spe-react | React | Composants, hooks, état et rendu. | RCT | techno | link=javascript/js-spe-react
 * fe-spe-vue | Vue | Composants, réactivité et Composition API. | VUE | techno | link=javascript/js-spe-vue
@@ -819,10 +923,26 @@
 #ch 02 mob-ch-interfaces | Interfaces mobiles | Navigation et mise en page.
 - mob-navigation | Navigation | Piles, onglets et liens profonds. | 1
 - mob-layout | Mises en page adaptatives | Tailles d'écran et orientation. | 2
-#ch 03 mob-ch-donnees | Données et réseau | Stockage local et synchronisation.
+#ch 03 mob-ch-architecture | Architecture d'application | Séparer l'interface de la logique.
+- mob-mvvm | MVVM et flux unidirectionnel | Vue, état et événements. | 2
+- mob-injection | Injection et modularisation | Des dépendances remplaçables. | 2
+#ch 04 mob-ch-asynchrone | Thread principal et tâches de fond | Garder l'interface fluide.
+- mob-thread-ui | Le thread principal | Ne jamais le bloquer. | 2
+- mob-taches-fond | Tâches de fond | Ce que le système autorise. | 3
+#ch 05 mob-ch-donnees | Données et réseau | Stockage local et synchronisation.
 - mob-stockage | Stockage local | Fichiers, SQLite et préférences. | 1
 - mob-hors-ligne | Mode hors ligne | Synchroniser sans perdre de données. | 3
-#ch 04 mob-ch-publication | Publication | Des stores aux mises à jour.
+#ch 06 mob-ch-reseau | Réseau et API | Appeler un serveur depuis un téléphone.
+- mob-api | Consommer une API | Délais, nouvelles tentatives et pagination. | 2
+- mob-securite | Sécurité mobile | Jetons, TLS et rétro-ingénierie. | 3
+#ch 07 mob-ch-plateforme | Capacités de la plateforme | Permissions et notifications.
+- mob-permissions | Permissions | Demander au bon moment. | 1
+- mob-notifications | Notifications | Locales et push. | 2
+#ch 08 mob-ch-qualite | Qualité et performance | Tester, mesurer et rendre accessible.
+- mob-tests | Tester une application mobile | Unitaires, UI et appareils. | 2
+- mob-performance | Performance | Démarrage, fluidité et mémoire. | 3
+- mob-accessibilite | Accessibilité mobile | Lecteurs d'écran et tailles de texte. | 1
+#ch 09 mob-ch-publication | Publication | Des stores aux mises à jour.
 - mob-stores | Signature et stores | App Store et Google Play. | 1
 - mob-cicd | CI/CD mobile | Des builds et déploiements automatisés. | 2
 + mob-spe-natif | Natif | Au plus près de chaque plateforme. | NAT
@@ -846,17 +966,26 @@
 - ia-regression | Régression linéaire et logistique | Les bases. | 2
 - ia-arbres | Arbres et forêts | Random forest et gradient boosting. | 2
 - ia-clustering | Clustering | k-means et consorts. | 2
-#ch 03 ia-ch-deep-learning | Deep learning | Les réseaux de neurones.
+#ch 03 ia-ch-entrainement | Bien entraîner un modèle | Validation, réglages et pièges.
+- ia-validation | Validation croisée et hyperparamètres | Régler sans tricher. | 2
+- ia-pieges | Déséquilibre et fuite de données | Les erreurs qui faussent tout. | 3
+#ch 04 ia-ch-deep-learning | Deep learning | Les réseaux de neurones.
 - ia-neurones | Réseaux de neurones | Couches, activation et rétropropagation. | 3
 - ia-architectures | Architectures classiques | CNN et RNN. | 3
 - ia-transformers | Transformers | L'attention et les modèles de langage. | 3
-#ch 04 ia-ch-llm | Les LLM dans les applications | Intégrer des modèles de langage.
+#ch 05 ia-ch-embeddings | Embeddings et recherche | Représenter le sens par des vecteurs.
+- ia-embeddings | Embeddings | Des vecteurs qui capturent le sens. | 2
+- ia-recherche-vectorielle | Recherche vectorielle | Similarité et index approximatifs. | 2
+#ch 06 ia-ch-llm | Les LLM dans les applications | Intégrer des modèles de langage.
 - ia-prompting | Prompting | Instructions, exemples et formats de sortie. | 1
 - ia-rag | RAG | Recherche et génération augmentée. | 2
 - ia-agents | Agents et outils | Appels d'outils et boucles d'agents. | 3
-#ch 05 ia-ch-production | L'IA en production | Déployer et surveiller.
+#ch 07 ia-ch-production | L'IA en production | Déployer et surveiller.
 - ia-mlops | MLOps | Versionner, entraîner et déployer. | 2
 - ia-evaluation-llm | Évaluer des LLM | Jeux d'évaluation et garde-fous. | 3
+#ch 08 ia-ch-responsable | IA responsable | Biais, explicabilité et sécurité.
+- ia-biais | Biais et explicabilité | Des modèles justes et compréhensibles. | 1
+- ia-securite-llm | Sécurité des LLM | Injection de prompt et fuites de données. | 2
 + ia-spe-frameworks | Frameworks | Les outils du machine learning. | FW
 * ia-spe-pytorch | PyTorch | Tenseurs, autograd et entraînement de réseaux de neurones. | PT | lib | link=python/py-spe-pytorch
 * ia-spe-sklearn | scikit-learn | Apprentissage automatique classique : pipelines, validation croisée, métriques. | SKL | lib | link=python/py-spe-sklearn

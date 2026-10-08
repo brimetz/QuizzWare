@@ -1,0 +1,330 @@
+{
+  "id": "sec-ch-api",
+  "title": "Sécurité des API",
+  "summary": "Contrôle d'accès et abus.",
+  "lessons": [
+    {
+      "id": "sec-controle-acces",
+      "title": "Contrôle d'accès",
+      "summary": "IDOR et autorisations cassées.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Authentifié n'est pas autorisé",
+          "body": "Le contrôle d'accès défaillant est en tête du classement OWASP. Le cas le plus fréquent est l'IDOR (ou BOLA pour les API) : GET /factures/1043 renvoie la facture 1043 à tout utilisateur connecté, sans vérifier qu'elle lui appartient. Il suffit de changer le numéro pour lire les factures des autres."
+        },
+        {
+          "title": "Vérifier la propriété à chaque requête",
+          "body": "Pour chaque objet demandé, le serveur vérifie qu'il appartient à l'utilisateur (ou qu'un rôle l'autorise), ou mieux, filtre directement la requête par propriétaire. Répondre 404 plutôt que 403 évite de confirmer que la ressource existe. Des identifiants non devinables (UUID) compliquent l'attaque, mais ne remplacent pas le contrôle.",
+          "code": "@app.get(\"/factures/<int:id>\")\n@login_required\ndef facture(id):\n    f = Facture.query.get_or_404(id)\n    if f.client_id != current_user.client_id:\n        abort(404)\n    return jsonify(f.to_dict())",
+          "language": "python"
+        },
+        {
+          "title": "Refuser par défaut",
+          "body": "Les fonctions d'administration doivent aussi être protégées côté serveur : masquer un bouton dans l'interface ne protège rien. On refuse par défaut, on centralise les règles (politiques, décorateurs, filtre dans la couche d'accès aux données) et on teste avec deux comptes : l'un ne doit jamais voir les données de l'autre."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-controle-acces-q1",
+          "prompt": "Qu'est-ce qu'une IDOR (ou BOLA) ?",
+          "choices": [
+            "Accéder à l'objet d'un autre utilisateur en changeant son identifiant dans la requête, faute de contrôle de propriété",
+            "Un vol de mot de passe par hameçonnage",
+            "Une injection SQL dans un identifiant",
+            "Un déni de service par requêtes massives"
+          ],
+          "answerIndex": 0,
+          "explanation": "Insecure Direct Object Reference, ou Broken Object Level Authorization : l'API fait confiance à l'identifiant fourni.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sec-controle-acces-q2",
+          "prompt": "Un client connecté peut lire les factures de tous les autres. Touche la ligne en cause.",
+          "code": "@app.get(\"/factures/<int:id>\")\n@login_required\ndef facture(id):\n    f = Facture.query.get_or_404(id)\n    return jsonify(f.to_dict())",
+          "language": "python",
+          "bugLines": [
+            4,
+            5
+          ],
+          "explanation": "login_required vérifie seulement que l'utilisateur est connecté. Il faut vérifier que la facture lui appartient, ou la chercher filtrée par client.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-controle-acces-q3",
+          "prompt": "Remplacer les identifiants numériques par des UUID suffit-il à corriger une IDOR ?",
+          "choices": [
+            "Non : c'est plus dur à deviner, mais un identifiant qui fuit (lien partagé, journal, URL) reste exploitable",
+            "Oui, un UUID est impossible à obtenir",
+            "Oui, à condition d'utiliser HTTPS",
+            "Non, les UUID sont plus faciles à deviner"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une défense en profondeur, pas un contrôle d'accès.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-controle-acces-q4",
+          "prompt": "Pourquoi répondre 404 plutôt que 403 quand un client demande la facture d'un autre ?",
+          "choices": [
+            "Pour ne pas confirmer que la ressource existe",
+            "Parce que 403 n'existe pas en HTTP",
+            "Pour accélérer la réponse",
+            "Pour que le navigateur réessaie"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un 403 permet d'énumérer les identifiants valides.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "sec-controle-acces-q5",
+          "prompt": "Complète le contrôle de propriété.",
+          "code": "f = Facture.query.get_or_404(id)\nif f.client_id ___ current_user.client_id:\n    ___(404)",
+          "language": "python",
+          "answers": [
+            "!=",
+            "abort"
+          ],
+          "distractors": [
+            "==",
+            "raise",
+            "return"
+          ],
+          "explanation": "Encore mieux : Facture.query.filter_by(id=id, client_id=current_user.client_id).first_or_404().",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sec-controle-acces-q6",
+          "prompt": "Quelles sont de bonnes pratiques de contrôle d'accès ?",
+          "choices": [
+            "Refuser par défaut",
+            "Vérifier côté serveur, à chaque requête",
+            "Tester avec deux comptes différents",
+            "Masquer le bouton d'administration dans l'interface, ce qui suffit"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un attaquant appelle l'API directement, sans passer par l'interface.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "sec-api-abus",
+      "title": "Abus d'API",
+      "summary": "Mass assignment, quotas et validation.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "L'affectation de masse",
+          "body": "Appliquer à un objet tous les champs reçus dans le JSON est pratique… et dangereux : un utilisateur ajoute \"role\": \"admin\" ou \"solde\": 1000000 à la modification de son profil. On liste explicitement les champs modifiables, avec un modèle dédié (DTO), qui valide aussi les types et les tailles.",
+          "code": "class ProfilModif(BaseModel):\n    nom: str = Field(max_length=80)\n    bio: str | None = Field(None, max_length=500)\n\ndonnees = ProfilModif.model_validate(request.json)",
+          "language": "python"
+        },
+        {
+          "title": "Valider et ne renvoyer que l'utile",
+          "body": "Toute entrée est validée côté serveur : type, taille, bornes et règles métier (une quantité négative ne doit pas créditer le client). À l'inverse, une réponse ne contient que les champs nécessaires : renvoyer l'objet utilisateur complet expose le hash du mot de passe ou des données privées, même si l'interface ne les affiche pas."
+        },
+        {
+          "title": "Limiter le débit",
+          "body": "Sans limite, /login permet de tester des millions de mots de passe, /verifier-code toutes les combinaisons d'un code à 6 chiffres, et une recherche avec ?limit=1000000 épuise la base. On limite le débit par compte et par adresse, on impose une taille de page maximale et des quotas, et on répond 429 Too Many Requests."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "sec-api-abus-q1",
+          "prompt": "Un utilisateur s'est attribué le rôle administrateur. Touche la ligne en cause.",
+          "code": "@app.patch(\"/moi\")\n@login_required\ndef modifier_profil():\n    for cle, val in request.json.items():\n        setattr(current_user, cle, val)\n    db.session.commit()\n    return \"\", 204",
+          "language": "python",
+          "bugLines": [
+            4,
+            5
+          ],
+          "explanation": "Tous les champs reçus sont appliqués, y compris role. On n'accepte que les champs prévus (nom, bio) via un modèle de validation.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-api-abus-q2",
+          "prompt": "Une API renvoie l'objet utilisateur complet ; l'interface n'en affiche que le nom. Quel est le risque ?",
+          "choices": [
+            "Une exposition excessive : hash du mot de passe ou données privées sont lisibles dans la réponse",
+            "Aucun, ce qui n'est pas affiché est invisible",
+            "Une page plus lente uniquement",
+            "Une erreur JavaScript"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les outils de développement du navigateur montrent toute la réponse.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-api-abus-q3",
+          "prompt": "Pourquoi limiter le débit de /login et de /verifier-code ?",
+          "choices": [
+            "Pour empêcher de tester des milliers de mots de passe ou toutes les combinaisons d'un code",
+            "Pour économiser de la bande passante",
+            "Pour accélérer les connexions",
+            "Ce n'est utile que pour les API publiques"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un code à 6 chiffres n'offre qu'un million de possibilités : sans limite, il se trouve en quelques minutes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-api-abus-q4",
+          "prompt": "En envoyant une commande avec \"quantite\": -3, un client obtient un avoir. Quelle défense ?",
+          "choices": [
+            "Valider les règles métier côté serveur : la quantité doit être au moins 1",
+            "Ajouter min=\"1\" au champ du formulaire, ce qui suffit",
+            "Chiffrer la requête",
+            "Masquer le champ quantité"
+          ],
+          "answerIndex": 0,
+          "explanation": "La validation du formulaire améliore l'expérience, mais l'attaquant appelle l'API directement.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "sec-api-abus-q5",
+          "prompt": "Complète : n'accepter que le nom et la bio, avec des tailles maximales.",
+          "code": "class ProfilModif(___):\n    nom: str = Field(max_length=80)\n    bio: str | None = Field(None, max_length=500)\n\ndonnees = ProfilModif.___(request.json)",
+          "language": "python",
+          "answers": [
+            "BaseModel",
+            "model_validate"
+          ],
+          "distractors": [
+            "dict",
+            "parse",
+            "loads"
+          ],
+          "explanation": "Pydantic rejette les types invalides et, par défaut, ignore les champs non déclarés comme role.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sec-api-abus-q6",
+          "prompt": "Quelles protections attend-on d'une API exposée sur Internet ?",
+          "choices": [
+            "Une limitation de débit et des quotas",
+            "Une validation stricte des entrées",
+            "Des réponses limitées aux champs nécessaires",
+            "La confiance dans les contrôles faits par l'application cliente"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le client est entre les mains de l'utilisateur : tout ce qu'il vérifie peut être contourné.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "sec-defi-api",
+    "title": "Défi entretien : les relevés du voisin",
+    "summary": "IDOR, correction et prévention.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sec-defi-api-q1",
+        "prompt": "Cas pratique 1/3 — Dans une application bancaire, un testeur remplace 88412 par 88413 dans GET /api/comptes/88412/releves et voit les relevés d'un autre client. De quelle vulnérabilité s'agit-il ?",
+        "choices": [
+          "Une IDOR (BOLA) : contrôle de propriété manquant",
+          "Une injection SQL",
+          "Une XSS",
+          "Une SSRF"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'identifiant est fourni par le client et utilisé sans vérification.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-api-q2",
+        "prompt": "Cas pratique 2/3 — Quel correctif ?",
+        "choices": [
+          "Vérifier à chaque requête que le compte appartient à l'utilisateur authentifié, ou filtrer la requête par utilisateur",
+          "Chiffrer le numéro de compte dans l'URL",
+          "Passer l'identifiant dans le corps plutôt que dans l'URL",
+          "Bloquer l'adresse IP du testeur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le chiffrement ou le déplacement de l'identifiant ne changent rien au contrôle manquant.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-api-q3",
+        "prompt": "Cas pratique 3/3 — Comment éviter la même faille sur les 200 autres endpoints ?",
+        "choices": [
+          "Centraliser l'autorisation (filtre par propriétaire dans la couche d'accès) et ajouter des tests automatiques à deux comptes",
+          "Relire les endpoints une fois par an",
+          "Faire confiance à chaque développeur",
+          "Ne plus utiliser d'identifiants dans les URL"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un contrôle centralisé ne peut pas être oublié endpoint par endpoint ; les tests détectent les régressions.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "sec-defi-api-q4",
+        "prompt": "Le serveur applique tous les champs reçus. Touche le champ qui ne devrait jamais être accepté.",
+        "code": "PATCH /api/moi\n{\n  \"nom\": \"Ana\",\n  \"role\": \"admin\"\n}",
+        "language": "text",
+        "bugLines": [
+          4
+        ],
+        "explanation": "Le rôle se change par une fonction d'administration contrôlée, jamais par la modification de son propre profil.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-api-q5",
+        "prompt": "Une recherche accepte ?limit=1000000. Quel est le risque ?",
+        "choices": [
+          "Épuiser la base et la mémoire du serveur : il faut imposer une taille de page maximale",
+          "Aucun, plus de résultats est mieux",
+          "Une injection SQL",
+          "Une fuite du mot de passe administrateur"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est une consommation de ressources illimitée, un risque du classement OWASP des API.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sec-defi-api-q6",
+        "prompt": "Lors de la revue d'une API, que vérifier ?",
+        "choices": [
+          "Chaque endpoint contrôle la propriété des objets",
+          "Les champs modifiables sont listés explicitement",
+          "Les endpoints sensibles ont une limite de débit",
+          "Les messages d'erreur détaillent la pile d'appels"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une pile d'appels renvoyée au client aide l'attaquant ; elle va dans les journaux.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

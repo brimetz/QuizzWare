@@ -1,0 +1,329 @@
+{
+  "id": "os-ch-noyau",
+  "title": "Le noyau et le démarrage",
+  "summary": "De la mise sous tension au premier processus.",
+  "lessons": [
+    {
+      "id": "os-demarrage",
+      "title": "Le démarrage",
+      "summary": "Firmware, chargeur, noyau et init.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Du firmware au noyau",
+          "body": "À la mise sous tension, le firmware (UEFI, autrefois le BIOS) initialise le matériel et lance le chargeur d'amorçage trouvé sur la partition EFI. Avec Secure Boot, il vérifie d'abord que ce chargeur est signé par une clé de confiance. Le chargeur (GRUB, systemd-boot) charge le noyau et l'initramfs en mémoire, avec une ligne de commande d'options."
+        },
+        {
+          "title": "L'initramfs",
+          "body": "Le noyau démarre d'abord sur l'initramfs, un petit système de fichiers temporaire en mémoire. Il contient les pilotes et outils nécessaires pour atteindre la vraie racine : disque chiffré, RAID, LVM, stockage réseau. Une fois la racine montée, le noyau lance le premier processus de l'espace utilisateur, de PID 1."
+        },
+        {
+          "title": "systemd et les services",
+          "body": "Sur la plupart des distributions, le PID 1 est systemd. Il lit des fichiers d'unités qui décrivent chaque service et ses dépendances (After, Requires), les démarre en parallèle, les relance s'ils plantent (Restart) et collecte leurs journaux (journalctl).",
+          "code": "[Unit]\nDescription=API commandes\nAfter=network-online.target\n\n[Service]\nExecStart=/usr/bin/api\nRestart=on-failure\nUser=api",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "order",
+          "id": "os-demarrage-q1",
+          "prompt": "Remets les étapes du démarrage dans l'ordre.",
+          "language": "text",
+          "lines": [
+            "Le firmware (UEFI) initialise le matériel",
+            "Le chargeur d'amorçage charge le noyau et l'initramfs",
+            "Le noyau initialise les pilotes et monte la racine",
+            "Le processus init (PID 1) démarre",
+            "Les services sont lancés"
+          ],
+          "explanation": "Chaque étape prépare ce dont la suivante a besoin.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-demarrage-q2",
+          "prompt": "Quel est le PID du premier processus de l'espace utilisateur ?",
+          "choices": [
+            "1",
+            "0",
+            "2",
+            "100"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il adopte les processus orphelins ; s'il se termine, le noyau panique.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-demarrage-q3",
+          "prompt": "À quoi sert l'initramfs ?",
+          "choices": [
+            "À fournir les pilotes et outils nécessaires pour monter la vraie racine (disque chiffré, RAID, LVM)",
+            "À stocker les fichiers des utilisateurs",
+            "À remplacer le noyau",
+            "À accélérer Internet"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il est jeté une fois la racine définitive montée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-demarrage-q4",
+          "prompt": "Que vérifie Secure Boot ?",
+          "choices": [
+            "Que le chargeur et le noyau sont signés par une clé de confiance",
+            "Que le mot de passe administrateur est robuste",
+            "Que le disque n'est pas plein",
+            "Que le réseau est sécurisé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il empêche un logiciel malveillant de s'installer avant le système d'exploitation.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "os-demarrage-q5",
+          "prompt": "Complète : démarrer après le réseau, et relancer le service s'il plante.",
+          "code": "[Unit]\nDescription=API commandes\n___=network-online.target\n\n[Service]\nExecStart=/usr/bin/api\n___=on-failure",
+          "language": "text",
+          "answers": [
+            "After",
+            "Restart"
+          ],
+          "distractors": [
+            "Before",
+            "Retry",
+            "OnError"
+          ],
+          "explanation": "After fixe un ordre de démarrage ; Wants ou Requires indiquent en plus une dépendance.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "os-demarrage-q6",
+          "prompt": "Ce service doit redémarrer s'il plante et ne pas tourner en root. Touche une ligne à corriger.",
+          "code": "[Service]\nExecStart=/usr/bin/api\nRestart=no\nUser=root",
+          "language": "text",
+          "bugLines": [
+            3,
+            4
+          ],
+          "explanation": "Restart=on-failure relance après un plantage ; User=api (un compte dédié) limite les dégâts d'une compromission.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "os-architecture-noyau",
+      "title": "Architecture du noyau",
+      "summary": "Monolithique, micro-noyau et pilotes.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Monolithique ou micro-noyau",
+          "body": "Dans un noyau monolithique comme Linux, ordonnanceur, mémoire, systèmes de fichiers, réseau et pilotes partagent le même espace privilégié : les appels sont directs et rapides, mais un bug de pilote peut faire tomber toute la machine. Un micro-noyau (seL4, QNX, MINIX 3) ne garde que l'essentiel ; pilotes et services tournent en espace utilisateur et communiquent par messages : plus robuste, au prix de plus d'échanges. Windows NT et XNU (macOS) sont des hybrides."
+        },
+        {
+          "title": "Les modules Linux",
+          "body": "Linux reste modulaire : un pilote peut être compilé en module et chargé à chaud (modprobe, lsmod, rmmod). Un module s'exécute néanmoins dans l'espace du noyau, avec tous les privilèges : une erreur provoque un « oops » ou un kernel panic.",
+          "code": "lsmod | grep nvme\nsudo modprobe e1000e\nmodinfo e1000e",
+          "language": "shell"
+        },
+        {
+          "title": "eBPF",
+          "body": "eBPF permet de charger dans le noyau de petits programmes, vérifiés avant exécution (pas de boucle infinie, pas d'accès mémoire hors limites). On s'en sert pour l'observabilité (bpftrace), le filtrage réseau (Cilium) ou la sécurité, sans écrire de module et sans risquer de faire planter le noyau."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-architecture-noyau-q1",
+          "prompt": "Quel est le principal avantage d'un micro-noyau ?",
+          "choices": [
+            "Un pilote qui plante peut être relancé sans faire tomber le système",
+            "Il est toujours plus rapide",
+            "Il n'a pas besoin de pilotes",
+            "Il ne gère pas la mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le pilote est un processus isolé ; QNX est utilisé dans l'automobile et l'industrie pour cette raison.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-architecture-noyau-q2",
+          "prompt": "Quelle est l'architecture de Linux ?",
+          "choices": [
+            "Monolithique, mais modulaire : des modules se chargent à chaud",
+            "Un micro-noyau pur",
+            "Un hyperviseur",
+            "Un exokernel"
+          ],
+          "answerIndex": 0,
+          "explanation": "Modulaire ne veut pas dire isolé : les modules s'exécutent dans l'espace du noyau.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "os-architecture-noyau-q3",
+          "prompt": "Complète : charger le pilote réseau e1000e par son nom, avec ses dépendances.",
+          "code": "lsmod | grep e1000e\nsudo ___ e1000e",
+          "language": "shell",
+          "answers": [
+            "modprobe"
+          ],
+          "distractors": [
+            "apt",
+            "systemctl",
+            "loadmod"
+          ],
+          "explanation": "insmod charge un fichier .ko précis, sans résoudre les dépendances ; modprobe s'en occupe.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-architecture-noyau-q4",
+          "prompt": "Qu'est-ce qu'eBPF ?",
+          "choices": [
+            "De petits programmes vérifiés, chargés à chaud dans le noyau pour observer ou filtrer, sans écrire de module",
+            "Un nouveau système de fichiers",
+            "Un langage de script pour le shell",
+            "Un pilote graphique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le vérificateur refuse tout programme qui pourrait boucler ou accéder hors de sa mémoire.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "os-architecture-noyau-q5",
+          "prompt": "Pourquoi un bug dans un pilote Linux peut-il faire planter toute la machine ?",
+          "choices": [
+            "Le pilote s'exécute dans l'espace du noyau, avec tous les privilèges et sans isolation",
+            "Parce que les pilotes sont écrits en C",
+            "Parce qu'ils tournent dans le firmware",
+            "Ce n'est jamais le cas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une écriture hors limites dans un pilote peut corrompre n'importe quelle structure du noyau.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "os-architecture-noyau-q6",
+          "prompt": "Quels systèmes reposent sur un micro-noyau ?",
+          "choices": [
+            "seL4",
+            "QNX",
+            "MINIX 3",
+            "Linux"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "seL4 a même été prouvé formellement correct.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "os-defi-noyau",
+    "title": "Défi entretien : le serveur qui ne redémarre plus",
+    "summary": "Démarrage, initramfs et journaux.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "os-defi-noyau-q1",
+        "prompt": "Cas pratique 1/3 — Après une mise à jour du noyau, un serveur ne démarre plus. Que tenter d'abord ?",
+        "choices": [
+          "Démarrer sur l'ancien noyau depuis le menu du chargeur d'amorçage",
+          "Réinstaller le système",
+          "Changer le disque",
+          "Mettre à jour le firmware"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les distributions gardent les noyaux précédents précisément pour ce cas.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-noyau-q2",
+        "prompt": "Cas pratique 2/3 — Le nouveau noyau s'arrête en cherchant la racine, sur un disque chiffré. Que soupçonner ?",
+        "choices": [
+          "Un initramfs régénéré sans le module ou l'outil de déchiffrement nécessaire",
+          "Une panne réseau",
+          "Un mot de passe utilisateur expiré",
+          "Un fichier de configuration de l'application"
+        ],
+        "answerIndex": 0,
+        "explanation": "On régénère l'initramfs (dracut, update-initramfs) depuis l'ancien noyau.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-noyau-q3",
+        "prompt": "Cas pratique 3/3 — Comment lire les messages du démarrage précédent, celui qui a échoué ?",
+        "choices": [
+          "journalctl -b -1",
+          "dmesg --future",
+          "cat /etc/hostname",
+          "uptime"
+        ],
+        "answerIndex": 0,
+        "explanation": "-b -1 sélectionne le démarrage précédent (à condition que les journaux soient persistants) ; -k se limite aux messages du noyau.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-noyau-q4",
+        "prompt": "Un service systemd plante en boucle. Quelle commande montre son état et ses dernières lignes de journal ?",
+        "choices": [
+          "systemctl status api",
+          "ps aux",
+          "top",
+          "ls /etc"
+        ],
+        "answerIndex": 0,
+        "explanation": "journalctl -u api donne ensuite tout l'historique du service.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-noyau-q5",
+        "prompt": "Pourquoi les outils d'observabilité modernes préfèrent-ils eBPF à un module noyau ?",
+        "choices": [
+          "Le vérificateur garantit que le programme ne peut ni planter le noyau ni boucler indéfiniment",
+          "eBPF est écrit en Java",
+          "Les modules sont interdits depuis Linux 6",
+          "eBPF s'exécute dans le navigateur"
+        ],
+        "answerIndex": 0,
+        "explanation": "On peut instrumenter un serveur de production sans risquer de le faire tomber.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "os-defi-noyau-q6",
+        "prompt": "Quels sont les rôles du noyau ?",
+        "choices": [
+          "Ordonnancer les processus",
+          "Gérer la mémoire virtuelle",
+          "Piloter le matériel",
+          "Afficher le bureau graphique"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le bureau est un ensemble de programmes de l'espace utilisateur (serveur d'affichage, environnement de bureau).",
+        "difficulty": 1
+      }
+    ]
+  }
+}

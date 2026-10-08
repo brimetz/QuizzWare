@@ -1,0 +1,458 @@
+{
+  "id": "fe-ch-css-avance",
+  "title": "CSS avancé",
+  "summary": "Positionnement, variables et animations.",
+  "lessons": [
+    {
+      "id": "fe-positionnement",
+      "title": "Positionnement et empilement",
+      "summary": "position, z-index et contextes d'empilement.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les valeurs de position",
+          "body": "static est la valeur par défaut : l'élément suit le flux. relative le décale par rapport à sa place normale, qu'il garde. absolute le retire du flux et le place par rapport à son plus proche ancêtre positionné (position autre que static). fixed le place par rapport à la fenêtre. sticky le laisse dans le flux, puis le colle quand il atteint le seuil indiqué (top: 0), à l'intérieur de son conteneur de défilement.",
+          "code": ".carte { position: relative; }\n.badge {\n  position: absolute;\n  top: 8px;\n  right: 8px;\n}",
+          "language": "text"
+        },
+        {
+          "title": "z-index et contextes d'empilement",
+          "body": "z-index ne s'applique qu'aux éléments positionnés (ou aux éléments de flex et de grid). Surtout, il ne compare que des éléments d'un même contexte d'empilement. Un élément positionné avec un z-index, ou un élément avec opacity < 1, transform, filter, crée un nouveau contexte : ses enfants y sont enfermés, quel que soit leur z-index."
+        },
+        {
+          "title": "Les pièges classiques",
+          "body": "Un transform sur un ancêtre devient le bloc conteneur des descendants en position: fixed : une « modale plein écran » reste prisonnière de sa carte. Un overflow autre que visible sur un ancêtre crée un conteneur de défilement, et sticky se colle à lui, pas à la page. Pour les modales, l'élément <dialog> ouvert avec showModal() s'affiche dans une couche supérieure (top layer), au-dessus de tout."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-positionnement-q1",
+          "prompt": "Par rapport à quoi un élément en position: absolute est-il placé ?",
+          "choices": [
+            "Par rapport à son plus proche ancêtre positionné, sinon au bloc conteneur initial",
+            "Par rapport à son parent direct, toujours",
+            "Par rapport à la fenêtre, toujours",
+            "Par rapport à sa place normale dans le flux"
+          ],
+          "answerIndex": 0,
+          "explanation": "D'où le réflexe position: relative sur le conteneur d'un élément absolu. La place normale, c'est le comportement de relative.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-positionnement-q2",
+          "prompt": "La .modale (dans une .carte) doit couvrir tout l'écran, mais elle reste dans les limites de la carte. Pourquoi ?",
+          "code": ".carte {\n  transform: translateX(0);\n}\n.modale {\n  position: fixed;\n  inset: 0;\n  z-index: 9999;\n}",
+          "language": "text",
+          "choices": [
+            "Le transform de la carte en fait le bloc conteneur des éléments fixed qu'elle contient",
+            "inset: 0 n'est pas supporté",
+            "Le z-index est trop faible",
+            "position: fixed ne fonctionne que sur body"
+          ],
+          "answerIndex": 0,
+          "explanation": "transform (comme filter ou perspective) change le bloc conteneur des descendants fixed et crée un contexte d'empilement.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "fe-positionnement-q3",
+          "prompt": "Le menu passe sous .contenu malgré son z-index. Touche la ligne en cause.",
+          "code": ".menu {\n  z-index: 10;\n  background: white;\n}\n.contenu {\n  position: relative;\n  z-index: 1;\n}",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": ".menu n'est pas positionné (ni enfant de flex ou grid) : son z-index est ignoré. Il faut ajouter position: relative.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-positionnement-q4",
+          "prompt": ".a et .b sont frères. Qui s'affiche au-dessus : .enfant (dans .a) ou .b ?",
+          "code": ".a { position: relative; z-index: 1; }\n.enfant { position: relative; z-index: 999; }\n.b { position: relative; z-index: 2; }",
+          "language": "text",
+          "choices": [
+            ".b, car .enfant est enfermé dans le contexte de .a, qui est sous .b",
+            ".enfant, car 999 > 2",
+            "Celui qui apparaît en dernier dans le HTML",
+            "Cela dépend du navigateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le z-index de .enfant ne compte qu'à l'intérieur de .a. Entre frères, on compare 1 et 2.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "fe-positionnement-q5",
+          "prompt": "Complète : l'en-tête défile normalement, puis reste collé en haut une fois atteint.",
+          "code": ".entete {\n  position: ___;\n  ___: 0;\n}",
+          "language": "text",
+          "answers": [
+            "sticky",
+            "top"
+          ],
+          "distractors": [
+            "static",
+            "bottom",
+            "float"
+          ],
+          "explanation": "sticky sans seuil (top, bottom…) se comporte comme relative.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "fe-positionnement-q6",
+          "prompt": "Qu'est-ce qui crée un nouveau contexte d'empilement ?",
+          "choices": [
+            "position: relative avec un z-index autre que auto",
+            "opacity inférieure à 1",
+            "transform différent de none",
+            "margin: auto"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "D'où les surprises : ajouter une animation d'opacité ou un transform peut changer l'empilement d'une page.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "fe-variables-css",
+      "title": "Variables CSS et thèmes",
+      "summary": "Propriétés personnalisées et mode sombre.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les propriétés personnalisées",
+          "body": "Une propriété dont le nom commence par -- est une variable CSS ; on la lit avec var(--nom), avec une valeur de repli éventuelle : var(--nom, black). Elle se déclare souvent sur :root pour toute la page. Elle est héritée et suit la cascade : on peut la redéfinir sur un composant, et tous ses descendants voient la nouvelle valeur.",
+          "code": ":root {\n  --accent: #2563eb;\n  --espace: 16px;\n}\n.bouton {\n  background: var(--accent);\n  padding: var(--espace);\n}",
+          "language": "text"
+        },
+        {
+          "title": "Vivantes dans le navigateur",
+          "body": "Contrairement aux variables Sass, remplacées à la compilation, les variables CSS existent à l'exécution : une media query ou JavaScript (element.style.setProperty(\"--accent\", \"red\")) peuvent les changer, et tout ce qui les utilise se met à jour. Une variable contient des fragments de valeur : var(--espace)px ne colle pas une unité, il faut une variable avec unité ou calc(var(--n) * 1px)."
+        },
+        {
+          "title": "Le thème sombre",
+          "body": "On définit les couleurs du thème en variables, puis on les redéfinit pour le mode sombre : avec @media (prefers-color-scheme: dark) pour suivre le système, et avec un attribut (data-theme=\"dark\") pour laisser l'utilisateur choisir. color-scheme: light dark indique au navigateur d'adapter aussi ses propres éléments (barres de défilement, champs).",
+          "code": ":root { --fond: white; --texte: #111; }\n@media (prefers-color-scheme: dark) {\n  :root { --fond: #111; --texte: #eee; }\n}\nbody {\n  background: var(--fond);\n  color: var(--texte);\n}",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-variables-css-q1",
+          "prompt": "Le bouton est placé dans <div class=\"alerte\">. De quelle couleur est son texte ?",
+          "code": ":root { --accent: blue; }\n.alerte { --accent: red; }\n.bouton { color: var(--accent); }",
+          "language": "text",
+          "choices": [
+            "Rouge",
+            "Bleu",
+            "Noir, la couleur par défaut",
+            "Le CSS est invalide"
+          ],
+          "answerIndex": 0,
+          "explanation": "La variable est héritée : la valeur la plus proche dans l'arbre, celle de .alerte, l'emporte.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "fe-variables-css-q2",
+          "prompt": "Complète.",
+          "code": ":root {\n  ___fond: white;\n}\nbody {\n  background: ___(--fond);\n}",
+          "language": "text",
+          "answers": [
+            "--",
+            "var"
+          ],
+          "distractors": [
+            "$",
+            "@",
+            "env"
+          ],
+          "explanation": "$ est la syntaxe de Sass, @ celle de Less ; env() lit des valeurs fournies par le navigateur (zones sûres d'un écran à encoche).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-variables-css-q3",
+          "prompt": "Quelle est la différence entre une variable CSS et une variable Sass ?",
+          "choices": [
+            "La variable CSS existe dans le navigateur : elle suit la cascade et peut changer à l'exécution ; la variable Sass est remplacée à la compilation",
+            "Aucune, seule la syntaxe change",
+            "La variable Sass est plus récente",
+            "La variable CSS ne peut contenir que des couleurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui rend les thèmes dynamiques possibles sans régénérer de CSS.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "fe-variables-css-q4",
+          "prompt": "Le padding n'est pas appliqué. Touche la ligne en cause.",
+          "code": ":root {\n  --espace: 16;\n}\n.carte {\n  padding: var(--espace)px;\n}",
+          "language": "text",
+          "bugLines": [
+            2,
+            5
+          ],
+          "explanation": "var(--espace)px donne deux éléments séparés, « 16 » et « px » : la déclaration est invalide. On met l'unité dans la variable (16px) ou on écrit calc(var(--espace) * 1px).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "fe-variables-css-q5",
+          "prompt": "Comment suivre automatiquement le thème sombre du système ?",
+          "choices": [
+            "Redéfinir les variables dans @media (prefers-color-scheme: dark)",
+            "Lire l'heure en JavaScript",
+            "Utiliser filter: invert(1) sur body",
+            "Ce n'est pas possible en CSS"
+          ],
+          "answerIndex": 0,
+          "explanation": "invert inverserait aussi les images et les couleurs de marque ; les variables donnent un contrôle précis.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "fe-variables-css-q6",
+          "prompt": "Quelles affirmations sur les propriétés personnalisées sont vraies ?",
+          "choices": [
+            "Elles sont héritées par les descendants",
+            "var(--x, repli) utilise le repli si --x n'est pas définie",
+            "JavaScript peut les modifier avec style.setProperty",
+            "Elles sont remplacées par leur valeur à la compilation"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Aucune compilation : c'est le navigateur qui résout var() au moment du calcul des styles.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "fe-animations",
+      "title": "Transitions et animations",
+      "summary": "Animer sans saccades.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "transition et @keyframes",
+          "body": "Une transition anime le passage d'une valeur à une autre quand une propriété change (survol, classe ajoutée) : transition: transform 200ms ease-out. Une animation @keyframes décrit des étapes et se lance d'elle-même, en boucle si on le souhaite.",
+          "code": ".bouton {\n  transition: transform 200ms ease-out;\n}\n.bouton:hover {\n  transform: scale(1.05);\n}",
+          "language": "text"
+        },
+        {
+          "title": "Animer ce qui est bon marché",
+          "body": "Pour chaque image, le navigateur peut avoir à recalculer la mise en page (layout), repeindre (paint) puis composer les calques. Animer width, height, top, left ou margin relance la mise en page à chaque image : saccades sur mobile. transform et opacity sont gérés à l'étape de composition, souvent par le GPU : ce sont les propriétés à animer en priorité."
+        },
+        {
+          "title": "Limites et accessibilité",
+          "body": "display ne se transitionne pas par défaut : passer à display: none fait disparaître l'élément instantanément. Certaines personnes souffrent de nausées face aux mouvements : @media (prefers-reduced-motion: reduce) permet de réduire ou supprimer les animations non essentielles. will-change prévient le navigateur, mais s'utilise avec parcimonie : chaque calque coûte de la mémoire."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-animations-q1",
+          "prompt": "Quelles propriétés animer en priorité pour une animation fluide ?",
+          "choices": [
+            "transform et opacity",
+            "width et height",
+            "top et left",
+            "margin et padding"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elles n'entraînent ni mise en page ni peinture : seulement de la composition.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "fe-animations-q2",
+          "prompt": "Complète : le bouton grossit légèrement et en douceur au survol.",
+          "code": ".bouton {\n  ___: transform 200ms ease-out;\n}\n.bouton:hover {\n  transform: ___(1.05);\n}",
+          "language": "text",
+          "answers": [
+            "transition",
+            "scale"
+          ],
+          "distractors": [
+            "animation",
+            "zoom",
+            "grow"
+          ],
+          "explanation": "La transition est déclarée sur l'état de base : elle joue à l'entrée et à la sortie du survol.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "fe-animations-q3",
+          "prompt": "Cette animation saccade sur mobile. Touche une ligne à changer.",
+          "code": "@keyframes glisser {\n  from { left: 0; }\n  to   { left: 300px; }\n}\n.panneau {\n  position: absolute;\n  animation: glisser 300ms;\n}",
+          "language": "text",
+          "bugLines": [
+            2,
+            3
+          ],
+          "explanation": "Animer left recalcule la mise en page à chaque image. On anime transform: translateX(300px) à la place.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-animations-q4",
+          "prompt": "Comment respecter les utilisateurs sensibles aux mouvements ?",
+          "choices": [
+            "Réduire ou supprimer les animations dans @media (prefers-reduced-motion: reduce)",
+            "Ralentir toutes les animations",
+            "Ajouter un avertissement en haut de page",
+            "Ce n'est pas possible à détecter"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le réglage « réduire les animations » du système est exposé à CSS et à JavaScript (matchMedia).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-animations-q5",
+          "prompt": "On ajoute la classe cachee à la boîte. Que voit-on ?",
+          "code": ".boite {\n  transition: opacity 1s;\n}\n.boite.cachee {\n  opacity: 0;\n  display: none;\n}",
+          "language": "text",
+          "choices": [
+            "La boîte disparaît instantanément : display: none s'applique sans transition",
+            "Un fondu d'une seconde, puis la boîte disparaît",
+            "Rien ne change",
+            "Un fondu qui se répète"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans transition-behavior: allow-discrete, display bascule immédiatement et l'élément n'est plus rendu : le fondu n'a pas lieu.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "fe-animations-q6",
+          "prompt": "Animer quelles propriétés relance la mise en page à chaque image ?",
+          "choices": [
+            "width",
+            "top",
+            "margin",
+            "opacity"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "opacity ne change ni la taille ni la position : seule la composition est refaite.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "fe-defi-css-avance",
+    "title": "Défi entretien : la modale invisible",
+    "summary": "Empilement, positionnement et animation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "fe-defi-css-avance-q1",
+        "prompt": "Cas pratique 1/3 — Une modale a z-index: 9999 mais passe sous l'en-tête collant (z-index: 100). Cause probable ?",
+        "choices": [
+          "Un ancêtre de la modale crée un contexte d'empilement de rang inférieur : son z-index ne compte qu'à l'intérieur",
+          "Le z-index maximal est 100",
+          "L'en-tête est en position: sticky, toujours au-dessus",
+          "Les navigateurs ignorent les z-index supérieurs à 1000"
+        ],
+        "answerIndex": 0,
+        "explanation": "Augmenter encore le z-index n'y changera rien : il faut sortir la modale de ce contexte.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-css-avance-q2",
+        "prompt": "Cas pratique 2/3 — Quel correctif est le plus robuste ?",
+        "choices": [
+          "Utiliser <dialog> avec showModal(), affiché dans la couche supérieure, ou rendre la modale à la fin de body",
+          "Mettre z-index: 999999",
+          "Supprimer le z-index de l'en-tête",
+          "Passer la modale en position: absolute"
+        ],
+        "answerIndex": 0,
+        "explanation": "La top layer est au-dessus de tous les contextes d'empilement ; showModal() gère aussi le focus et la touche Échap.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-css-avance-q3",
+        "prompt": "Cas pratique 3/3 — L'ouverture doit être animée par un fondu et une légère montée. Quelles propriétés animer ?",
+        "choices": [
+          "opacity et transform: translateY",
+          "height et margin-top",
+          "display et top",
+          "visibility et padding"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ce sont les deux propriétés gérées à l'étape de composition.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-css-avance-q4",
+        "prompt": "De quelle couleur est le titre, si --titre-couleur n'est définie nulle part ?",
+        "code": ":root { --texte: navy; }\n.titre {\n  color: var(--titre-couleur, var(--texte, black));\n}",
+        "language": "text",
+        "choices": [
+          "navy",
+          "black",
+          "La couleur héritée du parent",
+          "Le CSS est invalide"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les replis s'imbriquent : --titre-couleur manque, on prend --texte, qui est définie.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "fe-defi-css-avance-q5",
+        "prompt": "L'en-tête, placé dans .page, défile avec le contenu au lieu de rester collé. Touche la ligne en cause.",
+        "code": ".entete {\n  position: sticky;\n  top: 0;\n}\n.page {\n  overflow: hidden;\n}",
+        "language": "text",
+        "bugLines": [
+          6
+        ],
+        "explanation": "overflow: hidden fait de .page un conteneur de défilement : sticky s'y colle, alors que c'est la fenêtre qui défile. overflow: clip coupe sans créer de conteneur de défilement.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "fe-defi-css-avance-q6",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": ".carte:hover {\n  width: 320px;\n  transition: all 1s;\n  z-index: 10;\n}",
+        "language": "text",
+        "choices": [
+          "Animer width relance la mise en page à chaque image",
+          "transition: all anime aussi des propriétés imprévues",
+          "Sans position (ni flex ou grid), z-index n'a pas d'effet",
+          "Le sélecteur :hover est invalide"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "On préfère transform: scale, une transition limitée à transform, et un z-index sur un élément positionné. La transition déclarée seulement dans :hover ne joue d'ailleurs qu'à l'entrée.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

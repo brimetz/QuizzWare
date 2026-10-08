@@ -1,0 +1,328 @@
+{
+  "id": "git-ch-securite",
+  "title": "Sécurité et hygiène",
+  "summary": "Secrets, signatures et nettoyage.",
+  "lessons": [
+    {
+      "id": "git-secrets",
+      "title": "Un secret dans l'historique",
+      "summary": "Réagir et prévenir.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Supprimer ne suffit pas",
+          "body": "Un mot de passe ou une clé commité reste dans l'historique, même si un commit suivant supprime le fichier : n'importe qui ayant accès au dépôt peut le retrouver. S'il a été poussé, on le considère comme compromis. La première action est toujours de le révoquer et d'en générer un nouveau ; nettoyer l'historique vient ensuite."
+        },
+        {
+          "title": "Nettoyer l'historique",
+          "body": "git filter-repo (ou BFG) réécrit tout l'historique sans le fichier ou la chaîne en cause. Il faut ensuite pousser en force, demander à chacun de recloner, et penser aux copies qu'on ne contrôle pas : forks, caches des pull requests, clones existants. C'est pourquoi la révocation reste indispensable.",
+          "code": "git filter-repo --path config/.env --invert-paths\ngit push --force origin main"
+        },
+        {
+          "title": "Prévenir",
+          "body": "Les secrets vivent dans des variables d'environnement ou un coffre (Vault, gestionnaire du cloud), jamais dans le code. .gitignore exclut les fichiers locaux (.env) ; on versionne seulement un .env.example sans valeurs réelles. Un scanner (gitleaks, trufflehog) en pre-commit et en CI, et la protection de push des plateformes, bloquent les erreurs avant qu'elles ne partent."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-secrets-q1",
+          "prompt": "Une clé d'accès cloud vient d'être poussée sur un dépôt public. Quelle est la première action ?",
+          "choices": [
+            "Révoquer la clé et en générer une nouvelle",
+            "Supprimer le fichier dans un nouveau commit",
+            "Réécrire l'historique",
+            "Rendre le dépôt privé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des robots parcourent les dépôts publics en continu : la clé peut être exploitée en quelques minutes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-secrets-q2",
+          "prompt": "On supprime le fichier .env dans un nouveau commit. Le secret a-t-il disparu ?",
+          "choices": [
+            "Non : il reste dans les commits précédents de l'historique",
+            "Oui, définitivement",
+            "Oui, après un git pull",
+            "Seulement sur la branche main"
+          ],
+          "answerIndex": 0,
+          "explanation": "git log -p ou git show <ancien commit>:.env le retrouvent.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "git-secrets-q3",
+          "prompt": "Complète : retirer config/.env de tout l'historique, puis publier.",
+          "code": "git filter-repo --___ config/.env --invert-paths\ngit push --___ origin main",
+          "answers": [
+            "path",
+            "force"
+          ],
+          "distractors": [
+            "file",
+            "all",
+            "tags"
+          ],
+          "explanation": "--path sélectionne le fichier, --invert-paths le retire au lieu de le garder seul.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "git-secrets-q4",
+          "prompt": "Le fichier .env, qui contient les mots de passe, est commité par erreur. Touche la ligne en cause.",
+          "code": "node_modules/\ndist/\n.env.example",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "C'est .env qu'il faut ignorer ; .env.example, sans valeurs réelles, doit au contraire être versionné.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-secrets-q5",
+          "prompt": "Pourquoi réécrire l'historique ne suffit-il pas après une fuite sur un dépôt public ?",
+          "choices": [
+            "Des clones, forks et caches ont pu récupérer le secret : seule la révocation le neutralise",
+            "Parce que filter-repo ne fonctionne pas",
+            "Parce que Git garde une copie sur chaque serveur DNS",
+            "Ça suffit toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "Réécrire limite l'exposition future ; révoquer protège dès maintenant.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "git-secrets-q6",
+          "prompt": "Quelles mesures préviennent les fuites de secrets ?",
+          "choices": [
+            "Un scanner de secrets en pre-commit et en CI",
+            "La protection de push de la plateforme",
+            "Des secrets en variables d'environnement ou dans un coffre",
+            "Un dépôt privé, qui suffit à lui seul"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un dépôt privé est lu par beaucoup de monde et d'outils, et peut devenir public un jour.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "git-signatures",
+      "title": "Signer ses commits",
+      "summary": "GPG, SSH et vérification.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "L'auteur est une déclaration",
+          "body": "Le nom et l'e-mail d'un commit viennent de user.name et user.email : n'importe qui peut écrire celui d'un collègue. Rien, dans un commit ordinaire, ne prouve qui l'a réellement créé. La signature cryptographique comble ce manque."
+        },
+        {
+          "title": "Signer avec SSH ou GPG",
+          "body": "Git signe les commits et les tags avec une clé GPG ou, plus simplement, avec une clé SSH. Une fois la clé publique enregistrée sur GitHub ou GitLab, les commits signés affichent un badge « Verified ». git log --show-signature affiche les signatures en local.",
+          "code": "git config --global gpg.format ssh\ngit config --global user.signingkey ~/.ssh/id_ed25519.pub\ngit config --global commit.gpgsign true\ngit config --global tag.gpgsign true"
+        },
+        {
+          "title": "Exiger des signatures",
+          "body": "Une règle de protection de branche peut refuser les commits non signés. Signer les tags de version prouve que la version publiée vient bien de l'équipe et n'a pas été remplacée. La signature authentifie et protège l'intégrité ; elle ne chiffre rien."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-signatures-q1",
+          "prompt": "Peut-on créer un commit au nom de quelqu'un d'autre ?",
+          "choices": [
+            "Oui : l'auteur n'est qu'une déclaration (user.name, user.email)",
+            "Non, Git vérifie l'identité",
+            "Seulement avec les droits administrateur",
+            "Seulement sur un dépôt local"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans signature, l'auteur affiché n'est qu'une information parmi d'autres.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "git-signatures-q2",
+          "prompt": "Complète : signer tous ses commits avec sa clé SSH.",
+          "code": "git config --global gpg.format ___\ngit config --global user.signingkey ~/.ssh/id_ed25519.pub\ngit config --global commit.___ true",
+          "answers": [
+            "ssh",
+            "gpgsign"
+          ],
+          "distractors": [
+            "rsa",
+            "sign",
+            "verify"
+          ],
+          "explanation": "L'option garde le nom historique gpgsign, même avec une clé SSH.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-signatures-q3",
+          "prompt": "Que garantit le badge « Verified » de GitHub sur un commit ?",
+          "choices": [
+            "Que le commit est signé par une clé enregistrée sur le compte de l'utilisateur",
+            "Que le code a été relu",
+            "Que les tests passent",
+            "Que le commit ne contient pas de secret"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il atteste l'origine du commit, pas sa qualité.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-signatures-q4",
+          "prompt": "Quelle commande affiche les signatures des commits ?",
+          "choices": [
+            "git log --show-signature",
+            "git verify",
+            "git status --signed",
+            "git sign --list"
+          ],
+          "answerIndex": 0,
+          "explanation": "git verify-commit et git verify-tag vérifient un objet précis.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-signatures-q5",
+          "prompt": "Pourquoi signer les tags de version ?",
+          "choices": [
+            "Pour prouver que la version publiée vient de l'équipe et n'a pas été remplacée",
+            "Pour accélérer les téléchargements",
+            "Pour que le tag soit poussé automatiquement",
+            "Pour chiffrer le code de la version"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les utilisateurs peuvent vérifier la signature avant de construire ou de déployer la version.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "git-signatures-q6",
+          "prompt": "Qu'apporte la signature des commits ?",
+          "choices": [
+            "Authentifier qui a créé le commit",
+            "Détecter toute modification du commit après signature",
+            "Pouvoir exiger des commits signés sur une branche protégée",
+            "Chiffrer le code source"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le code reste lisible par quiconque a accès au dépôt.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "git-defi-securite",
+    "title": "Défi entretien : le mot de passe oublié",
+    "summary": "Révoquer, nettoyer, prévenir.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "git-defi-securite-q1",
+        "prompt": "Cas pratique 1/3 — On découvre le mot de passe de la base de production dans un commit vieux de six mois, sur le dépôt interne. Quelle est la priorité ?",
+        "choices": [
+          "Changer ce mot de passe immédiatement",
+          "Réécrire l'historique d'abord",
+          "Trouver qui l'a commité",
+          "Rien, le dépôt est interne"
+        ],
+        "answerIndex": 0,
+        "explanation": "Six mois d'exposition interne, des dizaines de clones : on part du principe qu'il a fuité.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi-securite-q2",
+        "prompt": "Cas pratique 2/3 — Faut-il ensuite réécrire l'historique ?",
+        "choices": [
+          "Oui, pour limiter l'exposition future, en coordonnant l'équipe ; cela ne protège pas des copies existantes",
+          "Non, jamais",
+          "Oui, et cela dispense de changer le mot de passe",
+          "Seulement si le dépôt est public"
+        ],
+        "answerIndex": 0,
+        "explanation": "La réécriture est une mesure d'hygiène ; la rotation du secret est la vraie protection.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi-securite-q3",
+        "prompt": "Cas pratique 3/3 — Comment éviter que cela se reproduise ?",
+        "choices": [
+          "Un scanner de secrets en pre-commit et en CI, et les secrets dans un coffre plutôt que dans le code",
+          "Une note dans le README",
+          "Interdire Git",
+          "Changer les mots de passe chaque jour"
+        ],
+        "answerIndex": 0,
+        "explanation": "On combine une prévention automatique et une gestion des secrets hors du code.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi-securite-q4",
+        "prompt": "Un commit modifiant les droits administrateur porte le nom et l'e-mail d'Ana, mais elle ne l'a pas écrit. Quelle règle aurait empêché sa fusion ?",
+        "choices": [
+          "Exiger des commits signés sur la branche protégée",
+          "Exiger des messages de commit en anglais",
+          "Interdire les commits le week-end",
+          "Limiter la taille des commits"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans la clé privée d'Ana, impossible de produire une signature vérifiée à son nom.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi-securite-q5",
+        "prompt": "Après un git filter-repo et un push en force, que doivent faire les collègues ?",
+        "choices": [
+          "Recloner (ou réinitialiser leurs branches) pour ne pas repousser l'ancien historique",
+          "Rien, un git pull suffit",
+          "Faire un git merge de l'ancien historique",
+          "Supprimer Git de leur machine"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un simple pull fusionnerait l'ancien historique, secret compris, avec le nouveau.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "git-defi-securite-q6",
+        "prompt": "Que ne faut-il jamais versionner ?",
+        "choices": [
+          "Un .env contenant des mots de passe",
+          "Des clés privées SSH",
+          "Des fichiers d'identifiants cloud",
+          "Un .env.example sans valeurs réelles"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le fichier d'exemple documente les variables attendues : il a sa place dans le dépôt.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

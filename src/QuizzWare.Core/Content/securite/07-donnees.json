@@ -1,0 +1,321 @@
+{
+  "id": "sec-ch-donnees",
+  "title": "Protéger les données",
+  "summary": "Secrets et données personnelles.",
+  "lessons": [
+    {
+      "id": "sec-secrets",
+      "title": "Gestion des secrets",
+      "summary": "Ni dans le code, ni dans les journaux.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Où ne pas les mettre",
+          "body": "Mots de passe, clés d'API, clés privées, jetons : un secret n'a sa place ni dans le code, ni dans une image Docker (chaque couche se lit), ni dans les journaux, ni dans un ticket. Ce qui y entre une fois y reste, dans l'historique, les sauvegardes et les copies."
+        },
+        {
+          "title": "Où les mettre",
+          "body": "Le secret est injecté au déploiement, par une variable d'environnement ou un fichier monté, depuis un gestionnaire de secrets (Vault, AWS Secrets Manager, Azure Key Vault). Mieux encore, une identité managée (rôle IAM, identité de charge de travail) fournit des identifiants temporaires : il n'y a plus de secret à stocker du tout.",
+          "code": "import os\n\nmot_de_passe = os.environ[\"DB_PASSWORD\"]",
+          "language": "python"
+        },
+        {
+          "title": "Le cycle de vie",
+          "body": "Chaque environnement (développement, recette, production) a ses propres secrets : une fuite en développement ne doit pas ouvrir la production. Chaque secret a des droits minimaux et peut être renouvelé sans interruption ; on le renouvelle régulièrement, et dès qu'une personne qui le connaissait quitte l'équipe. Les journaux masquent les en-têtes Authorization et les champs sensibles."
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "sec-secrets-q1",
+          "prompt": "Revue du Dockerfile : touche la ligne problématique.",
+          "code": "FROM python:3.13-slim\nENV DB_PASSWORD=Sup3rS3cret!\nCOPY . /app\nCMD [\"python\", \"/app/main.py\"]",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le mot de passe est gravé dans l'image : quiconque peut la récupérer le lit avec docker inspect ou docker history. Il est injecté au lancement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-secrets-q2",
+          "prompt": "Quelle est la meilleure façon pour une application dans le cloud d'accéder à sa base, sans stocker de secret ?",
+          "choices": [
+            "Une identité managée (rôle IAM) qui fournit des identifiants temporaires",
+            "Un mot de passe dans le code, chiffré en base64",
+            "Un mot de passe dans un fichier README privé",
+            "Le compte administrateur de la base"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le base64 n'est pas un chiffrement : il se décode instantanément.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sec-secrets-q3",
+          "prompt": "Revue de code : touche la ligne problématique.",
+          "code": "log.info(\"appel API %s headers=%s\",\n         url, requete.headers)",
+          "language": "python",
+          "bugLines": [
+            1,
+            2
+          ],
+          "explanation": "Les en-têtes contiennent souvent Authorization : le jeton se retrouve dans les journaux, lus par bien plus de monde. On les filtre avant de journaliser.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-secrets-q4",
+          "prompt": "Pourquoi utiliser des secrets différents pour le développement, la recette et la production ?",
+          "choices": [
+            "Pour qu'une fuite en développement ne donne pas accès à la production",
+            "Pour faciliter la mémorisation",
+            "Parce que les variables d'environnement l'exigent",
+            "Ce n'est pas nécessaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les environnements de développement sont moins protégés et plus de personnes y ont accès.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "sec-secrets-q5",
+          "prompt": "Complète : lire le mot de passe injecté au déploiement.",
+          "code": "import os\n\nmot_de_passe = os.___[\"DB_PASSWORD\"]",
+          "language": "python",
+          "answers": [
+            "environ"
+          ],
+          "distractors": [
+            "env",
+            "secrets",
+            "config"
+          ],
+          "explanation": "os.environ[\"…\"] lève une erreur si la variable manque : l'application refuse de démarrer sans sa configuration.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "sec-secrets-q6",
+          "prompt": "Que faire quand un développeur quitte l'équipe ?",
+          "choices": [
+            "Révoquer ses accès",
+            "Renouveler les secrets partagés qu'il connaissait",
+            "Supprimer ses clés SSH et jetons personnels",
+            "Rien, si son départ se passe bien"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il ne s'agit pas de soupçonner la personne : son poste, ses notes ou ses comptes peuvent être compromis plus tard.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "sec-donnees-perso",
+      "title": "Données personnelles",
+      "summary": "Minimiser, chiffrer et effacer.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les principes du RGPD",
+          "body": "On ne collecte que ce qui est nécessaire à une finalité précise (minimisation), on le garde seulement le temps utile (durée de conservation), et les personnes peuvent accéder à leurs données, les rectifier ou les faire effacer. Une violation de données présentant un risque doit être notifiée à l'autorité (la CNIL en France) dans les 72 heures."
+        },
+        {
+          "title": "Protéger",
+          "body": "Chiffrement en transit (TLS) et au repos (disques, sauvegardes, colonnes très sensibles), accès limités et journalisés. Certaines données ne se stockent jamais : le cryptogramme d'une carte bancaire après l'autorisation, par exemple (norme PCI DSS). Les journaux ne contiennent pas de données personnelles inutiles."
+        },
+        {
+          "title": "Pseudonymiser, anonymiser",
+          "body": "Des données pseudonymisées (nom remplacé par un identifiant, table de correspondance à part) restent personnelles : on peut réidentifier. Des données anonymisées ne permettent plus aucune réidentification. Copier la base de production sur un poste de développement ou en recette fait sortir des données réelles du périmètre protégé : on utilise des données anonymisées ou synthétiques."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sec-donnees-perso-q1",
+          "prompt": "Que dit le principe de minimisation ?",
+          "choices": [
+            "Ne collecter que les données nécessaires à la finalité",
+            "Compresser les données pour gagner de la place",
+            "Réduire le nombre de serveurs",
+            "Écrire des noms de colonnes courts"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une donnée jamais collectée ne peut pas fuiter.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-donnees-perso-q2",
+          "prompt": "Quelle est la différence entre des données pseudonymisées et des données anonymisées ?",
+          "choices": [
+            "Les premières permettent encore de réidentifier les personnes avec une information séparée ; les secondes, plus du tout",
+            "Aucune",
+            "Les premières sont chiffrées, les secondes non",
+            "Les secondes contiennent les noms"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des données pseudonymisées restent soumises au RGPD.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sec-donnees-perso-q3",
+          "prompt": "Un développeur copie la base de production sur son portable pour reproduire un bug. Quel est le problème ?",
+          "choices": [
+            "Des données personnelles réelles sortent du périmètre protégé ; il faut des données anonymisées ou synthétiques",
+            "Aucun, s'il supprime la copie après",
+            "Le portable sera trop lent",
+            "La base sera désynchronisée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un portable perdu ou volé devient une violation de données.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sec-donnees-perso-q4",
+          "prompt": "Dans quel délai faut-il notifier une violation de données à l'autorité de contrôle ?",
+          "choices": [
+            "72 heures après en avoir pris connaissance",
+            "Un mois",
+            "Un an",
+            "Jamais si l'entreprise est petite"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les personnes concernées doivent aussi être informées si le risque pour elles est élevé.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sec-donnees-perso-q5",
+          "prompt": "Revue de conformité : touche la colonne qui ne doit jamais être stockée.",
+          "code": "CREATE TABLE paiements (\n  id BIGINT PRIMARY KEY,\n  client_id BIGINT NOT NULL,\n  derniers_chiffres CHAR(4),\n  cvv CHAR(3)\n);",
+          "language": "sql",
+          "bugLines": [
+            5
+          ],
+          "explanation": "La norme PCI DSS interdit de conserver le cryptogramme après l'autorisation. En pratique, on confie la carte à un prestataire de paiement et on ne garde qu'un jeton.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sec-donnees-perso-q6",
+          "prompt": "Quelles mesures protègent les données personnelles ?",
+          "choices": [
+            "Le chiffrement en transit et au repos",
+            "Des durées de conservation avec suppression automatique",
+            "Des accès limités et journalisés aux données sensibles",
+            "La copie des données de production en recette"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les environnements de test sont rarement protégés comme la production.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "sec-defi-donnees",
+    "title": "Défi entretien : le stockage public",
+    "summary": "Réagir à une fuite de données.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sec-defi-donnees-q1",
+        "prompt": "Cas pratique 1/3 — Les pièces d'identité des clients étaient dans un espace de stockage cloud resté public par erreur pendant trois jours. Première action ?",
+        "choices": [
+          "Rendre l'espace privé immédiatement",
+          "Prévenir la presse",
+          "Supprimer toutes les pièces d'identité sans garder de trace",
+          "Attendre l'audit annuel"
+        ],
+        "answerIndex": 0,
+        "explanation": "On contient d'abord la fuite ; les journaux d'accès sont conservés pour l'enquête.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-donnees-q2",
+        "prompt": "Cas pratique 2/3 — Et ensuite ?",
+        "choices": [
+          "Analyser les journaux d'accès pour savoir ce qui a été téléchargé, et notifier l'autorité sous 72 heures (et les clients si le risque est élevé)",
+          "Ne rien dire si personne ne s'en est rendu compte",
+          "Changer le nom de l'espace de stockage",
+          "Changer de fournisseur cloud"
+        ],
+        "answerIndex": 0,
+        "explanation": "Des pièces d'identité exposées présentent un risque élevé d'usurpation : les personnes doivent être prévenues.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-donnees-q3",
+        "prompt": "Cas pratique 3/3 — Comment éviter que cela se reproduise ?",
+        "choices": [
+          "Bloquer l'accès public au niveau du compte, décrire l'infrastructure en code relu, et scanner la configuration",
+          "Demander plus d'attention aux équipes",
+          "Interdire le stockage cloud",
+          "Renommer les fichiers"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un garde-fou automatique vaut mieux qu'une consigne.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "sec-defi-donnees-q4",
+        "prompt": "Revue de code : touche la ligne problématique.",
+        "code": "log.info(\"Nouvel utilisateur %s né le %s, IBAN %s\",\n         u.email, u.naissance, u.iban)",
+        "language": "python",
+        "bugLines": [
+          1,
+          2
+        ],
+        "explanation": "Les journaux se copient partout et se conservent longtemps : on y met un identifiant interne, pas des données personnelles.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "sec-defi-donnees-q5",
+        "prompt": "Le droit à l'effacement s'applique-t-il aux sauvegardes ?",
+        "choices": [
+          "Oui : on documente la durée de rotation des sauvegardes, et on ne restaure jamais des données effacées",
+          "Non, jamais",
+          "Oui, il faut modifier chaque sauvegarde dans l'heure",
+          "Seulement pour les sauvegardes papier"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les données disparaissent des sauvegardes à leur expiration ; une restauration doit réappliquer les effacements.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "sec-defi-donnees-q6",
+        "prompt": "Où un secret ne doit-il jamais apparaître ?",
+        "choices": [
+          "Dans le code source",
+          "Dans une image Docker",
+          "Dans les journaux",
+          "Dans un gestionnaire de secrets"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le gestionnaire de secrets est justement fait pour ça.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

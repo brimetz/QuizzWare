@@ -1,0 +1,328 @@
+{
+  "id": "java-ch-outillage",
+  "title": "Outillage et tests",
+  "summary": "Build, JUnit et Mockito.",
+  "lessons": [
+    {
+      "id": "java-build",
+      "title": "Maven et Gradle",
+      "summary": "Dépendances et cycle de build.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Maven",
+          "body": "Maven décrit le projet dans pom.xml : coordonnées (groupId, artifactId, version), dépendances et plugins. Son cycle de vie enchaîne des phases : validate, compile, test, package, verify, install (dans le dépôt local), deploy (vers un dépôt distant). Lancer une phase exécute toutes celles qui la précèdent.",
+          "code": "<dependency>\n  <groupId>org.junit.jupiter</groupId>\n  <artifactId>junit-jupiter</artifactId>\n  <version>5.11.0</version>\n  <scope>test</scope>\n</dependency>",
+          "language": "text"
+        },
+        {
+          "title": "Gradle",
+          "body": "Gradle décrit le build en code (build.gradle.kts en Kotlin). Il est souvent plus rapide grâce à son build incrémental et à son cache. Les configurations indiquent où sert une dépendance : implementation pour le code, testImplementation pour les tests seulement, api pour une bibliothèque qui l'expose à ses utilisateurs.",
+          "code": "dependencies {\n    implementation(\"org.postgresql:postgresql:42.7.4\")\n    testImplementation(\"org.junit.jupiter:junit-jupiter:5.11.0\")\n}",
+          "language": "text"
+        },
+        {
+          "title": "Versions et reproductibilité",
+          "body": "Chaque dépendance en tire d'autres (dépendances transitives) ; deux chemins peuvent réclamer deux versions d'une même bibliothèque. mvn dependency:tree et gradle dependencies montrent d'où vient chacune. Un BOM (bill of materials) aligne les versions d'une famille de modules. Le wrapper (mvnw, gradlew), versionné avec le projet, garantit la même version de l'outil partout."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "java-build-q1",
+          "prompt": "Quelle commande Maven compile, lance les tests et produit le JAR ?",
+          "choices": [
+            "mvn package",
+            "mvn compile",
+            "mvn clean",
+            "mvn validate"
+          ],
+          "answerIndex": 0,
+          "explanation": "package exécute compile et test avant d'empaqueter ; -DskipTests saute les tests, à éviter en CI.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "java-build-q2",
+          "prompt": "Complète : JUnit ne doit servir qu'aux tests, pas au code livré.",
+          "code": "<dependency>\n  <groupId>org.junit.jupiter</groupId>\n  <artifactId>junit-jupiter</artifactId>\n  <version>5.11.0</version>\n  <scope>___</scope>\n</dependency>",
+          "language": "text",
+          "answers": [
+            "test"
+          ],
+          "distractors": [
+            "compile",
+            "runtime",
+            "provided"
+          ],
+          "explanation": "provided sert à ce que fournit l'environnement d'exécution (l'API Servlet d'un serveur d'applications, par exemple).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-build-q3",
+          "prompt": "Pourquoi versionner le wrapper (mvnw ou gradlew) avec le projet ?",
+          "choices": [
+            "Tout le monde, CI comprise, utilise la même version de l'outil de build, sans l'installer",
+            "Pour accélérer la compilation",
+            "Pour publier sur Maven Central",
+            "Parce que Java l'exige"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le script télécharge la version prévue au premier lancement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-build-q4",
+          "prompt": "Deux versions de Jackson se retrouvent dans le projet. Comment savoir quelle dépendance tire laquelle ?",
+          "choices": [
+            "mvn dependency:tree (ou gradle dependencies)",
+            "Lire le JAR final",
+            "Supprimer le dossier .m2",
+            "mvn clean"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'arbre montre les chemins et la version retenue ; on aligne ensuite avec un BOM ou une version imposée.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "java-build-q5",
+          "prompt": "JUnit se retrouve dans l'application livrée. Touche la ligne en cause.",
+          "code": "dependencies {\n    implementation(\"org.postgresql:postgresql:42.7.4\")\n    implementation(\"org.junit.jupiter:junit-jupiter:5.11.0\")\n    testImplementation(\"org.mockito:mockito-core:5.14.0\")\n}",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "JUnit doit être en testImplementation : il n'a rien à faire dans le classpath de production.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "java-build-q6",
+          "prompt": "Quelles phases s'exécutent avec mvn install ?",
+          "choices": [
+            "compile",
+            "test",
+            "package",
+            "deploy"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "install copie l'artefact dans le dépôt local ; deploy, qui le publie sur un dépôt distant, vient après.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "java-tests",
+      "title": "JUnit 5 et Mockito",
+      "summary": "Tester en Java.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "JUnit 5",
+          "body": "Une méthode @Test contient un test ; assertEquals(attendu, obtenu) compare, assertThrows vérifie qu'une exception est levée. @BeforeEach prépare un état neuf avant chaque test : les tests doivent être indépendants les uns des autres. @ParameterizedTest exécute le même test avec plusieurs jeux de données.",
+          "code": "@ParameterizedTest\n@CsvSource({\"1, 1\", \"2, 4\", \"3, 9\"})\nvoid carre(int x, int attendu) {\n    assertEquals(attendu, x * x);\n}"
+        },
+        {
+          "title": "Mockito",
+          "body": "Mockito crée des doublures : mock(Depot.class) renvoie un objet dont les méthodes ne font rien et renvoient des valeurs par défaut (null, 0, liste vide, Optional vide). when(...).thenReturn(...) configure une réponse, verify(...) vérifie qu'un appel a eu lieu.",
+          "code": "Depot depot = mock(Depot.class);\nwhen(depot.trouver(1)).thenReturn(Optional.of(ana));\nvar service = new UserService(depot);\nservice.renommer(1, \"Anna\");\nverify(depot).sauver(any());"
+        },
+        {
+          "title": "Avec mesure",
+          "body": "On ne remplace que les dépendances lentes ou extérieures (base, réseau, e-mails). Un objet valeur (un montant, une date) ou un objet léger se teste avec la vraie classe. Une bibliothèque tierce se met derrière une interface à soi, qu'on peut alors simuler. Trop de verify rend les tests fragiles : on préfère vérifier le résultat."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "java-tests-q1",
+          "prompt": "Complète : vérifier qu'un débit négatif est refusé.",
+          "code": "@Test\nvoid refuse_un_montant_negatif() {\n    var compte = new Compte();\n    ___(IllegalArgumentException.class,\n        () -> compte.debiter(-5));\n}",
+          "answers": [
+            "assertThrows"
+          ],
+          "distractors": [
+            "assertEquals",
+            "expectThrows",
+            "assertFails"
+          ],
+          "explanation": "assertThrows renvoie l'exception, ce qui permet d'en vérifier aussi le message.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "java-tests-q2",
+          "prompt": "Ces tests passent ou échouent selon leur ordre d'exécution. Touche la ligne en cause.",
+          "code": "class PanierTest {\n    static Panier panier = new Panier();\n\n    @Test void ajoute() {\n        panier.ajouter(\"pomme\");\n        assertEquals(1, panier.taille());\n    }\n\n    @Test void vide() {\n        assertEquals(0, panier.taille());\n    }\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le panier statique est partagé : si ajoute passe d'abord, vide échoue. On crée un panier neuf dans un @BeforeEach (ou un champ non statique).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-tests-q3",
+          "prompt": "Que vérifie la dernière ligne ?",
+          "code": "Depot depot = mock(Depot.class);\nwhen(depot.trouver(1)).thenReturn(Optional.of(ana));\nvar service = new UserService(depot);\nservice.renommer(1, \"Anna\");\nverify(depot).sauver(any());",
+          "choices": [
+            "Que sauver a été appelée exactement une fois, avec n'importe quel argument",
+            "Que sauver a été appelée au moins deux fois",
+            "Que sauver n'a jamais été appelée",
+            "Que l'utilisateur a bien été renommé en base"
+          ],
+          "answerIndex": 0,
+          "explanation": "verify(m) équivaut à verify(m, times(1)). Rien n'est enregistré nulle part : depot est un mock.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-tests-q4",
+          "prompt": "Que renvoie un mock Mockito pour une méthode non configurée qui renvoie un Optional<User> ?",
+          "choices": [
+            "Optional.empty()",
+            "null",
+            "Une exception",
+            "Un Optional contenant un User vide"
+          ],
+          "answerIndex": 0,
+          "explanation": "Mockito renvoie des valeurs « vides » : collections vides, Optional vide, 0, false ; null pour les autres objets.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "java-tests-q5",
+          "prompt": "À quoi sert @ParameterizedTest ?",
+          "choices": [
+            "À exécuter le même test avec plusieurs jeux de données",
+            "À lancer les tests en parallèle",
+            "À passer des paramètres à la JVM",
+            "À ignorer un test"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque jeu de données apparaît comme un test distinct dans le rapport.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "java-tests-q6",
+          "prompt": "Dans quels cas vaut-il mieux éviter un mock ?",
+          "choices": [
+            "Pour un objet valeur simple (un montant, une date)",
+            "Pour une bibliothèque tierce, qu'on enveloppe plutôt derrière sa propre interface",
+            "Quand un vrai objet léger suffit",
+            "Pour l'envoi d'e-mails dans un test unitaire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'envoi d'e-mails est justement une dépendance extérieure à remplacer.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "java-defi-outillage",
+    "title": "Défi entretien : le démarrage qui casse",
+    "summary": "Conflits de versions et tests.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "java-defi-outillage-q1",
+        "prompt": "Cas pratique 1/3 — Après la montée de version d'une bibliothèque, l'application plante au démarrage : NoSuchMethodError dans Jackson. Cause probable ?",
+        "choices": [
+          "Un conflit de versions transitives : une autre dépendance impose une version de Jackson incompatible",
+          "Un bug de la JVM",
+          "Un fichier de configuration manquant",
+          "Le JAR est corrompu"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le code a été compilé contre une version et s'exécute avec une autre, où la méthode n'existe pas.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "java-defi-outillage-q2",
+        "prompt": "Cas pratique 2/3 — Comment aligner toutes les versions des modules Jackson ?",
+        "choices": [
+          "Importer le BOM de Jackson (dependencyManagement ou platform) qui fixe une version cohérente",
+          "Copier les JAR à la main dans lib/",
+          "Supprimer Jackson",
+          "Lancer mvn clean"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le BOM déclare la même version pour jackson-core, jackson-databind et les autres modules.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "java-defi-outillage-q3",
+        "prompt": "Cas pratique 3/3 — Comment détecter ce genre de problème avant la production ?",
+        "choices": [
+          "Un test qui démarre l'application en intégration continue à chaque montée de version",
+          "Relire les notes de version de toutes les dépendances",
+          "Ne jamais mettre à jour",
+          "Tester uniquement en production"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un simple test de démarrage (contexte Spring chargé, par exemple) attrape la plupart des conflits.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi-outillage-q4",
+        "prompt": "Combien de tests ce code exécute-t-il ?",
+        "code": "@ParameterizedTest\n@CsvSource({\"1, 1\", \"2, 4\", \"3, 9\"})\nvoid carre(int x, int attendu) {\n    assertEquals(attendu, x * x);\n}",
+        "choices": [
+          "3",
+          "1",
+          "6",
+          "0, il manque @Test"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une exécution par ligne de @CsvSource ; @ParameterizedTest remplace @Test.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "java-defi-outillage-q5",
+        "prompt": "Ce test échoue avec une NoSuchElementException. Touche la ligne en cause.",
+        "code": "when(depot.trouver(1)).thenReturn(Optional.of(ana));\nvar u = service.charger(2);\nassertEquals(\"Ana\", u.nom());",
+        "bugLines": [
+          1,
+          2
+        ],
+        "explanation": "Seul l'identifiant 1 est configuré ; pour 2, le mock renvoie Optional.empty(), et charger appelle orElseThrow.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "java-defi-outillage-q6",
+        "prompt": "Quelles qualités attend-on d'une suite de tests en CI ?",
+        "choices": [
+          "Des tests indépendants les uns des autres",
+          "Des tests unitaires rapides",
+          "Des messages d'échec explicites",
+          "Des tests qui dépendent de leur ordre d'exécution"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "JUnit ne garantit pas l'ordre des méthodes de test : en dépendre rend la suite instable.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

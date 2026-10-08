@@ -1,0 +1,442 @@
+{
+  "id": "mob-ch-qualite",
+  "title": "Qualité et performance",
+  "summary": "Tester, mesurer et rendre accessible.",
+  "lessons": [
+    {
+      "id": "mob-tests",
+      "title": "Tester une application mobile",
+      "summary": "Unitaires, UI et appareils.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La pyramide, version mobile",
+          "body": "La base, ce sont les tests unitaires des ViewModels et des services : rapides, sans émulateur, avec des doublures pour l'API et le stockage. Au-dessus, quelques tests d'interface instrumentés (Espresso sur Android, XCUITest sur iOS, Appium pour les deux) couvrent les parcours principaux : plus lents et plus fragiles, ils restent peu nombreux.",
+          "code": "[Fact]\npublic async Task Affiche_une_erreur_hors_ligne()\n{\n    var api = new FausseApi { HorsLigne = true };\n    var vm = new CatalogueViewModel(api);\n    await vm.ChargerAsync();\n    Assert.True(vm.ErreurVisible);\n}",
+          "language": "csharp"
+        },
+        {
+          "title": "La diversité des appareils",
+          "body": "Le parc Android compte des milliers de modèles : tailles d'écran, versions du système, surcouches des constructeurs. Les fermes d'appareils (Firebase Test Lab, BrowserStack, AWS Device Farm) exécutent les tests sur de vrais téléphones. On teste au moins sur un appareil d'entrée de gamme, celui de beaucoup d'utilisateurs."
+        },
+        {
+          "title": "Bêta et mises à jour",
+          "body": "Avant la publication, une bêta (TestFlight, tests internes de Google Play) fait remonter les problèmes du monde réel. Un test souvent oublié : la mise à jour. On installe la version précédente, on crée des données, puis on installe la nouvelle : la migration de la base locale et des préférences doit fonctionner."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-tests-q1",
+          "prompt": "Où concentrer la majorité des tests d'une application mobile ?",
+          "choices": [
+            "Dans des tests unitaires des ViewModels et des services",
+            "Dans des tests d'interface sur émulateur",
+            "Dans des tests manuels avant chaque version",
+            "Dans les retours des utilisateurs sur le store"
+          ],
+          "answerIndex": 0,
+          "explanation": "Rapides et fiables, ils tournent à chaque commit ; les tests d'interface ciblent les parcours critiques.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-tests-q2",
+          "prompt": "Pourquoi tester sur une ferme d'appareils réels ?",
+          "choices": [
+            "Pour couvrir des constructeurs, tailles d'écran et versions qu'on n'a pas sous la main",
+            "Parce que les émulateurs sont interdits",
+            "Pour accélérer la compilation",
+            "Pour publier automatiquement sur les stores"
+          ],
+          "answerIndex": 0,
+          "explanation": "Certains bugs n'apparaissent qu'avec la surcouche d'un constructeur ou une petite quantité de mémoire.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "mob-tests-q3",
+          "prompt": "Ce test échoue au hasard en intégration continue. Touche la ligne en cause.",
+          "code": "[Fact]\npublic async Task Charge_les_produits()\n{\n    var vm = new CatalogueViewModel(new VraieApi());\n    await vm.ChargerAsync();\n    Assert.Equal(42, vm.Produits.Count);\n}",
+          "language": "csharp",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le test dépend du vrai serveur : de son contenu, de sa disponibilité et du réseau. Une doublure rend le test déterministe.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-tests-q4",
+          "prompt": "Quel test oublie-t-on souvent avant de publier une nouvelle version ?",
+          "choices": [
+            "La mise à jour : installer l'ancienne version, créer des données, puis installer la nouvelle",
+            "Le test de l'icône",
+            "Le test sur le simulateur le plus récent",
+            "Le test de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une installation neuve ne révèle pas une migration de base de données ratée, qui touche tous les utilisateurs existants.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "mob-tests-q5",
+          "prompt": "Complète ce test.",
+          "code": "[Fact]\npublic async Task Affiche_une_erreur_hors_ligne()\n{\n    var api = new FausseApi { HorsLigne = true };\n    var vm = new CatalogueViewModel(___);\n    await vm.ChargerAsync();\n    Assert.___(vm.ErreurVisible);\n}",
+          "language": "csharp",
+          "answers": [
+            "api",
+            "True"
+          ],
+          "distractors": [
+            "new VraieApi()",
+            "False",
+            "null"
+          ],
+          "explanation": "Le ViewModel reçoit la doublure configurée « hors ligne », et l'on vérifie qu'il affiche l'erreur.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "mob-tests-q6",
+          "prompt": "Quels outils servent aux tests d'interface mobiles ?",
+          "choices": [
+            "Espresso (Android)",
+            "XCUITest (iOS)",
+            "Appium (multiplateforme)",
+            "Lighthouse"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Lighthouse audite des pages web, pas des applications natives.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mob-performance",
+      "title": "Performance",
+      "summary": "Démarrage, fluidité et mémoire.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le démarrage",
+          "body": "Au démarrage à froid, le processus n'existe pas : le système le crée, charge le runtime et l'application, puis le premier écran. C'est le cas le plus lent, et le premier contact de l'utilisateur. On l'accélère en n'initialisant au démarrage que l'indispensable (le suivi des plantages), en différant les autres SDK, et en affichant l'écran avant ses données. La compilation anticipée (AOT, profils de référence sur Android) réduit aussi le temps de chargement."
+        },
+        {
+          "title": "La fluidité",
+          "body": "Une longue liste doit être virtualisée (CollectionView, RecyclerView, LazyColumn, List) : seules les cellules visibles existent, et elles sont recyclées au défilement. Chaque cellule reste simple : peu de niveaux imbriqués, des images à la taille affichée, aucun calcul lourd pendant l'affichage."
+        },
+        {
+          "title": "Mémoire et batterie",
+          "body": "Une page qui s'abonne à un événement global (connectivité, messager) sans se désabonner reste en mémoire après sa fermeture : chaque ouverture ajoute une copie, jusqu'au plantage par manque de mémoire. Côté batterie, le GPS précis en continu, les requêtes réseau fréquentes (chacune réveille la radio) et les réveils en arrière-plan sont les premiers coupables : on regroupe et on espace.",
+          "code": "protected override void OnAppearing()\n{\n    base.OnAppearing();\n    Connectivity.ConnectivityChanged += OnChange;\n}\n\nprotected override void OnDisappearing()\n{\n    Connectivity.ConnectivityChanged -= OnChange;\n    base.OnDisappearing();\n}",
+          "language": "csharp"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-performance-q1",
+          "prompt": "Qu'est-ce qu'un démarrage à froid ?",
+          "choices": [
+            "Le processus n'existe pas encore : le système doit le créer, charger le runtime puis l'application",
+            "Un démarrage par temps froid, quand la batterie est faible",
+            "Le retour sur une application restée en arrière-plan",
+            "Le premier démarrage après l'installation uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le retour sur une application encore en mémoire est un démarrage à chaud, bien plus rapide.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-performance-q2",
+          "prompt": "L'accueil met 4 s à s'afficher : cinq SDK (statistiques, publicité, plantages, chat, tests A/B) sont initialisés au démarrage. Que faire ?",
+          "choices": [
+            "N'initialiser que le suivi des plantages au démarrage, et différer les autres après le premier affichage",
+            "Initialiser les cinq en parallèle sur le thread principal",
+            "Supprimer l'écran d'accueil",
+            "Afficher un écran de démarrage plus long"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le suivi des plantages doit être prêt tôt pour capturer un plantage au démarrage ; le reste peut attendre.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mob-performance-q3",
+          "prompt": "La mémoire augmente à chaque ouverture de cette page. Touche la ligne en cause.",
+          "code": "public partial class DetailPage : ContentPage\n{\n    public DetailPage()\n    {\n        InitializeComponent();\n        Connectivity.ConnectivityChanged +=\n            OnConnectiviteChangee;\n    }\n\n    void OnConnectiviteChangee(object? s,\n        ConnectivityChangedEventArgs e) =>\n        Bandeau.IsVisible =\n            e.NetworkAccess != NetworkAccess.Internet;\n}",
+          "language": "csharp",
+          "bugLines": [
+            6,
+            7
+          ],
+          "explanation": "L'événement global garde une référence vers chaque page abonnée, qui n'est jamais libérée. On s'abonne dans OnAppearing et on se désabonne dans OnDisappearing.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mob-performance-q4",
+          "prompt": "Pourquoi une liste de 10 000 éléments doit-elle être virtualisée ?",
+          "choices": [
+            "Seules les cellules visibles sont créées, puis recyclées au défilement",
+            "Pour trier les éléments plus vite",
+            "Pour les charger depuis le serveur",
+            "Pour qu'elles s'affichent dans l'ordre"
+          ],
+          "answerIndex": 0,
+          "explanation": "Créer 10 000 cellules prendrait des secondes et des centaines de Mo ; une vingtaine suffit à remplir l'écran.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "mob-performance-q5",
+          "prompt": "Complète : se désabonner quand la page disparaît.",
+          "code": "protected override void OnDisappearing()\n{\n    Connectivity.ConnectivityChanged ___\n        OnConnectiviteChangee;\n    base.OnDisappearing();\n}",
+          "language": "csharp",
+          "answers": [
+            "-="
+          ],
+          "distractors": [
+            "+=",
+            "=",
+            "!="
+          ],
+          "explanation": "-= retire le gestionnaire : l'événement ne référence plus la page, qui peut être libérée.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-performance-q6",
+          "prompt": "Qu'est-ce qui vide le plus la batterie ?",
+          "choices": [
+            "Le GPS haute précision en continu",
+            "Des requêtes réseau fréquentes, qui réveillent chacune la radio",
+            "Des réveils fréquents en arrière-plan",
+            "Un écran fixe en thème sombre sur un écran OLED"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Sur OLED, les pixels noirs sont éteints : le thème sombre économise même un peu d'énergie.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mob-accessibilite",
+      "title": "Accessibilité mobile",
+      "summary": "Lecteurs d'écran et tailles de texte.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les lecteurs d'écran",
+          "body": "TalkBack (Android) et VoiceOver (iOS) lisent à voix haute l'élément touché. Un bouton qui n'affiche qu'une icône doit avoir une description : SemanticProperties.Description en .NET MAUI, contentDescription sur Android, accessibilityLabel sur iOS. Les images purement décoratives sont au contraire exclues, pour ne pas encombrer la lecture.",
+          "code": "<ImageButton Source=\"poubelle.png\"\n    SemanticProperties.Description=\"Supprimer la note\"\n    Command=\"{Binding SupprimerCommand}\" />",
+          "language": "text"
+        },
+        {
+          "title": "Taille du texte et zones tactiles",
+          "body": "Beaucoup d'utilisateurs agrandissent le texte dans les réglages du système. L'application doit suivre ce réglage, avec des mises en page qui s'adaptent : pas de hauteur fixe ni de texte tronqué à une ligne. Les zones tactiles mesurent au moins 48 dp sur Android et 44 points sur iOS, même si l'icône dessinée est plus petite."
+        },
+        {
+          "title": "Couleurs et tests",
+          "body": "Le texte doit contraster avec son fond (au moins 4,5:1 pour un texte normal), et une information ne passe jamais par la seule couleur : un champ en erreur affiche aussi un message. On teste en parcourant l'application avec le lecteur d'écran activé, avec le texte au maximum, et avec les scanners (Accessibility Scanner sur Android, Accessibility Inspector sur iOS)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-accessibilite-q1",
+          "prompt": "Que lit VoiceOver pour un bouton qui n'affiche qu'une icône, sans description ?",
+          "choices": [
+            "Rien d'utile : « bouton », voire le nom du fichier image",
+            "Une description générée parfaitement par le système",
+            "Le nom de la commande liée",
+            "Le texte de la page"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les systèmes tentent parfois de reconnaître l'icône, mais rien ne vaut une description explicite.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "mob-accessibilite-q2",
+          "prompt": "Complète : décrire ce bouton pour les lecteurs d'écran.",
+          "code": "<ImageButton Source=\"poubelle.png\"\n    SemanticProperties.___=\"Supprimer la note\"\n    Command=\"{Binding SupprimerCommand}\" />",
+          "language": "text",
+          "answers": [
+            "Description"
+          ],
+          "distractors": [
+            "Title",
+            "Tooltip",
+            "Text"
+          ],
+          "explanation": "SemanticProperties.Hint peut compléter avec ce qui se passe à l'activation.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-accessibilite-q3",
+          "prompt": "Quelle taille minimale pour une zone tactile ?",
+          "choices": [
+            "Environ 48 dp sur Android et 44 points sur iOS",
+            "16 pixels",
+            "La taille de l'icône, quelle qu'elle soit",
+            "Un quart de l'écran"
+          ],
+          "answerIndex": 0,
+          "explanation": "Soit environ 9 mm : la taille d'un bout de doigt. La zone peut dépasser le dessin de l'icône.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "mob-accessibilite-q4",
+          "prompt": "Avec une grande taille de texte système, le message devient illisible. Touche une ligne en cause.",
+          "code": "<Label Text=\"Erreur de paiement\"\n       FontAttributes=\"Bold\" />\n<Label Text=\"{Binding Message}\"\n       MaxLines=\"1\"\n       HeightRequest=\"20\" />",
+          "language": "text",
+          "bugLines": [
+            4,
+            5
+          ],
+          "explanation": "Une hauteur fixe et une seule ligne coupent le texte agrandi. On laisse le label grandir et passer à la ligne.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-accessibilite-q5",
+          "prompt": "Un formulaire signale les champs invalides uniquement par une bordure rouge. Quel est le problème ?",
+          "choices": [
+            "Les personnes daltoniennes ou qui utilisent un lecteur d'écran ne perçoivent pas l'erreur : il faut aussi un message",
+            "Le rouge est réservé aux boutons de suppression",
+            "Aucun problème",
+            "Les bordures ralentissent l'affichage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le message d'erreur, lié au champ, est aussi annoncé par le lecteur d'écran.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "mob-accessibilite-q6",
+          "prompt": "Comment tester l'accessibilité d'une application ?",
+          "choices": [
+            "Parcourir l'application avec TalkBack ou VoiceOver",
+            "Régler la taille du texte système au maximum",
+            "Utiliser Accessibility Scanner ou Accessibility Inspector",
+            "Vérifier seulement sur le plus grand écran disponible"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un grand écran masque au contraire les problèmes de texte tronqué.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "mob-defi-qualite",
+    "title": "Défi entretien : une note qui s'effondre",
+    "summary": "Plantages, mémoire et fluidité.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mob-defi-qualite-q1",
+        "prompt": "Cas pratique 1/3 — La note de l'application chute : « elle rame et plante ». Par où commencer ?",
+        "choices": [
+          "Les rapports de plantages et de performance de production (Android vitals, Crashlytics, Xcode Organizer)",
+          "Réécrire l'application",
+          "Répondre aux avis un par un",
+          "Tester sur son propre téléphone"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les données de production disent quels plantages touchent le plus d'utilisateurs, sur quels appareils.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-qualite-q2",
+        "prompt": "Cas pratique 2/3 — Premier plantage : manque de mémoire sur la galerie, après plusieurs ouvertures. Hypothèse la plus probable ?",
+        "choices": [
+          "Une fuite : chaque page ouverte reste en mémoire (abonnement non retiré, images pleine taille retenues)",
+          "Le téléphone est trop ancien",
+          "Le serveur envoie trop de données",
+          "Un bug du système"
+        ],
+        "answerIndex": 0,
+        "explanation": "« Après plusieurs ouvertures » est la signature d'une fuite : la mémoire monte à chaque passage.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-qualite-q3",
+        "prompt": "Cas pratique 3/3 — Où s'abonner et se désabonner d'un événement global dans une page .NET MAUI ?",
+        "choices": [
+          "S'abonner dans OnAppearing, se désabonner dans OnDisappearing",
+          "S'abonner dans le constructeur, sans jamais se désabonner",
+          "S'abonner à chaque clic",
+          "Dans App.xaml.cs, pour toutes les pages"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les deux méthodes encadrent la période où la page est affichée : l'abonnement ne survit pas à la page.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-qualite-q4",
+        "prompt": "Une liste saccade. Le profileur montre des cellules avec six niveaux de mises en page imbriquées. Que faire ?",
+        "choices": [
+          "Aplatir la mise en page des cellules, par exemple une seule grille au lieu de piles imbriquées",
+          "Ajouter des animations pour masquer les saccades",
+          "Charger toutes les cellules à l'avance",
+          "Désactiver le recyclage"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque niveau ajoute des passes de mesure : multiplié par chaque cellule à chaque défilement, le coût explose.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "mob-defi-qualite-q5",
+        "prompt": "Ce test d'interface échoue une fois sur cinq. Touche la ligne en cause.",
+        "code": "app.Tap(\"Connexion\");\nThread.Sleep(2000);\nvar titre = app.Query(\"Titre\").Text;\nAssert.Equal(\"Accueil\", titre);",
+        "language": "csharp",
+        "bugLines": [
+          2
+        ],
+        "explanation": "Une attente fixe est soit trop courte (échec), soit trop longue (lenteur). On attend que l'élément apparaisse, avec un délai maximal (WaitForElement).",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "mob-defi-qualite-q6",
+        "prompt": "Avant une publication, que vérifier ?",
+        "choices": [
+          "Les parcours principaux avec un lecteur d'écran",
+          "Le démarrage à froid sur un appareil d'entrée de gamme",
+          "La mise à jour depuis la version précédente",
+          "Uniquement le dernier téléphone haut de gamme"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les utilisateurs ont rarement le téléphone du développeur.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

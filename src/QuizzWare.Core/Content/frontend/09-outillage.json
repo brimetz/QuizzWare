@@ -1,0 +1,324 @@
+{
+  "id": "fe-ch-outillage",
+  "title": "Outillage",
+  "summary": "Construire et déboguer.",
+  "lessons": [
+    {
+      "id": "fe-build",
+      "title": "La chaîne de build",
+      "summary": "Transpiler, regrouper et minifier.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Pourquoi un build ?",
+          "body": "Le navigateur ne comprend ni TypeScript, ni JSX, ni les fichiers .vue. Le build transpile ce code en JavaScript standard, regroupe les modules en quelques fichiers (bundling), minifie le résultat et ajoute un hash aux noms pour le cache. Vite (qui s'appuie sur esbuild et Rollup), webpack ou Parcel s'en chargent ; en développement, Vite sert les modules natifs avec un rechargement à chaud (HMR)."
+        },
+        {
+          "title": "Tree shaking et découpage",
+          "body": "Les imports ES sont statiques : le bundler voit ce qui est réellement utilisé et retire le reste (tree shaking). Cela ne marche que si la bibliothèque est publiée en modules ES : import _ from \"lodash\" embarque tout, import { debounce } from \"lodash-es\" seulement la fonction. Chaque import() dynamique crée un morceau (chunk) chargé à la demande.",
+          "code": "// Tout lodash (≈ 70 Ko) :\nimport _ from \"lodash\";\n// Seulement debounce :\nimport { debounce } from \"lodash-es\";"
+        },
+        {
+          "title": "Ce qui part chez le client est public",
+          "body": "Les variables d'environnement exposées au client (préfixe VITE_, NEXT_PUBLIC_…) sont recopiées en clair dans le bundle : on n'y met jamais de secret. Les source maps relient le code minifié au code d'origine : indispensables pour lire une trace d'erreur de production, on peut les envoyer à l'outil de suivi d'erreurs sans les publier."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-build-q1",
+          "prompt": "Qu'est-ce que le tree shaking ?",
+          "choices": [
+            "Retirer du bundle le code exporté mais jamais importé, grâce à l'analyse des modules ES",
+            "Trier les dépendances par ordre alphabétique",
+            "Mettre à jour automatiquement les dépendances",
+            "Supprimer les commentaires du code"
+          ],
+          "answerIndex": 0,
+          "explanation": "Supprimer commentaires et espaces, c'est la minification ; le tree shaking retire du code inutilisé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-build-q2",
+          "prompt": "Pourquoi le build produit-il des noms comme app.3f9a2c.js ?",
+          "choices": [
+            "Le hash change avec le contenu : on peut mettre le fichier en cache très longtemps",
+            "Pour masquer le code source",
+            "Pour éviter les conflits de noms entre développeurs",
+            "Pour accélérer la minification"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une nouvelle version produit un nouveau nom : le navigateur la télécharge, sans jamais servir une copie périmée.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "fe-build-q3",
+          "prompt": "Revue de sécurité : ce fichier est inclus dans le bundle client. Touche la ligne problématique.",
+          "code": "export const config = {\n  apiUrl: import.meta.env.VITE_API_URL,\n  mapsKey: import.meta.env.VITE_MAPS_KEY,\n  stripeSecret: import.meta.env.VITE_STRIPE_SECRET,\n};",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Tout ce qui est dans le bundle est lisible par n'importe qui. Une clé secrète reste côté serveur ; une clé publique de cartographie, restreinte par domaine, peut être exposée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-build-q4",
+          "prompt": "À quoi servent les source maps en production ?",
+          "choices": [
+            "Relier le code minifié au code source pour lire les traces d'erreur et déboguer",
+            "Accélérer le chargement des pages",
+            "Cartographier les routes de l'application",
+            "Compresser les images"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans elles, une erreur pointe vers app.3f9a2c.js:1:48213, inexploitable.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "fe-build-q5",
+          "prompt": "Complète : n'embarquer que la fonction debounce.",
+          "code": "___ { debounce } ___ \"lodash-es\";",
+          "answers": [
+            "import",
+            "from"
+          ],
+          "distractors": [
+            "require",
+            "export",
+            "of"
+          ],
+          "explanation": "Un import nommé depuis un paquet en modules ES permet au bundler d'ignorer le reste de la bibliothèque.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "fe-build-q6",
+          "prompt": "Que fait généralement un build de production ?",
+          "choices": [
+            "Transpiler TypeScript et JSX",
+            "Minifier le code",
+            "Découper le code en morceaux chargés à la demande",
+            "Exécuter l'application pour vérifier qu'elle fonctionne"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le build transforme le code ; le vérifier, c'est le rôle des tests.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "fe-devtools",
+      "title": "Les DevTools",
+      "summary": "Inspecter, mesurer et déboguer.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Elements et Console",
+          "body": "L'onglet Elements montre le DOM réel (pas le HTML d'origine) et, pour l'élément choisi, toutes les règles CSS qui s'y appliquent : une règle barrée est écrasée par une règle plus prioritaire. L'onglet Computed donne la valeur finale de chaque propriété. La Console affiche les erreurs et permet d'exécuter du code dans la page ; $0 désigne l'élément sélectionné."
+        },
+        {
+          "title": "Network et Performance",
+          "body": "Network liste chaque requête : statut, en-têtes, taille, durée, et une cascade (waterfall) qui montre ce qui attend quoi. On peut désactiver le cache et brider le réseau. Performance enregistre ce que fait le thread principal : les tâches de plus de 50 ms (long tasks) bloquent l'interface. Le bridage du CPU simule un téléphone moyen. Lighthouse produit un audit complet."
+        },
+        {
+          "title": "Déboguer le JavaScript",
+          "body": "Dans Sources, on pose des points d'arrêt, éventuellement conditionnels, puis on avance pas à pas en inspectant les variables. L'instruction debugger; dans le code arrête l'exécution quand les DevTools sont ouverts. Attention : console.log d'un objet affiche une référence vivante ; déplié plus tard, il montre son état actuel, pas celui du moment du log.",
+          "code": "function total(panier) {\n  debugger; // arrêt ici si les DevTools sont ouverts\n  return panier.reduce((s, p) => s + p.prix, 0);\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-devtools-q1",
+          "prompt": "Dans l'onglet Elements, une règle CSS apparaît barrée. Que signifie-t-elle ?",
+          "choices": [
+            "Elle est écrasée par une règle plus prioritaire (spécificité, ordre ou !important)",
+            "Elle contient une erreur de syntaxe",
+            "Elle a été supprimée du fichier",
+            "Elle s'applique seulement au survol"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une propriété invalide est signalée autrement (icône d'avertissement) ; barrée veut dire « perdante » dans la cascade.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-devtools-q2",
+          "prompt": "Comment reproduire la lenteur vécue par un utilisateur sur un téléphone moyen en 4G ?",
+          "choices": [
+            "Brider le réseau et le CPU dans les DevTools",
+            "Ouvrir plusieurs onglets en même temps",
+            "Vider le cache du navigateur",
+            "C'est impossible sans téléphone"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un ordinateur de développement est souvent 4 à 6 fois plus rapide qu'un téléphone moyen.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-devtools-q3",
+          "prompt": "Dans Performance, une « long task » de 300 ms apparaît à chaque clic. Qu'est-ce que cela signifie ?",
+          "choices": [
+            "Du JavaScript occupe le thread principal plus de 50 ms : l'interface ne répond plus, l'INP en souffre",
+            "Une requête réseau a pris 300 ms",
+            "Une image met 300 ms à s'afficher",
+            "Le navigateur est en train de mettre en cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "On découpe le travail, on le reporte, ou on le déplace dans un Web Worker.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "fe-devtools-q4",
+          "prompt": "Complète : arrêter l'exécution ici quand les DevTools sont ouverts.",
+          "code": "function total(panier) {\n  ___;\n  return panier.reduce((s, p) => s + p.prix, 0);\n}",
+          "answers": [
+            "debugger"
+          ],
+          "distractors": [
+            "breakpoint",
+            "pause",
+            "console.break()"
+          ],
+          "explanation": "debugger est une instruction du langage, sans effet quand aucun débogueur n'est attaché.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-devtools-q5",
+          "prompt": "Après l'exécution de ce code, on déplie l'objet affiché dans la console. Quelle valeur de total montre-t-il ?",
+          "code": "const panier = { total: 10 };\nconsole.log(panier);\npanier.total = 99;",
+          "choices": [
+            "99 : la console garde une référence et l'évalue au moment où on déplie",
+            "10 : la valeur au moment du log",
+            "undefined",
+            "Une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'aperçu sur une ligne peut montrer 10, l'objet déplié montre 99. Pour figer l'état : console.log(structuredClone(panier)) ou JSON.stringify.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "fe-devtools-q6",
+          "prompt": "Que permet l'onglet Network ?",
+          "choices": [
+            "Voir la cascade de chargement des ressources",
+            "Lire les en-têtes et le statut de chaque réponse",
+            "Désactiver le cache tant que les DevTools sont ouverts",
+            "Modifier le code du serveur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On peut aussi rejouer une requête ou la copier en commande curl.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "fe-defi-outillage",
+    "title": "Défi entretien : un bundle de 2 Mo",
+    "summary": "Mesurer, alléger, découper.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "fe-defi-outillage-q1",
+        "prompt": "Cas pratique 1/3 — Le bundle principal pèse 2 Mo. Comment savoir ce qui le compose ?",
+        "choices": [
+          "Un analyseur de bundle (rollup-plugin-visualizer, webpack-bundle-analyzer) qui montre la taille de chaque module",
+          "Lire le fichier minifié",
+          "Supprimer des dépendances au hasard",
+          "Regarder package.json"
+        ],
+        "answerIndex": 0,
+        "explanation": "La carte des modules révèle les dépendances inattendues, souvent bien plus lourdes qu'on ne le pense.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-outillage-q2",
+        "prompt": "Cas pratique 2/3 — Une bibliothèque de dates de 300 Ko est importée en entier pour une seule fonction de formatage. Que faire ?",
+        "choices": [
+          "Importer seulement cette fonction depuis une version en modules ES, ou la remplacer par Intl.DateTimeFormat",
+          "Minifier davantage",
+          "La charger depuis un CDN",
+          "La copier dans le projet"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'API Intl du navigateur formate les dates dans toutes les langues, sans aucun octet à télécharger.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-outillage-q3",
+        "prompt": "Cas pratique 3/3 — Un éditeur riche de 800 Ko ne sert que sur la page d'administration. Que faire ?",
+        "choices": [
+          "Le charger à la demande avec import() dynamique",
+          "L'inclure dans le bundle principal",
+          "Le précharger sur toutes les pages",
+          "Le transpiler en ES5"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le bundler en fait un morceau séparé, que seuls les administrateurs téléchargent.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "fe-defi-outillage-q4",
+        "prompt": "La production sert un JavaScript bien plus lourd que prévu. Touche la ligne en cause.",
+        "code": "// vite.config.js\nexport default {\n  build: {\n    sourcemap: true,\n    minify: false,\n  },\n};",
+        "bugLines": [
+          5
+        ],
+        "explanation": "minify: false désactive la minification. Les source maps, elles, sont des fichiers séparés que le navigateur ne télécharge que si les DevTools sont ouverts.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-outillage-q5",
+        "prompt": "Une erreur de production indique « a is not a function at app.3f9a2c.js:1:48213 ». Que faut-il pour la comprendre ?",
+        "choices": [
+          "Les source maps du build, chargées dans l'outil de suivi d'erreurs ou les DevTools",
+          "Relancer le build en mode développement",
+          "Demander à l'utilisateur une capture d'écran",
+          "Désactiver la minification en production"
+        ],
+        "answerIndex": 0,
+        "explanation": "La source map retrouve le fichier, la ligne et le nom d'origine de la fonction.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "fe-defi-outillage-q6",
+        "prompt": "Coche les bons réflexes de performance.",
+        "choices": [
+          "Mesurer (Lighthouse, panneau Performance) avant d'optimiser",
+          "Tester avec un CPU et un réseau bridés",
+          "Surveiller la taille des bundles en intégration continue",
+          "Optimiser uniquement sur sa machine de développement"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un budget de taille vérifié en CI empêche les régressions de passer inaperçues.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

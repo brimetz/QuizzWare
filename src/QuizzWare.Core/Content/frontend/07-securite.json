@@ -1,0 +1,326 @@
+{
+  "id": "fe-ch-securite",
+  "title": "Sécurité frontend",
+  "summary": "Ce que le navigateur protège, et ce qu'il ne protège pas.",
+  "lessons": [
+    {
+      "id": "fe-csp",
+      "title": "XSS et Content Security Policy",
+      "summary": "Bloquer les scripts injectés.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les points d'entrée côté navigateur",
+          "body": "Une XSS fait exécuter à la page un script fourni par un attaquant. Côté frontend, les portes d'entrée sont connues : innerHTML (ou outerHTML, insertAdjacentHTML) avec une donnée externe, un lien dont l'URL commence par javascript:, eval ou new Function. textContent insère du texte sans jamais l'interpréter comme du HTML.",
+          "code": "const nom = new URLSearchParams(location.search)\n  .get(\"nom\");\n// Dangereux :\nel.innerHTML = `Bonjour ${nom} !`;\n// Sûr :\nel.textContent = `Bonjour ${nom} !`;"
+        },
+        {
+          "title": "Les frameworks échappent, sauf…",
+          "body": "React, Vue et Angular échappent les valeurs insérées dans les gabarits : {nom} en JSX est sûr. Les échappatoires explicites, elles, ne le sont pas : dangerouslySetInnerHTML, v-html, ou écrire dans ref.current.innerHTML. Quand il faut afficher du HTML riche fourni par un utilisateur, on le nettoie avec une bibliothèque éprouvée comme DOMPurify."
+        },
+        {
+          "title": "Content Security Policy",
+          "body": "L'en-tête Content-Security-Policy indique au navigateur quelles sources de scripts, styles ou images sont autorisées. script-src 'self' bloque les scripts inline et les domaines externes : une XSS injectée ne s'exécute plus. Pour un script inline légitime, on utilise un nonce aléatoire par réponse, jamais 'unsafe-inline'. On déploie d'abord en mode Report-Only pour repérer ce qui casserait.",
+          "code": "Content-Security-Policy:\n  default-src 'self';\n  script-src 'self' 'nonce-r4nd0m';\n  object-src 'none';\n  base-uri 'none'",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "fe-csp-q1",
+          "prompt": "Ce code permet une XSS par un simple lien. Touche la ligne en cause.",
+          "code": "const params = new URLSearchParams(location.search);\nconst nom = params.get(\"nom\");\ndocument.querySelector(\"#bonjour\")\n  .innerHTML = `Bonjour ${nom} !`;",
+          "bugLines": [
+            4
+          ],
+          "explanation": "?nom=<img src=x onerror=alert(1)> exécute du code. Il faut textContent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-csp-q2",
+          "prompt": "Quel est l'effet de Content-Security-Policy: script-src 'self' ?",
+          "choices": [
+            "Seuls les scripts servis par la même origine s'exécutent : scripts inline et domaines externes sont bloqués",
+            "Les scripts doivent être signés",
+            "Les scripts ne peuvent plus faire de requêtes réseau",
+            "Seul le script principal de la page s'exécute"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les attributs d'événement inline (onclick, onerror) sont aussi bloqués : c'est ce qui neutralise la plupart des XSS.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "fe-csp-q3",
+          "prompt": "Pourquoi ajouter 'unsafe-inline' à script-src est-il une mauvaise idée ?",
+          "choices": [
+            "Cela réautorise les scripts inline, précisément ce qu'injecte une XSS",
+            "Cela ralentit la page",
+            "Cela bloque les scripts externes",
+            "Ce mot-clé n'existe pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour un script inline légitime, on lui donne un nonce ou on autorise son hash.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "fe-csp-q4",
+          "prompt": "Complète pour afficher le nom sans risque.",
+          "code": "const el = document.querySelector(\"#bonjour\");\nel.___ = `Bonjour ${nom} !`;",
+          "answers": [
+            "textContent"
+          ],
+          "distractors": [
+            "innerHTML",
+            "outerHTML",
+            "html"
+          ],
+          "explanation": "textContent traite la valeur comme du texte : les chevrons s'affichent, rien n'est interprété.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-csp-q5",
+          "prompt": "Comment déployer une CSP sur un site existant sans rien casser ?",
+          "choices": [
+            "D'abord en Content-Security-Policy-Report-Only, pour collecter les violations, puis l'appliquer",
+            "Directement en production un vendredi soir",
+            "Avec 'unsafe-inline' et 'unsafe-eval' pour commencer",
+            "Uniquement dans la balise <meta> de la page d'accueil"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le mode Report-Only signale ce qui serait bloqué sans rien bloquer : on corrige, puis on bascule.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "fe-csp-q6",
+          "prompt": "Dans une application React, quels usages restent des portes d'entrée XSS ?",
+          "choices": [
+            "dangerouslySetInnerHTML avec du contenu utilisateur",
+            "Écrire du contenu utilisateur dans ref.current.innerHTML",
+            "eval sur une donnée externe",
+            "Afficher {nom} dans du JSX"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "React échappe ce qu'il insère lui-même ; tout ce qui le contourne revient à manipuler du HTML brut.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "fe-cors-cookies",
+      "title": "CORS et cookies",
+      "summary": "Same-origin, SameSite et credentials.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La politique de même origine",
+          "body": "Une origine, c'est un schéma, un hôte et un port : https://app.exemple.fr et https://api.exemple.fr sont deux origines différentes. Par défaut, un script peut envoyer une requête vers une autre origine, mais le navigateur ne lui laisse pas lire la réponse. C'est le serveur qui, par des en-têtes CORS, autorise une origine à la lire."
+        },
+        {
+          "title": "CORS en pratique",
+          "body": "Le serveur répond Access-Control-Allow-Origin avec l'origine autorisée (ou * pour toutes). Pour une requête « non simple » (PUT, DELETE, Content-Type: application/json, en-tête personnalisé), le navigateur envoie d'abord une requête préliminaire OPTIONS (preflight). Pour envoyer les cookies, le client indique credentials: \"include\", et le serveur doit répondre Access-Control-Allow-Credentials: true avec une origine explicite : * est alors refusé.",
+          "code": "fetch(\"https://api.exemple.fr/me\", {\n  credentials: \"include\",\n});\n\n// Réponse attendue de l'API :\n// Access-Control-Allow-Origin: https://app.exemple.fr\n// Access-Control-Allow-Credentials: true"
+        },
+        {
+          "title": "Les attributs des cookies",
+          "body": "HttpOnly rend le cookie illisible par JavaScript : une XSS ne peut pas le voler. Secure ne l'envoie qu'en HTTPS. SameSite limite son envoi dans les requêtes intersites : Strict jamais, Lax seulement lors d'une navigation de premier niveau (clic sur un lien), None toujours (et exige Secure). Lax est la valeur par défaut des navigateurs récents ; c'est une bonne défense contre le CSRF.",
+          "code": "Set-Cookie: session=abc123; HttpOnly; Secure;\n  SameSite=Lax; Path=/",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "fe-cors-cookies-q1",
+          "prompt": "https://app.exemple.fr et https://api.exemple.fr ont-ils la même origine ?",
+          "choices": [
+            "Non : l'hôte diffère",
+            "Oui : même domaine principal",
+            "Oui : même schéma",
+            "Seulement s'ils partagent la même adresse IP"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ils sont en revanche du même site (même domaine enregistrable), ce qui compte pour SameSite.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "fe-cors-cookies-q2",
+          "prompt": "Un POST cross-origin envoyé en text/plain échoue avec une erreur CORS. La requête a-t-elle atteint le serveur ?",
+          "choices": [
+            "Oui : c'est une requête simple, envoyée sans préliminaire ; le navigateur refuse seulement de donner la réponse au script",
+            "Non, le navigateur l'a bloquée avant l'envoi",
+            "Non, c'est le serveur qui l'a refusée",
+            "Cela dépend du pare-feu"
+          ],
+          "answerIndex": 0,
+          "explanation": "CORS protège la lecture, pas l'envoi : d'où l'importance des protections CSRF côté serveur.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "fe-cors-cookies-q3",
+          "prompt": "Le navigateur rejette la réponse de l'API. Touche la ligne en cause.",
+          "code": "fetch(\"https://api.ex.fr/me\",\n  { credentials: \"include\" })\n\n// Réponse de l'API :\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true",
+          "language": "text",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Avec credentials, le joker * est interdit : le serveur doit renvoyer l'origine exacte autorisée (et Vary: Origin).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "fe-cors-cookies-q4",
+          "prompt": "Quelle requête cross-origin déclenche une requête préliminaire OPTIONS ?",
+          "choices": [
+            "Un fetch en PUT avec Content-Type: application/json",
+            "Un GET sans en-tête particulier",
+            "Un POST d'un formulaire HTML classique",
+            "Le chargement d'une image"
+          ],
+          "answerIndex": 0,
+          "explanation": "PUT et le type application/json rendent la requête « non simple » : le navigateur demande d'abord la permission.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "fe-cors-cookies-q5",
+          "prompt": "Complète : un cookie illisible par JavaScript, envoyé lors d'une navigation depuis un autre site mais pas dans ses requêtes en arrière-plan.",
+          "code": "Set-Cookie: session=abc123; ___; Secure;\n  SameSite=___; Path=/",
+          "language": "text",
+          "answers": [
+            "HttpOnly",
+            "Lax"
+          ],
+          "distractors": [
+            "Strict",
+            "None",
+            "Private"
+          ],
+          "explanation": "Strict ne l'enverrait même pas lors d'un clic sur un lien venant d'un autre site ; None l'enverrait partout.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "fe-cors-cookies-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "CORS est appliqué par le navigateur",
+            "Un client comme curl ignore CORS",
+            "SameSite aide à se protéger du CSRF",
+            "Access-Control-Allow-Origin protège l'API des accès non autorisés"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "CORS assouplit la politique de même origine du navigateur ; il ne remplace ni l'authentification ni l'autorisation côté serveur.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "fe-defi-securite",
+    "title": "Défi entretien : un front et son API",
+    "summary": "Cookies, CORS et XSS.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "fe-defi-securite-q1",
+        "prompt": "Cas pratique 1/3 — Un front sur https://app.ex.fr appelle une API sur https://api.ex.fr avec un cookie de session. Que doit répondre l'API ?",
+        "choices": [
+          "Access-Control-Allow-Origin: https://app.ex.fr et Access-Control-Allow-Credentials: true",
+          "Access-Control-Allow-Origin: *",
+          "Rien, les deux sont sur ex.fr",
+          "Un cookie SameSite=None sans Secure"
+        ],
+        "answerIndex": 0,
+        "explanation": "Origine explicite et credentials autorisés ; le joker * est interdit dès qu'il y a des cookies.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-securite-q2",
+        "prompt": "Cas pratique 2/3 — Le front appelle fetch sans option. Le cookie de session est-il envoyé à l'API ?",
+        "choices": [
+          "Non : pour une autre origine, il faut credentials: \"include\"",
+          "Oui, toujours",
+          "Oui, si le cookie est HttpOnly",
+          "Non, les cookies ne passent jamais entre sous-domaines"
+        ],
+        "answerIndex": 0,
+        "explanation": "La valeur par défaut, same-origin, n'envoie les cookies qu'à la même origine.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-securite-q3",
+        "prompt": "Cas pratique 3/3 — Le cookie de session doit-il être HttpOnly ?",
+        "choices": [
+          "Oui : une XSS ne pourra pas le lire, même si elle peut encore agir dans la page",
+          "Non : le front doit le lire pour l'envoyer",
+          "Seulement en développement",
+          "Non, HttpOnly empêche son envoi en HTTPS"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le navigateur envoie le cookie tout seul ; le JavaScript n'a jamais besoin de le lire.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "fe-defi-securite-q4",
+        "prompt": "Pourquoi stocker un jeton d'accès dans localStorage est-il débattu ?",
+        "choices": [
+          "Tout script exécuté dans la page peut le lire : une XSS suffit à le voler",
+          "localStorage est effacé à chaque rechargement",
+          "localStorage est envoyé automatiquement à tous les sites",
+          "Il ne peut contenir que des nombres"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un cookie HttpOnly n'est pas lisible par JavaScript ; en contrepartie, il faut se protéger du CSRF.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "fe-defi-securite-q5",
+        "prompt": "Le lien de profil d'un utilisateur malveillant exécute du code au clic. Touche la ligne en cause.",
+        "code": "function lien(url) {\n  const a = document.createElement(\"a\");\n  a.href = url; // fourni par l'utilisateur\n  a.textContent = \"Mon site\";\n  return a;\n}",
+        "bugLines": [
+          3
+        ],
+        "explanation": "Une URL javascript:… s'exécute au clic. On vérifie le schéma (new URL(url).protocol est https: ou http:) avant de l'utiliser.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "fe-defi-securite-q6",
+        "prompt": "Coche les défenses en profondeur contre les XSS.",
+        "choices": [
+          "Échapper les données à l'affichage (textContent, gabarits des frameworks)",
+          "Une CSP sans 'unsafe-inline'",
+          "Des cookies de session HttpOnly",
+          "Désactiver CORS côté serveur"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "CORS n'a rien à voir avec les XSS : un script injecté s'exécute dans la bonne origine.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

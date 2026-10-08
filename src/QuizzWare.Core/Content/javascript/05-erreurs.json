@@ -1,0 +1,325 @@
+{
+  "id": "js-ch-erreurs",
+  "title": "Erreurs et mémoire",
+  "summary": "Gérer les erreurs, éviter les fuites.",
+  "lessons": [
+    {
+      "id": "js-erreurs",
+      "title": "Gestion des erreurs",
+      "summary": "try, catch et erreurs asynchrones.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "throw, try, catch, finally",
+          "body": "On lance une erreur avec throw new Error(\"message\") : un objet Error porte un message, un type et une pile d'appels (stack), précieuse au débogage. finally s'exécute dans tous les cas, même après un return. Depuis ES2022, l'option cause chaîne une erreur à celle qui l'a provoquée.",
+          "code": "try {\n  await enregistrer(cmd);\n} catch (err) {\n  throw new Error(\"Commande non enregistrée\",\n    { cause: err });\n} finally {\n  spinner.hide();\n}"
+        },
+        {
+          "title": "Les erreurs asynchrones",
+          "body": "try/catch n'attrape que ce qui se produit pendant son exécution. Une erreur levée plus tard, dans un setTimeout ou une promesse non attendue, lui échappe. Avec async/await, il faut attendre la promesse dans le try : return promesse sans await laisse le rejet sortir de la fonction sans passer par le catch."
+        },
+        {
+          "title": "Les rejets non gérés",
+          "body": "Une promesse rejetée que personne ne traite déclenche un « unhandled rejection » : avertissement dans le navigateur, arrêt du processus dans Node.js depuis la version 15. Chaque promesse doit être attendue ou recevoir un .catch. Et un catch vide qui avale l'erreur cache les bugs : on traite, on enrichit et relance, ou au minimum on journalise."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-erreurs-q1",
+          "prompt": "Que se passe-t-il ?",
+          "code": "try {\n  setTimeout(() => {\n    throw new Error(\"boum\");\n  }, 0);\n} catch (e) {\n  console.log(\"rattrapé\");\n}",
+          "choices": [
+            "Rien n'est rattrapé : l'erreur survient plus tard, hors du try, et reste non gérée",
+            "« rattrapé » s'affiche",
+            "« rattrapé » s'affiche, puis l'erreur",
+            "Une erreur de syntaxe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Quand le callback s'exécute, le bloc try est terminé depuis longtemps. Il faut le try dans le callback.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "js-erreurs-q2",
+          "prompt": "Un JSON invalide fait échouer l'appelant au lieu de renvoyer null. Touche la ligne en cause.",
+          "code": "async function charger() {\n  try {\n    const r = await fetch(\"/api/profil\");\n    return r.json();\n  } catch (e) {\n    return null;\n  }\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "r.json() renvoie une promesse qui sort de la fonction sans être attendue : son rejet échappe au catch. Il faut return await r.json().",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "js-erreurs-q3",
+          "prompt": "Complète : garder l'erreur d'origine et toujours masquer l'indicateur.",
+          "code": "try {\n  await enregistrer(cmd);\n} catch (err) {\n  throw new Error(\"Non enregistrée\",\n    { ___: err });\n} ___ {\n  spinner.hide();\n}",
+          "answers": [
+            "cause",
+            "finally"
+          ],
+          "distractors": [
+            "source",
+            "inner",
+            "always"
+          ],
+          "explanation": "err.cause conserve l'erreur d'origine, que les outils de suivi affichent avec sa pile.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-erreurs-q4",
+          "prompt": "Pourquoi lancer new Error(\"…\") plutôt que la chaîne \"…\" ?",
+          "choices": [
+            "Une Error porte un type et une pile d'appels, utiles pour comprendre d'où vient le problème",
+            "Une chaîne ne peut pas être lancée",
+            "C'est plus rapide",
+            "Une chaîne arrête tout le programme"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut lancer n'importe quelle valeur, mais une chaîne n'a ni pile ni type à tester avec instanceof.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-erreurs-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "function f() {\n  try {\n    return \"try\";\n  } finally {\n    console.log(\"finally\");\n  }\n}\nconsole.log(f());",
+          "choices": [
+            "finally puis try",
+            "try puis finally",
+            "try seulement",
+            "finally seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "La valeur de retour est préparée, finally s'exécute, puis la fonction renvoie.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "js-erreurs-q6",
+          "prompt": "Quelles erreurs un try/catch autour de await p attrape-t-il ?",
+          "choices": [
+            "Le rejet de la promesse p",
+            "Une exception levée de façon synchrone dans le bloc try",
+            "Une erreur levée plus tard dans un setTimeout lancé depuis le try",
+            "Le rejet d'une autre promesse créée dans le try mais jamais attendue"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "Seul ce qui est attendu (await) ou synchrone passe par le catch.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "js-memoire",
+      "title": "Mémoire et fuites",
+      "summary": "Ramasse-miettes, WeakMap et fuites classiques.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le ramasse-miettes",
+          "body": "JavaScript libère la mémoire automatiquement : le ramasse-miettes part des racines (variables globales, pile d'appels, closures encore utilisées) et récupère tout ce qui n'est plus atteignable. Une fuite, c'est donc une référence oubliée qui maintient atteignable un objet dont on n'a plus besoin."
+        },
+        {
+          "title": "Les fuites classiques",
+          "body": "Un écouteur ajouté sur window ou document à chaque ouverture d'un composant, jamais retiré. Un setInterval jamais arrêté. Un cache global qui ne fait que grossir. Un élément retiré de la page mais encore référencé (élément « détaché »). Chaque closure garde en vie les variables qu'elle capture. Un AbortController permet de retirer d'un coup tous les écouteurs liés à son signal.",
+          "code": "const ctrl = new AbortController();\nwindow.addEventListener(\"resize\", onResize,\n  { signal: ctrl.signal });\n// à la fermeture du composant :\nctrl.abort();"
+        },
+        {
+          "title": "Références faibles",
+          "body": "Une WeakMap ne retient pas ses clés : quand l'objet clé n'est plus référencé ailleurs, l'entrée peut disparaître. Idéal pour associer des métadonnées à des éléments DOM ou à des objets qu'on ne possède pas. Pour trouver une fuite, l'onglet Memory des DevTools compare des instantanés du tas avant et après une action répétée."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-memoire-q1",
+          "prompt": "Quand un objet peut-il être récupéré par le ramasse-miettes ?",
+          "choices": [
+            "Quand il n'est plus atteignable depuis les racines (globales, pile, closures actives)",
+            "Quand on le met à null une fois",
+            "Quand la fonction qui l'a créé se termine, toujours",
+            "Jamais, il faut appeler delete"
+          ],
+          "answerIndex": 0,
+          "explanation": "Mettre une variable à null ne libère l'objet que si plus rien d'autre ne le référence.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "js-memoire-q2",
+          "prompt": "Ce panneau est ouvert et fermé souvent ; la mémoire grimpe à chaque fois. Touche la ligne en cause.",
+          "code": "function ouvrirPanneau() {\n  const donnees = chargerGrosTableau();\n  window.addEventListener(\"resize\", () => {\n    redimensionner(donnees);\n  });\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Chaque ouverture ajoute un écouteur sur window, jamais retiré, dont la closure garde donnees en vie. On le retire à la fermeture (removeEventListener ou AbortController).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "js-memoire-q3",
+          "prompt": "Complète : retirer l'écouteur à la fermeture du composant.",
+          "code": "const ctrl = new ___();\nwindow.addEventListener(\"resize\", onResize,\n  { signal: ctrl.signal });\n// à la fermeture :\nctrl.___();",
+          "answers": [
+            "AbortController",
+            "abort"
+          ],
+          "distractors": [
+            "EventController",
+            "cancel",
+            "remove"
+          ],
+          "explanation": "Un même signal peut être passé à plusieurs écouteurs et à des fetch : un seul abort() nettoie tout.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "js-memoire-q4",
+          "prompt": "Pourquoi une WeakMap plutôt qu'une Map pour associer des données à des éléments DOM ?",
+          "choices": [
+            "Elle ne retient pas ses clés : quand l'élément disparaît, l'entrée peut être récupérée",
+            "Elle est plus rapide",
+            "Elle accepte des chaînes comme clés",
+            "Elle peut être parcourue avec for...of"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une Map garderait chaque élément supprimé en mémoire tant que l'entrée existe. Une WeakMap n'est d'ailleurs pas itérable.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "js-memoire-q5",
+          "prompt": "Ce code tourne dans un serveur Node.js pendant des semaines. Quel est le risque ?",
+          "code": "const cache = new Map();\nfunction getUser(id) {\n  if (!cache.has(id)) {\n    cache.set(id, fetchUser(id));\n  }\n  return cache.get(id);\n}",
+          "choices": [
+            "Le cache grossit sans limite : il faut une taille maximale ou une expiration",
+            "Aucun, une Map se vide toute seule",
+            "Le cache est vidé à chaque requête",
+            "Une erreur dès le deuxième appel"
+          ],
+          "answerIndex": 0,
+          "explanation": "Autre défaut : une promesse rejetée reste en cache. On utilise un cache LRU avec durée de vie.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "js-memoire-q6",
+          "prompt": "Quelles sont des sources classiques de fuites mémoire ?",
+          "choices": [
+            "Un setInterval jamais arrêté",
+            "Un écouteur ajouté sur window à chaque ouverture d'un composant",
+            "Un cache global sans limite",
+            "Une variable locale d'une fonction terminée"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une variable locale non capturée par une closure devient inatteignable à la fin de la fonction.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "js-defi-erreurs",
+    "title": "Défi entretien : l'application qui ralentit",
+    "summary": "Fuites et erreurs perdues.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "js-defi-erreurs-q1",
+        "prompt": "Cas pratique 1/3 — Une application monopage ralentit après une heure d'utilisation ; la mémoire ne fait que monter. Comment enquêter ?",
+        "choices": [
+          "Comparer des instantanés du tas (onglet Memory) avant et après une action répétée",
+          "Recharger la page toutes les heures",
+          "Lire tout le code à la recherche de new",
+          "Augmenter la mémoire du navigateur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ce qui grandit entre les instantanés, et ce qui le retient, désigne la fuite.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi-erreurs-q2",
+        "prompt": "Cas pratique 2/3 — Les instantanés montrent des milliers d'éléments DOM « détachés », retenus par des fonctions d'écoute. Cause ?",
+        "choices": [
+          "Des écouteurs ou des références conservés après la suppression des composants",
+          "Un bug du navigateur",
+          "Trop de CSS",
+          "Des images trop lourdes"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'élément a quitté la page, mais une closure encore enregistrée le référence.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "js-defi-erreurs-q3",
+        "prompt": "Cas pratique 3/3 — Quel correctif ?",
+        "choices": [
+          "Retirer écouteurs et timers au démontage du composant (AbortController, clearInterval)",
+          "Appeler le ramasse-miettes manuellement",
+          "Remplacer toutes les fonctions fléchées",
+          "Passer en mode strict"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les frameworks offrent un point de nettoyage : la fonction renvoyée par useEffect, onUnmounted, ngOnDestroy.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi-erreurs-q4",
+        "prompt": "Dans un script Node.js récent, que se passe-t-il ?",
+        "code": "async function tache() {\n  throw new Error(\"oups\");\n}\ntache();\nconsole.log(\"suite\");",
+        "choices": [
+          "« suite » s'affiche, puis le processus s'arrête sur un rejet non géré",
+          "Le processus s'arrête avant d'afficher « suite »",
+          "« suite » s'affiche et l'erreur est ignorée",
+          "Une erreur de syntaxe"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une fonction async transforme l'exception en promesse rejetée ; personne ne l'attend, et depuis Node 15 cela arrête le processus.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "js-defi-erreurs-q5",
+        "prompt": "L'appelant reçoit des promesses au lieu des réponses. Touche la ligne à corriger.",
+        "code": "async function chargerTout(ids) {\n  const res = [];\n  for (const id of ids) {\n    res.push(fetch(`/api/${id}`));\n  }\n  return res;\n}",
+        "bugLines": [
+          6
+        ],
+        "explanation": "Il faut return Promise.all(res) : les requêtes partent en parallèle et l'appelant reçoit les réponses.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "js-defi-erreurs-q6",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "async function sauver(d) {\n  try {\n    await api.post(d);\n  } catch (e) {}\n}",
+        "choices": [
+          "L'erreur est avalée silencieusement",
+          "L'appelant croit que la sauvegarde a réussi",
+          "Aucune trace ne permet de diagnostiquer l'échec",
+          "await est inutile ici"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Sans await, le catch ne verrait même pas le rejet : il est nécessaire.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

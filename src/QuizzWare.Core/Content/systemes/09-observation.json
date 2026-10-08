@@ -1,0 +1,220 @@
+{
+  "id": "os-ch-observation",
+  "title": "Observer un système",
+  "summary": "Comprendre ce qui se passe.",
+  "lessons": [
+    {
+      "id": "os-outils",
+      "title": "Les outils d'observation",
+      "summary": "top, /proc, strace et perf.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "top et la charge",
+          "body": "top (ou htop) montre la charge, le CPU et la mémoire. Le load average est le nombre moyen, sur 1, 5 et 15 minutes, de tâches prêtes à s'exécuter ou bloquées en E/S non interruptible : on le compare au nombre de cœurs. Dans la ligne CPU, us est le temps utilisateur, sy le noyau, wa l'attente d'E/S, st le temps volé par l'hyperviseur. Côté mémoire, Linux sert la mémoire libre de cache disque : c'est la colonne available qui compte."
+        },
+        {
+          "title": "/proc",
+          "body": "/proc expose l'état du noyau sous forme de fichiers. Pour chaque processus, /proc/<pid>/ contient sa ligne de commande (cmdline), son état (status), ses descripteurs ouverts (fd), ses zones mémoire (maps) et ses limites (limits). /proc/meminfo et /proc/loadavg décrivent la machine.",
+          "code": "ls -l /proc/4242/fd | wc -l\ngrep \"open files\" /proc/4242/limits\ncat /proc/loadavg",
+          "language": "shell"
+        },
+        {
+          "title": "strace et perf",
+          "body": "strace affiche les appels système d'un processus : sur quoi il attend, quels fichiers il ouvre, quelles erreurs il reçoit (-p pour s'attacher, -f pour suivre les threads, -c pour un résumé). perf échantillonne le CPU pour montrer quelles fonctions consomment du temps (perf top, perf record puis flame graph). iostat, vmstat et ss complètent pour le disque, la mémoire et le réseau.",
+          "code": "strace -f -e trace=openat -p 4242\nstrace -c -p 4242\nsudo perf top -p 4242",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-outils-q1",
+          "prompt": "Une machine à 4 cœurs affiche un load average de 8. Qu'est-ce que cela signifie ?",
+          "choices": [
+            "En moyenne, deux fois plus de tâches prêtes ou bloquées en E/S que de cœurs : surcharge CPU ou attente disque",
+            "Le CPU est utilisé à 8 %",
+            "8 processus tournent en tout",
+            "La machine est inactive"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sous Linux, les tâches en attente d'E/S non interruptible comptent aussi : une charge élevée n'est pas forcément du CPU.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-outils-q2",
+          "prompt": "free montre très peu de mémoire « free » mais beaucoup « available ». Y a-t-il un problème ?",
+          "choices": [
+            "Non : Linux utilise la mémoire libre comme cache disque, qu'il libère au besoin",
+            "Oui, une fuite mémoire du noyau",
+            "Oui, il faut vider le cache toutes les heures",
+            "Oui, la machine va bientôt planter"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une mémoire inutilisée est une mémoire gaspillée : le cache accélère les lectures.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "os-outils-q3",
+          "prompt": "Complète : voir les fichiers que le processus 4242 ouvre, puis ceux qu'il a déjà ouverts.",
+          "code": "___ -f -e trace=openat -p 4242\nls -l /proc/4242/___",
+          "language": "shell",
+          "answers": [
+            "strace",
+            "fd"
+          ],
+          "distractors": [
+            "perf",
+            "top",
+            "files"
+          ],
+          "explanation": "Chaque entrée de /proc/<pid>/fd est un lien vers le fichier, la socket ou le tube correspondant.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-outils-q4",
+          "prompt": "Un processus est bloqué et ne consomme aucun CPU. Comment savoir ce qu'il attend ?",
+          "choices": [
+            "strace -p PID montre l'appel système en cours (read sur une socket, futex…)",
+            "top suffit à le dire",
+            "Il faut le redémarrer",
+            "perf top"
+          ],
+          "answerIndex": 0,
+          "explanation": "perf montre où va le CPU ; ici, il n'y a justement pas de CPU consommé à analyser.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-outils-q5",
+          "prompt": "Dans top, %wa est à 30 %. Que cela indique-t-il ?",
+          "choices": [
+            "Les CPU attendent la fin d'E/S : le goulet d'étranglement est probablement le stockage",
+            "30 % des processus sont en attente d'utilisateur",
+            "Le réseau est saturé",
+            "Le CPU est surchargé"
+          ],
+          "answerIndex": 0,
+          "explanation": "iostat -x permet ensuite de voir quel disque sature.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "os-outils-q6",
+          "prompt": "Que trouve-t-on dans /proc/<pid> ?",
+          "choices": [
+            "Les descripteurs de fichiers ouverts (fd)",
+            "Les zones mémoire du processus (maps)",
+            "Sa ligne de commande (cmdline)",
+            "Le code source du programme"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On y trouve le binaire exécuté (exe), jamais ses sources.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "os-defi-observation",
+    "title": "Défi entretien : le service lent",
+    "summary": "Du symptôme à la cause.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "os-defi-observation-q1",
+        "prompt": "Cas pratique 1/3 — Un service répond lentement. top : CPU à 5 %, %wa à 60 %. Quelle piste ?",
+        "choices": [
+          "Le stockage : vérifier avec iostat quel disque sature, et quel processus écrit (iotop)",
+          "Ajouter des cœurs CPU",
+          "Le réseau",
+          "Un manque de mémoire graphique"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le CPU attend les disques ; ajouter des cœurs n'y changerait rien.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-observation-q2",
+        "prompt": "Cas pratique 2/3 — strace -c sur le service montre des milliers d'appels fsync par seconde. Interprétation ?",
+        "choices": [
+          "Il force une écriture physique sur disque à chaque opération : il faut regrouper les écritures",
+          "Il lit trop de fichiers",
+          "Il crée trop de threads",
+          "C'est un fonctionnement normal et sans coût"
+        ],
+        "answerIndex": 0,
+        "explanation": "fsync attend que les données soient réellement sur le disque : c'est sûr, mais lent si on le fait à chaque petite écriture.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-observation-q3",
+        "prompt": "Cas pratique 3/3 — Comment confirmer le gain après correction ?",
+        "choices": [
+          "Mesurer à nouveau les mêmes indicateurs (latence, %wa, iostat), sous la même charge",
+          "Demander aux utilisateurs",
+          "Redémarrer la machine",
+          "Regarder l'heure de la dernière modification du code"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une comparaison n'a de valeur que dans les mêmes conditions.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-observation-q4",
+        "prompt": "Un serveur échoue avec « Too many open files ». Où regarder ?",
+        "choices": [
+          "Le nombre d'entrées de /proc/PID/fd et la limite « open files » de /proc/PID/limits",
+          "L'espace disque libre",
+          "La température du processeur",
+          "Le fichier /etc/hosts"
+        ],
+        "answerIndex": 0,
+        "explanation": "On distingue une limite trop basse d'une fuite de descripteurs (nombre qui ne fait qu'augmenter).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-observation-q5",
+        "prompt": "Quel outil indique quelles fonctions d'un programme consomment le CPU en production ?",
+        "choices": [
+          "perf (perf top, ou perf record puis un flame graph)",
+          "strace",
+          "df",
+          "ping"
+        ],
+        "answerIndex": 0,
+        "explanation": "perf échantillonne la pile d'appels des centaines de fois par seconde, avec un faible surcoût.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "os-defi-observation-q6",
+        "prompt": "Quelles commandes montrent les connexions réseau d'une machine ?",
+        "choices": [
+          "ss",
+          "netstat",
+          "lsof -i",
+          "df"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "df affiche l'espace disque ; ss remplace netstat sur les systèmes récents.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

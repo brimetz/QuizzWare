@@ -1,0 +1,332 @@
+{
+  "id": "os-ch-isolation",
+  "title": "Isolation et virtualisation",
+  "summary": "Machines virtuelles et conteneurs.",
+  "lessons": [
+    {
+      "id": "os-virtualisation",
+      "title": "Machines virtuelles",
+      "summary": "Hyperviseurs et virtualisation matérielle.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les hyperviseurs",
+          "body": "Un hyperviseur fait tourner plusieurs machines virtuelles, chacune avec son propre noyau. Celui de type 1 s'exécute directement sur le matériel (VMware ESXi, Hyper-V, Xen, KVM intégré à Linux) : c'est le cas du cloud. Celui de type 2 s'exécute comme une application sur un système existant (VirtualBox, VMware Workstation) : pratique sur un poste de développement."
+        },
+        {
+          "title": "La virtualisation matérielle",
+          "body": "Les extensions VT-x (Intel) et AMD-V permettent au processeur d'exécuter directement le code invité et de n'intercepter que les opérations sensibles ; EPT et NPT accélèrent la traduction des adresses mémoire des invités. Les pilotes paravirtualisés (virtio) évitent d'émuler du vrai matériel : l'invité sait qu'il est virtualisé et dialogue efficacement avec l'hyperviseur.",
+          "code": "grep -E -c \"vmx|svm\" /proc/cpuinfo",
+          "language": "shell"
+        },
+        {
+          "title": "Isolation forte, coût réel",
+          "body": "Une VM isole fortement : son noyau est séparé de celui de l'hôte. Elle peut faire tourner un autre système, se mettre en pause, se migrer à chaud. En échange, elle démarre en dizaines de secondes et embarque un noyau complet. Les micro-VM (Firecracker, utilisé par AWS Lambda) réduisent ce coût : une centaine de millisecondes pour démarrer."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-virtualisation-q1",
+          "prompt": "Quelle est la différence entre un hyperviseur de type 1 et de type 2 ?",
+          "choices": [
+            "Le type 1 s'exécute directement sur le matériel ; le type 2 comme une application sur un système existant",
+            "Le type 1 ne fait tourner qu'une seule VM",
+            "Le type 2 est réservé aux serveurs",
+            "Aucune, c'est une question de marque"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les fournisseurs de cloud utilisent des hyperviseurs de type 1.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-virtualisation-q2",
+          "prompt": "Quelle est la différence fondamentale entre une VM et un conteneur ?",
+          "choices": [
+            "Une VM a son propre noyau ; les conteneurs partagent le noyau de l'hôte",
+            "Un conteneur a son propre noyau ; les VM partagent celui de l'hôte",
+            "Les VM ne peuvent pas avoir de réseau",
+            "Les conteneurs ne fonctionnent que sous Windows"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qui rend les conteneurs légers, et leur isolation moins forte.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "os-virtualisation-q3",
+          "prompt": "À quoi servent les pilotes virtio ?",
+          "choices": [
+            "À dialoguer efficacement avec l'hyperviseur plutôt que d'émuler du vrai matériel",
+            "À virtualiser le processeur",
+            "À chiffrer le disque de la VM",
+            "À exécuter des conteneurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Émuler une vraie carte réseau, registre par registre, est bien plus coûteux que de partager des files de messages.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "os-virtualisation-q4",
+          "prompt": "Qu'est-ce que Firecracker, utilisé par AWS Lambda ?",
+          "choices": [
+            "Un moniteur de micro-VM : l'isolation d'une VM avec un démarrage d'environ une centaine de millisecondes",
+            "Un orchestrateur de conteneurs",
+            "Un pare-feu",
+            "Un système de fichiers"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il fournit le strict minimum de périphériques virtuels pour démarrer très vite.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "os-virtualisation-q5",
+          "prompt": "Complète : vérifier qu'un processeur Intel ou AMD gère la virtualisation matérielle.",
+          "code": "grep -E -c \"___|svm\" /proc/cpuinfo",
+          "language": "shell",
+          "answers": [
+            "vmx"
+          ],
+          "distractors": [
+            "kvm",
+            "vt",
+            "hvm"
+          ],
+          "explanation": "vmx est le drapeau d'Intel VT-x, svm celui d'AMD-V ; un résultat nul indique une virtualisation absente ou désactivée.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "os-virtualisation-q6",
+          "prompt": "Quels sont des avantages des machines virtuelles ?",
+          "choices": [
+            "Une isolation forte, avec un noyau séparé",
+            "Faire tourner un autre système d'exploitation",
+            "Les instantanés et la migration à chaud",
+            "Un démarrage plus rapide qu'un conteneur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un conteneur démarre plus vite : il ne démarre pas de noyau.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "os-conteneurs",
+      "title": "Les briques des conteneurs",
+      "summary": "Namespaces, cgroups et capabilities.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Un processus ordinaire, isolé",
+          "body": "Un conteneur n'est pas une petite VM : c'est un processus de l'hôte, isolé par des fonctions du noyau. Les namespaces limitent ce qu'il voit : ses propres PID (pid), points de montage (mnt), interfaces réseau (net), nom d'hôte (uts), utilisateurs (user). Vu de l'hôte, ps montre ses processus comme les autres. Son système de fichiers est fait de couches d'image superposées (overlayfs)."
+        },
+        {
+          "title": "Les cgroups",
+          "body": "Les cgroups limitent ce qu'il consomme : temps CPU, mémoire, nombre de processus, débit disque. Dépasser la limite de mémoire déclenche l'OOM killer du cgroup : le processus reçoit SIGKILL et le conteneur s'arrête avec le code 137 (128 + 9).",
+          "code": "docker run --memory 512m --cpus 1.5 \\\n  --cap-drop ALL --read-only \\\n  --user 1000 api:1.4",
+          "language": "shell"
+        },
+        {
+          "title": "Réduire les privilèges",
+          "body": "Le noyau étant partagé, une faille du noyau ou une mauvaise configuration permet de s'échapper vers l'hôte. On limite les dégâts : utilisateur non root (et user namespaces), capabilities retirées (le pouvoir de root découpé en morceaux), filtre seccomp sur les appels système, système de fichiers en lecture seule. --privileged ou le montage de la socket Docker donnent en pratique le contrôle de l'hôte."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-conteneurs-q1",
+          "prompt": "Que voit-on avec ps sur l'hôte pendant qu'un conteneur tourne ?",
+          "choices": [
+            "Ses processus, comme des processus ordinaires, avec d'autres numéros de PID",
+            "Une seule entrée « machine virtuelle »",
+            "Rien, les conteneurs sont invisibles de l'hôte",
+            "Le noyau du conteneur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans le conteneur, son processus principal a le PID 1 ; sur l'hôte, il a un PID quelconque.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-conteneurs-q2",
+          "prompt": "Quelle est la différence entre namespaces et cgroups ?",
+          "choices": [
+            "Les namespaces limitent ce qu'un processus voit ; les cgroups, ce qu'il consomme",
+            "Les cgroups limitent ce qu'il voit ; les namespaces, ce qu'il consomme",
+            "Ce sont deux noms pour la même chose",
+            "Les namespaces sont propres à Docker"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux sont des fonctions du noyau Linux ; Docker, Podman ou containerd ne font que les combiner.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-conteneurs-q3",
+          "prompt": "Un conteneur limité à 512 Mo dépasse sa limite de mémoire. Que se passe-t-il ?",
+          "choices": [
+            "Le noyau tue un de ses processus (OOM killer) ; le conteneur s'arrête souvent avec le code 137",
+            "Le conteneur utilise le disque à la place, sans conséquence",
+            "La limite est augmentée automatiquement",
+            "L'hôte redémarre"
+          ],
+          "answerIndex": 0,
+          "explanation": "137 = 128 + 9, le numéro de SIGKILL.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "os-conteneurs-q4",
+          "prompt": "Complète : limiter la mémoire et retirer toutes les capabilities.",
+          "code": "docker run --___ 512m --cpus 1.5 \\\n  --cap-drop ___ --read-only api:1.4",
+          "language": "shell",
+          "answers": [
+            "memory",
+            "ALL"
+          ],
+          "distractors": [
+            "ram",
+            "NONE",
+            "root"
+          ],
+          "explanation": "On retire tout, puis on rajoute seulement ce qui est nécessaire avec --cap-add.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "os-conteneurs-q5",
+          "prompt": "Revue de sécurité : touche une ligne qui donne en pratique le contrôle de l'hôte.",
+          "code": "docker run -d \\\n  --privileged \\\n  -v /var/run/docker.sock:/var/run/docker.sock \\\n  -p 8080:8080 api:1.4",
+          "language": "shell",
+          "bugLines": [
+            2,
+            3
+          ],
+          "explanation": "--privileged donne accès à tous les périphériques et désactive la plupart des protections ; la socket Docker permet de lancer d'autres conteneurs privilégiés.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "os-conteneurs-q6",
+          "prompt": "Quels namespaces le noyau Linux propose-t-il ?",
+          "choices": [
+            "pid",
+            "net",
+            "mnt",
+            "cpu"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le CPU se limite par les cgroups, pas par un namespace. Les autres namespaces : uts, ipc, user, cgroup, time.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "os-defi-isolation",
+    "title": "Défi entretien : exécuter le code des autres",
+    "summary": "Choisir le bon niveau d'isolation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "os-defi-isolation-q1",
+        "prompt": "Cas pratique 1/3 — Une plateforme exécute du code envoyé par des inconnus. Conteneurs classiques ou micro-VM ?",
+        "choices": [
+          "Des micro-VM (ou un bac à sable comme gVisor) : le noyau partagé d'un conteneur offre une surface d'attaque trop large",
+          "Des conteneurs classiques suffisent toujours",
+          "Exécuter le code directement sur l'hôte",
+          "Un processus par client, sans isolation"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une seule faille du noyau suffirait à sortir d'un conteneur ; une VM ajoute une frontière matérielle.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-isolation-q2",
+        "prompt": "Cas pratique 2/3 — Pour les services internes, de confiance, on garde des conteneurs. Comment réduire leur surface d'attaque ?",
+        "choices": [
+          "Utilisateur non root, capabilities retirées, seccomp, système de fichiers en lecture seule",
+          "--privileged pour éviter les erreurs de permission",
+          "Monter la socket Docker dans chaque conteneur",
+          "Désactiver les cgroups"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque mesure retire un moyen d'exploiter une faille.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-isolation-q3",
+        "prompt": "Cas pratique 3/3 — Un conteneur redémarre en boucle avec le code de sortie 137. Hypothèse ?",
+        "choices": [
+          "Il est tué par SIGKILL, le plus souvent par l'OOM killer de son cgroup",
+          "Une erreur de syntaxe dans le code",
+          "Un problème de réseau",
+          "Il s'arrête normalement"
+        ],
+        "answerIndex": 0,
+        "explanation": "docker inspect indique OOMKilled ; on vérifie la limite et la consommation réelle.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-isolation-q4",
+        "prompt": "Pourquoi un conteneur démarre-t-il en une seconde alors qu'une VM met trente secondes ?",
+        "choices": [
+          "Le conteneur ne démarre pas de noyau : il lance simplement un processus isolé",
+          "Les images de conteneurs sont toujours plus petites",
+          "Les conteneurs utilisent un processeur plus rapide",
+          "La VM télécharge son système à chaque démarrage"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une VM doit passer par tout le démarrage d'un système : firmware virtuel, noyau, init.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-isolation-q5",
+        "prompt": "Que permet la virtualisation matérielle (VT-x, AMD-V) ?",
+        "choices": [
+          "Le processeur exécute directement le code invité et n'intercepte que les opérations sensibles",
+          "Le processeur émule chaque instruction en logiciel",
+          "Les VM partagent le noyau de l'hôte",
+          "Les VM n'ont plus besoin de mémoire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avant ces extensions, il fallait réécrire ou émuler le code privilégié des invités, bien plus lentement.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "os-defi-isolation-q6",
+        "prompt": "Qu'est-ce qui est partagé entre les conteneurs d'un même hôte ?",
+        "choices": [
+          "Le noyau",
+          "L'horloge système",
+          "Le matériel (CPU, disques)",
+          "Le système de fichiers racine, toujours"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Chaque conteneur a sa propre racine, construite à partir de son image.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

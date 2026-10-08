@@ -1,0 +1,215 @@
+{
+  "id": "qa-ch-legacy",
+  "title": "Code existant",
+  "summary": "Tester ce qui n'a jamais été testé.",
+  "lessons": [
+    {
+      "id": "qa-legacy",
+      "title": "Tests de caractérisation",
+      "summary": "Figer le comportement avant de changer.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Figer le comportement actuel",
+          "body": "Pour Michael Feathers, du code legacy est du code sans tests : on ne peut pas le modifier sans risque. Avant de le changer, on écrit des tests de caractérisation, qui décrivent ce que le code fait aujourd'hui, même si ce comportement semble étrange. Corriger un comportement est un changement séparé, à décider explicitement."
+        },
+        {
+          "title": "Le golden master",
+          "body": "Quand le code est trop gros pour être décrit cas par cas, on enregistre ses sorties pour un grand nombre d'entrées (générées avec une graine fixe), puis on vérifie que le code modifié produit exactement les mêmes. Les outils de tests d'approbation (approval tests) automatisent cette comparaison.",
+          "code": "def test_golden_master():\n    entrees = generer_entrees(graine=42, n=1000)\n    sorties = [calculer_primes(e) for e in entrees]\n    assert sorties == charger(\"golden.json\")",
+          "language": "python"
+        },
+        {
+          "title": "Des coutures et des petits pas",
+          "body": "Le code legacy lit souvent directement la base, l'heure ou des globales. On crée des coutures pour les remplacer en test : paramètre avec valeur par défaut, méthode extraite, interface. On avance par petites étapes, tests au vert, en préférant les refactorings automatiques de l'IDE. Pour ajouter une règle, on l'écrit dans une nouvelle fonction testée (sprout), appelée depuis l'ancien code."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "qa-legacy-q1",
+          "prompt": "Qu'est-ce qu'un test de caractérisation ?",
+          "choices": [
+            "Un test qui fige le comportement actuel, sans juger s'il est correct, pour pouvoir modifier en sécurité",
+            "Un test qui vérifie la spécification officielle",
+            "Un test de performance",
+            "Un test écrit avant le code"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il protège contre les changements involontaires pendant un refactoring.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "qa-legacy-q2",
+          "prompt": "En écrivant des tests de caractérisation, on découvre que calculer_frais(0) renvoie -4,90. Que faire ?",
+          "choices": [
+            "Garder le test tel quel pendant le refactoring et signaler l'anomalie : la corriger est un changement séparé, à valider",
+            "Corriger tout de suite au milieu du refactoring",
+            "Supprimer le test",
+            "Ignorer le cas 0"
+          ],
+          "answerIndex": 0,
+          "explanation": "Peut-être que du code ailleurs dépend de ce comportement ; mélanger correction et refactoring brouille les deux.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "qa-legacy-q3",
+          "prompt": "Qu'est-ce qu'un golden master ?",
+          "choices": [
+            "Les sorties enregistrées du code actuel pour de nombreuses entrées, que le code modifié doit reproduire exactement",
+            "La branche principale du dépôt",
+            "Le développeur le plus expérimenté de l'équipe",
+            "Une base de données de production"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pratique pour un calcul complexe dont personne ne connaît plus toutes les règles.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "qa-legacy-q4",
+          "prompt": "Complète : la nouvelle règle est écrite et testée à part, puis appelée depuis le vieux code.",
+          "code": "def facturer(commande):\n    # ... 300 lignes historiques ...\n    total += ___(commande)\n    return total\n\ndef remise_fidelite(commande):\n    return -5 if commande.client.fidele else 0",
+          "language": "python",
+          "answers": [
+            "remise_fidelite"
+          ],
+          "distractors": [
+            "facturer",
+            "commande",
+            "total"
+          ],
+          "explanation": "C'est la technique « sprout » : le nouveau code naît testé, à côté de l'ancien.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "qa-legacy-q5",
+          "prompt": "Impossible de tester cette fonction sans la base de production. Touche la ligne qui crée la dépendance cachée.",
+          "code": "def rapport_mensuel():\n    conn = psycopg.connect(\"host=prod-db user=admin\")\n    lignes = conn.execute(\"SELECT ...\").fetchall()\n    return formater(lignes)",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "On passe la connexion (ou une fonction qui fournit les lignes) en paramètre : c'est la couture qui permet de tester formater et le reste.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "qa-legacy-q6",
+          "prompt": "Quelle méthode permet de modifier du code legacy en sécurité ?",
+          "choices": [
+            "Écrire d'abord des tests de caractérisation",
+            "Avancer par petites étapes vérifiées",
+            "Utiliser les refactorings automatiques de l'IDE",
+            "Tout réécrire d'un coup"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La réécriture complète perd des règles métier que seul le vieux code connaissait.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "qa-defi-legacy",
+    "title": "Défi entretien : les primes des commerciaux",
+    "summary": "Ajouter une règle à du code sans tests.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "qa-defi-legacy-q1",
+        "prompt": "Cas pratique 1/3 — Une fonction de 600 lignes calcule les primes des commerciaux, sans aucun test. Il faut ajouter une règle. Premier pas ?",
+        "choices": [
+          "Écrire des tests de caractérisation (ou un golden master) sur des cas réels",
+          "Ajouter la règle directement et déployer",
+          "Réécrire la fonction de zéro",
+          "Demander aux commerciaux de vérifier leurs primes"
+        ],
+        "answerIndex": 0,
+        "explanation": "On sécurise l'existant avant de toucher quoi que ce soit.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-legacy-q2",
+        "prompt": "Cas pratique 2/3 — La fonction lit directement la base et la date du jour. Comment la tester ?",
+        "choices": [
+          "Introduire des coutures : passer la connexion et la date en paramètres, avec des valeurs par défaut pour ne rien casser",
+          "Tester sur la base de production",
+          "Changer la date de la machine",
+          "Ne tester que le dernier jour du mois"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les appelants existants ne changent pas ; les tests fournissent leurs propres valeurs.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-legacy-q3",
+        "prompt": "Cas pratique 3/3 — Comment ajouter la nouvelle règle ?",
+        "choices": [
+          "Dans une nouvelle fonction testée (sprout), appelée depuis l'ancienne",
+          "Au milieu des 600 lignes, sans test",
+          "Dans un fichier de configuration",
+          "Dans un commentaire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le nouveau code naît propre et testé, sans attendre le refactoring complet.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "qa-defi-legacy-q4",
+        "prompt": "Les tests de caractérisation sont verts ; on veut extraire une méthode. Pourquoi utiliser le refactoring automatique de l'IDE plutôt que de le faire à la main ?",
+        "choices": [
+          "L'outil préserve le comportement de façon fiable, sans oubli de variable ou de cas",
+          "Il est plus joli",
+          "Il écrit les tests à notre place",
+          "Il n'y a aucune différence"
+        ],
+        "answerIndex": 0,
+        "explanation": "Moins d'erreurs humaines, donc moins de risques pendant que la couverture est encore faible.",
+        "difficulty": 1
+      },
+      {
+        "type": "order",
+        "id": "qa-defi-legacy-q5",
+        "prompt": "Remets dans l'ordre la démarche.",
+        "language": "text",
+        "lines": [
+          "Écrire des tests de caractérisation",
+          "Introduire une couture pour isoler une dépendance",
+          "Refactorer par petites étapes, tests au vert",
+          "Ajouter la nouvelle fonctionnalité avec ses tests"
+        ],
+        "explanation": "Chaque étape s'appuie sur le filet de sécurité de la précédente.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "qa-defi-legacy-q6",
+        "prompt": "Quels signes indiquent qu'une réécriture complète serait risquée ?",
+        "choices": [
+          "Les règles métier ne sont documentées que dans le code",
+          "Aucun test ne décrit le comportement attendu",
+          "Le système est en production et utilisé chaque jour",
+          "Le code a des tests complets et à jour"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Avec des tests complets, une réécriture devient au contraire bien plus envisageable.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

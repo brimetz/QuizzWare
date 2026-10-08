@@ -1,0 +1,330 @@
+{
+  "id": "mob-ch-plateforme",
+  "title": "Capacités de la plateforme",
+  "summary": "Permissions et notifications.",
+  "lessons": [
+    {
+      "id": "mob-permissions",
+      "title": "Permissions",
+      "summary": "Demander au bon moment.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Déclarer, puis demander",
+          "body": "L'accès à la localisation, à la caméra, au micro, aux contacts ou aux photos se déclare dans le manifeste (Android) ou dans Info.plist (iOS), puis se demande à l'exécution. Sur iOS, chaque permission exige une phrase d'explication (NSCameraUsageDescription…) : sans elle, l'application plante au moment de la demande. Sur Android 13 et plus, afficher des notifications demande aussi une permission.",
+          "code": "var statut = await Permissions\n    .RequestAsync<Permissions.Camera>();\nif (statut != PermissionStatus.Granted)\n{\n    AfficherExplication();\n    return;\n}",
+          "language": "csharp"
+        },
+        {
+          "title": "Le bon moment",
+          "body": "Une rafale de demandes au premier lancement fait refuser presque tout : l'utilisateur ne sait pas encore à quoi elles servent. On demande au moment où la fonctionnalité est utilisée (« Scanner un code » → caméra), éventuellement après un écran qui explique pourquoi. On demande le minimum : la localisation « pendant l'utilisation » plutôt que « toujours », approximative si la précision n'est pas utile."
+        },
+        {
+          "title": "Vivre avec un refus",
+          "body": "Un refus n'est pas une erreur : l'application propose une alternative (saisir une ville au lieu de la localisation). Sur Android, après deux refus, le système n'affiche plus la boîte de dialogue ; sur iOS, dès le premier. Il ne reste alors qu'à expliquer et à proposer un lien vers les réglages de l'application."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-permissions-q1",
+          "prompt": "Quand demander l'accès à la caméra pour une fonction de scan ?",
+          "choices": [
+            "Quand l'utilisateur touche « Scanner », avec un contexte clair",
+            "Au premier lancement, avec toutes les autres permissions",
+            "À l'installation",
+            "Jamais, la caméra n'a pas besoin de permission"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une demande liée à une action que l'utilisateur vient de faire est bien plus souvent acceptée.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-permissions-q2",
+          "prompt": "Sur iOS, l'application plante dès qu'elle demande l'accès aux photos. Cause fréquente ?",
+          "choices": [
+            "La phrase d'usage (NSPhotoLibraryUsageDescription) manque dans Info.plist",
+            "L'utilisateur a refusé",
+            "Le téléphone n'a pas de photos",
+            "La demande est faite sur le thread principal"
+          ],
+          "answerIndex": 0,
+          "explanation": "iOS termine l'application si elle demande une permission sans en avoir déclaré la raison.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "mob-permissions-q3",
+          "prompt": "Complète : demander la localisation et s'arrêter en cas de refus.",
+          "code": "var statut = await Permissions\n    .___<Permissions.LocationWhenInUse>();\nif (statut != PermissionStatus.___)\n    return;",
+          "language": "csharp",
+          "answers": [
+            "RequestAsync",
+            "Granted"
+          ],
+          "distractors": [
+            "AskAsync",
+            "Allowed",
+            "Denied"
+          ],
+          "explanation": "CheckStatusAsync lit le statut sans rien demander ; RequestAsync affiche la boîte de dialogue si c'est encore possible.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "mob-permissions-q4",
+          "prompt": "L'application affiche seulement les magasins proches quand on ouvre la carte. Touche la ligne qui demande trop.",
+          "code": "async Task AfficherMagasinsAsync()\n{\n    var s = await Permissions\n        .RequestAsync<Permissions.LocationAlways>();\n    if (s != PermissionStatus.Granted) return;\n    var pos = await Geolocation.GetLocationAsync();\n    Carte.Centrer(pos);\n}",
+          "language": "csharp",
+          "bugLines": [
+            4
+          ],
+          "explanation": "La localisation n'est utile que pendant l'utilisation : LocationWhenInUse. « Toujours » inquiète l'utilisateur et est examinée de près par les stores.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-permissions-q5",
+          "prompt": "L'utilisateur a refusé définitivement la localisation. Que faire ?",
+          "choices": [
+            "Proposer une alternative (saisir une ville) et un lien vers les réglages de l'application",
+            "Redemander à chaque ouverture d'écran",
+            "Fermer l'application",
+            "Bloquer toutes les fonctionnalités"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le système n'affiche plus la boîte de dialogue : seul l'utilisateur peut changer d'avis, dans les réglages.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-permissions-q6",
+          "prompt": "Sur un Android récent, quelles permissions se demandent à l'exécution ?",
+          "choices": [
+            "La localisation",
+            "La caméra",
+            "Les notifications (Android 13 et plus)",
+            "L'accès à Internet"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "INTERNET est une permission « normale » : déclarée dans le manifeste, accordée d'office.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mob-notifications",
+      "title": "Notifications",
+      "summary": "Locales et push.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Locales ou push",
+          "body": "Une notification locale est planifiée par l'application elle-même, sans serveur : un rappel quotidien, la fin d'un minuteur. Une notification push part d'un serveur, passe par le service de la plateforme (FCM pour Android, APNs pour iOS) et arrive sur l'appareil, même application fermée."
+        },
+        {
+          "title": "Le jeton de l'appareil",
+          "body": "Pour recevoir des push, l'application obtient un jeton propre à l'appareil et à l'application, puis l'envoie à son serveur, qui l'utilise pour cibler l'envoi. Ce jeton peut changer (réinstallation, restauration, renouvellement) : on le renvoie au serveur à chaque changement, et le serveur supprime les jetons que FCM ou APNs déclarent invalides."
+        },
+        {
+          "title": "Respecter l'utilisateur",
+          "body": "Sur Android 8 et plus, chaque notification appartient à un canal (messages, promotions) que l'utilisateur peut couper séparément. Le texte s'affiche sur l'écran verrouillé : pas de mot de passe, pas de donnée médicale ou bancaire détaillée. Une notification utile ouvre directement l'écran concerné ; trop de notifications, et l'utilisateur les désactive toutes, voire désinstalle.",
+          "code": "val canal = NotificationChannel(\n    \"messages\",\n    \"Messages\",\n    NotificationManager.IMPORTANCE_HIGH)\nmanager.createNotificationChannel(canal)",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-notifications-q1",
+          "prompt": "Quel service livre une notification push à un iPhone ?",
+          "choices": [
+            "APNs (Apple Push Notification service)",
+            "FCM uniquement",
+            "Le serveur de l'application, directement",
+            "SMS"
+          ],
+          "answerIndex": 0,
+          "explanation": "FCM peut servir d'intermédiaire pour iOS, mais c'est toujours APNs qui livre à l'appareil.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-notifications-q2",
+          "prompt": "Pourquoi l'application doit-elle renvoyer son jeton push au serveur quand il change ?",
+          "choices": [
+            "Un ancien jeton n'atteint plus l'appareil : le serveur enverrait dans le vide",
+            "Pour que l'utilisateur reçoive deux fois chaque notification",
+            "Le jeton sert de mot de passe",
+            "Ce n'est pas utile, le jeton ne change jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "Réinstallation, restauration sur un nouveau téléphone ou renouvellement par la plateforme changent le jeton.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-notifications-q3",
+          "prompt": "Un rappel « Révise 5 minutes » chaque jour à 19 h, sans serveur. Quel type de notification ?",
+          "choices": [
+            "Une notification locale planifiée",
+            "Une notification push",
+            "Un e-mail",
+            "Un service de premier plan"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'application planifie le rappel elle-même ; aucun jeton ni serveur n'est nécessaire.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "mob-notifications-q4",
+          "prompt": "Revue de sécurité : touche la ligne problématique de cette notification.",
+          "code": "{\n  \"token\": \"jeton-appareil\",\n  \"notification\": {\n    \"title\": \"Compte réinitialisé\",\n    \"body\": \"Mot de passe temporaire : Xk9!pQ\"\n  }\n}",
+          "language": "text",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Le texte s'affiche sur l'écran verrouillé et transite par des services tiers. On notifie (« Ouvrez l'application pour continuer ») sans y mettre le secret.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "mob-notifications-q5",
+          "prompt": "Complète ce code Kotlin : créer un canal de notification sur Android.",
+          "code": "val canal = ___(\n    \"messages\",\n    \"Messages\",\n    NotificationManager.IMPORTANCE_HIGH)\nmanager.___(canal)",
+          "language": "text",
+          "answers": [
+            "NotificationChannel",
+            "createNotificationChannel"
+          ],
+          "distractors": [
+            "NotificationGroup",
+            "registerChannel",
+            "createChannel"
+          ],
+          "explanation": "Sans canal, une notification n'est pas affichée sur Android 8 et plus. Créer un canal qui existe déjà ne fait rien.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-notifications-q6",
+          "prompt": "Quelles sont de bonnes pratiques de notification ?",
+          "choices": [
+            "Ouvrir directement l'écran concerné quand on touche la notification",
+            "Des canaux séparés pour les messages et les promotions",
+            "Demander la permission après avoir montré l'intérêt des notifications",
+            "Plusieurs promotions par jour pour maximiser l'engagement"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Trop sollicité, l'utilisateur coupe tout, y compris les notifications utiles.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "mob-defi-plateforme",
+    "title": "Défi entretien : une application de covoiturage",
+    "summary": "Permissions, arrière-plan et push.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mob-defi-plateforme-q1",
+        "prompt": "Cas pratique 1/3 — L'application demande localisation, contacts et notifications dès le premier écran ; 60 % des utilisateurs refusent tout. Que changer ?",
+        "choices": [
+          "Demander chaque permission au moment où sa fonctionnalité est utilisée, avec une explication",
+          "Demander deux fois pour insister",
+          "Rendre l'application inutilisable sans les trois permissions",
+          "Supprimer les permissions du manifeste"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le contexte rend la demande compréhensible ; et un refus n'empêche que la fonctionnalité concernée.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-plateforme-q2",
+        "prompt": "Cas pratique 2/3 — La position du conducteur doit être suivie pendant tout le trajet, écran éteint. Que faut-il sur Android ?",
+        "choices": [
+          "Un service de premier plan de type localisation, avec une notification visible pendant le trajet",
+          "Un timer dans l'activité",
+          "Une notification push toutes les 10 secondes",
+          "Rien de particulier"
+        ],
+        "answerIndex": 0,
+        "explanation": "La notification informe l'utilisateur que l'application le localise ; le système tolère alors le travail continu.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-plateforme-q3",
+        "prompt": "Cas pratique 3/3 — Le passager doit être prévenu de l'arrivée du conducteur, application fermée. Quel mécanisme ?",
+        "choices": [
+          "Une notification push envoyée par le serveur via FCM ou APNs",
+          "Une notification locale planifiée à l'heure prévue",
+          "Un service de premier plan chez le passager",
+          "Un e-mail"
+        ],
+        "answerIndex": 0,
+        "explanation": "Seul le serveur sait quand le conducteur arrive vraiment.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-plateforme-q4",
+        "prompt": "Sur Android 13 et plus, l'application n'affiche aucune notification sur un téléphone neuf. Cause probable ?",
+        "choices": [
+          "La permission POST_NOTIFICATIONS n'a pas été demandée à l'exécution",
+          "Le jeton push a expiré",
+          "Le téléphone est en mode avion",
+          "FCM ne fonctionne pas sur Android 13"
+        ],
+        "answerIndex": 0,
+        "explanation": "Depuis Android 13, les notifications sont désactivées tant que l'utilisateur ne les a pas autorisées.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "mob-defi-plateforme-q5",
+        "prompt": "L'application plante si l'utilisateur refuse la caméra. Touche la ligne où le refus est ignoré.",
+        "code": "async Task ScannerAsync()\n{\n    var s = await Permissions\n        .RequestAsync<Permissions.Camera>();\n    var photo = await MediaPicker\n        .Default.CapturePhotoAsync();\n    await AnalyserAsync(photo);\n}",
+        "language": "csharp",
+        "bugLines": [
+          3,
+          4,
+          5
+        ],
+        "explanation": "Le statut s n'est jamais vérifié : sans permission, la capture échoue. On teste s != PermissionStatus.Granted avant, et on gère aussi photo == null (capture annulée).",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "mob-defi-plateforme-q6",
+        "prompt": "Que ne faut-il pas écrire dans le texte d'une notification ?",
+        "choices": [
+          "Un mot de passe temporaire",
+          "Le contenu d'un message médical",
+          "Le détail d'un compte bancaire",
+          "Le nom de l'application"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Tout ce qui s'affiche sur l'écran verrouillé est lisible par quiconque tient le téléphone.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,333 @@
+{
+  "id": "mob-ch-architecture",
+  "title": "Architecture d'application",
+  "summary": "Séparer l'interface de la logique.",
+  "lessons": [
+    {
+      "id": "mob-mvvm",
+      "title": "MVVM et flux unidirectionnel",
+      "summary": "Vue, état et événements.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Trois rôles",
+          "body": "La vue (XAML, Jetpack Compose, SwiftUI) affiche et capte les gestes. Le ViewModel expose l'état de l'écran et les commandes, sans connaître les contrôles de la vue. Le modèle et les services (API, base locale) portent les données et les règles métier. La vue se lie aux propriétés du ViewModel ; quand l'état change, l'affichage suit.",
+          "code": "public partial class ProfilViewModel(IApiClient api)\n    : ObservableObject\n{\n    [ObservableProperty]\n    public partial string Nom { get; set; } = \"\";\n\n    [RelayCommand]\n    private Task EnregistrerAsync() => api.SauverAsync(Nom);\n}",
+          "language": "csharp"
+        },
+        {
+          "title": "Le flux unidirectionnel",
+          "body": "Dans les architectures récentes (MVI, architecture recommandée d'Android, SwiftUI), l'état descend et les événements montent : l'écran envoie une intention (« clic sur Enregistrer ») au ViewModel, qui calcule un nouvel état, que l'écran affiche. Un seul endroit modifie l'état : les bugs d'affichage incohérent deviennent rares, et chaque transition se teste."
+        },
+        {
+          "title": "Survivre aux changements",
+          "body": "Sur Android, une rotation ou un changement de langue recrée l'activité : l'état stocké dans la vue est perdu. Le ViewModel d'Android Jetpack survit à ces recréations. Mais si le système tue le processus en arrière-plan, même le ViewModel disparaît : l'état important doit aussi être sauvegardé (SavedStateHandle, stockage local)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-mvvm-q1",
+          "prompt": "Que ne doit pas contenir un ViewModel ?",
+          "choices": [
+            "Une référence aux contrôles de la vue (Label, Button)",
+            "L'état de l'écran",
+            "Des commandes",
+            "Des appels à des services injectés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans dépendance vers la vue, le ViewModel se teste sans interface graphique et peut servir à plusieurs vues.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "mob-mvvm-q2",
+          "prompt": "Complète avec CommunityToolkit.Mvvm : une propriété observable et une commande.",
+          "code": "public partial class ProfilViewModel : ObservableObject\n{\n    [___]\n    public partial string Nom { get; set; }\n\n    [___]\n    private Task EnregistrerAsync() =>\n        _api.SauverAsync(Nom);\n}",
+          "language": "csharp",
+          "answers": [
+            "ObservableProperty",
+            "RelayCommand"
+          ],
+          "distractors": [
+            "Property",
+            "Command",
+            "Binding"
+          ],
+          "explanation": "Les générateurs de source écrivent la notification de changement et la propriété EnregistrerCommand.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mob-mvvm-q3",
+          "prompt": "Touche la ligne qui enfreint le principe de MVVM.",
+          "code": "public class ConnexionViewModel\n{\n    public Entry ChampEmail { get; set; }\n\n    public bool EmailValide() =>\n        ChampEmail.Text.Contains('@');\n}",
+          "language": "csharp",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Le ViewModel dépend d'un contrôle (Entry) : on ne peut plus le tester sans vue. Il expose plutôt une propriété string Email, liée au champ.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-mvvm-q4",
+          "prompt": "Dans un flux unidirectionnel, comment l'écran réagit-il à un clic ?",
+          "choices": [
+            "Il envoie un événement au ViewModel, qui produit un nouvel état que l'écran affiche",
+            "Il modifie directement les données affichées",
+            "Il appelle l'API puis met à jour ses contrôles",
+            "Il recharge toute l'application"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'état n'est modifié qu'à un seul endroit ; la vue n'en est que le reflet.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-mvvm-q5",
+          "prompt": "Sur Android, pourquoi garder l'état d'un écran dans un ViewModel plutôt que dans l'activité ?",
+          "choices": [
+            "L'activité est recréée lors d'une rotation ou d'un changement de configuration ; le ViewModel survit",
+            "Le ViewModel est plus rapide à dessiner",
+            "L'activité ne peut pas contenir de variables",
+            "Le ViewModel survit à la désinstallation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il ne survit pas, en revanche, à la mort du processus : on persiste ce qui compte.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-mvvm-q6",
+          "prompt": "Qu'apporte MVVM ?",
+          "choices": [
+            "Tester la logique de présentation sans interface graphique",
+            "Séparer la présentation de la logique",
+            "Réutiliser un ViewModel pour plusieurs vues",
+            "Se passer de liaison de données"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La liaison de données (ou l'observation d'un état) est au contraire le mécanisme central de MVVM.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "mob-injection",
+      "title": "Injection et modularisation",
+      "summary": "Des dépendances remplaçables.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Recevoir plutôt que créer",
+          "body": "Un ViewModel qui crée lui-même son client HTTP ou sa base de données ne peut pas être testé sans réseau ni disque. Avec l'injection de dépendances, il reçoit des interfaces par son constructeur ; le conteneur, configuré au démarrage, fournit les vraies implémentations, et les tests passent des doublures. En .NET MAUI, c'est le conteneur de MauiProgram ; sur Android, Hilt ou Koin.",
+          "code": "builder.Services.AddSingleton<IApiClient, ApiClient>();\nbuilder.Services.AddSingleton<IStockage, StockageSqlite>();\nbuilder.Services.AddTransient<ProfilViewModel>();\nbuilder.Services.AddTransient<ProfilPage>();",
+          "language": "csharp"
+        },
+        {
+          "title": "Les durées de vie",
+          "body": "Un singleton vit autant que l'application : client API, base locale, cache. Un service transient est recréé à chaque demande : les ViewModels et les pages, pour repartir d'un état neuf. Piège : un singleton qui reçoit un service à durée de vie plus courte le garde pour toujours (dépendance captive) ; l'état capturé devient périmé."
+        },
+        {
+          "title": "Modulariser",
+          "body": "Une application qui grandit se découpe en modules par fonctionnalité (catalogue, paiement, profil) et en modules communs (réseau, design). Chaque module expose une petite interface. Les frontières deviennent visibles, les builds incrémentaux plus rapides, et plusieurs équipes travaillent sans se marcher dessus."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-injection-q1",
+          "prompt": "Pourquoi un ViewModel reçoit-il un IApiClient par son constructeur au lieu de créer un ApiClient ?",
+          "choices": [
+            "Pour le remplacer par une doublure dans les tests, et changer d'implémentation sans toucher au ViewModel",
+            "Pour que l'application démarre plus vite",
+            "Parce que le mot-clé new est interdit en MVVM",
+            "Pour économiser de la mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "La dépendance est explicite dans la signature, et le choix de l'implémentation se fait à un seul endroit.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "mob-injection-q2",
+          "prompt": "Complète : un seul client API pour toute l'application, un nouveau ViewModel à chaque ouverture de la page.",
+          "code": "builder.Services.___<IApiClient, ApiClient>();\nbuilder.Services.___<ProfilViewModel>();",
+          "language": "csharp",
+          "answers": [
+            "AddSingleton",
+            "AddTransient"
+          ],
+          "distractors": [
+            "AddScoped",
+            "Register",
+            "AddInstance"
+          ],
+          "explanation": "Dans une application MAUI, il n'y a pas de portée par requête comme en ASP.NET : un service scoped résolu depuis la racine se comporte comme un singleton.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mob-injection-q3",
+          "prompt": "Après une déconnexion puis la connexion d'un autre compte, le panier reste lié au premier utilisateur. Touche la ligne en cause.",
+          "code": "builder.Services.AddSingleton<PanierService>();\nbuilder.Services.AddTransient<IUtilisateurCourant,\n    UtilisateurCourant>();\n\npublic class PanierService(\n    IUtilisateurCourant utilisateur)\n{\n}",
+          "language": "csharp",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Le singleton reçoit une seule fois son IUtilisateurCourant et le garde à vie : dépendance captive. PanierService doit avoir une durée de vie compatible, ou demander l'utilisateur courant au moment de chaque opération.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mob-injection-q4",
+          "prompt": "Qu'est-ce qu'une dépendance captive ?",
+          "choices": [
+            "Un service à longue durée de vie qui garde une dépendance prévue pour vivre moins longtemps",
+            "Une dépendance qu'on ne peut pas désinstaller",
+            "Un service enregistré deux fois",
+            "Une dépendance circulaire entre deux services"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le service capturé ne sera jamais renouvelé : état périmé, voire fuite de mémoire.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mob-injection-q5",
+          "prompt": "Quel est l'intérêt de découper une grosse application en modules par fonctionnalité ?",
+          "choices": [
+            "Des frontières claires, des builds incrémentaux plus rapides et des équipes plus autonomes",
+            "Une application plus petite sur le téléphone, toujours",
+            "Ne plus avoir besoin de tests",
+            "Pouvoir publier chaque module comme une application séparée"
+          ],
+          "answerIndex": 0,
+          "explanation": "La taille finale de l'application ne change pas forcément ; c'est l'organisation du code qui gagne.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-injection-q6",
+          "prompt": "Que gagne-t-on avec l'injection de dépendances ?",
+          "choices": [
+            "Des tests unitaires avec des doublures",
+            "Changer d'implémentation à un seul endroit",
+            "Des dépendances visibles dans le constructeur",
+            "Un démarrage toujours plus rapide"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le conteneur a même un léger coût au démarrage ; son intérêt est la conception, pas la vitesse.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "mob-defi-architecture",
+    "title": "Défi entretien : l'écran de 2 000 lignes",
+    "summary": "Extraire, injecter, tester.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mob-defi-architecture-q1",
+        "prompt": "Cas pratique 1/3 — Le code-behind de l'écran de commande fait 2 000 lignes : appels HTTP, calcul des prix, accès SQLite et animations. Premier pas ?",
+        "choices": [
+          "Extraire la logique dans un ViewModel, et l'accès aux données dans des services injectés",
+          "Tout réécrire dans un autre framework",
+          "Découper le fichier en plusieurs fichiers partiels",
+          "Ajouter des commentaires"
+        ],
+        "answerIndex": 0,
+        "explanation": "On sépare par responsabilité : ce qui s'affiche, ce qui se décide, ce qui se stocke.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "mob-defi-architecture-q2",
+        "prompt": "Cas pratique 2/3 — Remets dans l'ordre un test du nouveau ViewModel.",
+        "language": "csharp",
+        "lines": [
+          "var api = new FausseApi(prixUnitaire: 10m);",
+          "var vm = new CommandeViewModel(api);",
+          "vm.Quantite = 3;",
+          "await vm.CalculerCommand.ExecuteAsync(null);",
+          "Assert.Equal(30m, vm.Total);"
+        ],
+        "explanation": "Arrange (doublure et ViewModel), Act (la commande), Assert (l'état obtenu).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-architecture-q3",
+        "prompt": "Cas pratique 3/3 — Qu'apporte ce test par rapport à un test d'interface ?",
+        "choices": [
+          "Il vérifie la logique de prix sans émulateur ni interface, en quelques millisecondes",
+          "Il vérifie l'apparence de l'écran",
+          "Il teste le vrai serveur",
+          "Rien, il faut toujours tester par l'interface"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les tests d'interface restent utiles pour les parcours principaux, mais en petit nombre.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-architecture-q4",
+        "prompt": "Un ViewModel doit revenir à l'écran précédent après une suppression. Quelle approche reste testable ?",
+        "choices": [
+          "Injecter un service de navigation (INavigationService) que les tests remplacent",
+          "Appeler directement Application.Current.MainPage.Navigation",
+          "Afficher un message demandant à l'utilisateur de revenir en arrière",
+          "Passer la page au ViewModel"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le test vérifie que le ViewModel a demandé la navigation, sans interface réelle.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-architecture-q5",
+        "prompt": "Pourquoi éviter d'enregistrer le ViewModel d'un écran de détail en singleton ?",
+        "choices": [
+          "Il garderait l'état du produit précédent, et sa mémoire, toute la vie de l'application",
+          "Les singletons sont interdits pour les ViewModels",
+          "Il serait recréé à chaque affichage",
+          "Il ne pourrait plus utiliser de commandes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque ouverture du détail mérite un état neuf : transient.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "mob-defi-architecture-q6",
+        "prompt": "Revue de code : coche tous les problèmes de ce ViewModel.",
+        "code": "public class ProduitViewModel\n{\n    public Label Titre { get; set; }\n    private readonly HttpClient _http = new();\n\n    public async void Charger() =>\n        Titre.Text = await _http\n            .GetStringAsync(Url);\n}",
+        "language": "csharp",
+        "choices": [
+          "Il manipule directement un contrôle de la vue",
+          "Il crée son propre HttpClient au lieu de recevoir un service",
+          "async void : impossible d'attendre la méthode ou d'en capter les exceptions dans un test",
+          "Il utilise async et await"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "On expose une propriété Titre (string), on injecte un IApiClient et on renvoie une Task (ou une commande asynchrone).",
+        "difficulty": 3
+      }
+    ]
+  }
+}

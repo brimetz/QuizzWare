@@ -1,0 +1,325 @@
+{
+  "id": "git-ch-quotidien",
+  "title": "Outils du quotidien",
+  "summary": "stash, cherry-pick et historique.",
+  "lessons": [
+    {
+      "id": "git-stash-cherry-pick",
+      "title": "stash, cherry-pick et worktree",
+      "summary": "Mettre de côté et reprendre.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "git stash",
+          "body": "git stash met de côté les modifications non commitées et rend un répertoire de travail propre. git stash pop les réapplique puis supprime l'entrée ; git stash apply les réapplique en gardant l'entrée. Par défaut, les fichiers jamais ajoutés (non suivis) ne sont pas concernés : il faut -u. En cas de conflit, pop garde l'entrée pour ne rien perdre.",
+          "code": "git stash push -m \"wip formulaire\"\ngit switch main\n# ... correctif urgent ...\ngit switch -\ngit stash pop"
+        },
+        {
+          "title": "git cherry-pick",
+          "body": "cherry-pick copie un commit existant sur la branche courante : idéal pour reporter un correctif sur une branche de maintenance. Le nouveau commit a les mêmes changements mais un autre parent, donc un autre hash. L'option -x ajoute au message la référence du commit d'origine."
+        },
+        {
+          "title": "git worktree",
+          "body": "Un worktree est un second répertoire de travail attaché au même dépôt, sur une autre branche. On peut corriger un bug sur main dans ../hotfix pendant que son travail reste intact dans le dossier principal, ou laisser tourner de longs tests sur une branche en codant sur une autre.",
+          "code": "git worktree add ../hotfix main\ncd ../hotfix\n# ... correction, commit, push ...\ngit worktree remove ../hotfix"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-stash-cherry-pick-q1",
+          "prompt": "Quelle est la différence entre git stash pop et git stash apply ?",
+          "choices": [
+            "pop réapplique puis supprime l'entrée ; apply la garde",
+            "apply réapplique puis supprime l'entrée ; pop la garde",
+            "pop ne fonctionne que sur main",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "apply est utile pour appliquer la même mise de côté sur plusieurs branches.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-stash-cherry-pick-q2",
+          "prompt": "Un fichier tout neuf, jamais ajouté avec git add, est-il mis de côté par git stash ?",
+          "choices": [
+            "Non, sauf avec l'option -u (--include-untracked)",
+            "Oui, toujours",
+            "Oui, s'il est dans .gitignore",
+            "Non, et c'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le fichier reste dans le répertoire de travail et suit l'utilisateur sur l'autre branche.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "git-stash-cherry-pick-q3",
+          "prompt": "Complète : mettre son travail de côté, puis reporter le commit 4f2a9c1 sur main.",
+          "code": "git ___ push -m \"wip\"\ngit switch main\ngit ___ 4f2a9c1",
+          "answers": [
+            "stash",
+            "cherry-pick"
+          ],
+          "distractors": [
+            "commit",
+            "merge",
+            "rebase"
+          ],
+          "explanation": "merge 4f2a9c1 intégrerait aussi tous les commits qui le précèdent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "git-stash-cherry-pick-q4",
+          "prompt": "Après un cherry-pick, le commit copié a-t-il le même hash que l'original ?",
+          "choices": [
+            "Non : son parent est différent, donc son hash aussi",
+            "Oui, c'est le même commit",
+            "Oui, si le contenu est identique",
+            "Seulement avec l'option -x"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le hash d'un commit dépend de son arbre, de ses parents, de ses dates et de son message.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "git-stash-cherry-pick-q5",
+          "prompt": "Le travail en cours a disparu. Touche la ligne en cause.",
+          "code": "git switch feature\ngit stash\ngit switch main\ngit stash drop\ngit switch feature",
+          "bugLines": [
+            4
+          ],
+          "explanation": "drop supprime l'entrée sans l'appliquer. Il fallait git stash pop, une fois revenu sur feature. (On peut encore la retrouver avec git fsck, mais c'est laborieux.)",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "git-stash-cherry-pick-q6",
+          "prompt": "Dans quelles situations git worktree est-il utile ?",
+          "choices": [
+            "Corriger un bug urgent sur main sans toucher à son travail en cours",
+            "Laisser tourner une longue suite de tests sur une branche pendant qu'on code sur une autre",
+            "Comparer deux versions de l'application côte à côte",
+            "Cloner un dépôt distant"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un worktree partage le dépôt existant : pas de second clone ni de second téléchargement.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "git-historique",
+      "title": "Fouiller l'historique",
+      "summary": "log, blame et recherche de code.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "git log en détail",
+          "body": "git log --oneline --graph --all dessine l'historique de toutes les branches. Les filtres affinent : --author, --since=\"2 weeks\", -- chemin pour un fichier ou un dossier, et --follow pour suivre un fichier à travers ses renommages. git show commit:chemin affiche un fichier tel qu'il était dans un commit.",
+          "code": "git log --oneline --graph --all\ngit log --since=\"2 weeks\" --author=ana -- src/\ngit log --follow -- src/utils/dates.js"
+        },
+        {
+          "title": "Chercher dans le code de l'historique",
+          "body": "git log -S \"calculerRemise\" (la « pioche ») liste les commits qui ont ajouté ou retiré cette chaîne : parfait pour savoir quand une fonction a disparu. -G accepte une expression régulière. git grep cherche dans les fichiers suivis, y compris dans une ancienne version."
+        },
+        {
+          "title": "blame et comparaisons",
+          "body": "git blame -L 40,60 fichier indique, pour chaque ligne, le dernier commit qui l'a modifiée. Un commit de reformatage massif peut être ignoré grâce à un fichier .git-blame-ignore-revs. git diff main...feature (trois points) montre ce que feature a changé depuis son point de divergence avec main, sans les nouveautés de main."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "git-historique-q1",
+          "prompt": "Comment trouver le commit qui a supprimé la fonction calculerRemise ?",
+          "choices": [
+            "git log -S \"calculerRemise\"",
+            "git blame calculerRemise",
+            "git status",
+            "git diff calculerRemise"
+          ],
+          "answerIndex": 0,
+          "explanation": "-S liste les commits qui changent le nombre d'occurrences de la chaîne : son ajout et sa suppression.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "git-historique-q2",
+          "prompt": "Complète : voir le graphe de toutes les branches, puis qui a écrit les lignes 40 à 60.",
+          "code": "git log --oneline --___ --all\ngit blame -___ 40,60 src/panier.js",
+          "answers": [
+            "graph",
+            "L"
+          ],
+          "distractors": [
+            "tree",
+            "n",
+            "lines"
+          ],
+          "explanation": "-L limite blame (et log) à une plage de lignes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "git-historique-q3",
+          "prompt": "Que montre git diff main...feature (trois points) ?",
+          "choices": [
+            "Les changements de feature depuis son point de divergence avec main",
+            "Toutes les différences entre main et feature, dans les deux sens",
+            "Les changements de main depuis la création de feature",
+            "Les commits communs aux deux branches"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ce qu'affiche une pull request : la contribution de la branche, sans le bruit des nouveautés de main.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "git-historique-q4",
+          "prompt": "Un énorme commit de reformatage fait apparaître son auteur sur toutes les lignes de git blame. Que faire ?",
+          "choices": [
+            "Lister ce commit dans .git-blame-ignore-revs (et régler blame.ignoreRevsFile)",
+            "Supprimer ce commit de l'historique",
+            "Ne plus utiliser git blame",
+            "Reformater à nouveau"
+          ],
+          "answerIndex": 0,
+          "explanation": "GitHub prend aussi ce fichier en compte dans sa vue blame.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "git-historique-q5",
+          "prompt": "Le fichier s'appelait utils/date.js avant d'être renommé ; l'historique affiché s'arrête au renommage. Touche la ligne à corriger.",
+          "code": "git log --oneline -- src/utils/dates.js",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Il manque --follow, qui suit un fichier unique à travers ses renommages.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "git-historique-q6",
+          "prompt": "Que permet git log ?",
+          "choices": [
+            "Filtrer par auteur (--author)",
+            "Filtrer par date (--since)",
+            "Se limiter à un chemin (-- chemin)",
+            "Modifier le message d'un commit"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "git log ne fait que lire ; modifier un message passe par commit --amend ou un rebase interactif.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "git-defi-quotidien",
+    "title": "Défi entretien : le correctif urgent",
+    "summary": "Interrompre, corriger, reporter.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "git-defi-quotidien-q1",
+        "prompt": "Cas pratique 1/3 — En pleine fonctionnalité, il faut corriger d'urgence un bug sur main. Le travail en cours n'est pas prêt à être commité. Que faire ?",
+        "choices": [
+          "git stash (ou un git worktree), corriger sur main, puis reprendre son travail",
+          "Commiter le travail inachevé sur main",
+          "Copier le dossier à la main",
+          "Supprimer ses modifications"
+        ],
+        "answerIndex": 0,
+        "explanation": "On peut aussi faire un commit « wip » sur sa propre branche et le réécrire plus tard.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi-quotidien-q2",
+        "prompt": "Cas pratique 2/3 — Le correctif (commit 9e1f0aa sur main) doit aussi partir sur la branche release/2.3. Comment ?",
+        "choices": [
+          "git switch release/2.3, puis git cherry-pick 9e1f0aa",
+          "git merge main dans release/2.3",
+          "git rebase main depuis release/2.3",
+          "git push origin 9e1f0aa:release/2.3"
+        ],
+        "answerIndex": 0,
+        "explanation": "Fusionner main embarquerait toutes les fonctionnalités en cours, pas seulement le correctif.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "git-defi-quotidien-q3",
+        "prompt": "Cas pratique 3/3 — De retour sur sa branche, git stash pop provoque un conflit. Que devient l'entrée du stash ?",
+        "choices": [
+          "Elle est conservée : on résout le conflit, puis git stash drop",
+          "Elle est supprimée, le travail est perdu",
+          "Elle est appliquée sur main",
+          "Git annule automatiquement le pop"
+        ],
+        "answerIndex": 0,
+        "explanation": "Git préfère garder une copie tant que l'application ne s'est pas faite proprement.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "git-defi-quotidien-q4",
+        "prompt": "Remets dans l'ordre la création et la publication d'une branche de correctif.",
+        "lines": [
+          "git switch main",
+          "git pull",
+          "git switch -c correctif/tva",
+          "git commit -am \"fix: arrondi de la TVA\"",
+          "git push -u origin correctif/tva"
+        ],
+        "explanation": "On part d'un main à jour ; -u relie la branche locale à sa branche distante.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "git-defi-quotidien-q5",
+        "prompt": "Comment savoir qui a modifié en dernier la ligne 42 de panier.js, et dans quel commit ?",
+        "choices": [
+          "git blame -L 42,42 panier.js",
+          "git log -n 42 panier.js",
+          "git show 42 panier.js",
+          "git diff 42 panier.js"
+        ],
+        "answerIndex": 0,
+        "explanation": "On lit ensuite le commit avec git show pour comprendre pourquoi.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "git-defi-quotidien-q6",
+        "prompt": "Quelles commandes ne modifient pas l'historique ?",
+        "choices": [
+          "git log",
+          "git blame",
+          "git show",
+          "git rebase -i"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le rebase interactif réécrit des commits ; les trois autres ne font que lire.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

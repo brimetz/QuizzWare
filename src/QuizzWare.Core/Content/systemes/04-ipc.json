@@ -1,0 +1,323 @@
+{
+  "id": "os-ch-ipc",
+  "title": "Communication entre processus",
+  "summary": "Tubes, signaux et mémoire partagée.",
+  "lessons": [
+    {
+      "id": "os-tubes-signaux",
+      "title": "Tubes et signaux",
+      "summary": "Les mécanismes historiques d'Unix.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les tubes",
+          "body": "pipe() crée un canal à sens unique : deux descripteurs, un pour lire, un pour écrire. Après un fork, parent et enfant se partagent ces descripteurs, et chacun ferme l'extrémité qu'il n'utilise pas. C'est ce que fait le shell pour ls | wc -l. Un tube nommé (mkfifo) relie des processus sans lien de parenté.",
+          "code": "int fd[2];\npipe(fd);\nif (fork() == 0) {          /* enfant */\n    close(fd[0]);\n    write(fd[1], \"salut\", 5);\n    _exit(0);\n}\nclose(fd[1]);               /* parent */\nchar buf[16];\nssize_t n = read(fd[0], buf, sizeof buf);"
+        },
+        {
+          "title": "Fin de flux et SIGPIPE",
+          "body": "read renvoie 0 (fin de fichier) seulement quand toutes les extrémités d'écriture sont fermées, dans tous les processus. Un parent qui oublie de fermer la sienne attend donc pour toujours. À l'inverse, écrire dans un tube que plus personne ne lit envoie le signal SIGPIPE, qui termine le processus par défaut."
+        },
+        {
+          "title": "Les signaux",
+          "body": "Un signal est une notification asynchrone : SIGINT (Ctrl+C), SIGTERM (demande d'arrêt poli, envoyé par kill ou par Docker), SIGKILL et SIGSTOP (impossibles à intercepter), SIGCHLD (un enfant s'est terminé), SIGSEGV (accès mémoire invalide). On installe un gestionnaire avec sigaction. Dans un gestionnaire, seules les fonctions async-signal-safe sont permises : ni printf ni malloc. On se contente en général de lever un drapeau de type volatile sig_atomic_t."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-tubes-signaux-q1",
+          "prompt": "Quelle est la différence entre SIGTERM et SIGKILL ?",
+          "choices": [
+            "SIGTERM peut être intercepté pour s'arrêter proprement ; SIGKILL tue immédiatement, sans interception possible",
+            "SIGKILL peut être intercepté, pas SIGTERM",
+            "Ce sont deux noms du même signal",
+            "SIGTERM redémarre le processus"
+          ],
+          "answerIndex": 0,
+          "explanation": "D'où la séquence classique : SIGTERM, un délai de grâce, puis SIGKILL si le processus ne s'est pas arrêté.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "os-tubes-signaux-q2",
+          "prompt": "L'enfant a terminé, mais le parent ne sort jamais de sa boucle. Touche la ligne qui bloque.",
+          "code": "int fd[2];\npipe(fd);\nif (fork() == 0) {\n    close(fd[0]);\n    write(fd[1], \"fin\", 3);\n    _exit(0);\n}\nchar buf[64];\nwhile (read(fd[0], buf, sizeof buf) > 0) {\n    /* traiter */\n}",
+          "bugLines": [
+            9
+          ],
+          "explanation": "Le parent garde fd[1] ouvert : l'extrémité d'écriture existe encore, read attend donc d'autres données au lieu de renvoyer 0. Il faut close(fd[1]) dans le parent avant la boucle.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "os-tubes-signaux-q3",
+          "prompt": "Complète : s'arrêter proprement à la réception de SIGTERM.",
+          "code": "static volatile sig_atomic_t arret = 0;\n\nvoid gerer(int sig) { arret = 1; }\n\nstruct sigaction sa = { .sa_handler = gerer };\n___(SIGTERM, &sa, NULL);\nwhile (!___) {\n    traiter_requete();\n}",
+          "answers": [
+            "sigaction",
+            "arret"
+          ],
+          "distractors": [
+            "kill",
+            "raise",
+            "SIGKILL"
+          ],
+          "explanation": "Le gestionnaire se contente de lever le drapeau ; la boucle principale fait le travail d'arrêt hors du contexte du signal.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "os-tubes-signaux-q4",
+          "prompt": "Ce gestionnaire de signal provoque, très rarement, un blocage du programme. Touche une ligne en cause.",
+          "code": "void gerer(int sig) {\n    printf(\"signal %d reçu\\n\", sig);\n    sauvegarder_et_quitter();\n}",
+          "bugLines": [
+            2,
+            3
+          ],
+          "explanation": "Si le signal arrive pendant que le programme est déjà dans printf ou malloc, le gestionnaire reprend un verrou déjà tenu : interblocage. On lève un drapeau et on traite dans la boucle principale.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "os-tubes-signaux-q5",
+          "prompt": "Que se passe-t-il quand un processus écrit dans un tube que plus personne ne lit ?",
+          "choices": [
+            "Il reçoit SIGPIPE ; s'il l'ignore, write échoue avec EPIPE",
+            "L'écriture est mise en attente indéfiniment",
+            "Les données sont écrites dans un fichier temporaire",
+            "Rien, les données sont perdues silencieusement"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est ainsi que yes | head -1 s'arrête : quand head se termine, yes reçoit SIGPIPE.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "os-tubes-signaux-q6",
+          "prompt": "Quels signaux ne peuvent pas être interceptés ni ignorés ?",
+          "choices": [
+            "SIGKILL",
+            "SIGSTOP",
+            "SIGTERM",
+            "SIGINT"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "Le noyau doit toujours pouvoir arrêter ou suspendre un processus, quel que soit son code.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "os-memoire-partagee",
+      "title": "Mémoire partagée et sockets",
+      "summary": "Échanger vite, échanger loin.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La mémoire partagée",
+          "body": "shm_open crée un objet de mémoire partagée, mmap avec MAP_SHARED le place dans l'espace d'adressage de chaque processus : ils lisent et écrivent les mêmes pages physiques. Aucune copie par le noyau, c'est le mécanisme le plus rapide. Le prix : il faut synchroniser soi-même les accès, avec des opérations atomiques, un sémaphore ou un mutex partagé.",
+          "code": "int fd = shm_open(\"/compteurs\", O_CREAT | O_RDWR, 0600);\nftruncate(fd, 4096);\nint *p = mmap(NULL, 4096, PROT_READ | PROT_WRITE,\n              MAP_SHARED, fd, 0);"
+        },
+        {
+          "title": "Les sockets Unix",
+          "body": "Une socket du domaine Unix (AF_UNIX) offre l'API des sockets entre processus d'une même machine, sans traverser la pile TCP/IP. Elle apparaît comme un fichier (/run/app.sock), dont les permissions contrôlent l'accès, et peut même transmettre des descripteurs de fichiers. Docker, PostgreSQL ou systemd s'en servent."
+        },
+        {
+          "title": "Choisir",
+          "body": "Tube : un flux simple entre processus apparentés. Socket Unix : des échanges bidirectionnels entre processus locaux quelconques. Mémoire partagée : de gros volumes avec le moins de copies possible, accompagnée d'un canal de notification. Sockets TCP : dès que les processus peuvent être sur des machines différentes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "os-memoire-partagee-q1",
+          "prompt": "Pourquoi la mémoire partagée est-elle le mécanisme de communication entre processus le plus rapide ?",
+          "choices": [
+            "Les processus accèdent aux mêmes pages physiques : le noyau ne copie rien",
+            "Elle utilise le réseau local",
+            "Elle compresse les données",
+            "Elle est gérée par le processeur graphique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un tube ou une socket copie les données de l'espace de l'émetteur vers le noyau, puis vers le récepteur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "os-memoire-partagee-q2",
+          "prompt": "Quel est le principal inconvénient de la mémoire partagée ?",
+          "choices": [
+            "Il faut synchroniser soi-même les accès concurrents",
+            "Elle est limitée à 4 Ko",
+            "Elle ne fonctionne qu'entre threads",
+            "Elle est effacée à chaque lecture"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans synchronisation, on retrouve toutes les conditions de course des threads, entre processus.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "os-memoire-partagee-q3",
+          "prompt": "Complète : partager une page entre processus.",
+          "code": "int fd = ___(\"/compteurs\", O_CREAT | O_RDWR, 0600);\nftruncate(fd, 4096);\nint *p = mmap(NULL, 4096, PROT_READ | PROT_WRITE,\n              ___, fd, 0);",
+          "answers": [
+            "shm_open",
+            "MAP_SHARED"
+          ],
+          "distractors": [
+            "fopen",
+            "MAP_PRIVATE",
+            "malloc"
+          ],
+          "explanation": "Avec MAP_PRIVATE, chaque processus aurait sa propre copie dès la première écriture (copie à l'écriture).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "os-memoire-partagee-q4",
+          "prompt": "Deux processus d'une même machine veulent échanger des requêtes avec l'API des sockets, sans passer par la pile TCP/IP. Quel mécanisme ?",
+          "choices": [
+            "Une socket du domaine Unix (AF_UNIX)",
+            "Une socket TCP sur 127.0.0.1, obligatoirement",
+            "Un signal",
+            "Un fichier texte relu en boucle"
+          ],
+          "answerIndex": 0,
+          "explanation": "TCP en local fonctionne, mais traverse inutilement la pile réseau.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "os-memoire-partagee-q5",
+          "prompt": "Après la fin des 4 enfants, le compteur vaut moins de 400 000. Touche la ligne en cause.",
+          "code": "int *compteur = mmap(NULL, sizeof(int),\n    PROT_READ | PROT_WRITE,\n    MAP_SHARED | MAP_ANONYMOUS, -1, 0);\nfor (int i = 0; i < 4; i++) {\n    if (fork() == 0) {\n        for (int j = 0; j < 100000; j++)\n            (*compteur)++;\n        _exit(0);\n    }\n}",
+          "bugLines": [
+            7
+          ],
+          "explanation": "L'incrément (lire, ajouter, écrire) n'est pas atomique : des mises à jour se perdent. On utilise une opération atomique (atomic_fetch_add) ou un sémaphore partagé.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "os-memoire-partagee-q6",
+          "prompt": "Quels sont des mécanismes de communication entre processus ?",
+          "choices": [
+            "Les tubes",
+            "Les sockets Unix",
+            "La mémoire partagée",
+            "Lire directement les variables globales d'un autre processus"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Chaque processus a son propre espace d'adressage : ses variables sont invisibles des autres.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "os-defi-ipc",
+    "title": "Défi entretien : le service d'images",
+    "summary": "Transférer, notifier, surveiller.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "os-defi-ipc-q1",
+        "prompt": "Cas pratique 1/3 — Un serveur web confie le redimensionnement d'images (plusieurs Mo chacune, des milliers par minute) à un processus séparé, sur la même machine. Comment transférer les images ?",
+        "choices": [
+          "Par mémoire partagée (ou fichiers mappés), avec un petit canal de contrôle pour signaler qu'une image est prête",
+          "Par signaux, un par octet",
+          "Par une socket TCP vers un autre continent",
+          "En les copiant dans des variables d'environnement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les gros volumes passent sans copie ; seules de petites notifications transitent par le canal de contrôle.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-ipc-q2",
+        "prompt": "Cas pratique 2/3 — Comment le serveur apprend-il qu'une image est prête, sans scruter la mémoire en boucle ?",
+        "choices": [
+          "Il attend un message sur une socket Unix (ou un sémaphore) et reste bloqué jusque-là",
+          "Il relit la mémoire partagée toutes les microsecondes",
+          "Il redémarre le processus d'images",
+          "Il attend une seconde à chaque fois"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une attente bloquante ne consomme pas de CPU, contrairement à une attente active.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-ipc-q3",
+        "prompt": "Cas pratique 3/3 — Le processus d'images, enfant du serveur, plante. Comment le serveur le sait-il ?",
+        "choices": [
+          "Il reçoit SIGCHLD et récupère son état avec waitpid ; la socket de contrôle se ferme aussi",
+          "Il ne peut pas le savoir",
+          "Le noyau redémarre l'enfant automatiquement",
+          "Par un e-mail du système"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans waitpid, l'enfant terminé reste un zombie dans la table des processus.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-ipc-q4",
+        "prompt": "Quel signal Ctrl+C envoie-t-il au processus au premier plan d'un terminal ?",
+        "choices": [
+          "SIGINT",
+          "SIGKILL",
+          "SIGTERM",
+          "SIGSTOP"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ctrl+Z envoie SIGTSTP, qui suspend le processus.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "os-defi-ipc-q5",
+        "prompt": "Pour exécuter cette commande, combien de processus et de tubes le shell crée-t-il ?",
+        "code": "ls | wc -l",
+        "language": "shell",
+        "choices": [
+          "Deux processus et un tube",
+          "Un processus et deux tubes",
+          "Un seul processus",
+          "Trois processus et trois tubes"
+        ],
+        "answerIndex": 0,
+        "explanation": "La sortie standard de ls est reliée à l'entrée standard de wc par un tube.",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "os-defi-ipc-q6",
+        "prompt": "Que doit faire un service qui reçoit SIGTERM ?",
+        "choices": [
+          "Arrêter d'accepter du nouveau travail",
+          "Terminer ou abandonner proprement le travail en cours",
+          "Fermer ses ressources, puis se terminer",
+          "Ignorer le signal pour rester disponible"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "S'il ignore SIGTERM, l'orchestrateur enverra SIGKILL après le délai de grâce, sans arrêt propre.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

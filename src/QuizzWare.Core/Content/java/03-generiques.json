@@ -1,0 +1,328 @@
+{
+  "id": "java-ch-generiques",
+  "title": "Génériques et lambdas",
+  "summary": "Typer et passer du comportement.",
+  "lessons": [
+    {
+      "id": "java-generiques",
+      "title": "Génériques",
+      "summary": "Effacement de type et jokers.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des types paramétrés",
+          "body": "List<String> garantit à la compilation qu'on n'y met que des chaînes : plus de cast, et les erreurs apparaissent tôt. Une méthode peut aussi être générique : static <T> T premier(List<T> l). Les types bruts (List sans paramètre) existent pour la compatibilité avec le vieux code, mais désactivent ces vérifications."
+        },
+        {
+          "title": "L'effacement de type",
+          "body": "Les paramètres de type n'existent qu'à la compilation : dans le bytecode, List<String> et List<Integer> sont toutes deux de simples List. Conséquences : pas de new T(), pas de instanceof List<String>, et pas de surcharge entre m(List<String>) et m(List<Integer>), qui auraient la même signature une fois effacées."
+        },
+        {
+          "title": "Invariance et jokers",
+          "body": "List<Integer> n'est pas une List<Number> : sinon, on pourrait y ajouter un Double. Les jokers assouplissent la règle. ? extends Number accepte une liste de n'importe quel sous-type, en lecture. ? super Integer accepte une liste qui peut recevoir des Integer, en écriture. Moyen mnémotechnique : PECS, Producer Extends, Consumer Super.",
+          "code": "static double somme(List<? extends Number> l) {\n    double s = 0;\n    for (Number n : l) s += n.doubleValue();\n    return s;\n}\nstatic void remplir(List<? super Integer> l) {\n    l.add(42);\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "java-generiques-q1",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "List<Integer> entiers = new ArrayList<>();\nList<Number> nombres = entiers;\nnombres.add(3.14);",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Les génériques sont invariants : sans cela, la ligne 3 glisserait un Double dans une liste d'entiers. List<? extends Number> serait accepté, mais en lecture seule.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-generiques-q2",
+          "prompt": "Pourquoi ne peut-on pas écrire new T() dans une classe générique ?",
+          "choices": [
+            "À l'exécution, T est effacé : la JVM ne sait pas quel type instancier",
+            "Parce que T pourrait être une interface, toujours",
+            "Pour des raisons de performance",
+            "On peut, depuis Java 21"
+          ],
+          "answerIndex": 0,
+          "explanation": "On contourne en passant une fabrique : Supplier<T> ou Class<T>.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "java-generiques-q3",
+          "prompt": "Complète selon la règle PECS.",
+          "code": "static double somme(List<? ___ Number> l) {\n    double s = 0;\n    for (Number n : l) s += n.doubleValue();\n    return s;\n}\nstatic void remplir(List<? ___ Integer> l) {\n    l.add(42);\n}",
+          "answers": [
+            "extends",
+            "super"
+          ],
+          "distractors": [
+            "implements",
+            "this",
+            "Object"
+          ],
+          "explanation": "somme lit des Number (la liste produit) ; remplir écrit des Integer (la liste consomme) : une List<Number> ou List<Object> convient.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "java-generiques-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "List<String> a = new ArrayList<>();\nList<Integer> b = new ArrayList<>();\nSystem.out.println(a.getClass() == b.getClass());",
+          "choices": [
+            "true",
+            "false",
+            "Une erreur de compilation",
+            "Une ClassCastException"
+          ],
+          "answerIndex": 0,
+          "explanation": "À l'exécution, les deux sont des java.util.ArrayList : le paramètre de type a été effacé.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "java-generiques-q5",
+          "prompt": "Que signifie la règle PECS ?",
+          "choices": [
+            "Producer Extends, Consumer Super : ? extends pour lire, ? super pour écrire",
+            "Public Extends, Class Super",
+            "Primitives Extends, Collections Super",
+            "Une convention de nommage des paramètres de type"
+          ],
+          "answerIndex": 0,
+          "explanation": "Collections.copy(List<? super T> dest, List<? extends T> src) en est l'exemple type.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "java-generiques-q6",
+          "prompt": "Quelles sont des conséquences de l'effacement de type ?",
+          "choices": [
+            "Impossible d'écrire new T()",
+            "Impossible de tester instanceof List<String>",
+            "Impossible de surcharger m(List<String>) et m(List<Integer>)",
+            "Les génériques ralentissent l'exécution"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les génériques n'ont aucun coût à l'exécution : le compilateur insère simplement les casts.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "java-lambdas",
+      "title": "Lambdas et interfaces fonctionnelles",
+      "summary": "Function, Supplier et références de méthodes.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les interfaces fonctionnelles",
+          "body": "Une lambda implémente une interface fonctionnelle, c'est-à-dire avec exactement une méthode abstraite. java.util.function fournit les plus courantes : Function<T, R> (transforme), Predicate<T> (teste), Supplier<T> (fournit sans paramètre), Consumer<T> (consomme sans rien renvoyer), BiFunction<T, U, R>. Runnable et Comparator en sont aussi.",
+          "code": "Predicate<String> vide = String::isBlank;\nSupplier<List<String>> nouvelle = ArrayList::new;\nFunction<String, Integer> longueur = String::length;"
+        },
+        {
+          "title": "Références de méthodes et capture",
+          "body": "Une référence de méthode (String::length, System.out::println, ArrayList::new) est un raccourci pour une lambda qui appelle cette méthode. Une lambda peut lire les variables locales qui l'entourent, à condition qu'elles soient effectivement finales : jamais réaffectées."
+        },
+        {
+          "title": "Composer",
+          "body": "Les interfaces fonctionnelles offrent des méthodes de composition : f.andThen(g) applique f puis g, f.compose(g) applique g puis f, p.and(q), p.negate(). Comparator.comparing(...) se combine avec thenComparing et reversed pour trier sur plusieurs critères.",
+          "code": "employes.sort(Comparator\n    .comparing(Employe::salaire).reversed()\n    .thenComparing(Employe::nom));"
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "java-lambdas-q1",
+          "prompt": "Complète.",
+          "code": "___<String, Integer> longueur = ___::length;\nSystem.out.println(longueur.apply(\"java\"));",
+          "answers": [
+            "Function",
+            "String"
+          ],
+          "distractors": [
+            "Supplier",
+            "Integer",
+            "Consumer"
+          ],
+          "explanation": "Function<String, Integer> prend une chaîne et renvoie un entier ; String::length équivaut à s -> s.length().",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "java-lambdas-q2",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "int total = 0;\nliste.forEach(x -> {\n    total += x;\n});",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Une lambda ne peut utiliser que des variables locales effectivement finales. On écrit plutôt int total = liste.stream().mapToInt(x -> x).sum();",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "java-lambdas-q3",
+          "prompt": "Quelle interface représente une fonction sans paramètre qui renvoie une valeur ?",
+          "choices": [
+            "Supplier<T>",
+            "Consumer<T>",
+            "Function<T, R>",
+            "Runnable"
+          ],
+          "answerIndex": 0,
+          "explanation": "Runnable ne prend rien et ne renvoie rien ; Consumer prend un argument sans rien renvoyer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "java-lambdas-q4",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "var noms = new ArrayList<>(\n    List.of(\"léa\", \"Bob\", \"al\"));\nnoms.sort(Comparator.comparing(String::length)\n    .thenComparing(Comparator.naturalOrder()));\nSystem.out.println(noms);",
+          "choices": [
+            "[al, Bob, léa]",
+            "[al, léa, Bob]",
+            "[Bob, al, léa]",
+            "[léa, Bob, al]"
+          ],
+          "answerIndex": 0,
+          "explanation": "Tri par longueur (al d'abord), puis ordre naturel des chaînes : les majuscules passent avant les minuscules (B avant l).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "java-lambdas-q5",
+          "prompt": "Qu'est-ce qu'une interface fonctionnelle ?",
+          "choices": [
+            "Une interface qui a exactement une méthode abstraite",
+            "Une interface sans aucune méthode",
+            "Une interface annotée @Override",
+            "Une classe qui ne contient que des méthodes statiques"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les méthodes default et static ne comptent pas. @FunctionalInterface fait vérifier la règle par le compilateur.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "java-lambdas-q6",
+          "prompt": "Quelles expressions peuvent être affectées à une Function<String, Integer> ?",
+          "choices": [
+            "String::length",
+            "Integer::parseInt",
+            "s -> s.indexOf('a')",
+            "String::isEmpty"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "isEmpty renvoie un boolean, qui ne se convertit pas en Integer : il irait dans un Predicate<String>.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "java-defi-generiques",
+    "title": "Défi entretien : une méthode max générique",
+    "summary": "Bornes, jokers et comparateurs.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "java-defi-generiques-q1",
+        "prompt": "Cas pratique 1/3 — On écrit une méthode qui renvoie le plus grand élément d'une liste d'éléments comparables, de n'importe quel type. Quelle signature est la plus générale ?",
+        "choices": [
+          "static <T extends Comparable<? super T>> T max(List<? extends T> l)",
+          "static Object max(List<Object> l)",
+          "static <T> T max(List<T> l)",
+          "static Comparable max(List l)"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est la signature de Collections.max. Sans borne, on ne peut pas comparer ; avec des types bruts, on perd toute vérification.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "java-defi-generiques-q2",
+        "prompt": "Cas pratique 2/3 — Pourquoi Comparable<? super T> plutôt que Comparable<T> ?",
+        "choices": [
+          "Pour accepter des types qui héritent leur comparaison d'un parent : LocalDate implémente Comparable<ChronoLocalDate>",
+          "Pour accélérer la comparaison",
+          "C'est purement esthétique",
+          "Pour autoriser null"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec Comparable<T>, max(List<LocalDate>) ne compilerait pas.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "java-defi-generiques-q3",
+        "prompt": "Cas pratique 3/3 — Comment trier des employés par salaire décroissant, puis par nom ?",
+        "choices": [
+          "Comparator.comparing(Employe::salaire).reversed().thenComparing(Employe::nom)",
+          "Comparator.comparing(Employe::nom).thenComparing(Employe::salaire).reversed()",
+          "Collections.reverse(employes) puis sort par nom",
+          "Un tri par salaire, puis un second tri par nom"
+        ],
+        "answerIndex": 0,
+        "explanation": "reversed() s'applique à tout ce qui précède : placé à la fin, il inverserait aussi l'ordre des noms.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "java-defi-generiques-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "Function<Integer, Integer> plus1 = x -> x + 1;\nFunction<Integer, Integer> fois2 = x -> x * 2;\nSystem.out.println(plus1.andThen(fois2).apply(3));\nSystem.out.println(plus1.compose(fois2).apply(3));",
+        "choices": [
+          "8 puis 7",
+          "7 puis 8",
+          "8 puis 8",
+          "7 puis 7"
+        ],
+        "answerIndex": 0,
+        "explanation": "andThen : (3 + 1) × 2 = 8. compose : 3 × 2 + 1 = 7.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "java-defi-generiques-q5",
+        "prompt": "Remets dans l'ordre : la longueur de chaque ligne non vide, une fois les espaces retirés.",
+        "lines": [
+          "List<Integer> longueurs = lignes.stream()",
+          "    .map(String::strip)",
+          "    .filter(s -> !s.isEmpty())",
+          "    .map(String::length)",
+          "    .toList();"
+        ],
+        "explanation": "On nettoie, on écarte les lignes vides, puis on transforme ; toList() (Java 16) termine le pipeline.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "java-defi-generiques-q6",
+        "prompt": "Qu'apportent les génériques ?",
+        "choices": [
+          "Des erreurs de type détectées à la compilation",
+          "La disparition des casts explicites",
+          "Du code réutilisable pour plusieurs types",
+          "Des types conservés à l'exécution"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les types sont effacés à l'exécution, contrairement aux génériques de C#.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

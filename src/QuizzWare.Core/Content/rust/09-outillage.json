@@ -1,0 +1,326 @@
+{
+  "id": "rust-ch-outillage",
+  "title": "Modules et outillage",
+  "summary": "Cargo, modules et tests.",
+  "lessons": [
+    {
+      "id": "rust-modules",
+      "title": "Modules et crates",
+      "summary": "mod, pub et use.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Crates et modules",
+          "body": "Une crate est l'unité de compilation : un binaire (src/main.rs) ou une bibliothèque (src/lib.rs). À l'intérieur, le code s'organise en modules déclarés avec mod. mod reseau; dans main.rs demande au compilateur de lire src/reseau.rs (ou src/reseau/mod.rs).",
+          "code": "// src/main.rs\nmod reseau;\n\nfn main() {\n    reseau::connecter();\n}\n\n// src/reseau.rs\npub fn connecter() { /* ... */ }"
+        },
+        {
+          "title": "Privé par défaut",
+          "body": "Tout élément est privé à son module (et visible de ses sous-modules) tant qu'il n'est pas marqué pub. Une struct pub peut garder des champs privés : on la construit alors par une fonction comme new, ce qui protège ses invariants. Les variantes d'un enum pub sont toutes publiques. pub(crate) rend un élément visible dans toute la crate, mais pas à l'extérieur."
+        },
+        {
+          "title": "Chemins et use",
+          "body": "On désigne un élément par son chemin : crate::reseau::connecter depuis la racine, super:: pour le module parent, self:: pour le module courant. use crée un raccourci local vers un chemin ; il n'importe ni ne copie de code.",
+          "code": "use std::collections::HashMap;\nuse crate::reseau::{connecter, Client};"
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "rust-modules-q1",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "mod banque {\n    pub struct Compte {\n        solde: i64,\n    }\n}\n\nfn main() {\n    let c = banque::Compte { solde: 0 };\n}",
+          "bugLines": [
+            3,
+            8
+          ],
+          "explanation": "La struct est publique, mais pas son champ solde : main ne peut pas l'initialiser. On rend le champ pub, ou on fournit un constructeur pub fn new().",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-modules-q2",
+          "prompt": "Par défaut, une fonction déclarée dans un module est…",
+          "choices": [
+            "Privée : visible dans son module et ses sous-modules seulement",
+            "Publique pour toute la crate",
+            "Publique pour tout le monde",
+            "Invisible même dans son propre module"
+          ],
+          "answerIndex": 0,
+          "explanation": "Rust rend la surface publique explicite : on ajoute pub uniquement ce qui doit être exposé.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "rust-modules-q3",
+          "prompt": "Complète pour que main puisse appeler aire.",
+          "code": "mod geo {\n    ___ fn aire(r: f64) -> f64 {\n        3.14 * r * r\n    }\n}\n___ geo::aire;\n\nfn main() {\n    println!(\"{}\", aire(1.0));\n}",
+          "answers": [
+            "pub",
+            "use"
+          ],
+          "distractors": [
+            "export",
+            "import",
+            "public"
+          ],
+          "explanation": "pub rend aire visible hors de geo ; use crée le raccourci aire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-modules-q4",
+          "prompt": "main.rs contient « mod reseau; ». Où le compilateur cherche-t-il le code du module ?",
+          "choices": [
+            "Dans src/reseau.rs ou src/reseau/mod.rs",
+            "Dans le dossier target/",
+            "Sur crates.io",
+            "Dans Cargo.toml"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une déclaration mod sans accolades renvoie à un fichier ; les dépendances externes, elles, se déclarent dans Cargo.toml.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-modules-q5",
+          "prompt": "Que signifie pub(crate) devant une fonction d'une bibliothèque ?",
+          "choices": [
+            "Visible partout dans la crate, mais pas pour les utilisateurs de la bibliothèque",
+            "Visible uniquement dans son fichier",
+            "Publiée sur crates.io",
+            "Visible seulement dans les tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est idéal pour un utilitaire interne partagé entre modules, sans l'engager dans l'API publique.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-modules-q6",
+          "prompt": "Quelles affirmations sont vraies ?",
+          "choices": [
+            "Une struct pub peut avoir des champs privés",
+            "Les variantes d'un enum pub sont toutes publiques",
+            "super:: désigne le module parent",
+            "use copie le code du module importé"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "use ne fait que raccourcir un chemin ; la compilation porte sur la crate entière.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "rust-cargo-tests",
+      "title": "Cargo et tests",
+      "summary": "cargo test, clippy et fmt.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Cargo",
+          "body": "Cargo compile, gère les dépendances et lance les tests. Cargo.toml déclare le paquet et ses dépendances ; « serde = \"1.0\" » accepte toute version compatible au sens semver (≥ 1.0.0 et < 2.0.0). Cargo.lock fige les versions exactes : on le versionne pour une application. cargo check vérifie le code sans produire d'exécutable, beaucoup plus vite que cargo build ; --release active les optimisations.",
+          "code": "[package]\nname = \"outil\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n[dependencies]\nserde = { version = \"1.0\", features = [\"derive\"] }",
+          "language": "text"
+        },
+        {
+          "title": "Tests intégrés",
+          "body": "Un test est une fonction annotée #[test], qui échoue si elle panique. Les tests unitaires vivent dans un module #[cfg(test)] du même fichier, compilé seulement pour cargo test, et peuvent tester les fonctions privées via use super::*. Les tests d'intégration vont dans le dossier tests/ et ne voient que l'API publique. Les exemples des commentaires de documentation sont aussi exécutés.",
+          "code": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn addition() {\n        assert_eq!(ajouter(2, 2), 4);\n    }\n}"
+        },
+        {
+          "title": "fmt et clippy",
+          "body": "cargo fmt formate le code selon le style officiel ; cargo clippy signale des centaines de maladresses et de bugs probables (un clone inutile, un indice au lieu d'un itérateur). En intégration continue, on lance cargo fmt --check, cargo clippy -- -D warnings et cargo test."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "rust-cargo-tests-q1",
+          "prompt": "Complète ce module de tests.",
+          "code": "#[cfg(___)]\nmod tests {\n    use super::*;\n\n    #[___]\n    fn addition() {\n        assert_eq!(ajouter(2, 2), 4);\n    }\n}",
+          "answers": [
+            "test",
+            "test"
+          ],
+          "distractors": [
+            "tests",
+            "check",
+            "unit"
+          ],
+          "explanation": "#[cfg(test)] compile le module seulement pour cargo test ; #[test] marque chaque fonction de test.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-cargo-tests-q2",
+          "prompt": "Quelle commande vérifie le plus vite que le code compile ?",
+          "choices": [
+            "cargo check",
+            "cargo build --release",
+            "cargo run",
+            "cargo fmt"
+          ],
+          "answerIndex": 0,
+          "explanation": "cargo check fait l'analyse (types, emprunts) sans générer de code machine : idéal pendant le développement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-cargo-tests-q3",
+          "prompt": "Dans Cargo.toml, quelles versions accepte serde = \"1.0\" ?",
+          "choices": [
+            "Toute version ≥ 1.0.0 et < 2.0.0",
+            "Exactement 1.0.0",
+            "Toute version, la plus récente",
+            "Uniquement les versions 1.0.x"
+          ],
+          "answerIndex": 0,
+          "explanation": "Cargo applique la compatibilité semver par défaut (équivalent de ^1.0) ; =1.0.0 fixerait une version exacte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-cargo-tests-q4",
+          "prompt": "Pourquoi versionner Cargo.lock pour une application ?",
+          "choices": [
+            "Pour que tous les développeurs et la CI compilent exactement les mêmes versions de dépendances",
+            "Pour accélérer cargo check",
+            "Parce que Cargo refuse de compiler sans",
+            "Pour publier sur crates.io"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans fichier de verrouillage, une nouvelle version mineure d'une dépendance pourrait changer le comportement d'un build à l'autre.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "rust-cargo-tests-q5",
+          "prompt": "Ce test doit vérifier que la division par zéro panique, mais il échoue. Touche la ligne à corriger.",
+          "code": "fn diviser(a: i32, b: i32) -> i32 {\n    if b == 0 { panic!(\"division par zéro\"); }\n    a / b\n}\n\n#[test]\nfn division_par_zero() {\n    diviser(1, 0);\n}",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Un test qui panique échoue, sauf s'il est annoté #[should_panic] (on peut préciser expected = \"division par zéro\").",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-cargo-tests-q6",
+          "prompt": "Quelles commandes ont leur place dans la CI d'un projet Rust ?",
+          "choices": [
+            "cargo fmt --check",
+            "cargo clippy -- -D warnings",
+            "cargo test",
+            "cargo clean après chaque commit"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Format, lint puis tests ; cargo clean effacerait le cache de compilation et ralentirait tout.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "rust-defi-outillage",
+    "title": "Défi entretien : organiser une bibliothèque",
+    "summary": "Visibilité et tests.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "rust-defi-outillage-q1",
+        "prompt": "Cas pratique 1/3 — Une bibliothèque a un module utilitaire utilisé partout en interne, qui ne doit pas faire partie de son API. Quelle visibilité ?",
+        "choices": [
+          "pub(crate)",
+          "pub",
+          "Privé, sans rien",
+          "pub(super)"
+        ],
+        "answerIndex": 0,
+        "explanation": "Privé, il ne serait pas visible des autres modules ; pub l'engagerait dans l'API publique.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-outillage-q2",
+        "prompt": "Cas pratique 2/3 — On veut tester une fonction privée de ce module. Où écrire le test ?",
+        "choices": [
+          "Dans un mod tests (#[cfg(test)]) du même fichier, qui y accède via use super::*",
+          "Dans le dossier tests/",
+          "Il faut d'abord la rendre pub",
+          "Dans main.rs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un sous-module voit les éléments privés de ses ancêtres.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-outillage-q3",
+        "prompt": "Cas pratique 3/3 — Et pour tester l'API comme le ferait un utilisateur de la bibliothèque ?",
+        "choices": [
+          "Des tests d'intégration dans le dossier tests/, qui ne voient que ce qui est pub",
+          "Dans le même mod tests",
+          "Avec cargo bench",
+          "Ce n'est pas possible en Rust"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque fichier de tests/ est compilé comme une crate séparée qui dépend de la bibliothèque.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-outillage-q4",
+        "prompt": "Que fait cargo test avec ce commentaire de documentation ?",
+        "code": "/// Double un nombre.\n///\n/// ```\n/// assert_eq!(ma_crate::double(2), 4);\n/// ```\npub fn double(x: i32) -> i32 {\n    x * 2\n}",
+        "choices": [
+          "Il compile et exécute l'exemple : la documentation est testée",
+          "Il l'ignore, ce n'est qu'un commentaire",
+          "Il l'affiche seulement dans la documentation",
+          "Il échoue, les commentaires ne peuvent contenir de code"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les doc tests garantissent que les exemples de la documentation restent justes.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "rust-defi-outillage-q5",
+        "prompt": "Ce projet ne compile pas : « function `charger` is private ». Touche la ligne à corriger.",
+        "code": "// src/main.rs\nmod config;\n\nfn main() {\n    let c = config::charger();\n}\n\n// src/config.rs\nfn charger() -> Config { todo!() }",
+        "bugLines": [
+          9
+        ],
+        "explanation": "charger est privée à son module config : il faut pub fn charger().",
+        "difficulty": 1
+      },
+      {
+        "type": "multi",
+        "id": "rust-defi-outillage-q6",
+        "prompt": "Quelles affirmations sur Cargo sont vraies ?",
+        "choices": [
+          "cargo build --release active les optimisations",
+          "Les features activent des parties optionnelles d'une crate",
+          "cargo check est plus rapide que cargo build",
+          "cargo run ignore Cargo.toml"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le profil debug compile vite mais produit un code lent : on mesure les performances en --release.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

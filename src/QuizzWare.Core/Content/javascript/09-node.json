@@ -1,0 +1,327 @@
+{
+  "id": "js-ch-node",
+  "title": "Node.js",
+  "summary": "JavaScript côté serveur.",
+  "lessons": [
+    {
+      "id": "js-node",
+      "title": "Le runtime Node.js",
+      "summary": "Boucle d'événements, process et modules.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "V8 et libuv",
+          "body": "Node.js associe le moteur JavaScript V8 à libuv, une bibliothèque qui fournit la boucle d'événements et les entrées / sorties non bloquantes. Le réseau passe par les mécanismes du système (epoll, kqueue, IOCP) ; les fichiers, le DNS et une partie de la cryptographie sont délégués à un petit pool de threads. Le code JavaScript, lui, s'exécute sur un seul thread."
+        },
+        {
+          "title": "Ne pas bloquer la boucle",
+          "body": "Tant qu'un calcul JavaScript tourne, aucune autre requête n'est traitée. Un readFileSync, un JSON.parse de 200 Mo ou un hachage synchrone dans un gestionnaire de requêtes bloque tout le serveur. Les calculs lourds partent dans des worker_threads ou d'autres processus ; les E/S utilisent les versions asynchrones.",
+          "code": "import { readFile } from \"node:fs/promises\";\n\nconst texte = await readFile(\"config.json\", \"utf8\");\nconst config = JSON.parse(texte);"
+        },
+        {
+          "title": "L'ordre d'exécution",
+          "body": "Après le code synchrone, Node vide d'abord la file de process.nextTick, puis celle des microtâches (promesses), avant de passer aux phases de la boucle : minuteurs, E/S, setImmediate. L'objet process donne accès aux variables d'environnement (process.env), aux arguments et au code de sortie (process.exitCode)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-node-q1",
+          "prompt": "Un serveur Node calcule un hachage de mot de passe synchrone de 300 ms à chaque connexion. Effet ?",
+          "choices": [
+            "Pendant chaque calcul, toutes les autres requêtes attendent : la boucle est bloquée",
+            "Aucun, Node lance un thread par requête",
+            "Seule la requête concernée est ralentie",
+            "Le calcul est automatiquement déplacé dans un worker"
+          ],
+          "answerIndex": 0,
+          "explanation": "On utilise la version asynchrone (exécutée dans le pool de libuv) : bcrypt.hash, crypto.scrypt avec callback.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "js-node-q2",
+          "prompt": "Dans un script CommonJS exécuté par Node, qu'affiche ce code ?",
+          "code": "setTimeout(() => console.log(\"timeout\"), 0);\nPromise.resolve()\n  .then(() => console.log(\"promesse\"));\nprocess.nextTick(() => console.log(\"tick\"));\nconsole.log(\"sync\");",
+          "choices": [
+            "sync, tick, promesse, timeout",
+            "sync, promesse, tick, timeout",
+            "timeout, tick, promesse, sync",
+            "sync, timeout, tick, promesse"
+          ],
+          "answerIndex": 0,
+          "explanation": "Code synchrone d'abord, puis la file nextTick, puis les microtâches, puis les minuteurs. (Dans un module ES, l'évaluation est elle-même asynchrone et l'ordre de tick et promesse peut s'inverser.)",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "js-node-q3",
+          "prompt": "Complète : lire un fichier texte sans bloquer.",
+          "code": "import { readFile } from \"node:fs/___\";\nconst texte = await readFile(\"config.json\", \"___\");",
+          "answers": [
+            "promises",
+            "utf8"
+          ],
+          "distractors": [
+            "sync",
+            "async",
+            "binary"
+          ],
+          "explanation": "Sans encodage, readFile renvoie un Buffer d'octets plutôt qu'une chaîne.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "js-node-q4",
+          "prompt": "Pendant la génération d'un rapport, le serveur ne répond plus à personne. Touche la ligne en cause.",
+          "code": "app.get(\"/rapport\", (req, res) => {\n  const data = fs.readFileSync(\"gros.csv\", \"utf8\");\n  res.send(analyser(data));\n});",
+          "bugLines": [
+            2
+          ],
+          "explanation": "readFileSync bloque la boucle pendant toute la lecture. On utilise await readFile, voire un flux pour un gros fichier.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "js-node-q5",
+          "prompt": "Comment exploiter les 8 cœurs d'une machine pour un calcul lourd en Node.js ?",
+          "choices": [
+            "Avec worker_threads (ou plusieurs processus), en gardant la boucle principale libre",
+            "Avec async/await, qui répartit le calcul sur les cœurs",
+            "Avec setTimeout(…, 0)",
+            "Ce n'est pas possible en Node.js"
+          ],
+          "answerIndex": 0,
+          "explanation": "async/await n'ajoute aucun parallélisme de calcul : il évite seulement d'attendre les E/S en bloquant.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "js-node-q6",
+          "prompt": "Quel est le rôle de libuv dans Node.js ?",
+          "choices": [
+            "Fournir la boucle d'événements",
+            "Déléguer certaines E/S (fichiers, DNS) à un pool de threads",
+            "S'appuyer sur epoll, kqueue ou IOCP pour le réseau",
+            "Compiler le JavaScript"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "C'est V8 qui analyse et compile le JavaScript.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "js-node-fichiers",
+      "title": "Fichiers, flux et HTTP",
+      "summary": "fs/promises, streams et serveur.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les flux",
+          "body": "readFile charge tout le fichier en mémoire. Pour un gros fichier, une vidéo ou une réponse générée au fil de l'eau, on utilise des flux (streams) : les données passent par morceaux. La contre-pression (backpressure) ralentit la lecture quand l'écriture ne suit pas, pour ne pas tout accumuler en mémoire."
+        },
+        {
+          "title": "pipeline",
+          "body": "stream.pipeline relie des flux, propage les erreurs et ferme tout proprement en cas d'échec ou d'interruption. L'ancienne méthode .pipe() ne propage pas les erreurs : un fichier introuvable émet un événement error non écouté, et le processus s'arrête.",
+          "code": "import { pipeline } from \"node:stream/promises\";\n\nawait pipeline(\n  fs.createReadStream(\"log.txt\"),\n  zlib.createGzip(),\n  fs.createWriteStream(\"log.txt.gz\"),\n);"
+        },
+        {
+          "title": "En production",
+          "body": "On construit les chemins avec path.join (ou import.meta.dirname), jamais par concaténation. La configuration vient des variables d'environnement. À la réception de SIGTERM (envoyé par Docker ou Kubernetes), le serveur arrête d'accepter des connexions, termine les requêtes en cours, ferme ses connexions à la base, puis sort."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "js-node-fichiers-q1",
+          "prompt": "Pourquoi traiter un fichier de 4 Go avec un flux plutôt qu'avec readFile ?",
+          "choices": [
+            "readFile charge tout en mémoire ; le flux traite le fichier par morceaux",
+            "readFile ne sait lire que du texte",
+            "Les flux sont toujours synchrones",
+            "readFile est interdit au-delà de 1 Mo"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avec un flux, la mémoire utilisée reste de l'ordre de la taille d'un morceau (64 Ko par défaut pour un fichier).",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "js-node-fichiers-q2",
+          "prompt": "Complète : compresser un fichier en flux, avec gestion des erreurs.",
+          "code": "await ___(\n  fs.createReadStream(\"log.txt\"),\n  zlib.___(),\n  fs.createWriteStream(\"log.txt.gz\"),\n);",
+          "answers": [
+            "pipeline",
+            "createGzip"
+          ],
+          "distractors": [
+            "pipe",
+            "gzip",
+            "compress"
+          ],
+          "explanation": "pipeline (de node:stream/promises) renvoie une promesse rejetée si l'une des étapes échoue.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "js-node-fichiers-q3",
+          "prompt": "Si le fichier est absent, tout le serveur s'arrête. Touche la ligne en cause.",
+          "code": "http.createServer((req, res) => {\n  fs.createReadStream(\"video.mp4\").pipe(res);\n}).listen(8080);",
+          "bugLines": [
+            2
+          ],
+          "explanation": "L'erreur ENOENT est émise par le flux de lecture, que personne n'écoute : exception non gérée. pipeline(source, res) permet de la traiter et de répondre 404 ou 500.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "js-node-fichiers-q4",
+          "prompt": "Qu'est-ce que la contre-pression (backpressure) ?",
+          "choices": [
+            "Ralentir la lecture quand l'écriture ne suit pas, pour ne pas accumuler les données en mémoire",
+            "Compresser les données avant l'envoi",
+            "Refuser les requêtes trop nombreuses",
+            "Lire un fichier à l'envers"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un client lent ne doit pas forcer le serveur à garder toute la réponse en mémoire.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "js-node-fichiers-q5",
+          "prompt": "Sous Linux, qu'affiche ce code ?",
+          "code": "import path from \"node:path\";\nconsole.log(\n  path.join(\"/data\", \"../etc\", \"conf.json\"));",
+          "choices": [
+            "/etc/conf.json",
+            "/data/../etc/conf.json",
+            "/data/etc/conf.json",
+            "Une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "path.join normalise le chemin. C'est aussi pourquoi un nom de fichier fourni par un utilisateur doit être vérifié : « ../ » permet de sortir du dossier prévu.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "js-node-fichiers-q6",
+          "prompt": "Quelles sont de bonnes pratiques pour un service Node.js en production ?",
+          "choices": [
+            "Lire la configuration dans les variables d'environnement",
+            "Traiter chaque rejet de promesse",
+            "S'arrêter proprement sur SIGTERM",
+            "Utiliser les fonctions Sync dans les gestionnaires de requêtes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les fonctions Sync sont acceptables au démarrage, jamais pendant le traitement des requêtes.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "js-defi-node",
+    "title": "Défi entretien : l'export qui bloque tout",
+    "summary": "Flux, boucle d'événements et arrêt propre.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "js-defi-node-q1",
+        "prompt": "Cas pratique 1/3 — Une API Node répond en 20 ms, sauf pendant un export CSV de 500 000 lignes : 2 s pour tout le monde. Pourquoi ?",
+        "choices": [
+          "L'export construit tout le fichier en mémoire de façon synchrone et bloque la boucle",
+          "Le disque est trop lent",
+          "Node limite le nombre de requêtes simultanées",
+          "Le CSV est un format lent"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une seule tâche synchrone longue fige toutes les autres requêtes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi-node-q2",
+        "prompt": "Cas pratique 2/3 — Quelle solution ?",
+        "choices": [
+          "Produire le CSV en flux, ligne par ligne, écrit au fur et à mesure dans la réponse",
+          "Ajouter un setTimeout avant l'export",
+          "Mettre l'export en cache pour toujours",
+          "Passer le CSV en JSON"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque morceau laisse la main à la boucle, et la mémoire reste faible.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "js-defi-node-q3",
+        "prompt": "Cas pratique 3/3 — Le client interrompt le téléchargement au milieu. Que doit faire le serveur ?",
+        "choices": [
+          "Arrêter la génération : pipeline détruit les flux et rejette, on interrompt aussi la requête en base",
+          "Finir l'export quand même",
+          "Redémarrer le processus",
+          "Rien, l'export s'arrête toujours tout seul"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans cela, le serveur continue de lire la base pour un client parti.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "js-defi-node-q4",
+        "prompt": "Quelle différence entre process.exitCode = 1 et process.exit(1) ?",
+        "choices": [
+          "exitCode laisse la boucle finir (écritures en attente comprises) puis sort avec ce code ; exit arrête immédiatement",
+          "Aucune",
+          "exitCode est ignoré par Node",
+          "exit attend la fin de toutes les promesses"
+        ],
+        "answerIndex": 0,
+        "explanation": "process.exit peut couper des journaux pas encore écrits ou des requêtes en cours.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "js-defi-node-q5",
+        "prompt": "Remets dans l'ordre un arrêt propre.",
+        "lines": [
+          "process.on(\"SIGTERM\", () => {",
+          "  serveur.close(() => {",
+          "    db.end();",
+          "    process.exit(0);",
+          "  });",
+          "});"
+        ],
+        "explanation": "close arrête d'accepter des connexions et appelle le callback une fois les requêtes en cours terminées.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "js-defi-node-q6",
+        "prompt": "Quelles opérations bloquent la boucle d'événements ?",
+        "choices": [
+          "JSON.parse d'une chaîne de 200 Mo",
+          "fs.readFileSync",
+          "Une boucle de calcul de 2 secondes",
+          "await fetch(url)"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "await fetch rend la main pendant l'attente du réseau.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

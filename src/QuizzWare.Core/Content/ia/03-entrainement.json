@@ -1,0 +1,323 @@
+{
+  "id": "ia-ch-entrainement",
+  "title": "Bien entraîner un modèle",
+  "summary": "Validation, réglages et pièges.",
+  "lessons": [
+    {
+      "id": "ia-validation",
+      "title": "Validation croisée et hyperparamètres",
+      "summary": "Régler sans tricher.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Paramètres et hyperparamètres",
+          "body": "Les paramètres sont appris pendant l'entraînement : les poids d'une régression, les seuils d'un arbre. Les hyperparamètres sont choisis avant : profondeur maximale, nombre d'arbres, taux d'apprentissage. On les choisit en comparant des modèles sur des données de validation, jamais sur le jeu de test, réservé à la mesure finale."
+        },
+        {
+          "title": "La validation croisée",
+          "body": "Avec k plis (souvent 5), on découpe l'entraînement en k parts ; chaque part sert une fois de validation pendant que le modèle apprend sur les autres. La moyenne des k scores est plus fiable qu'un seul découpage. GridSearchCV essaie toutes les combinaisons d'une grille ; une recherche aléatoire ou bayésienne explore plus efficacement les grands espaces.",
+          "code": "from sklearn.model_selection import GridSearchCV\n\ngrille = {\"max_depth\": [3, 5, 10],\n          \"n_estimators\": [100, 300]}\nrecherche = GridSearchCV(\n    RandomForestClassifier(), grille, cv=5)\nrecherche.fit(X_train, y_train)\nprint(recherche.best_params_)"
+        },
+        {
+          "title": "Les données qui ont un ordre",
+          "body": "Mélanger les lignes avant de découper suppose qu'elles sont indépendantes. Pour une série temporelle (ventes, capteurs), mélanger fait apprendre le futur pour prédire le passé : on valide toujours sur une période postérieure (TimeSeriesSplit). De même, les lignes d'un même client ou d'une même machine restent du même côté (GroupKFold)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-validation-q1",
+          "prompt": "Quelle est la différence entre un paramètre et un hyperparamètre ?",
+          "choices": [
+            "Les paramètres sont appris pendant l'entraînement ; les hyperparamètres sont choisis avant",
+            "Ce sont deux noms pour la même chose",
+            "Les hyperparamètres sont appris, les paramètres choisis",
+            "Les paramètres ne concernent que les réseaux de neurones"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les poids d'un réseau sont des paramètres ; son taux d'apprentissage et son nombre de couches, des hyperparamètres.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-validation-q2",
+          "prompt": "Pourquoi ne pas choisir les hyperparamètres d'après le score sur le jeu de test ?",
+          "choices": [
+            "Le test servirait à l'apprentissage : son score deviendrait optimiste et ne mesurerait plus la généralisation",
+            "Parce que le jeu de test est trop petit",
+            "Parce que c'est trop lent",
+            "On peut, c'est la pratique recommandée"
+          ],
+          "answerIndex": 0,
+          "explanation": "À force de choisir ce qui marche sur le test, on s'y adapte : il faut un jeu jamais vu pour la mesure finale.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "ia-validation-q3",
+          "prompt": "Complète : chercher la meilleure profondeur avec une validation croisée à 5 plis.",
+          "code": "from sklearn.model_selection import ___\n\ngrille = {\"max_depth\": [3, 5, 10]}\nrecherche = GridSearchCV(arbre, grille, ___=5)\nrecherche.fit(X_train, y_train)",
+          "answers": [
+            "GridSearchCV",
+            "cv"
+          ],
+          "distractors": [
+            "train_test_split",
+            "folds",
+            "k"
+          ],
+          "explanation": "Le paramètre cv fixe le nombre de plis ; la recherche ne voit que l'entraînement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-validation-q4",
+          "prompt": "Avec une validation croisée à 5 plis, combien d'entraînements faut-il pour évaluer une combinaison d'hyperparamètres ?",
+          "choices": [
+            "5",
+            "1",
+            "10",
+            "25"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un par pli. Une grille de 6 combinaisons demande donc 30 entraînements.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "ia-validation-q5",
+          "prompt": "Ce modèle de prévision des ventes du lendemain a un excellent score… qui s'effondre en production. Touche la ligne en cause.",
+          "code": "# X : une ligne par jour, triée par date\nX_train, X_test, y_train, y_test = train_test_split(\n    X, y, test_size=0.2, shuffle=True)\nmodele.fit(X_train, y_train)\nprint(modele.score(X_test, y_test))",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Mélanger des jours fait apprendre sur des dates postérieures à celles du test. Il faut entraîner sur le passé et tester sur la période qui suit (shuffle=False, TimeSeriesSplit).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "ia-validation-q6",
+          "prompt": "Quelles méthodes de recherche d'hyperparamètres existent ?",
+          "choices": [
+            "La recherche par grille",
+            "La recherche aléatoire",
+            "L'optimisation bayésienne",
+            "Tirer une combinaison au hasard une seule fois et la garder"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La recherche aléatoire bat souvent la grille à budget égal, car peu d'hyperparamètres comptent vraiment.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "ia-pieges",
+      "title": "Déséquilibre et fuite de données",
+      "summary": "Les erreurs qui faussent tout.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les classes déséquilibrées",
+          "body": "Quand 99,5 % des transactions sont légitimes, un modèle qui répond toujours « légitime » a 99,5 % d'exactitude et ne sert à rien. On regarde la précision et le rappel de la classe rare, le F1, l'aire sous la courbe précision-rappel. Remèdes : pondérer les classes (class_weight), sur-échantillonner la classe rare dans l'entraînement seulement, ajuster le seuil de décision."
+        },
+        {
+          "title": "La fuite de données",
+          "body": "Il y a fuite quand le modèle voit pendant l'entraînement une information indisponible au moment de la prédiction : une variable remplie après coup (« date de résiliation » pour prédire la résiliation), des doublons entre entraînement et test, ou un prétraitement ajusté sur toutes les données avant le découpage. Le symptôme : un score trop beau, qui s'effondre en production."
+        },
+        {
+          "title": "Les pipelines",
+          "body": "Un Pipeline scikit-learn enchaîne prétraitement et modèle : le StandardScaler n'apprend ses moyennes que sur les données d'entraînement de chaque pli, puis les applique au reste. On évite ainsi la fuite la plus fréquente, et le même objet sert tel quel en production.",
+          "code": "from sklearn.pipeline import make_pipeline\n\nmodele = make_pipeline(\n    StandardScaler(),\n    LogisticRegression(class_weight=\"balanced\"))\nmodele.fit(X_train, y_train)"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-pieges-q1",
+          "prompt": "0,5 % des transactions sont des fraudes. Un modèle annonce 99,5 % d'exactitude. Qu'en conclure ?",
+          "choices": [
+            "Rien encore : il peut répondre « pas de fraude » partout ; il faut le rappel et la précision sur les fraudes",
+            "Le modèle est excellent",
+            "Le modèle surapprend",
+            "Il faut plus de données légitimes"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'exactitude est dominée par la classe majoritaire ; c'est la classe rare qui nous intéresse.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "ia-pieges-q2",
+          "prompt": "Ce code contient une fuite de données. Touche la ligne en cause.",
+          "code": "scaler = StandardScaler()\nX = scaler.fit_transform(X)\nX_train, X_test, y_train, y_test = \\\n    train_test_split(X, y)\nmodele.fit(X_train, y_train)",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le scaler calcule ses moyennes et écarts-types sur tout le jeu, test compris. On découpe d'abord, puis on ajuste sur l'entraînement seulement (idéalement dans un pipeline).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ia-pieges-q3",
+          "prompt": "Pour prédire la résiliation d'abonnés, la variable « jours depuis la résiliation » donne 99 % de rappel. Que se passe-t-il ?",
+          "choices": [
+            "Une fuite : cette information n'existe qu'après la résiliation, elle sera vide au moment de prédire",
+            "Le modèle a trouvé une excellente variable",
+            "Le modèle est déséquilibré",
+            "Il faut normaliser cette variable"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour chaque variable, on se demande : la connaîtrai-je au moment où je dois prédire ?",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "ia-pieges-q4",
+          "prompt": "Complète : compenser le déséquilibre des classes en les pondérant.",
+          "code": "modele = make_pipeline(\n    StandardScaler(),\n    LogisticRegression(class_weight=\"___\"))",
+          "answers": [
+            "balanced"
+          ],
+          "distractors": [
+            "auto",
+            "equal",
+            "none"
+          ],
+          "explanation": "« balanced » donne à chaque classe un poids inversement proportionnel à sa fréquence.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-pieges-q5",
+          "prompt": "Comment un Pipeline évite-t-il la fuite de prétraitement pendant une validation croisée ?",
+          "choices": [
+            "Le prétraitement est ajusté sur la partie d'entraînement de chaque pli, puis appliqué à la partie de validation",
+            "Il désactive le prétraitement",
+            "Il ajuste le prétraitement sur toutes les données une fois pour toutes",
+            "Il mélange les données plus souvent"
+          ],
+          "answerIndex": 0,
+          "explanation": "Passer le pipeline entier à cross_val_score ou GridSearchCV garantit ce comportement.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "ia-pieges-q6",
+          "prompt": "Quels remèdes au déséquilibre des classes sont valables ?",
+          "choices": [
+            "Pondérer les classes",
+            "Sur-échantillonner la classe rare, dans le jeu d'entraînement seulement",
+            "Ajuster le seuil de décision",
+            "Supprimer la classe rare"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Sur-échantillonner avant le découpage mettrait des copies des mêmes exemples dans l'entraînement et le test : encore une fuite.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "ia-defi-entrainement",
+    "title": "Défi entretien : le modèle trop beau",
+    "summary": "Fuites, groupes et temps.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "ia-defi-entrainement-q1",
+        "prompt": "Cas pratique 1/3 — Un modèle de prédiction de pannes obtient 0,98 d'AUC en validation et 0,62 en production. Première hypothèse ?",
+        "choices": [
+          "Une fuite de données, ou une validation qui ne ressemble pas à la production",
+          "Le serveur de production est trop lent",
+          "Il faut un modèle plus gros",
+          "La production a un bug d'affichage"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un tel écart vient presque toujours de la façon dont on a évalué, pas du modèle.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi-entrainement-q2",
+        "prompt": "Cas pratique 2/3 — Les mesures d'une même machine se retrouvent à la fois dans l'entraînement et la validation. Que faire ?",
+        "choices": [
+          "Découper par machine (GroupKFold) : chaque machine d'un seul côté",
+          "Supprimer les machines en double",
+          "Augmenter le nombre de plis",
+          "Normaliser les mesures"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sinon, le modèle reconnaît la machine plutôt qu'il n'apprend les signes de panne.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi-entrainement-q3",
+        "prompt": "Cas pratique 3/3 — Les données couvrent trois ans. Comment valider ?",
+        "choices": [
+          "Entraîner sur le passé et valider sur une période postérieure",
+          "Mélanger les trois ans au hasard",
+          "Valider sur la première année",
+          "Ne garder que la dernière semaine"
+        ],
+        "answerIndex": 0,
+        "explanation": "La production prédit toujours l'avenir à partir du passé : la validation doit faire de même.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi-entrainement-q4",
+        "prompt": "Sur la classe fraude, un modèle a une précision de 0,9 et un rappel de 0,3. Qu'est-ce que cela signifie ?",
+        "choices": [
+          "Quand il signale une fraude, il a souvent raison, mais il ne détecte que 30 % des fraudes",
+          "Il détecte 90 % des fraudes",
+          "Il se trompe 90 % du temps",
+          "Il a 30 % d'exactitude"
+        ],
+        "answerIndex": 0,
+        "explanation": "Baisser le seuil de décision augmenterait le rappel, au prix de plus de fausses alertes.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "ia-defi-entrainement-q5",
+        "prompt": "Remets dans l'ordre une démarche d'évaluation honnête.",
+        "language": "text",
+        "lines": [
+          "Mettre de côté un jeu de test",
+          "Choisir les hyperparamètres par validation croisée sur l'entraînement",
+          "Réentraîner le meilleur modèle sur tout l'entraînement",
+          "Mesurer une seule fois sur le jeu de test"
+        ],
+        "explanation": "Le jeu de test n'intervient qu'à la toute fin, une fois.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "ia-defi-entrainement-q6",
+        "prompt": "Quels signes doivent faire soupçonner une fuite de données ?",
+        "choices": [
+          "Un score de validation trop beau pour être vrai",
+          "Une variable étonnamment prédictive",
+          "Un grand écart entre validation et production",
+          "Un score qui progresse lentement quand on ajoute des données"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une progression lente avec la quantité de données est un comportement normal.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

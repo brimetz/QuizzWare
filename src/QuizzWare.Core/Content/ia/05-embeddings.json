@@ -1,0 +1,326 @@
+{
+  "id": "ia-ch-embeddings",
+  "title": "Embeddings et recherche",
+  "summary": "Représenter le sens par des vecteurs.",
+  "lessons": [
+    {
+      "id": "ia-embeddings",
+      "title": "Embeddings",
+      "summary": "Des vecteurs qui capturent le sens.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le sens en coordonnées",
+          "body": "Un embedding est un vecteur de quelques centaines à quelques milliers de nombres, produit par un modèle, qui représente un texte, une image ou un produit. Le modèle est entraîné pour que des contenus de sens proche aient des vecteurs proches : « annuler ma commande » et « me rétracter d'un achat » sont voisins, même sans mot commun."
+        },
+        {
+          "title": "Mesurer la proximité",
+          "body": "On compare deux vecteurs avec la similarité cosinus : le cosinus de leur angle, de -1 à 1. Si les vecteurs sont normalisés (norme 1), elle se réduit au produit scalaire, plus rapide à calculer. On parle aussi de distance cosinus (1 - similarité) ou de distance euclidienne.",
+          "code": "import numpy as np\n\ndef cosinus(a, b):\n    return np.dot(a, b) / (\n        np.linalg.norm(a) * np.linalg.norm(b))"
+        },
+        {
+          "title": "Les usages et les règles",
+          "body": "Recherche sémantique, RAG, regroupement de documents, recommandations, détection de quasi-doublons. Une règle absolue : documents et requêtes doivent être encodés par le même modèle. Changer de modèle oblige à recalculer tous les vecteurs, car les espaces de deux modèles ne sont pas comparables."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-embeddings-q1",
+          "prompt": "Qu'est-ce qu'un embedding ?",
+          "choices": [
+            "Un vecteur de nombres qui représente un contenu, de sorte que des sens proches donnent des vecteurs proches",
+            "Un résumé textuel d'un document",
+            "Un identifiant unique de document",
+            "Une version compressée d'une image"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une représentation apprise : sa qualité dépend du modèle qui la produit.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ia-embeddings-q2",
+          "prompt": "Avec la fonction cosinus de la leçon, que renvoie cosinus(np.array([1, 0]), np.array([0, 1])) ?",
+          "choices": [
+            "0.0",
+            "1.0",
+            "-1.0",
+            "0.5"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux vecteurs sont orthogonaux : produit scalaire nul. Deux vecteurs de même direction donneraient 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "ia-embeddings-q3",
+          "prompt": "La recherche renvoie des résultats sans rapport avec la question. Touche la ligne en cause.",
+          "code": "docs_vec = modele_a.encode(documents)\nindex.ajouter(docs_vec)\n\nq_vec = modele_b.encode(\"remboursement\")\nresultats = index.chercher(q_vec, k=5)",
+          "bugLines": [
+            4
+          ],
+          "explanation": "La requête doit être encodée avec le même modèle que les documents ; deux modèles ont des espaces de vecteurs différents.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "ia-embeddings-q4",
+          "prompt": "Complète la similarité cosinus.",
+          "code": "def cosinus(a, b):\n    return np.___(a, b) / (\n        np.linalg.___(a) * np.linalg.norm(b))",
+          "answers": [
+            "dot",
+            "norm"
+          ],
+          "distractors": [
+            "sum",
+            "mean",
+            "cross"
+          ],
+          "explanation": "Produit scalaire divisé par le produit des normes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-embeddings-q5",
+          "prompt": "Un utilisateur cherche « me rétracter d'un achat » ; la FAQ contient « Annuler ma commande ». Que se passe-t-il ?",
+          "choices": [
+            "La recherche sémantique les rapproche ; une recherche par mots-clés ne trouve aucun mot commun",
+            "Les deux recherches trouvent la FAQ",
+            "Aucune des deux ne la trouve",
+            "Seule la recherche par mots-clés la trouve"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le principal apport des embeddings : chercher par le sens, pas par les mots.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "ia-embeddings-q6",
+          "prompt": "À quoi servent les embeddings ?",
+          "choices": [
+            "La recherche sémantique",
+            "Regrouper des documents similaires",
+            "Détecter des quasi-doublons",
+            "Calculer exactement une somme de nombres"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un embedding capture une ressemblance, pas une valeur exacte.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "ia-recherche-vectorielle",
+      "title": "Recherche vectorielle",
+      "summary": "Similarité et index approximatifs.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Exacte ou approximative",
+          "body": "La recherche exacte compare la requête à chaque vecteur : simple, parfaite, mais linéaire. Au-delà de quelques centaines de milliers de vecteurs, on utilise un index approximatif (ANN) qui n'en visite qu'une petite partie : HNSW (un graphe de voisins sur plusieurs niveaux), IVF (des partitions), avec ou sans quantification pour réduire la mémoire. On échange un peu de rappel contre beaucoup de vitesse."
+        },
+        {
+          "title": "Les outils",
+          "body": "FAISS est une bibliothèque ; Qdrant, Weaviate, Milvus ou Pinecone sont des bases vectorielles ; pgvector ajoute des vecteurs et des index HNSW à PostgreSQL, à côté des données métier. Un réglage comme ef_search (HNSW) fixe le nombre de candidats explorés : plus haut, meilleur rappel, recherche plus lente.",
+          "code": "SELECT id, titre\nFROM documents\nORDER BY embedding <=> :requete\nLIMIT 5;",
+          "language": "sql"
+        },
+        {
+          "title": "Filtrer, combiner, reclasser",
+          "body": "Les filtres de métadonnées (client, langue, date) s'appliquent pendant la recherche, pas après : sinon, les k meilleurs résultats peuvent tous être filtrés. Les embeddings ratent les correspondances exactes (une référence « ERR-4012 ») : la recherche hybride combine mots-clés (BM25) et vecteurs. Enfin, un modèle de reclassement (cross-encoder) réordonne les meilleurs candidats avec plus de précision."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ia-recherche-vectorielle-q1",
+          "prompt": "Pourquoi utiliser un index approximatif (ANN) ?",
+          "choices": [
+            "Comparer la requête à des millions de vecteurs serait trop lent ; l'ANN en visite une petite partie, au prix de quelques résultats manqués",
+            "Pour obtenir des résultats plus exacts que la recherche exhaustive",
+            "Pour réduire la taille des embeddings",
+            "Parce que la similarité cosinus est impossible à calculer exactement"
+          ],
+          "answerIndex": 0,
+          "explanation": "On mesure ce compromis par le rappel : la part des vrais plus proches voisins effectivement retrouvés.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ia-recherche-vectorielle-q2",
+          "prompt": "Que règle le paramètre ef_search d'un index HNSW ?",
+          "choices": [
+            "Le nombre de candidats explorés : plus grand, meilleur rappel mais recherche plus lente",
+            "La dimension des vecteurs",
+            "Le nombre de résultats renvoyés",
+            "La fréquence de reconstruction de l'index"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il se règle à la requête ; m et ef_construction se fixent à la construction de l'index.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ia-recherche-vectorielle-q3",
+          "prompt": "Un utilisateur cherche le code exact « ERR-4012 » ; la recherche vectorielle renvoie des erreurs voisines, mais pas celle-ci. Que faire ?",
+          "choices": [
+            "Une recherche hybride : combiner mots-clés (BM25) et vecteurs",
+            "Augmenter la dimension des embeddings",
+            "Passer à la distance euclidienne",
+            "Supprimer les codes d'erreur des documents"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les identifiants, noms propres et références sont le point fort des mots-clés ; on fusionne les deux classements (par exemple avec RRF).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "ia-recherche-vectorielle-q4",
+          "prompt": "Complète cette requête pgvector : les 5 documents les plus proches au sens du cosinus.",
+          "code": "SELECT id, titre\nFROM documents\nORDER BY embedding ___ :requete\n___ 5;",
+          "language": "sql",
+          "answers": [
+            "<=>",
+            "LIMIT"
+          ],
+          "distractors": [
+            "=",
+            "LIKE",
+            "TOP"
+          ],
+          "explanation": "<=> est la distance cosinus de pgvector (<-> l'euclidienne, <#> le produit scalaire négatif) ; on trie par distance croissante.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "ia-recherche-vectorielle-q5",
+          "prompt": "Souvent, aucun résultat n'est renvoyé alors que le client a des documents pertinents. Touche la ligne à corriger.",
+          "code": "resultats = index.chercher(q_vec, k=10)\nresultats = [r for r in resultats\n             if r.client_id == client_courant]\nreturn resultats",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Le filtre est appliqué après coup : les 10 meilleurs résultats globaux peuvent tous appartenir à d'autres clients. Le filtre doit être passé à la recherche elle-même.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "ia-recherche-vectorielle-q6",
+          "prompt": "Quels outils servent à la recherche vectorielle ?",
+          "choices": [
+            "pgvector",
+            "Qdrant",
+            "FAISS",
+            "Un index B-tree classique"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un B-tree ordonne des valeurs sur un seul axe ; il ne sait pas trouver des voisins dans un espace à plusieurs centaines de dimensions.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "ia-defi-embeddings",
+    "title": "Défi entretien : retrouver des tickets similaires",
+    "summary": "Embeddings, index et isolation.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "ia-defi-embeddings-q1",
+        "prompt": "Cas pratique 1/3 — Un support veut retrouver, parmi 2 millions de tickets passés, ceux qui ressemblent à un nouveau ticket. Quelle approche ?",
+        "choices": [
+          "Encoder les tickets en embeddings et les chercher dans un index approximatif",
+          "Comparer le texte mot à mot avec chacun des 2 millions de tickets",
+          "Classer les tickets par ordre alphabétique",
+          "Entraîner un nouveau modèle à chaque ticket"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'encodage se fait une fois ; chaque recherche ne prend ensuite que quelques millisecondes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi-embeddings-q2",
+        "prompt": "Cas pratique 2/3 — On adopte un modèle d'embedding plus récent. Que faire de l'index existant ?",
+        "choices": [
+          "Recalculer tous les vecteurs avec le nouveau modèle",
+          "Garder les anciens vecteurs et encoder seulement les nouvelles requêtes",
+          "Moyenner anciens et nouveaux vecteurs",
+          "Rien, tous les modèles produisent des vecteurs compatibles"
+        ],
+        "answerIndex": 0,
+        "explanation": "Deux modèles définissent deux espaces différents : comparer leurs vecteurs n'a pas de sens.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi-embeddings-q3",
+        "prompt": "Cas pratique 3/3 — Des agents voient des tickets d'autres clients dans les résultats. Quel correctif ?",
+        "choices": [
+          "Filtrer par client dans la requête vectorielle elle-même, côté serveur",
+          "Masquer les autres clients dans l'interface",
+          "Augmenter k pour avoir plus de résultats",
+          "Demander aux agents de ne pas les ouvrir"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est un contrôle d'accès : il se fait côté serveur, avant que les données ne sortent.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi-embeddings-q4",
+        "prompt": "Les vecteurs sont normalisés (norme 1). À quoi se réduit la similarité cosinus ?",
+        "choices": [
+          "Au produit scalaire",
+          "À la distance euclidienne",
+          "À la somme des composantes",
+          "À la plus grande composante"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le dénominateur vaut 1 × 1. Beaucoup de bases normalisent à l'insertion pour cette raison.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "ia-defi-embeddings-q5",
+        "prompt": "Quel est le rôle d'un modèle de reclassement (reranker) ?",
+        "choices": [
+          "Réordonner les 50 premiers candidats avec un modèle plus précis mais plus lent",
+          "Encoder les documents plus vite",
+          "Supprimer les doublons de l'index",
+          "Réduire la dimension des vecteurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le cross-encoder lit la requête et le document ensemble : trop lent pour 2 millions de documents, idéal pour 50.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "ia-defi-embeddings-q6",
+        "prompt": "Qu'est-ce qui influence la qualité d'une recherche vectorielle ?",
+        "choices": [
+          "Le modèle d'embedding",
+          "La façon de découper les documents",
+          "Les réglages de l'index (compromis rappel / vitesse)",
+          "Le nombre de colonnes de la table qui stocke les vecteurs"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un morceau trop long dilue le sens ; trop court, il perd le contexte.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

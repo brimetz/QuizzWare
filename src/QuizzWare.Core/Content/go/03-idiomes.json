@@ -1,0 +1,446 @@
+{
+  "id": "go-ch-idiomes",
+  "title": "Idiomes du langage",
+  "summary": "defer, pointeurs et chaînes.",
+  "lessons": [
+    {
+      "id": "go-defer-panic",
+      "title": "defer, panic et recover",
+      "summary": "Nettoyer et survivre aux paniques.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "defer",
+          "body": "defer programme un appel qui s'exécutera à la sortie de la fonction, quelle qu'elle soit : retour normal, retour anticipé ou panique. Les appels différés s'exécutent dans l'ordre inverse de leur déclaration (dernier entré, premier sorti). Les arguments sont évalués tout de suite, au moment du defer, pas à la sortie.",
+          "code": "f, err := os.Open(nom)\nif err != nil {\n    return err\n}\ndefer f.Close()\n// ... lecture de f"
+        },
+        {
+          "title": "panic et recover",
+          "body": "panic interrompt la fonction en cours et remonte la pile en exécutant les defer. Si rien ne l'arrête, le programme s'arrête avec la trace de pile. recover arrête la panique, mais seulement s'il est appelé directement dans une fonction différée, et seulement dans la goroutine qui panique.",
+          "code": "func sur(f func()) (err error) {\n    defer func() {\n        if r := recover(); r != nil {\n            err = fmt.Errorf(\"panique : %v\", r)\n        }\n    }()\n    f()\n    return nil\n}"
+        },
+        {
+          "title": "Quand paniquer ?",
+          "body": "En Go, les échecs prévisibles (fichier absent, entrée invalide, réseau coupé) sont des valeurs error. panic est réservé aux erreurs de programmation (invariant violé, index hors limites) et aux échecs d'initialisation, comme regexp.MustCompile sur une expression constante. Un serveur HTTP rattrape les paniques de chaque requête pour ne pas tomber entièrement."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-defer-panic-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "func main() {\n    for i := 0; i < 3; i++ {\n        defer fmt.Print(i, \" \")\n    }\n}",
+          "choices": [
+            "2 1 0",
+            "0 1 2",
+            "3 3 3",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque defer évalue i immédiatement ; les appels s'exécutent à la sortie de main, du dernier au premier.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-defer-panic-q2",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "func main() {\n    x := 1\n    defer fmt.Println(\"defer :\", x)\n    x = 2\n    fmt.Println(\"main :\", x)\n}",
+          "choices": [
+            "main : 2 puis defer : 1",
+            "main : 2 puis defer : 2",
+            "defer : 1 puis main : 2",
+            "main : 2 seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les arguments d'un appel différé sont évalués au moment du defer : x valait 1. Pour lire la valeur finale, on différerait une closure : defer func() { fmt.Println(x) }().",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "go-defer-panic-q3",
+          "prompt": "Ce code ne rattrape jamais la panique de f. Touche la ligne en cause.",
+          "code": "func sur(f func()) {\n    if r := recover(); r != nil {\n        log.Println(\"rattrapé :\", r)\n    }\n    f()\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "recover n'a d'effet que dans une fonction différée, pendant la panique. Appelé ici, avant f, il renvoie nil. Il faut defer func() { if r := recover(); ... }() avant d'appeler f.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "go-defer-panic-q4",
+          "prompt": "Complète : transformer une panique en erreur.",
+          "code": "func sur(f func()) (err error) {\n    ___ func() {\n        if r := ___(); r != nil {\n            err = fmt.Errorf(\"panique : %v\", r)\n        }\n    }()\n    f()\n    return nil\n}",
+          "answers": [
+            "defer",
+            "recover"
+          ],
+          "distractors": [
+            "go",
+            "panic",
+            "catch"
+          ],
+          "explanation": "La closure différée s'exécute pendant la panique ; comme le résultat err est nommé, elle peut le modifier.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-defer-panic-q5",
+          "prompt": "Qu'affiche fmt.Println(f()) ?",
+          "code": "func f() (n int) {\n    defer func() { n *= 2 }()\n    return 3\n}",
+          "choices": [
+            "6",
+            "3",
+            "0",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "return 3 affecte d'abord le résultat nommé n, puis les defer s'exécutent et peuvent encore le modifier : 3 × 2 = 6.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "go-defer-panic-q6",
+          "prompt": "Dans quels cas panic est-il approprié ?",
+          "choices": [
+            "Un invariant interne violé : une erreur de programmation",
+            "Une expression régulière constante invalide au démarrage (MustCompile)",
+            "Un fichier demandé par l'utilisateur est introuvable",
+            "Un appel réseau a dépassé son délai"
+          ],
+          "answerIndices": [
+            0,
+            1
+          ],
+          "explanation": "Un fichier absent ou un délai dépassé sont des situations normales : on renvoie une error que l'appelant traite.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "go-pointeurs",
+      "title": "Pointeurs et valeurs",
+      "summary": "Copies, partage et échappement.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Tout est passé par valeur",
+          "body": "En Go, un argument est toujours copié. Une struct passée à une fonction est copiée entièrement : la modifier ne change rien chez l'appelant. Une slice, une map ou un channel sont aussi copiés, mais ce qui est copié est un petit descripteur qui pointe vers les mêmes données : les éléments sont partagés.",
+          "code": "type Point struct{ X, Y int }\n\nfunc deplacer(p *Point) {\n    p.X += 10 // modifie l'original\n}\n\np := Point{1, 2}\ndeplacer(&p)"
+        },
+        {
+          "title": "& et *",
+          "body": "&x donne l'adresse de x, *p la valeur pointée. Il n'y a pas d'arithmétique de pointeurs. On accède aux champs d'une struct pointée directement (p.X), sans écrire (*p).X. Un pointeur non initialisé vaut nil, et le déréférencer provoque une panique."
+        },
+        {
+          "title": "Pile ou tas : l'analyse d'échappement",
+          "body": "Renvoyer l'adresse d'une variable locale est parfaitement sûr en Go : le compilateur voit que la variable survit à la fonction et la place sur le tas. C'est l'analyse d'échappement (go build -gcflags=-m l'affiche). Les variables qui n'échappent pas restent sur la pile, sans coût pour le ramasse-miettes : un pointeur n'est donc pas toujours plus rapide qu'une copie."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-pointeurs-q1",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "type Point struct{ X, Y int }\n\nfunc deplacer(p Point) { p.X += 10 }\n\nfunc main() {\n    p := Point{1, 2}\n    deplacer(p)\n    fmt.Println(p.X)\n}",
+          "choices": [
+            "1",
+            "11",
+            "10",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "deplacer reçoit une copie de la struct. Pour modifier l'original, il faut un paramètre *Point et l'appel deplacer(&p).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-pointeurs-q2",
+          "prompt": "Que se passe-t-il quand une fonction Go renvoie l'adresse d'une variable locale ?",
+          "code": "func nouveau() *int {\n    x := 42\n    return &x\n}",
+          "choices": [
+            "C'est sûr : x échappe et le compilateur l'alloue sur le tas",
+            "Comportement indéfini, comme en C",
+            "Une erreur de compilation",
+            "Une panique à l'exécution"
+          ],
+          "answerIndex": 0,
+          "explanation": "Contrairement au C, la durée de vie d'une variable en Go dépend de son utilisation, pas de sa portée : le ramasse-miettes la libérera quand plus rien ne la référence.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-pointeurs-q3",
+          "prompt": "Qu'affiche ce programme ?",
+          "code": "func raz(s []int)    { s[0] = 0 }\nfunc ajoute(s []int) { s = append(s, 4) }\n\nfunc main() {\n    s := []int{1, 2, 3}\n    raz(s)\n    ajoute(s)\n    fmt.Println(s)\n}",
+          "choices": [
+            "[0 2 3]",
+            "[0 2 3 4]",
+            "[1 2 3]",
+            "[1 2 3 4]"
+          ],
+          "answerIndex": 0,
+          "explanation": "raz modifie le tableau partagé. ajoute ne change que sa copie locale du descripteur : la longueur de s dans main reste 3. Pour ajouter, la fonction doit renvoyer la nouvelle slice.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "go-pointeurs-q4",
+          "prompt": "Les soldes ne changent pas. Touche la ligne en cause.",
+          "code": "type Compte struct{ Solde int }\n\nfunc main() {\n    comptes := []Compte{{10}, {20}}\n    for _, c := range comptes {\n        c.Solde += 5\n    }\n    fmt.Println(comptes)\n}",
+          "bugLines": [
+            5,
+            6
+          ],
+          "explanation": "La variable de boucle c est une copie de chaque élément. On modifie l'élément lui-même par son index : for i := range comptes { comptes[i].Solde += 5 }.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "go-pointeurs-q5",
+          "prompt": "Complète pour que x vaille 2 après l'appel.",
+          "code": "func incrementer(n ___int) {\n    ___n++\n}\n\nx := 1\nincrementer(&x)",
+          "answers": [
+            "*",
+            "*"
+          ],
+          "distractors": [
+            "&",
+            "[]"
+          ],
+          "explanation": "Le paramètre est un *int ; *n++ incrémente la valeur pointée (en Go, ++ est une instruction et s'applique à *n).",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "go-pointeurs-q6",
+          "prompt": "Quand un receveur ou un paramètre pointeur est-il justifié ?",
+          "choices": [
+            "Quand la fonction doit modifier la valeur de l'appelant",
+            "Pour éviter de copier une grosse struct",
+            "Quand la struct contient un sync.Mutex",
+            "Toujours, c'est plus rapide"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un pointeur fait souvent échapper la valeur sur le tas et ajoute du travail au ramasse-miettes : pour une petite struct, la copie est souvent plus rapide.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "go-chaines",
+      "title": "Chaînes, octets et runes",
+      "summary": "UTF-8 en Go.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Une chaîne est une suite d'octets",
+          "body": "Une string Go est une suite d'octets immuable, contenant par convention de l'UTF-8. len(s) compte les octets, pas les caractères : « é » occupe 2 octets. s[i] renvoie un octet (byte). On ne peut pas modifier une chaîne en place : on en construit une nouvelle.",
+          "code": "s := \"café\"\nfmt.Println(len(s))                    // 5\nfmt.Println(utf8.RuneCountInString(s)) // 4"
+        },
+        {
+          "title": "Les runes",
+          "body": "Une rune (alias de int32) est un point de code Unicode. range sur une chaîne décode l'UTF-8 : il donne l'index en octets du début de chaque caractère et la rune. Pour manipuler des caractères par position, on convertit en []rune, au prix d'une copie.",
+          "code": "for i, r := range \"hé!\" {\n    fmt.Println(i, string(r))\n}\n// 0 h\n// 1 é\n// 3 !"
+        },
+        {
+          "title": "Construire des chaînes",
+          "body": "Concaténer avec + dans une boucle recopie toute la chaîne à chaque tour. strings.Builder accumule les morceaux dans un tampon. Les paquets strings et unicode fournissent le reste : strings.Fields, strings.Split, strings.ToUpper, unicode.IsLetter."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "go-chaines-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "s := \"café\"\nfmt.Println(len(s), utf8.RuneCountInString(s))",
+          "choices": [
+            "5 4",
+            "4 4",
+            "4 5",
+            "5 5"
+          ],
+          "answerIndex": 0,
+          "explanation": "« é » est encodé sur 2 octets en UTF-8 : 5 octets, mais 4 runes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "go-chaines-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "for i, r := range \"hé!\" {\n    fmt.Print(i, \":\", string(r), \" \")\n}",
+          "choices": [
+            "0:h 1:é 3:!",
+            "0:h 1:é 2:!",
+            "0:h 1:Ã 2:© 3:!",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "range décode les runes ; l'index est la position en octets. « é » occupe les octets 1 et 2, donc « ! » est à l'octet 3.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "go-chaines-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "s := \"hé\"\nfmt.Println(s[1])",
+          "choices": [
+            "195",
+            "é",
+            "233",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "s[1] est un octet : le premier des deux octets UTF-8 de « é » (0xC3 = 195). 233 serait le point de code U+00E9, qu'on obtient avec []rune(s)[1].",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "go-chaines-q4",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "func majuscule(s string) string {\n    if s == \"\" {\n        return s\n    }\n    s[0] = s[0] - 32\n    return s\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Les chaînes sont immuables : cannot assign to s[0]. On utilise strings.ToUpper, ou on passe par []rune et unicode.ToUpper (le -32 ne marche d'ailleurs qu'en ASCII).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "go-chaines-q5",
+          "prompt": "Complète : assembler des milliers de mots sans recopies inutiles.",
+          "code": "var b strings.___\nfor _, mot := range mots {\n    b.___(mot)\n}\nresultat := b.String()",
+          "answers": [
+            "Builder",
+            "WriteString"
+          ],
+          "distractors": [
+            "Join",
+            "Append",
+            "Concat"
+          ],
+          "explanation": "strings.Builder agrandit un tampon interne ; String() renvoie le résultat sans copie supplémentaire. Si tous les mots sont déjà dans une slice, strings.Join suffit.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "go-chaines-q6",
+          "prompt": "Quelles affirmations sur les chaînes Go sont vraies ?",
+          "choices": [
+            "len renvoie le nombre d'octets",
+            "Une chaîne est immuable",
+            "range sur une chaîne parcourt des runes",
+            "s[i] renvoie le i-ème caractère"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "s[i] renvoie le i-ème octet, qui n'est un caractère complet que pour l'ASCII.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "go-defi-idiomes",
+    "title": "Défi entretien : idiomes de Go",
+    "summary": "Des fichiers qui restent ouverts.",
+    "questions": [
+      {
+        "type": "bug",
+        "id": "go-defi-idiomes-q1",
+        "prompt": "Cas pratique 1/3 — Cette fonction traite 50 000 fichiers et échoue avec « too many open files ». Touche la ligne en cause.",
+        "code": "for _, nom := range noms {\n    f, err := os.Open(nom)\n    if err != nil {\n        return err\n    }\n    defer f.Close()\n    traiter(f)\n}",
+        "bugLines": [
+          6
+        ],
+        "explanation": "defer s'exécute à la sortie de la fonction, pas à la fin de l'itération : tous les fichiers restent ouverts jusqu'à la fin de la boucle.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-idiomes-q2",
+        "prompt": "Cas pratique 2/3 — Quel correctif ?",
+        "choices": [
+          "Extraire le corps de la boucle dans une fonction : son defer f.Close() s'exécute à chaque itération",
+          "Remplacer defer par go",
+          "Augmenter la limite de fichiers ouverts du système",
+          "Appeler runtime.GC() après chaque fichier"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une fonction par fichier donne une portée naturelle au defer ; augmenter la limite ne ferait que repousser le problème.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-idiomes-q3",
+        "prompt": "Cas pratique 3/3 — Les fichiers sont maintenant ouverts en écriture. Pourquoi ne faut-il pas ignorer l'erreur de f.Close() ?",
+        "choices": [
+          "Les données peuvent n'être écrites sur disque qu'à la fermeture : une erreur de Close signale une écriture perdue",
+          "Close ne renvoie jamais d'erreur",
+          "Pour libérer la mémoire plus vite",
+          "Parce que defer l'interdit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Pour un fichier écrit, on vérifie l'erreur de Close (ou on appelle f.Sync puis Close) et on la renvoie à l'appelant.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "go-defi-idiomes-q4",
+        "prompt": "Une goroutine lancée par main panique. Le defer recover() placé dans main la rattrape-t-il ?",
+        "choices": [
+          "Non : recover n'agit que dans la goroutine qui panique, et tout le programme s'arrête",
+          "Oui, main rattrape toutes les paniques",
+          "Oui, mais seulement si la goroutine a fini",
+          "La panique est ignorée silencieusement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque goroutine qui peut paniquer doit avoir son propre defer recover ; c'est ce que fait net/http pour chaque requête.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "go-defi-idiomes-q5",
+        "prompt": "Remets dans l'ordre une fonction qui transforme une panique en erreur.",
+        "lines": [
+          "func sur(f func()) (err error) {",
+          "    defer func() {",
+          "        if r := recover(); r != nil {",
+          "            err = fmt.Errorf(\"panique : %v\", r)",
+          "        }",
+          "    }()",
+          "    f()",
+          "    return nil",
+          "}"
+        ],
+        "explanation": "Le defer doit être posé avant l'appel qui peut paniquer ; le résultat nommé permet à la closure de renvoyer l'erreur.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "go-defi-idiomes-q6",
+        "prompt": "Quelles affirmations sont vraies ?",
+        "choices": [
+          "Une slice passée par valeur partage son tableau sous-jacent",
+          "Une map passée à une fonction peut être modifiée par elle",
+          "Une struct passée par valeur est copiée",
+          "Un tableau [3]int passé par valeur partage ses éléments avec l'appelant"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un tableau Go est une valeur : il est copié entièrement, contrairement à une slice.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

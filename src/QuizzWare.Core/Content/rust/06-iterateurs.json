@@ -1,0 +1,333 @@
+{
+  "id": "rust-ch-iterateurs",
+  "title": "Closures et itérateurs",
+  "summary": "Le style fonctionnel de Rust.",
+  "lessons": [
+    {
+      "id": "rust-closures",
+      "title": "Closures",
+      "summary": "Fn, FnMut, FnOnce et move.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des fonctions qui capturent",
+          "body": "Une closure s'écrit |x| x + 1 et peut utiliser les variables de son environnement. Le compilateur choisit le mode de capture le plus léger : par référence si elle lit, par référence mutable si elle modifie, par valeur si elle consomme. Les types des paramètres sont généralement inférés.",
+          "code": "let seuil = 10;\nlet grand = |x: i32| x > seuil;\nprintln!(\"{}\", grand(12)); // true"
+        },
+        {
+          "title": "Fn, FnMut, FnOnce",
+          "body": "Ces trois traits décrivent ce qu'une closure fait de ses captures. Fn : elle ne fait que lire, on peut l'appeler autant de fois qu'on veut, même en parallèle. FnMut : elle modifie son état, il faut un accès mutable pour l'appeler. FnOnce : elle consomme une capture, elle ne peut être appelée qu'une fois. Une fonction qui accepte une closure demande le trait le moins exigeant dont elle a besoin.",
+          "code": "fn appliquer<F: Fn(i32) -> i32>(f: F, x: i32) -> i32 {\n    f(x)\n}"
+        },
+        {
+          "title": "move",
+          "body": "move force la closure à prendre possession de tout ce qu'elle capture (ou à le copier, pour les types Copy). C'est indispensable quand la closure doit survivre à la fonction qui la crée : un thread, une tâche asynchrone, une closure renvoyée.",
+          "code": "let v = vec![1, 2, 3];\nlet h = std::thread::spawn(move || {\n    println!(\"{v:?}\");\n});\nh.join().unwrap();"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-closures-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "let mut compteur = 0;\nlet mut inc = || compteur += 1;\ninc();\ninc();\nprintln!(\"{compteur}\");",
+          "choices": [
+            "2",
+            "0",
+            "1",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "La closure emprunte compteur mutablement ; après son dernier appel, l'emprunt prend fin et on peut lire compteur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "rust-closures-q2",
+          "prompt": "Quel trait implémente au plus une closure qui modifie une variable capturée, sans la consommer ?",
+          "choices": [
+            "FnMut",
+            "Fn",
+            "FnOnce uniquement",
+            "Copy"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle implémente FnMut (et donc FnOnce), mais pas Fn, qui exige de ne rien modifier.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "rust-closures-q3",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "let v = vec![1, 2, 3];\nlet h = std::thread::spawn(|| {\n    println!(\"{v:?}\");\n});\nh.join().unwrap();",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le thread pourrait survivre à v, que la closure ne fait qu'emprunter. Il faut move || pour lui donner v.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "rust-closures-q4",
+          "prompt": "Complète.",
+          "code": "fn appliquer<F: ___(i32) -> i32>(f: F, x: i32) -> i32 {\n    f(x)\n}\nlet double = ___ x * 2;\nprintln!(\"{}\", appliquer(double, 5));",
+          "answers": [
+            "Fn",
+            "|x|"
+          ],
+          "distractors": [
+            "fn",
+            "Func",
+            "(x) =>"
+          ],
+          "explanation": "Le trait s'écrit avec une majuscule (Fn) ; fn minuscule désigne un pointeur de fonction. La syntaxe (x) => est celle de JavaScript ou de C#.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-closures-q5",
+          "prompt": "Que se passe-t-il ?",
+          "code": "let nom = String::from(\"Ana\");\nlet f = move || nom;\nlet a = f();\nlet b = f();",
+          "choices": [
+            "Une erreur de compilation : la closure rend nom, elle est FnOnce",
+            "a et b valent \"Ana\"",
+            "b vaut une chaîne vide",
+            "Une panique au second appel"
+          ],
+          "answerIndex": 0,
+          "explanation": "Renvoyer nom le déplace hors de la closure : après le premier appel, elle n'a plus rien à rendre. Le compilateur l'interdit.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "rust-closures-q6",
+          "prompt": "Quelles affirmations sur move sont vraies ?",
+          "choices": [
+            "move transfère la possession des variables capturées dans la closure",
+            "Avec un type Copy comme i32, move copie la valeur",
+            "move est souvent nécessaire avec thread::spawn",
+            "move rend la closure FnOnce"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "move change la façon de capturer, pas ce que la closure fait de ses captures : une closure move qui ne fait que lire reste Fn.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "rust-iterateurs",
+      "title": "Itérateurs",
+      "summary": "Adaptateurs paresseux et collect.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le trait Iterator",
+          "body": "Un itérateur implémente next(), qui renvoie Some(élément) puis None à la fin. Sur une collection, iter() produit des &T, iter_mut() des &mut T, et into_iter() des T en consommant la collection. Une boucle for x in v appelle into_iter : elle consomme v, alors que for x in &v l'emprunte."
+        },
+        {
+          "title": "Des adaptateurs paresseux",
+          "body": "map, filter, enumerate, zip, skip, take produisent de nouveaux itérateurs sans rien calculer. Le travail n'a lieu que lorsqu'un consommateur tire les éléments : collect, sum, count, find, any, ou une boucle for. Un map sans consommateur ne fait rien, et le compilateur le signale par un avertissement.",
+          "code": "let v = vec![1, 2, 3, 4, 5];\nlet s: i32 = v.iter()\n    .filter(|&&x| x % 2 == 1)\n    .map(|x| x * x)\n    .sum();\n// 1 + 9 + 25 = 35"
+        },
+        {
+          "title": "collect et coût nul",
+          "body": "collect construit une collection à partir d'un itérateur ; il faut lui indiquer laquelle, par une annotation (Vec<_>, HashMap<_, _>, String). Les chaînes d'itérateurs sont des abstractions à coût nul : le compilateur les transforme en une boucle aussi rapide qu'une boucle écrite à la main, souvent sans vérification de bornes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "rust-iterateurs-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "let v = vec![1, 2, 3, 4, 5];\nlet s: i32 = v.iter()\n    .filter(|&&x| x % 2 == 1)\n    .map(|x| x * x)\n    .sum();\nprintln!(\"{s}\");",
+          "choices": [
+            "35",
+            "15",
+            "9",
+            "55"
+          ],
+          "answerIndex": 0,
+          "explanation": "On garde 1, 3 et 5, puis on additionne leurs carrés : 1 + 9 + 25.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-iterateurs-q2",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "let v = vec![1, 2, 3];\nv.iter().map(|x| {\n    println!(\"{x}\");\n    x * 2\n});",
+          "choices": [
+            "Rien : map est paresseux et aucun consommateur ne tire les éléments",
+            "1 2 3",
+            "2 4 6",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le compilateur avertit : « iterators are lazy and do nothing unless consumed ». Pour un effet de bord, on utilise for ou for_each.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "rust-iterateurs-q3",
+          "prompt": "Complète : mettre tous les noms en majuscules.",
+          "code": "let noms = vec![\"ana\", \"léo\"];\nlet maj: ___<String> = noms\n    .iter()\n    .map(|n| n.to_uppercase())\n    .___();",
+          "answers": [
+            "Vec",
+            "collect"
+          ],
+          "distractors": [
+            "List",
+            "sum",
+            "into"
+          ],
+          "explanation": "L'annotation Vec<String> indique à collect quelle collection construire.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "rust-iterateurs-q4",
+          "prompt": "Ce code ne compile pas. Touche la ligne en cause.",
+          "code": "let v = vec![String::from(\"a\"), String::from(\"b\")];\nfor s in v {\n    println!(\"{s}\");\n}\nprintln!(\"{}\", v.len());",
+          "bugLines": [
+            2,
+            5
+          ],
+          "explanation": "for s in v consomme v (into_iter) : il n'existe plus après la boucle. On écrit for s in &v pour seulement l'emprunter.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "rust-iterateurs-q5",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "let r: Vec<(usize, char)> = \"abc\"\n    .chars()\n    .enumerate()\n    .skip(1)\n    .collect();\nprintln!(\"{r:?}\");",
+          "choices": [
+            "[(1, 'b'), (2, 'c')]",
+            "[(0, 'b'), (1, 'c')]",
+            "[(1, 'a'), (2, 'b')]",
+            "['b', 'c']"
+          ],
+          "answerIndex": 0,
+          "explanation": "enumerate numérote d'abord, skip retire ensuite le premier couple : les indices d'origine sont conservés.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "rust-iterateurs-q6",
+          "prompt": "Quelles affirmations sont vraies pour un Vec<T> ?",
+          "choices": [
+            "iter() produit des &T",
+            "iter_mut() produit des &mut T",
+            "into_iter() consomme le Vec et produit des T",
+            "iter() copie toujours les éléments"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "iter() emprunte : aucune copie. Pour copier des éléments Copy, on ajoute .copied().",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "rust-defi-iterateurs",
+    "title": "Défi entretien : totaux par client",
+    "summary": "Itérer, emprunter et agréger.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "rust-defi-iterateurs-q1",
+        "prompt": "Cas pratique 1/3 — Un Vec<Commande> contient un client (String) et un montant (f64). On veut le total par client. Quelle approche ?",
+        "choices": [
+          "Parcourir les commandes et cumuler dans une HashMap avec entry(client).or_insert(0.0)",
+          "Trier les commandes puis les additionner deux à deux",
+          "Un Vec de totaux indexé par le nom du client",
+          "Cloner le Vec pour chaque client"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un seul passage, une recherche en temps constant moyen par commande.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "rust-defi-iterateurs-q2",
+        "prompt": "Cas pratique 2/3 — Remets le code dans l'ordre.",
+        "lines": [
+          "let mut total: HashMap<&str, f64> = HashMap::new();",
+          "for c in &commandes {",
+          "    *total.entry(c.client.as_str()).or_insert(0.0) += c.montant;",
+          "}"
+        ],
+        "explanation": "Les clés empruntent les noms des commandes : aucune copie de String.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-iterateurs-q3",
+        "prompt": "Cas pratique 3/3 — Pourquoi itérer sur &commandes plutôt que sur commandes ?",
+        "choices": [
+          "Itérer sur commandes consommerait chaque Commande : les &str des clés emprunteraient des chaînes détruites, et le compilateur refuse",
+          "C'est seulement une question de style",
+          "Pour que la boucle aille plus vite",
+          "Parce que HashMap n'accepte pas les valeurs possédées"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le vérificateur d'emprunts détecte que c serait détruite à la fin de chaque tour alors que la map garde une référence vers son nom.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-iterateurs-q4",
+        "prompt": "Qu'affiche ce code ?",
+        "code": "let v: Vec<i32> = (1..=10)\n    .filter(|n| n % 3 == 0)\n    .collect();\nprintln!(\"{v:?}\");",
+        "choices": [
+          "[3, 6, 9]",
+          "[3, 6, 9, 10]",
+          "[0, 3, 6, 9]",
+          "[1, 4, 7, 10]"
+        ],
+        "answerIndex": 0,
+        "explanation": "1..=10 inclut 10 ; seuls les multiples de 3 passent le filtre.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "rust-defi-iterateurs-q5",
+        "prompt": "Une chaîne filter, map, sum est-elle plus lente qu'une boucle for écrite à la main ?",
+        "choices": [
+          "Non en général : c'est une abstraction à coût nul, compilée en une boucle équivalente",
+          "Oui, chaque adaptateur alloue une collection intermédiaire",
+          "Oui, d'un facteur dix",
+          "Cela dépend du ramasse-miettes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les adaptateurs sont paresseux : aucune collection intermédiaire n'est créée. Rust n'a pas de ramasse-miettes.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "rust-defi-iterateurs-q6",
+        "prompt": "Revue de code : comment rendre ce code plus idiomatique ?",
+        "code": "let mut pairs = Vec::new();\nfor i in 0..v.len() {\n    if v[i] % 2 == 0 {\n        pairs.push(v[i].clone());\n    }\n}",
+        "choices": [
+          "Itérer directement sur les éléments : for x in &v",
+          "Écrire v.iter().filter(…).cloned().collect()",
+          "Éviter les accès par index et leurs vérifications de bornes",
+          "Ajouter unsafe pour aller plus vite"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La version à base d'itérateurs exprime l'intention et laisse le compilateur supprimer les vérifications de bornes.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

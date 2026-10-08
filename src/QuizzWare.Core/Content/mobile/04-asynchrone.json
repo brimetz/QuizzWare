@@ -1,0 +1,336 @@
+{
+  "id": "mob-ch-asynchrone",
+  "title": "Thread principal et tâches de fond",
+  "summary": "Garder l'interface fluide.",
+  "lessons": [
+    {
+      "id": "mob-thread-ui",
+      "title": "Le thread principal",
+      "summary": "Ne jamais le bloquer.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Un seul thread pour l'interface",
+          "body": "Sur Android comme sur iOS, un seul thread, le thread principal (ou thread UI), traite les gestes et dessine l'écran. À 60 images par seconde, il dispose d'environ 16 ms par image ; au-delà, l'animation saccade. Sur Android, si l'application ne répond plus aux entrées pendant environ 5 secondes, le système affiche « L'application ne répond pas » (ANR)."
+        },
+        {
+          "title": "Sortir le travail long",
+          "body": "Réseau, disque, base de données, décodage d'un gros JSON ou d'une image : tout cela doit se faire sans bloquer le thread principal. En C#, on attend avec await, sans jamais appeler .Result ou .Wait(), qui bloquent le thread et peuvent provoquer un interblocage. En Kotlin, ce sont les coroutines (Dispatchers.IO), en Swift, async/await.",
+          "code": "// Bloque le thread principal :\nvar json = _http.GetStringAsync(url).Result;\n\n// Libère le thread pendant l'attente :\nvar json = await _http.GetStringAsync(url);",
+          "language": "csharp"
+        },
+        {
+          "title": "Revenir sur le thread principal",
+          "body": "À l'inverse, les contrôles ne se modifient que depuis le thread principal. Après un calcul lancé avec Task.Run, on y revient explicitement : MainThread.BeginInvokeOnMainThread en .NET MAUI, withContext(Dispatchers.Main) en Kotlin, @MainActor en Swift. Après un simple await lancé depuis le thread principal, la suite y reprend automatiquement.",
+          "code": "_ = Task.Run(async () =>\n{\n    var n = await CompterAsync();\n    MainThread.BeginInvokeOnMainThread(() =>\n        Compteur.Text = n.ToString());\n});",
+          "language": "csharp"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-thread-ui-q1",
+          "prompt": "À 60 images par seconde, de combien de temps le thread principal dispose-t-il pour produire une image ?",
+          "choices": [
+            "Environ 16 ms",
+            "Environ 60 ms",
+            "Une seconde",
+            "Environ 1 ms"
+          ],
+          "answerIndex": 0,
+          "explanation": "1000 ms / 60 ≈ 16,7 ms ; sur un écran à 120 Hz, le budget tombe à environ 8 ms.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mob-thread-ui-q2",
+          "prompt": "Sur Android, que se passe-t-il si le thread principal ne répond plus aux entrées pendant environ 5 secondes ?",
+          "choices": [
+            "Le système affiche une boîte « L'application ne répond pas » (ANR)",
+            "Rien, l'utilisateur attend",
+            "L'application passe automatiquement en arrière-plan",
+            "Le téléphone redémarre"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les ANR sont comptés dans les statistiques de qualité de Google Play.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "mob-thread-ui-q3",
+          "prompt": "L'écran se fige pendant le chargement. Touche la ligne en cause.",
+          "code": "async void OnChargerClicked(object s, EventArgs e)\n{\n    var json = _http.GetStringAsync(Url).Result;\n    var produits = Parser(json);\n    Liste.ItemsSource = produits;\n}",
+          "language": "csharp",
+          "bugLines": [
+            3
+          ],
+          "explanation": ".Result bloque le thread principal jusqu'à la réponse. Il faut await _http.GetStringAsync(Url).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-thread-ui-q4",
+          "prompt": "Que risque ce code ?",
+          "code": "_ = Task.Run(async () =>\n{\n    var n = await CompterAsync();\n    Compteur.Text = n.ToString();\n});",
+          "language": "csharp",
+          "choices": [
+            "Une exception ou un comportement imprévisible : un contrôle est modifié hors du thread principal",
+            "Rien, Task.Run revient automatiquement sur le thread principal",
+            "Un blocage du thread principal",
+            "Une erreur de compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sur Android, la plateforme lève « Only the original thread that created a view hierarchy can touch its views ».",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "mob-thread-ui-q5",
+          "prompt": "Complète : mettre à jour le compteur depuis une tâche de fond.",
+          "code": "_ = Task.Run(async () =>\n{\n    var n = await CompterAsync();\n    MainThread.___(() =>\n        Compteur.Text = n.ToString());\n});",
+          "language": "csharp",
+          "answers": [
+            "BeginInvokeOnMainThread"
+          ],
+          "distractors": [
+            "Run",
+            "Dispatch",
+            "InvokeLater"
+          ],
+          "explanation": "La mise à jour est mise en file sur le thread principal ; InvokeOnMainThreadAsync permet en plus de l'attendre.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mob-thread-ui-q6",
+          "prompt": "Que faut-il faire hors du thread principal, ou en attente asynchrone ?",
+          "choices": [
+            "Les appels réseau",
+            "Les lectures et écritures de gros fichiers ou de la base",
+            "Le décodage d'un gros JSON",
+            "La mise à jour du texte d'un label"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Modifier un contrôle, au contraire, doit se faire sur le thread principal.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "mob-taches-fond",
+      "title": "Tâches de fond",
+      "summary": "Ce que le système autorise.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "L'arrière-plan n'est pas garanti",
+          "body": "Pour économiser la batterie, les systèmes mobiles limitent fortement le code en arrière-plan. Sur iOS, une application est suspendue quelques secondes après avoir quitté l'écran. Sur Android, Doze et les restrictions d'arrière-plan espacent les réveils. Dans les deux cas, le système peut tuer le processus à tout moment pour libérer de la mémoire : l'état important doit être enregistré avant."
+        },
+        {
+          "title": "Android : WorkManager et services",
+          "body": "WorkManager planifie un travail différé mais garanti, avec des contraintes (réseau disponible, batterie suffisante) : il sera exécuté, même après un redémarrage du téléphone, quand les conditions le permettent. Pour un travail long que l'utilisateur perçoit (navigation GPS, lecture audio), on utilise un service de premier plan, avec une notification visible et un type déclaré."
+        },
+        {
+          "title": "iOS : tâches planifiées",
+          "body": "BGTaskScheduler permet de demander un rafraîchissement court (BGAppRefreshTask) ou un traitement plus long (BGProcessingTask), que le système exécute quand il le juge opportun. Les transferts de fichiers passent par une URLSession d'arrière-plan, gérée par le système même si l'application est suspendue. Seuls quelques modes déclarés (audio, localisation, VoIP) permettent de continuer à tourner."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mob-taches-fond-q1",
+          "prompt": "Une application doit envoyer des photos au serveur, même si l'utilisateur la quitte, mais pas forcément immédiatement. Quel outil sur Android ?",
+          "choices": [
+            "WorkManager, avec une contrainte de réseau disponible",
+            "Un thread lancé depuis l'activité",
+            "Un timer qui réessaie toutes les minutes",
+            "Un service de premier plan permanent"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le travail est persisté et sera exécuté quand le réseau sera là, même après un redémarrage.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-taches-fond-q2",
+          "prompt": "Sur iOS, que devient une application peu après être passée en arrière-plan ?",
+          "choices": [
+            "Elle est suspendue : son code ne s'exécute plus, sauf mode d'arrière-plan déclaré ou tâche planifiée",
+            "Elle continue de tourner normalement",
+            "Elle est désinstallée",
+            "Elle tourne à vitesse réduite indéfiniment"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle reste en mémoire, figée, et peut être tuée sans prévenir si le système manque de mémoire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mob-taches-fond-q3",
+          "prompt": "Peut-on compter sur un timer pour synchroniser les données toutes les 5 minutes en arrière-plan ?",
+          "choices": [
+            "Non : le système décide quand l'application s'exécute ; on planifie une tâche qu'il lancera au moment opportun",
+            "Oui, sur toutes les plateformes",
+            "Oui, si le timer est en millisecondes",
+            "Seulement sur iOS"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour une donnée urgente, c'est le serveur qui prévient l'application par une notification push.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mob-taches-fond-q4",
+          "prompt": "Quand utiliser un service de premier plan sur Android ?",
+          "choices": [
+            "Pour un travail long que l'utilisateur perçoit, comme la navigation GPS, avec une notification visible",
+            "Pour toute synchronisation de données",
+            "Pour que l'application démarre plus vite",
+            "Pour éviter de demander des permissions"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les versions récentes d'Android exigent de déclarer le type du service (location, mediaPlayback…) et restreignent son lancement depuis l'arrière-plan.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mob-taches-fond-q5",
+          "prompt": "Le brouillon est souvent perdu quand l'utilisateur quitte l'application. Touche la ligne en cause.",
+          "code": "protected override void OnSleep()\n{\n    _ = _api.EnvoyerBrouillonAsync(Brouillon);\n}",
+          "language": "csharp",
+          "bugLines": [
+            3
+          ],
+          "explanation": "L'envoi réseau lancé sans attente peut être interrompu par la suspension. On enregistre d'abord le brouillon localement, puis on le synchronise plus tard (WorkManager, tâche planifiée, prochain démarrage).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "mob-taches-fond-q6",
+          "prompt": "Quelles affirmations sur l'arrière-plan sont vraies ?",
+          "choices": [
+            "Le système peut tuer une application en arrière-plan pour libérer de la mémoire",
+            "Un travail WorkManager survit à un redémarrage du téléphone",
+            "BGTaskScheduler exécute les tâches quand le système le décide",
+            "Une application peut tourner sans limite en arrière-plan si elle le demande poliment"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les limites existent pour la batterie : on conçoit l'application pour les respecter, pas pour les contourner.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "mob-defi-asynchrone",
+    "title": "Défi entretien : une liste qui saccade",
+    "summary": "Thread principal et chargement d'images.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mob-defi-asynchrone-q1",
+        "prompt": "Cas pratique 1/3 — Une application de notes saccade au défilement. Le profilage montre que chaque cellule décode une photo de 4 Mo sur le thread principal. Que faire ?",
+        "choices": [
+          "Décoder hors du thread principal, à la taille d'affichage, et garder les miniatures en cache",
+          "Réduire la vitesse de défilement",
+          "Afficher moins de notes",
+          "Augmenter la fréquence de l'écran"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une miniature de 200 pixels décodée une fois coûte infiniment moins qu'une photo pleine taille à chaque affichage.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-asynchrone-q2",
+        "prompt": "Cas pratique 2/3 — Les miniatures sont décodées en arrière-plan. Comment les afficher ?",
+        "choices": [
+          "Revenir sur le thread principal pour affecter l'image au contrôle",
+          "Affecter l'image directement depuis la tâche de fond",
+          "Attendre la fin de toutes les miniatures avant d'afficher la liste",
+          "Recharger la page entière"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le calcul se fait en arrière-plan, l'affichage toujours sur le thread principal.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-asynchrone-q3",
+        "prompt": "Cas pratique 3/3 — L'utilisateur défile très vite : des centaines de décodages s'accumulent pour des cellules déjà sorties de l'écran. Que faire ?",
+        "choices": [
+          "Annuler le chargement d'une cellule quand elle est recyclée (CancellationToken)",
+          "Ajouter plus de threads",
+          "Désactiver le recyclage des cellules",
+          "Bloquer le défilement pendant les chargements"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sans annulation, la cellule recyclée peut même afficher l'image d'un ancien élément arrivée en retard.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mob-defi-asynchrone-q4",
+        "prompt": "Ce getter est lié à l'interface. Que risque-t-on ?",
+        "code": "public string Titre =>\n    ChargerTitreAsync().Result;",
+        "language": "csharp",
+        "choices": [
+          "Bloquer le thread principal, voire un interblocage si la tâche doit reprendre sur ce même thread",
+          "Rien, .Result est asynchrone",
+          "Une erreur de compilation",
+          "Un titre toujours vide"
+        ],
+        "answerIndex": 0,
+        "explanation": "La tâche attend le thread principal pour continuer, et le thread principal attend la tâche : plus rien n'avance.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "mob-defi-asynchrone-q5",
+        "prompt": "Remets dans l'ordre : afficher un indicateur pendant le chargement, et toujours le masquer ensuite.",
+        "language": "csharp",
+        "lines": [
+          "Chargement.IsVisible = true;",
+          "try",
+          "{",
+          "    Liste.ItemsSource = await _api.ChargerAsync();",
+          "}",
+          "finally",
+          "{",
+          "    Chargement.IsVisible = false;",
+          "}"
+        ],
+        "explanation": "finally garantit que l'indicateur disparaît même si le chargement échoue.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "mob-defi-asynchrone-q6",
+        "prompt": "Revue de code : coche tous les problèmes.",
+        "code": "void OnEnvoyer(object s, EventArgs e)\n{\n    Thread.Sleep(2000); // attendre le serveur\n    var r = _api.EnvoyerAsync(Msg).Result;\n    Statut.Text = r.Message;\n}",
+        "language": "csharp",
+        "choices": [
+          "Thread.Sleep bloque le thread principal",
+          ".Result bloque aussi, avec un risque d'interblocage",
+          "Les erreurs réseau ne sont pas gérées",
+          "Statut.Text est modifié sur le thread principal"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Modifier Statut.Text sur le thread principal est justement correct. On écrit plutôt async void OnEnvoyer, await, et un try/catch.",
+        "difficulty": 2
+      }
+    ]
+  }
+}
