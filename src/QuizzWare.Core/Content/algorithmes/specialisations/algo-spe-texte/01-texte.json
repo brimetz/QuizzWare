@@ -1,0 +1,438 @@
+{
+  "id": "txt-ch-essentiel",
+  "title": "Algorithmes sur les chaînes : l'essentiel",
+  "summary": "KMP, Rabin-Karp, distance d'édition.",
+  "lessons": [
+    {
+      "id": "txt-recherche",
+      "title": "Rechercher un motif",
+      "summary": "De la force brute à KMP.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La force brute",
+          "body": "Chercher un motif de longueur m dans un texte de longueur n en essayant chaque position coûte O(n × m) au pire, par exemple pour « aaaab » dans « aaaaaaaa…a ». Pour de petits textes, c'est souvent suffisant ; les fonctions find des bibliothèques standard sont d'ailleurs très optimisées."
+        },
+        {
+          "title": "La fonction préfixe",
+          "body": "KMP précalcule pour chaque position du motif la longueur du plus long préfixe propre qui est aussi un suffixe. En cas d'échec, on reprend à cette longueur au lieu de tout recommencer.",
+          "code": "def prefixe(m):\n    pi = [0] * len(m)\n    k = 0\n    for i in range(1, len(m)):\n        while k > 0 and m[i] != m[k]:\n            k = pi[k - 1]\n        if m[i] == m[k]:\n            k += 1\n        pi[i] = k\n    return pi"
+        },
+        {
+          "title": "KMP",
+          "body": "Avec cette table, on parcourt le texte sans jamais revenir en arrière : O(n + m) au total. Une astuce : appliquer la fonction préfixe à motif + « # » + texte, et repérer les positions où la valeur vaut m."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "txt-recherche-q1",
+          "prompt": "Quel est le pire coût de la recherche naïve d'un motif de longueur m dans un texte de longueur n ?",
+          "choices": [
+            "O(n × m)",
+            "O(n + m)",
+            "O(log n)",
+            "O(m)"
+          ],
+          "answerIndex": 0,
+          "explanation": "À chaque position, on peut comparer presque tout le motif avant d'échouer.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "txt-recherche-q2",
+          "prompt": "Que renvoie prefixe(\"abab\") ?",
+          "code": "def prefixe(m):\n    pi = [0] * len(m)\n    k = 0\n    for i in range(1, len(m)):\n        while k > 0 and m[i] != m[k]:\n            k = pi[k - 1]\n        if m[i] == m[k]:\n            k += 1\n        pi[i] = k\n    return pi",
+          "choices": [
+            "[0, 0, 1, 2]",
+            "[0, 1, 2, 3]",
+            "[0, 0, 0, 0]",
+            "[1, 2, 1, 2]"
+          ],
+          "answerIndex": 0,
+          "explanation": "« aba » a pour bord « a » (1), « abab » a pour bord « ab » (2).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "txt-recherche-q3",
+          "prompt": "Quel est le coût de KMP ?",
+          "choices": [
+            "O(n + m)",
+            "O(n × m)",
+            "O(n log m)",
+            "O(m²)"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ne revient jamais en arrière dans le texte.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "txt-recherche-q4",
+          "prompt": "Que renvoie prefixe(\"aabaaab\") ?",
+          "choices": [
+            "[0, 1, 0, 1, 2, 2, 3]",
+            "[0, 1, 0, 1, 2, 3, 4]",
+            "[0, 1, 0, 0, 1, 2, 3]",
+            "[0, 0, 0, 1, 2, 2, 3]"
+          ],
+          "answerIndex": 0,
+          "explanation": "À l'indice 5, « aab » ne prolonge pas « aa » : on retombe sur pi[1] = 1, puis le « a » donne 2. Le « b » final donne 3 (« aab »).",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "txt-recherche-q5",
+          "prompt": "Cette fonction préfixe renvoie des valeurs trop grandes. Touche la ligne en cause.",
+          "code": "def prefixe(m):\n    pi = [0] * len(m)\n    k = 0\n    for i in range(1, len(m)):\n        while k > 0 and m[i] != m[k]:\n            k = pi[k - 1]\n        k += 1\n        pi[i] = k\n    return pi",
+          "bugLines": [
+            7
+          ],
+          "explanation": "On n'incrémente k que si les caractères correspondent : if m[i] == m[k]: k += 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "txt-recherche-q6",
+          "prompt": "Quelles affirmations sur KMP sont vraies ?",
+          "choices": [
+            "Il précalcule une table à partir du motif seul",
+            "Il ne revient jamais en arrière dans le texte",
+            "Son coût est linéaire",
+            "Il exige un texte trié"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Aucun tri n'est nécessaire.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "txt-hachage",
+      "title": "Hachage glissant",
+      "summary": "Rabin-Karp et ses usages.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le principe",
+          "body": "Rabin-Karp compare des empreintes plutôt que des chaînes. L'empreinte d'une fenêtre se met à jour en O(1) quand elle glisse d'un caractère : on retire la contribution du caractère qui sort, on décale, on ajoute celui qui entre.",
+          "code": "B, M = 256, 1_000_000_007\n\ndef glisser(h, sortant, entrant, puissance):\n    h = (h - ord(sortant) * puissance) % M\n    return (h * B + ord(entrant)) % M"
+        },
+        {
+          "title": "Les collisions",
+          "body": "Deux chaînes différentes peuvent avoir la même empreinte. Quand les empreintes coïncident, on vérifie donc les caractères. Avec un bon module, les collisions sont rares et le coût moyen reste O(n + m) ; au pire, O(n × m)."
+        },
+        {
+          "title": "Les usages",
+          "body": "Rabin-Karp brille pour chercher plusieurs motifs de même longueur à la fois (un ensemble d'empreintes), détecter du plagiat, ou trouver la plus longue sous-chaîne répétée en combinant hachage et dichotomie sur la longueur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "txt-hachage-q1",
+          "prompt": "Qu'est-ce qu'un hachage glissant ?",
+          "choices": [
+            "Une empreinte de fenêtre mise à jour en O(1) quand la fenêtre avance d'un caractère",
+            "Un hachage recalculé entièrement à chaque position",
+            "Un algorithme de tri",
+            "Un chiffrement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans cela, chaque empreinte coûterait O(m).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "txt-hachage-q2",
+          "prompt": "Les empreintes du motif et d'une fenêtre sont égales. Que faire ?",
+          "choices": [
+            "Vérifier caractère par caractère, car il peut s'agir d'une collision",
+            "Déclarer une correspondance sans vérifier",
+            "Passer à la fenêtre suivante",
+            "Changer de module"
+          ],
+          "answerIndex": 0,
+          "explanation": "Des chaînes différentes peuvent avoir la même empreinte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "txt-hachage-q3",
+          "prompt": "Dans quel cas Rabin-Karp est-il particulièrement intéressant ?",
+          "choices": [
+            "Chercher en même temps des milliers de motifs de même longueur",
+            "Chercher un seul caractère",
+            "Trier des chaînes",
+            "Compter les voyelles"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un ensemble d'empreintes est testé en O(1) à chaque position.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "txt-hachage-q4",
+          "prompt": "Complète le glissement de l'empreinte.",
+          "code": "def glisser(h, sortant, entrant, puissance):\n    h = (h - ord(sortant) * ___) % M\n    return (h * ___ + ord(entrant)) % M",
+          "answers": [
+            "puissance",
+            "B"
+          ],
+          "distractors": [
+            "M",
+            "h",
+            "2"
+          ],
+          "explanation": "puissance vaut B^(m−1) : le poids du caractère le plus à gauche.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "txt-hachage-q5",
+          "prompt": "Cette recherche signale parfois des correspondances inexistantes. Touche la ligne en cause.",
+          "code": "for i in range(len(texte) - m + 1):\n    if h == h_motif:\n        positions.append(i)\n    if i + m < len(texte):\n        h = glisser(h, texte[i], texte[i + m], p)",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Égalité d'empreintes ne garantit pas l'égalité des chaînes : il faut ajouter and texte[i:i + m] == motif.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "txt-hachage-q6",
+          "prompt": "Comment réduire le risque de collision ?",
+          "choices": [
+            "Un grand module premier",
+            "Deux hachages indépendants combinés",
+            "Une base choisie aléatoirement",
+            "Un module de 10"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une base aléatoire empêche aussi un adversaire de fabriquer des collisions.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "txt-edition",
+      "title": "Distance d'édition",
+      "summary": "Comparer deux chaînes par programmation dynamique.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Levenshtein",
+          "body": "La distance d'édition est le nombre minimal d'insertions, suppressions et substitutions pour transformer une chaîne en une autre. « kitten » → « sitting » : 3 (k→s, e→i, ajout de g). Elle sert aux correcteurs orthographiques et à la recherche approximative."
+        },
+        {
+          "title": "La récurrence",
+          "body": "d[i][j] est la distance entre les i premiers caractères de a et les j premiers de b. Si les caractères sont égaux, d[i][j] = d[i−1][j−1] ; sinon, 1 + le minimum de la suppression, de l'insertion et de la substitution. Coût : O(n × m).",
+          "code": "def distance(a, b):\n    d = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]\n    for i in range(len(a) + 1): d[i][0] = i\n    for j in range(len(b) + 1): d[0][j] = j\n    for i in range(1, len(a) + 1):\n        for j in range(1, len(b) + 1):\n            cout = 0 if a[i - 1] == b[j - 1] else 1\n            d[i][j] = min(d[i - 1][j] + 1,\n                          d[i][j - 1] + 1,\n                          d[i - 1][j - 1] + cout)\n    return d[len(a)][len(b)]"
+        },
+        {
+          "title": "Les variantes",
+          "body": "La plus longue sous-séquence commune (LCS), à la base de diff, suit la même structure de tableau. On peut réduire la mémoire à deux lignes, O(min(n, m)), si l'on n'a besoin que de la distance et pas de la suite d'opérations."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "txt-edition-q1",
+          "prompt": "Quelle est la distance d'édition entre « chat » et « chien » ?",
+          "choices": [
+            "3",
+            "2",
+            "4",
+            "5"
+          ],
+          "answerIndex": 0,
+          "explanation": "« ch » est commun ; « at » → « ien » demande deux substitutions et une insertion.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "txt-edition-q2",
+          "prompt": "Quel est le coût du calcul de la distance d'édition ?",
+          "choices": [
+            "O(n × m) en temps",
+            "O(n + m)",
+            "O(log n)",
+            "O(2ⁿ)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une case du tableau par paire de préfixes.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "txt-edition-q3",
+          "prompt": "distance(\"abc\", \"\") renvoie 0 au lieu de 3. Touche la ligne en cause.",
+          "code": "def distance(a, b):\n    d = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]\n    for j in range(len(b) + 1): d[0][j] = j\n    for i in range(1, len(a) + 1):\n        for j in range(1, len(b) + 1):\n            cout = 0 if a[i - 1] == b[j - 1] else 1\n            d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + 1,\n                          d[i - 1][j - 1] + cout)\n    return d[len(a)][len(b)]",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Il manque l'initialisation de la première colonne, d[i][0] = i : transformer i caractères en chaîne vide coûte i suppressions.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "txt-edition-q4",
+          "prompt": "Quel outil repose sur la plus longue sous-séquence commune ?",
+          "choices": [
+            "diff, qui compare deux fichiers ligne par ligne",
+            "gzip",
+            "ls",
+            "ping"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les lignes hors de la sous-séquence commune sont les ajouts et suppressions.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "txt-edition-q5",
+          "prompt": "Complète la récurrence.",
+          "code": "cout = 0 if a[i - 1] == b[j - 1] else 1\nd[i][j] = ___(d[i - 1][j] + 1,\n              d[i][j - 1] + 1,\n              d[i - 1][j - 1] + ___)",
+          "answers": [
+            "min",
+            "cout"
+          ],
+          "distractors": [
+            "max",
+            "1",
+            "sum"
+          ],
+          "explanation": "Suppression, insertion, substitution (gratuite si les caractères sont égaux).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "txt-edition-q6",
+          "prompt": "Où la distance d'édition est-elle utilisée ?",
+          "choices": [
+            "Les correcteurs orthographiques",
+            "La recherche approximative (« vouliez-vous dire… »)",
+            "La comparaison de séquences en bio-informatique",
+            "Le chiffrement de mots de passe"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Elle mesure une ressemblance, ce qui n'a rien à voir avec le chiffrement.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "txt-defi",
+    "title": "Défi entretien : le correcteur",
+    "summary": "Chercher vite et tolérer les fautes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "txt-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un outil doit signaler dans des documents de 50 Mo toute apparition de 10 000 termes interdits de 12 caractères. Quelle approche ?",
+        "choices": [
+          "Rabin-Karp avec un ensemble des 10 000 empreintes, vérifiées en cas de correspondance",
+          "KMP lancé 10 000 fois",
+          "La recherche naïve pour chaque terme",
+          "Trier le document"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un seul passage sur le texte. Pour des longueurs variées, l'automate d'Aho-Corasick est l'alternative classique.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "txt-defi-q2",
+        "prompt": "Cas pratique 2/3 — Il faut aussi proposer une correction pour un mot mal orthographié. Quelle mesure ?",
+        "choices": [
+          "La distance d'édition avec les mots du dictionnaire",
+          "La longueur du mot",
+          "L'ordre alphabétique",
+          "Le hachage du mot"
+        ],
+        "answerIndex": 0,
+        "explanation": "On propose les mots à distance 1 ou 2.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "txt-defi-q3",
+        "prompt": "Cas pratique 3/3 — Calculer la distance avec 500 000 mots à chaque faute est trop lent. Quelle optimisation ?",
+        "choices": [
+          "Ne comparer qu'aux mots de longueur proche, abandonner un calcul dès que la distance dépasse 2, ou générer les variantes à distance 1 et les chercher dans un ensemble",
+          "Calculer en parallèle sur 500 000 threads",
+          "Comparer seulement au premier mot",
+          "Abandonner la correction"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une différence de longueur de 3 implique déjà une distance d'au moins 3.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "txt-defi-q4",
+        "prompt": "Quelle est la distance d'édition entre « kitten » et « sitting » ?",
+        "choices": [
+          "3",
+          "2",
+          "4",
+          "7"
+        ],
+        "answerIndex": 0,
+        "explanation": "k → s, e → i, et l'ajout du g final.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "txt-defi-q5",
+        "prompt": "Remets dans l'ordre la recherche KMP.",
+        "lines": [
+          "pi = prefixe(motif)",
+          "k = 0",
+          "for i, c in enumerate(texte):",
+          "    while k > 0 and c != motif[k]:",
+          "        k = pi[k - 1]",
+          "    if c == motif[k]:",
+          "        k += 1",
+          "    if k == len(motif):",
+          "        positions.append(i - k + 1)",
+          "        k = pi[k - 1]"
+        ],
+        "explanation": "Après une correspondance, on reprend au bord du motif pour trouver les chevauchements.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "txt-defi-q6",
+        "prompt": "Quels algorithmes cherchent un motif en temps linéaire (au moins en moyenne) ?",
+        "choices": [
+          "KMP",
+          "Rabin-Karp, en moyenne",
+          "Le parcours d'un arbre de suffixes déjà construit",
+          "La force brute sur un texte de « aaaa…a »"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La force brute devient quadratique sur ce cas pathologique.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

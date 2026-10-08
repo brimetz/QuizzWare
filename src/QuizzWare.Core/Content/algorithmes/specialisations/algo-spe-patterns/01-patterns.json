@@ -1,0 +1,436 @@
+{
+  "id": "algopat-ch-essentiel",
+  "title": "Problèmes par patterns : l'essentiel",
+  "summary": "Reconnaître le bon pattern en quelques minutes.",
+  "lessons": [
+    {
+      "id": "algopat-pointeurs",
+      "title": "Deux pointeurs et fenêtre glissante",
+      "summary": "Parcourir une seule fois au lieu de deux boucles.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Reconnaître les indices",
+          "body": "Un énoncé parle de tableau trié, de paire dont la somme vaut une cible, de sous-tableau contigu ou de sous-chaîne la plus longue ? Ces mots signalent deux pointeurs ou une fenêtre glissante, qui ramènent souvent un O(n²) naïf à O(n)."
+        },
+        {
+          "title": "Deux pointeurs",
+          "body": "Sur un tableau trié, un pointeur part du début, l'autre de la fin. Si la somme est trop petite, on avance le gauche ; trop grande, on recule le droit. Chaque pas élimine une possibilité.",
+          "code": "def paire(t, cible):\n    g, d = 0, len(t) - 1\n    while g < d:\n        s = t[g] + t[d]\n        if s == cible:\n            return g, d\n        if s < cible:\n            g += 1\n        else:\n            d -= 1\n    return None"
+        },
+        {
+          "title": "Fenêtre glissante",
+          "body": "Pour un sous-tableau ou une sous-chaîne contigus, on étend la fenêtre à droite et on la réduit à gauche quand elle ne respecte plus la condition. Chaque élément entre et sort au plus une fois : O(n).",
+          "code": "def plus_longue_sans_doublon(s):\n    vus, g, meilleur = set(), 0, 0\n    for d, c in enumerate(s):\n        while c in vus:\n            vus.remove(s[g])\n            g += 1\n        vus.add(c)\n        meilleur = max(meilleur, d - g + 1)\n    return meilleur"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algopat-pointeurs-q1",
+          "prompt": "« Trouver deux nombres d'un tableau trié dont la somme vaut une cible. » Quel pattern ?",
+          "choices": [
+            "Deux pointeurs, depuis les deux extrémités",
+            "Une recherche en largeur",
+            "La programmation dynamique",
+            "Un tas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le tri permet de savoir quel pointeur déplacer : O(n) au lieu de O(n²).",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algopat-pointeurs-q2",
+          "prompt": "« La plus longue sous-chaîne contenant au plus k caractères distincts. » Quel pattern ?",
+          "choices": [
+            "Une fenêtre glissante",
+            "Un tri",
+            "Un retour arrière (backtracking)",
+            "Une recherche dichotomique sur le résultat seulement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sous-chaîne contiguë et condition sur son contenu : on étend et on réduit la fenêtre.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algopat-pointeurs-q3",
+          "prompt": "Que renvoie plus_longue_sans_doublon(\"abcabcbb\") ?",
+          "code": "def plus_longue_sans_doublon(s):\n    vus, g, meilleur = set(), 0, 0\n    for d, c in enumerate(s):\n        while c in vus:\n            vus.remove(s[g])\n            g += 1\n        vus.add(c)\n        meilleur = max(meilleur, d - g + 1)\n    return meilleur",
+          "choices": [
+            "3",
+            "2",
+            "8",
+            "4"
+          ],
+          "answerIndex": 0,
+          "explanation": "« abc » est la plus longue sous-chaîne sans caractère répété.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "algopat-pointeurs-q4",
+          "prompt": "Cette fonction tourne parfois sans fin. Touche la ligne en cause.",
+          "code": "def paire(t, cible):\n    g, d = 0, len(t) - 1\n    while g < d:\n        s = t[g] + t[d]\n        if s == cible:\n            return g, d\n        if s < cible:\n            g += 1\n        else:\n            d += 1\n    return None",
+          "bugLines": [
+            10
+          ],
+          "explanation": "Quand la somme est trop grande, il faut reculer le pointeur droit : d -= 1. Sinon d sort du tableau et la boucle ne converge pas.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "algopat-pointeurs-q5",
+          "prompt": "Complète la réduction de la fenêtre.",
+          "code": "for d, c in enumerate(s):\n    while c in vus:\n        vus.remove(s[___])\n        g += 1\n    vus.add(c)\n    meilleur = max(meilleur, ___ - g + 1)",
+          "answers": [
+            "g",
+            "d"
+          ],
+          "distractors": [
+            "c",
+            "i"
+          ],
+          "explanation": "On retire à gauche jusqu'à ce que le doublon disparaisse ; la taille de la fenêtre vaut d − g + 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "algopat-pointeurs-q6",
+          "prompt": "Quels mots d'énoncé suggèrent deux pointeurs ou une fenêtre glissante ?",
+          "choices": [
+            "Tableau trié",
+            "Sous-tableau contigu",
+            "Sous-chaîne la plus longue",
+            "Plus court chemin dans un graphe"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un plus court chemin évoque plutôt BFS ou Dijkstra.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "algopat-recherche",
+      "title": "Recherche et parcours",
+      "summary": "Dichotomie, BFS, DFS et tas.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Dichotomie sur la réponse",
+          "body": "La dichotomie ne sert pas qu'à chercher dans un tableau trié. Dès qu'une condition est monotone (si une capacité x suffit, toute capacité plus grande suffit aussi), on peut chercher la plus petite réponse valide en O(log plage × coût du test).",
+          "code": "def plus_petite_valide(bas, haut, ok):\n    while bas < haut:\n        milieu = (bas + haut) // 2\n        if ok(milieu):\n            haut = milieu\n        else:\n            bas = milieu + 1\n    return bas"
+        },
+        {
+          "title": "BFS ou DFS",
+          "body": "« Le plus petit nombre d'étapes », « plus court chemin » dans un graphe non pondéré : BFS, avec une file. « Toutes les combinaisons », « existe-t-il un chemin », composantes, cycles : DFS, récursif ou avec une pile. Une grille est un graphe déguisé."
+        },
+        {
+          "title": "Les k plus grands",
+          "body": "« Les k plus grands », « les k plus fréquents », « fusionner k listes triées » : un tas de taille k donne O(n log k). En Python, heapq est un tas min ; pour garder les k plus grands, on retire le plus petit dès que le tas dépasse k."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algopat-recherche-q1",
+          "prompt": "« Le nombre minimal de mouvements d'un cavalier pour aller d'une case à une autre. » Quel pattern ?",
+          "choices": [
+            "BFS, car chaque mouvement coûte 1",
+            "DFS",
+            "Un tri",
+            "Deux pointeurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "BFS explore par distance croissante : la première fois qu'on atteint la cible, c'est par le plus court chemin.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algopat-recherche-q2",
+          "prompt": "« Les k éléments les plus fréquents d'un tableau. » Quelle approche ?",
+          "choices": [
+            "Compter avec un dictionnaire, puis un tas de taille k",
+            "Trier puis BFS",
+            "Deux pointeurs",
+            "Union-Find"
+          ],
+          "answerIndex": 0,
+          "explanation": "O(n log k) ; un tri complet des fréquences donnerait O(n log n).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algopat-recherche-q3",
+          "prompt": "« La capacité minimale d'un camion pour livrer tous les colis en D jours. » Quel pattern ?",
+          "choices": [
+            "Une dichotomie sur la capacité, car « capacité suffisante » est monotone",
+            "BFS",
+            "Un tas",
+            "Une fenêtre glissante"
+          ],
+          "answerIndex": 0,
+          "explanation": "On teste une capacité en O(n) et on divise la plage par deux à chaque fois.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "algopat-recherche-q4",
+          "prompt": "Complète la recherche de la plus petite valeur valide.",
+          "code": "while bas < haut:\n    milieu = (bas + haut) // 2\n    if ok(milieu):\n        haut = ___\n    else:\n        bas = ___",
+          "answers": [
+            "milieu",
+            "milieu + 1"
+          ],
+          "distractors": [
+            "milieu - 1",
+            "bas + 1"
+          ],
+          "explanation": "milieu reste candidat quand il est valide ; sinon on l'exclut.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "algopat-recherche-q5",
+          "prompt": "Ce code doit renvoyer les k plus grands éléments. Touche la ligne en cause.",
+          "code": "import heapq\n\ndef k_plus_grands(t, k):\n    tas = []\n    for x in t:\n        heapq.heappush(tas, x)\n        if len(tas) > k:\n            tas.pop()\n    return tas",
+          "bugLines": [
+            8
+          ],
+          "explanation": "list.pop() retire le dernier élément de la liste, pas le plus petit. Il faut heapq.heappop(tas).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "algopat-recherche-q6",
+          "prompt": "Quels problèmes se prêtent à un DFS ?",
+          "choices": [
+            "Compter les îles d'une grille",
+            "Détecter un cycle dans un graphe orienté",
+            "Énumérer toutes les permutations",
+            "Le plus court chemin dans un graphe non pondéré"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le plus court chemin non pondéré relève de BFS.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "algopat-optimisation",
+      "title": "Problèmes d'optimisation",
+      "summary": "Programmation dynamique, glouton et retour arrière.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Programmation dynamique",
+          "body": "« Nombre de façons », « coût minimal », « plus longue sous-séquence », avec des choix qui se recoupent : la programmation dynamique. On définit l'état (dp[i] = meilleure réponse pour les i premiers éléments), la transition et le cas de base.",
+          "code": "def escaliers(n):\n    a, b = 1, 1\n    for _ in range(n - 1):\n        a, b = b, a + b\n    return b"
+        },
+        {
+          "title": "Glouton",
+          "body": "Un choix local optimal suffit parfois : intervalles triés par fin pour en garder le maximum, rendu de monnaie avec des pièces canoniques. Il faut pouvoir l'argumenter ; sinon un contre-exemple le fait tomber. Avec les pièces 1, 3 et 4, rendre 6 de façon gloutonne donne 4+1+1, alors que 3+3 utilise deux pièces."
+        },
+        {
+          "title": "Retour arrière",
+          "body": "« Toutes les combinaisons », « toutes les solutions », placements sous contraintes : on construit une solution pas à pas, on explore, puis on annule le dernier choix. On élague dès qu'une branche ne peut plus aboutir."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "algopat-optimisation-q1",
+          "prompt": "« De combien de façons monter n marches, une ou deux à la fois ? » Quel pattern ?",
+          "choices": [
+            "La programmation dynamique : f(n) = f(n−1) + f(n−2)",
+            "Deux pointeurs",
+            "BFS",
+            "Un tas"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la suite de Fibonacci, calculée en O(n) sans recalculer les sous-problèmes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "algopat-optimisation-q2",
+          "prompt": "Que renvoie escaliers(5) ?",
+          "code": "def escaliers(n):\n    a, b = 1, 1\n    for _ in range(n - 1):\n        a, b = b, a + b\n    return b",
+          "choices": [
+            "8",
+            "5",
+            "13",
+            "10"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les valeurs de b successives sont 1, 2, 3, 5, 8.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "algopat-optimisation-q3",
+          "prompt": "Pièces 1, 3 et 4 : l'algorithme glouton rend-il 6 avec le moins de pièces ?",
+          "choices": [
+            "Non : il donne 4+1+1, soit trois pièces, alors que 3+3 en utilise deux",
+            "Oui, toujours",
+            "Oui, le glouton est toujours optimal pour la monnaie",
+            "Il ne trouve aucune solution"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans preuve, un glouton doit être vérifié ; ici, la programmation dynamique s'impose.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "algopat-optimisation-q4",
+          "prompt": "Remets dans l'ordre ce retour arrière qui génère les sous-ensembles.",
+          "lines": [
+            "def explorer(i, courant):",
+            "    if i == len(t):",
+            "        resultats.append(courant[:])",
+            "        return",
+            "    courant.append(t[i])",
+            "    explorer(i + 1, courant)",
+            "    courant.pop()",
+            "    explorer(i + 1, courant)"
+          ],
+          "explanation": "On prend l'élément, on explore, on annule, puis on explore sans lui.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "algopat-optimisation-q5",
+          "prompt": "« Garder le maximum d'intervalles sans chevauchement. » Quelle approche ?",
+          "choices": [
+            "Glouton : trier par fin, garder chaque intervalle qui commence après la fin du dernier gardé",
+            "Retour arrière exhaustif",
+            "BFS",
+            "Un tas de taille 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Finir le plus tôt possible laisse le plus de place aux suivants : O(n log n).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "algopat-optimisation-q6",
+          "prompt": "Quels indices signalent la programmation dynamique ?",
+          "choices": [
+            "« Nombre de façons de… »",
+            "« Coût minimal pour… »",
+            "Des sous-problèmes qui se recoupent",
+            "« Afficher tous les chemins »"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Énumérer toutes les solutions relève du retour arrière.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "algopat-defi",
+    "title": "Défi entretien : identifier vite",
+    "summary": "Un énoncé, un pattern.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "algopat-defi-q1",
+        "prompt": "Cas pratique 1/3 — « Étant donné un tableau d'entiers positifs, trouver le plus court sous-tableau contigu dont la somme est au moins S. » Quel pattern ?",
+        "choices": [
+          "Une fenêtre glissante",
+          "Un tri puis deux pointeurs",
+          "La programmation dynamique en O(n²)",
+          "BFS"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les entiers positifs garantissent que la somme diminue quand on réduit la fenêtre.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "algopat-defi-q2",
+        "prompt": "Cas pratique 2/3 — « Une grille de 0 et de 1 : la distance de chaque case à la case 0 la plus proche. » Quelle approche ?",
+        "choices": [
+          "Un BFS multi-sources, lancé depuis toutes les cases 0 en même temps",
+          "Un BFS depuis chaque case",
+          "Un DFS",
+          "Un tri"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un seul parcours en O(lignes × colonnes) au lieu d'un BFS par case.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "algopat-defi-q3",
+        "prompt": "Cas pratique 3/3 — « Le nombre de chemins de la case en haut à gauche à celle en bas à droite, en allant seulement à droite ou en bas, en évitant des obstacles. » Quel pattern ?",
+        "choices": [
+          "La programmation dynamique : chemins(i, j) = chemins(i−1, j) + chemins(i, j−1)",
+          "BFS",
+          "Le retour arrière seul",
+          "Un tas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le retour arrière fonctionne, mais en temps exponentiel.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "algopat-defi-q4",
+        "prompt": "« Fusionner k listes triées. » Quelle complexité vise-t-on, pour N éléments au total ?",
+        "choices": [
+          "O(N log k), avec un tas de taille k",
+          "O(N k)",
+          "O(N²)",
+          "O(k)"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le tas contient la tête de chaque liste ; on extrait le minimum puis on ajoute le suivant de la même liste.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "algopat-defi-q5",
+        "prompt": "Ce BFS renvoie parfois des distances trop grandes. Touche la ligne en cause.",
+        "code": "from collections import deque\n\ndef distances(graphe, depart):\n    dist = {depart: 0}\n    file = deque([depart])\n    while file:\n        n = file.pop()\n        for v in graphe[n]:\n            if v not in dist:\n                dist[v] = dist[n] + 1\n                file.append(v)\n    return dist",
+        "bugLines": [
+          7
+        ],
+        "explanation": "pop() retire à droite : la file devient une pile, et le parcours n'est plus en largeur. Il faut popleft().",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "algopat-defi-q6",
+        "prompt": "Quelles associations énoncé → pattern sont justes ?",
+        "choices": [
+          "« Les k plus grands » → tas",
+          "« Toutes les combinaisons » → retour arrière",
+          "« Paire dans un tableau trié » → deux pointeurs",
+          "« Plus court chemin non pondéré » → DFS"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le plus court chemin non pondéré se trouve avec BFS.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

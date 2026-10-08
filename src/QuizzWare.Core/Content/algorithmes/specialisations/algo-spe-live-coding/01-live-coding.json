@@ -1,0 +1,428 @@
+{
+  "id": "live-ch-essentiel",
+  "title": "Coder en direct : l'essentiel",
+  "summary": "Réfléchir à voix haute et communiquer pendant l'exercice.",
+  "lessons": [
+    {
+      "id": "live-comprendre",
+      "title": "Comprendre avant de coder",
+      "summary": "Reformuler, questionner, donner des exemples.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Reformuler",
+          "body": "Le premier réflexe est de reformuler le problème avec ses mots et de poser des questions : taille des entrées, valeurs négatives, doublons, tableau vide, format de la sortie. Ces questions montrent de la rigueur et évitent de résoudre le mauvais problème."
+        },
+        {
+          "title": "Des exemples à la main",
+          "body": "On déroule un petit exemple à la main, puis un cas limite. Cela valide la compréhension avec l'interlocuteur, et ces exemples serviront de tests à la fin.",
+          "code": "# Entrée : [2, 7, 11, 15], cible 9 → (0, 1)\n# Cas limites : [] → None ; [3, 3], cible 6 → (0, 1)\n# Question : peut-on réutiliser le même élément ? Non."
+        },
+        {
+          "title": "Annoncer une première solution",
+          "body": "On énonce d'abord une solution simple, même naïve, avec sa complexité, puis on cherche mieux : « En force brute, deux boucles, O(n²). Avec un dictionnaire, on peut descendre à O(n). » L'interlocuteur peut orienter la discussion avant que l'on écrive du code."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "live-comprendre-q1",
+          "prompt": "Quel est le premier réflexe face à un énoncé ?",
+          "choices": [
+            "Le reformuler et poser des questions sur les entrées et les cas limites",
+            "Commencer à coder immédiatement",
+            "Rester silencieux pour réfléchir dix minutes",
+            "Demander la solution"
+          ],
+          "answerIndex": 0,
+          "explanation": "Beaucoup d'échecs viennent d'un problème mal compris.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "live-comprendre-q2",
+          "prompt": "Faut-il annoncer une solution en force brute ?",
+          "choices": [
+            "Oui, avec sa complexité, comme point de départ avant d'optimiser",
+            "Non, cela fait mauvaise impression",
+            "Seulement si l'on n'a aucune autre idée",
+            "Uniquement à la fin de l'entretien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle prouve que le problème est compris et sert de base de comparaison.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "live-comprendre-q3",
+          "prompt": "Quelles questions sont utiles avant de coder ?",
+          "choices": [
+            "Quelle est la taille maximale des entrées ?",
+            "Les valeurs peuvent-elles être négatives ou en double ?",
+            "Que renvoyer si l'entrée est vide ?",
+            "Quel est le salaire du poste ?"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La taille des entrées indique aussi la complexité attendue.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "live-comprendre-q4",
+          "prompt": "On annonce que n peut atteindre 10⁵. Quelle complexité vise-t-on ?",
+          "choices": [
+            "O(n log n) ou mieux : O(n²) ferait 10¹⁰ opérations",
+            "O(n²), c'est suffisant",
+            "O(2ⁿ)",
+            "La complexité n'a pas d'importance"
+          ],
+          "answerIndex": 0,
+          "explanation": "On compte grossièrement 10⁸ opérations simples par seconde.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "live-comprendre-q5",
+          "prompt": "Touche la ligne de ces notes de préparation qui contient une erreur.",
+          "code": "# Entrée : [2, 7, 11, 15], cible 9 → (0, 1)\n# Cas limite : [] → None\n# Entrée : [3, 2, 4], cible 6 → (0, 0)",
+          "bugLines": [
+            3
+          ],
+          "explanation": "On ne peut pas réutiliser le même élément : la réponse attendue est (1, 2), soit 2 + 4.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "live-comprendre-q6",
+          "prompt": "À quoi servent les exemples déroulés au début ?",
+          "choices": [
+            "À valider la compréhension, puis à tester le code à la fin",
+            "À gagner du temps sans rien prouver",
+            "À remplacer le code",
+            "À rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les mêmes exemples deviennent les tests de la dernière étape.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "live-coder",
+      "title": "Coder à voix haute",
+      "summary": "Narrer, structurer, gérer le blocage.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Penser à voix haute",
+          "body": "L'interlocuteur évalue le raisonnement autant que le résultat. On annonce ce qu'on fait et pourquoi : « Je parcours le tableau une fois et je garde dans un dictionnaire les valeurs déjà vues. » Un long silence ne lui donne rien à évaluer ni d'occasion d'aider."
+        },
+        {
+          "title": "Un code lisible",
+          "body": "Des noms clairs, de petites fonctions auxiliaires annoncées avant d'être écrites. On peut supposer une fonction utilitaire évidente et dire qu'on l'écrira plus tard si on a le temps.",
+          "code": "def deux_sommes(nombres, cible):\n    indices_vus = {}\n    for i, n in enumerate(nombres):\n        complement = cible - n\n        if complement in indices_vus:\n            return indices_vus[complement], i\n        indices_vus[n] = i\n    return None"
+        },
+        {
+          "title": "En cas de blocage",
+          "body": "On le dit, on revient à un exemple, on cherche une structure qui accélérerait l'opération coûteuse (dictionnaire, tas, tri). Accepter un indice n'est pas un échec : savoir l'exploiter compte aussi."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "live-coder-q1",
+          "prompt": "Pourquoi penser à voix haute pendant l'exercice ?",
+          "choices": [
+            "L'interlocuteur évalue le raisonnement et peut aider s'il le suit",
+            "Pour combler le silence",
+            "Pour aller plus vite",
+            "Ce n'est pas utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une solution incomplète bien raisonnée vaut souvent mieux qu'une solution juste et muette.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "live-coder-q2",
+          "prompt": "Que renvoie deux_sommes([3, 2, 4], 6) ?",
+          "code": "def deux_sommes(nombres, cible):\n    indices_vus = {}\n    for i, n in enumerate(nombres):\n        complement = cible - n\n        if complement in indices_vus:\n            return indices_vus[complement], i\n        indices_vus[n] = i\n    return None",
+          "choices": [
+            "(1, 2)",
+            "(0, 0)",
+            "(0, 2)",
+            "None"
+          ],
+          "answerIndex": 0,
+          "explanation": "On vérifie le complément avant d'ajouter la valeur courante : 3 ne se trouve pas lui-même.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "live-coder-q3",
+          "prompt": "Avec [3, 2, 4] et la cible 6, ce code renvoie (0, 0). Touche la ligne à déplacer.",
+          "code": "def deux_sommes(nombres, cible):\n    indices_vus = {}\n    for i, n in enumerate(nombres):\n        indices_vus[n] = i\n        complement = cible - n\n        if complement in indices_vus:\n            return indices_vus[complement], i\n    return None",
+          "bugLines": [
+            4
+          ],
+          "explanation": "En ajoutant la valeur avant de chercher son complément, 3 se trouve lui-même. L'ajout doit venir après la vérification.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "live-coder-q4",
+          "prompt": "On est bloqué depuis deux minutes. Que faire ?",
+          "choices": [
+            "Le dire, revenir à un exemple, et chercher la structure qui accélérerait l'opération coûteuse",
+            "Se taire et attendre",
+            "Changer de problème sans prévenir",
+            "Abandonner"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'interlocuteur peut alors proposer un indice au bon moment.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "live-coder-q5",
+          "prompt": "Complète la solution en O(n).",
+          "code": "for i, n in enumerate(nombres):\n    complement = cible - n\n    if complement ___ indices_vus:\n        return indices_vus[complement], i\n    indices_vus[___] = i",
+          "answers": [
+            "in",
+            "n"
+          ],
+          "distractors": [
+            "not in",
+            "complement",
+            "i"
+          ],
+          "explanation": "On mémorise l'indice de chaque valeur, après avoir vérifié son complément.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "live-coder-q6",
+          "prompt": "Qu'est-ce qui rend un code d'entretien lisible ?",
+          "choices": [
+            "Des noms explicites",
+            "De petites fonctions auxiliaires annoncées",
+            "Une structure simple, sans astuce inutile",
+            "Des variables nommées a, b, c, d"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le relecteur doit suivre le code en temps réel.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "live-verifier",
+      "title": "Tester et conclure",
+      "summary": "Dérouler, corriger, analyser.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Dérouler le code",
+          "body": "Avant de déclarer avoir fini, on exécute mentalement le code sur l'exemple du début, ligne par ligne, en annonçant les valeurs des variables. Puis sur les cas limites : vide, un seul élément, doublons, valeurs extrêmes. On trouve ainsi soi-même les erreurs, ce qui est très apprécié."
+        },
+        {
+          "title": "Les erreurs classiques",
+          "body": "Les décalages d'un indice (< ou <=, len ou len − 1), les boucles qui ne progressent pas, les collections modifiées pendant leur parcours, l'oubli du cas vide, le dépassement en dehors de Python. Les repérer demande de relire chaque condition de boucle."
+        },
+        {
+          "title": "Conclure",
+          "body": "On termine par la complexité en temps et en espace, puis les améliorations possibles et leurs compromis : « O(n) en temps et en mémoire ; si la mémoire est contrainte, on peut trier et utiliser deux pointeurs, en O(n log n) et O(1) mémoire supplémentaire. »"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "live-verifier-q1",
+          "prompt": "Le code est écrit. Que faire avant de dire « j'ai fini » ?",
+          "choices": [
+            "Le dérouler sur l'exemple et les cas limites, en annonçant les valeurs",
+            "Attendre que l'interlocuteur trouve les bugs",
+            "Passer directement à la complexité",
+            "Réécrire le code dans un autre langage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Trouver soi-même ses erreurs est un signal très positif.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "live-verifier-q2",
+          "prompt": "En déroulant ce code sur [1, 2, 3], on obtient une erreur. Touche la ligne en cause.",
+          "code": "def maximum(t):\n    m = t[0]\n    for i in range(1, len(t) + 1):\n        if t[i] > m:\n            m = t[i]\n    return m",
+          "bugLines": [
+            3
+          ],
+          "explanation": "range(1, len(t) + 1) va jusqu'à l'indice 3, hors du tableau : IndexError. Il faut range(1, len(t)).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "live-verifier-q3",
+          "prompt": "Que reste-t-il à traiter pour la fonction maximum une fois l'indice corrigé ?",
+          "choices": [
+            "Le tableau vide : t[0] lève une erreur, il faut décider quoi renvoyer",
+            "Rien",
+            "Les nombres négatifs",
+            "Les tableaux triés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le cas vide se discute avec l'interlocuteur : None, exception, valeur par défaut.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "live-verifier-q4",
+          "prompt": "Quelle conclusion donner pour deux_sommes avec un dictionnaire ?",
+          "choices": [
+            "O(n) en temps et O(n) en mémoire ; on peut économiser la mémoire en triant (O(n log n), deux pointeurs) si l'on n'a pas besoin des indices d'origine",
+            "O(1) en temps",
+            "O(n²) en temps et O(1) en mémoire",
+            "Aucune complexité à donner"
+          ],
+          "answerIndex": 0,
+          "explanation": "Présenter un compromis montre la maîtrise du sujet.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "live-verifier-q5",
+          "prompt": "Remets dans l'ordre le déroulé d'un exercice de code en direct.",
+          "language": "text",
+          "lines": [
+            "Reformuler et poser des questions",
+            "Dérouler des exemples et des cas limites",
+            "Proposer une solution simple, puis l'optimiser",
+            "Coder en expliquant",
+            "Tester en déroulant le code",
+            "Donner la complexité et les améliorations"
+          ],
+          "explanation": "On peut l'annoncer à l'interlocuteur dès le début.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "live-verifier-q6",
+          "prompt": "Quels cas limites tester systématiquement ?",
+          "choices": [
+            "L'entrée vide",
+            "Un seul élément",
+            "Des doublons et des valeurs extrêmes",
+            "Uniquement l'exemple de l'énoncé"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'exemple de l'énoncé est souvent le cas le plus simple.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "live-defi",
+    "title": "Défi entretien : quarante-cinq minutes",
+    "summary": "Gérer le temps et l'échange.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "live-defi-q1",
+        "prompt": "Cas pratique 1/3 — L'énoncé : « Renvoyer les éléments d'un tableau qui apparaissent plus d'une fois. » Quelle est la meilleure première réaction ?",
+        "choices": [
+          "Demander si l'ordre de sortie compte, si un doublon doit apparaître une seule fois, et la taille des entrées",
+          "Écrire deux boucles imbriquées tout de suite",
+          "Demander dans quel langage coder, puis se taire",
+          "Dire que l'on connaît ce problème"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chacune de ces réponses change la solution attendue.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "live-defi-q2",
+        "prompt": "Cas pratique 2/3 — Au bout de vingt minutes, la solution optimale ne vient pas, mais une solution en O(n log n) est claire. Que faire ?",
+        "choices": [
+          "L'annoncer, la coder proprement, puis discuter de l'optimisation s'il reste du temps",
+          "Continuer à chercher l'optimale sans rien écrire",
+          "Abandonner",
+          "Coder une solution approximative sans le dire"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une solution correcte et testée vaut mieux qu'une idée optimale jamais écrite.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "live-defi-q3",
+        "prompt": "Cas pratique 3/3 — L'interlocuteur demande : « Et si le tableau ne tenait pas en mémoire ? » Que répondre ?",
+        "choices": [
+          "Proposer un traitement par morceaux : partitionner par hachage sur disque, puis traiter chaque partition",
+          "Dire que ce cas n'arrive jamais",
+          "Acheter plus de mémoire",
+          "Répondre que Python gère cela automatiquement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les mêmes valeurs tombent dans la même partition, qui tient en mémoire.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "live-defi-q4",
+        "prompt": "L'interlocuteur suggère « et si on utilisait un ensemble ? ». Comment réagir ?",
+        "choices": [
+          "Accueillir l'idée, expliquer ce qu'elle change et l'intégrer",
+          "Ignorer la remarque",
+          "Défendre sa solution à tout prix",
+          "Demander pourquoi il ne l'a pas dit plus tôt"
+        ],
+        "answerIndex": 0,
+        "explanation": "La capacité à collaborer fait partie de l'évaluation.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "live-defi-q5",
+        "prompt": "Cette fonction doit renvoyer les valeurs en double. Touche la ligne en cause.",
+        "code": "def doublons(t):\n    vus, resultat = set(), set()\n    for x in t:\n        if x in vus:\n            resultat.add(x)\n    vus.add(x)\n    return resultat",
+        "bugLines": [
+          6
+        ],
+        "explanation": "L'ajout est hors de la boucle : vus reste vide pendant toute la boucle, et la fonction renvoie toujours un ensemble vide.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "live-defi-q6",
+        "prompt": "Qu'évalue l'interlocuteur dans un exercice de code en direct ?",
+        "choices": [
+          "La compréhension du problème",
+          "La communication et la collaboration",
+          "La correction et la qualité du code",
+          "La vitesse de frappe"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La vitesse de frappe n'a aucune importance.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

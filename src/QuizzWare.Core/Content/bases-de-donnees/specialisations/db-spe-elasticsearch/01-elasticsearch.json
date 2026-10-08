@@ -1,0 +1,438 @@
+{
+  "id": "elastic-ch-essentiel",
+  "title": "Elasticsearch : l'essentiel",
+  "summary": "Index inversé, analyseurs, pertinence et agrégations.",
+  "lessons": [
+    {
+      "id": "elastic-index",
+      "title": "L'index inversé",
+      "summary": "Analyseurs, text et keyword.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "L'index inversé",
+          "body": "Elasticsearch associe chaque terme à la liste des documents qui le contiennent, comme l'index à la fin d'un livre. Chercher « vélo » revient à lire une liste, au lieu de parcourir tous les textes. Il est bâti sur Lucene, et répartit chaque index en shards sur plusieurs nœuds."
+        },
+        {
+          "title": "L'analyse",
+          "body": "À l'indexation, un analyseur découpe le texte en termes (tokenizer) puis les transforme : minuscules, retrait des accents, racinisation (« vélos » → « vélo »), mots vides. La même analyse est appliquée au texte de la recherche, pour que « Vélos » trouve « vélo »."
+        },
+        {
+          "title": "text ou keyword",
+          "body": "Un champ text est analysé : idéal pour la recherche plein texte. Un champ keyword est stocké tel quel : idéal pour les filtres exacts, le tri et les agrégations (statut, catégorie, e-mail). Un même champ peut avoir les deux, via un sous-champ.",
+          "code": "PUT produits\n{\n  \"mappings\": {\n    \"properties\": {\n      \"titre\": { \"type\": \"text\", \"analyzer\": \"french\" },\n      \"categorie\": { \"type\": \"keyword\" },\n      \"prix\": { \"type\": \"scaled_float\", \"scaling_factor\": 100 }\n    }\n  }\n}",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "elastic-index-q1",
+          "prompt": "Qu'est-ce qu'un index inversé ?",
+          "choices": [
+            "Une table qui associe chaque terme aux documents qui le contiennent",
+            "Un index trié à l'envers",
+            "Une copie des documents",
+            "Un B-tree sur l'identifiant"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la structure au cœur de tous les moteurs de recherche.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "elastic-index-q2",
+          "prompt": "Quel type choisir pour un champ statut (« payée », « expédiée ») utilisé en filtre et en agrégation ?",
+          "choices": [
+            "keyword",
+            "text",
+            "nested",
+            "geo_point"
+          ],
+          "answerIndex": 0,
+          "explanation": "keyword garde la valeur exacte, sans analyse.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "elastic-index-q3",
+          "prompt": "Pourquoi « Vélos » trouve-t-il un document contenant « vélo » ?",
+          "choices": [
+            "La même analyse (minuscules, racinisation) est appliquée au document et à la recherche",
+            "Elasticsearch ignore les fins de mots",
+            "La recherche est approximative par défaut",
+            "C'est un hasard"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux deviennent le même terme dans l'index.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "elastic-index-q4",
+          "prompt": "Complète ce mapping : un titre analysé en français, une catégorie exacte.",
+          "code": "\"properties\": {\n  \"titre\": { \"type\": \"___\", \"analyzer\": \"french\" },\n  \"categorie\": { \"type\": \"___\" }\n}",
+          "language": "text",
+          "answers": [
+            "text",
+            "keyword"
+          ],
+          "distractors": [
+            "string",
+            "exact",
+            "object"
+          ],
+          "explanation": "Le type string a disparu depuis Elasticsearch 5.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "elastic-index-q5",
+          "prompt": "L'agrégation par marque échoue : le tri et les agrégations ne sont pas permis sur ce champ. Touche la ligne en cause.",
+          "code": "\"properties\": {\n  \"titre\": { \"type\": \"text\" },\n  \"marque\": { \"type\": \"text\" }\n}",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Un champ text n'a pas de valeurs exactes exploitables par défaut. marque doit être keyword (ou avoir un sous-champ keyword).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "elastic-index-q6",
+          "prompt": "Que peut faire un analyseur ?",
+          "choices": [
+            "Mettre en minuscules",
+            "Retirer les accents",
+            "Réduire les mots à leur racine",
+            "Chiffrer les termes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il peut aussi retirer les mots vides ou ajouter des synonymes.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "elastic-recherche",
+      "title": "Rechercher",
+      "summary": "match, term, bool et pertinence.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "match ou term",
+          "body": "match analyse le texte recherché puis cherche ses termes : c'est la recherche plein texte. term cherche la valeur exacte, sans analyse : à réserver aux champs keyword, nombres et dates. Un term « Vélo » sur un champ text ne trouve rien, car l'index ne contient que « vélo »."
+        },
+        {
+          "title": "La requête bool",
+          "body": "bool combine des clauses : must (doit correspondre et compte dans le score), should (améliore le score), must_not (exclut) et filter (doit correspondre, sans calcul de score, et mis en cache). Les critères exacts vont dans filter.",
+          "code": "GET produits/_search\n{\n  \"query\": {\n    \"bool\": {\n      \"must\": [{ \"match\": { \"titre\": \"vélo électrique\" } }],\n      \"filter\": [\n        { \"term\": { \"categorie\": \"mobilite\" } },\n        { \"range\": { \"prix\": { \"lte\": 1500 } } }\n      ]\n    }\n  }\n}",
+          "language": "text"
+        },
+        {
+          "title": "La pertinence",
+          "body": "Le score BM25 favorise les termes rares dans l'ensemble de l'index et fréquents dans le document, en tenant compte de la longueur du champ. On peut pondérer un champ (titre^3) avec multi_match, ou ajuster le score avec function_score (popularité, fraîcheur)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "elastic-recherche-q1",
+          "prompt": "Quelle différence entre match et term ?",
+          "choices": [
+            "match analyse le texte recherché ; term cherche la valeur exacte sans analyse",
+            "term est plus récent",
+            "match ne fonctionne que sur les nombres",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "term s'utilise sur des champs keyword, numériques ou dates.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "elastic-recherche-q2",
+          "prompt": "Cette recherche ne trouve aucun produit alors que des titres contiennent « Vélo électrique ». Touche la ligne en cause.",
+          "code": "GET produits/_search\n{\n  \"query\": {\n    \"term\": { \"titre\": \"Vélo électrique\" }\n  }\n}",
+          "language": "text",
+          "bugLines": [
+            4
+          ],
+          "explanation": "titre est un champ text, indexé sous forme de termes en minuscules. Il faut une requête match.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "elastic-recherche-q3",
+          "prompt": "Pourquoi placer les critères exacts dans filter plutôt que must ?",
+          "choices": [
+            "filter ne calcule pas de score et peut être mis en cache",
+            "filter est obligatoire",
+            "must ignore les critères exacts",
+            "Aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "La pertinence ne dépend que du texte recherché, pas du filtre de prix.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "elastic-recherche-q4",
+          "prompt": "Complète : chercher dans le titre, filtrer par catégorie.",
+          "code": "\"bool\": {\n  \"must\": [{ \"___\": { \"titre\": \"vélo\" } }],\n  \"___\": [{ \"term\": { \"categorie\": \"mobilite\" } }]\n}",
+          "language": "text",
+          "answers": [
+            "match",
+            "filter"
+          ],
+          "distractors": [
+            "term",
+            "where",
+            "should"
+          ],
+          "explanation": "match pour le texte, filter pour le critère exact.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "elastic-recherche-q5",
+          "prompt": "Que favorise le score BM25 ?",
+          "choices": [
+            "Les termes rares dans l'index et fréquents dans le document, dans des champs courts",
+            "Les documents les plus récents",
+            "Les documents les plus longs",
+            "L'ordre d'insertion"
+          ],
+          "answerIndex": 0,
+          "explanation": "« électrique » pèse plus que « le » dans le score.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "elastic-recherche-q6",
+          "prompt": "Que contient une requête bool ?",
+          "choices": [
+            "must",
+            "should",
+            "must_not et filter",
+            "join"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il n'y a pas de jointure dans Elasticsearch.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "elastic-exploitation",
+      "title": "Agrégations et exploitation",
+      "summary": "Facettes, shards et synchronisation.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les agrégations",
+          "body": "Les agrégations calculent des statistiques sur les résultats d'une recherche : terms compte les documents par valeur (les facettes « Marque (12) »), range et histogram les répartissent par tranche, avg ou max calculent des métriques.",
+          "code": "\"aggs\": {\n  \"par_marque\": { \"terms\": { \"field\": \"marque\", \"size\": 10 } },\n  \"prix_moyen\": { \"avg\": { \"field\": \"prix\" } }\n}",
+          "language": "text"
+        },
+        {
+          "title": "Shards et quasi temps réel",
+          "body": "Un index est découpé en shards primaires, chacun avec des répliques. Le nombre de shards primaires se fixe à la création : le changer demande une réindexation (ou une opération de split). Un document indexé devient visible après un rafraîchissement, toutes les secondes par défaut : on parle de quasi temps réel."
+        },
+        {
+          "title": "Pas la source de vérité",
+          "body": "On garde les données de référence dans une base transactionnelle et on alimente Elasticsearch à partir d'elle (événements, CDC, réindexation périodique). La pagination profonde avec from et size est limitée à 10 000 résultats par défaut : au-delà, on utilise search_after."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "elastic-exploitation-q1",
+          "prompt": "Quelle agrégation produit les facettes « Marque (12) » d'un site marchand ?",
+          "choices": [
+            "terms sur un champ keyword",
+            "avg",
+            "match",
+            "range sur un champ text"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle compte les documents pour chaque valeur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "elastic-exploitation-q2",
+          "prompt": "Un document indexé n'apparaît pas dans une recherche lancée immédiatement après. Pourquoi ?",
+          "choices": [
+            "Il n'est visible qu'après le prochain rafraîchissement, toutes les secondes par défaut",
+            "L'indexation a échoué",
+            "Le cache du navigateur",
+            "Les répliques sont désactivées"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans les tests, on peut forcer refresh=wait_for sur l'indexation.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "elastic-exploitation-q3",
+          "prompt": "Peut-on changer le nombre de shards primaires d'un index existant ?",
+          "choices": [
+            "Pas directement : il faut réindexer, ou utiliser split et shrink sous conditions",
+            "Oui, à tout moment",
+            "Non, jamais, même en réindexant",
+            "Oui, il s'adapte automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le routage des documents dépend du nombre de shards primaires.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "elastic-exploitation-q4",
+          "prompt": "L'export de tous les résultats échoue après la page 1 000. Touche la ligne en cause.",
+          "code": "GET produits/_search\n{\n  \"from\": 10000,\n  \"size\": 10,\n  \"query\": { \"match_all\": {} }\n}",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "from + size dépasse la limite par défaut de 10 000. On pagine avec search_after (et un point in time) pour un parcours complet.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "elastic-exploitation-q5",
+          "prompt": "Pourquoi Elasticsearch ne doit-il pas être la seule copie des données ?",
+          "choices": [
+            "Il n'offre pas de transactions et les changements de mapping demandent souvent de réindexer depuis une source",
+            "Il ne stocke pas les documents",
+            "Il est en lecture seule",
+            "Il supprime les données après un mois"
+          ],
+          "answerIndex": 0,
+          "explanation": "La base transactionnelle reste la référence ; l'index est reconstructible.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "elastic-exploitation-q6",
+          "prompt": "Comment alimenter Elasticsearch depuis une base transactionnelle ?",
+          "choices": [
+            "Des événements publiés à chaque modification",
+            "La capture des changements (CDC)",
+            "Une réindexation périodique",
+            "Des jointures entre les deux bases"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les jointures entre systèmes n'existent pas.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "elastic-defi",
+    "title": "Défi entretien : la recherche d'un site marchand",
+    "summary": "Pertinence, facettes et fraîcheur.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "elastic-defi-q1",
+        "prompt": "Cas pratique 1/3 — La recherche d'un site marchand repose sur LIKE '%velo%' en SQL : lente, sans tolérance aux pluriels ni aux accents. Que proposer ?",
+        "choices": [
+          "Un index Elasticsearch des produits, avec un analyseur français, alimenté depuis la base",
+          "Un index B-tree sur le titre",
+          "Plus de mémoire pour la base",
+          "Un cache des résultats"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un B-tree n'aide pas un LIKE qui commence par %.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "elastic-defi-q2",
+        "prompt": "Cas pratique 2/3 — Les produits dont le titre contient le mot cherché doivent passer devant ceux où il n'apparaît que dans la description. Comment ?",
+        "choices": [
+          "Un multi_match sur titre^3 et description",
+          "Trier par prix",
+          "Filtrer sur la description",
+          "Un term sur le titre"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le titre pèse trois fois plus dans le score.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "elastic-defi-q3",
+        "prompt": "Cas pratique 3/3 — Un produit modifié en base met parfois une heure à être à jour dans la recherche. Que mettre en place ?",
+        "choices": [
+          "Une synchronisation par événements ou CDC à chaque modification, en plus d'une réindexation de rattrapage",
+          "Réindexer tout chaque minute",
+          "Écrire seulement dans Elasticsearch",
+          "Désactiver le rafraîchissement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les modifications arrivent en quelques secondes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "elastic-defi-q4",
+        "prompt": "On ajoute un analyseur de synonymes au champ titre. Que faut-il faire pour les documents existants ?",
+        "choices": [
+          "Réindexer : l'analyse se fait à l'indexation",
+          "Rien, la recherche s'adapte",
+          "Redémarrer le cluster",
+          "Vider le cache"
+        ],
+        "answerIndex": 0,
+        "explanation": "On réindexe dans un nouvel index puis on bascule un alias, sans interruption.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "elastic-defi-q5",
+        "prompt": "Le filtre par catégorie « Vélos & Trottinettes » ne renvoie rien. Touche la ligne en cause.",
+        "code": "\"properties\": {\n  \"titre\": { \"type\": \"text\", \"analyzer\": \"french\" },\n  \"categorie\": { \"type\": \"text\" }\n}",
+        "language": "text",
+        "bugLines": [
+          3
+        ],
+        "explanation": "La catégorie est analysée en termes séparés : un term sur la valeur complète ne correspond à rien. Elle doit être keyword.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "elastic-defi-q6",
+        "prompt": "Quelles bonnes pratiques avec Elasticsearch ?",
+        "choices": [
+          "Définir le mapping explicitement plutôt que laisser le mapping dynamique décider",
+          "Mettre les critères exacts dans filter",
+          "Utiliser des alias pour réindexer sans interruption",
+          "En faire l'unique stockage des commandes"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les commandes restent dans une base transactionnelle.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

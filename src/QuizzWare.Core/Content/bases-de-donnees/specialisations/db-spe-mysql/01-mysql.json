@@ -1,0 +1,431 @@
+{
+  "id": "my-ch-essentiel",
+  "title": "MySQL et MariaDB : l'essentiel",
+  "summary": "InnoDB, réplication et spécificités.",
+  "lessons": [
+    {
+      "id": "my-innodb",
+      "title": "InnoDB",
+      "summary": "Le moteur de stockage et son index clusterisé.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un moteur de stockage",
+          "body": "MySQL délègue le stockage à des moteurs. InnoDB, le moteur par défaut, gère les transactions, les clés étrangères et le verrouillage par ligne. L'ancien MyISAM, sans transactions, ne se justifie plus. MariaDB, un fork de MySQL, reste largement compatible mais a divergé sur certaines fonctions."
+        },
+        {
+          "title": "L'index clusterisé",
+          "body": "InnoDB range les lignes dans l'ordre de la clé primaire : la table elle-même est un B-tree sur cette clé. Les index secondaires stockent la clé primaire de la ligne, et non son adresse. Une clé primaire courte et croissante (AUTO_INCREMENT) garde donc la table compacte ; un UUID aléatoire provoque des insertions dispersées et des pages fragmentées.",
+          "code": "CREATE TABLE commandes (\n  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,\n  client_id BIGINT UNSIGNED NOT NULL,\n  total DECIMAL(10, 2) NOT NULL,\n  cree_le DATETIME NOT NULL,\n  INDEX idx_client_date (client_id, cree_le)\n) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;"
+        },
+        {
+          "title": "utf8mb4",
+          "body": "Le jeu de caractères « utf8 » historique de MySQL ne stocke que 3 octets par caractère : les emojis et certains caractères rares sont refusés ou tronqués. Le vrai UTF-8 s'appelle utf8mb4, désormais le défaut de MySQL 8."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "my-innodb-q1",
+          "prompt": "Quel est le moteur de stockage par défaut de MySQL ?",
+          "choices": [
+            "InnoDB",
+            "MyISAM",
+            "Memory",
+            "CSV"
+          ],
+          "answerIndex": 0,
+          "explanation": "InnoDB apporte transactions, clés étrangères et verrouillage par ligne.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "my-innodb-q2",
+          "prompt": "Que contient un index secondaire InnoDB pour retrouver la ligne ?",
+          "choices": [
+            "La valeur de la clé primaire",
+            "L'adresse physique de la ligne",
+            "Une copie de toute la ligne",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une longue clé primaire alourdit donc tous les index secondaires.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "my-innodb-q3",
+          "prompt": "Pourquoi un UUID aléatoire est-il une mauvaise clé primaire pour une grosse table InnoDB ?",
+          "choices": [
+            "Les insertions tombent n'importe où dans le B-tree : pages fragmentées et cache moins efficace",
+            "Les UUID sont interdits",
+            "Ils ne sont pas uniques",
+            "Ils empêchent les jointures"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un identifiant croissant (AUTO_INCREMENT, UUID v7) insère toujours en fin d'index.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "my-innodb-q4",
+          "prompt": "Les messages contenant des emojis provoquent une erreur à l'insertion. Touche la ligne en cause.",
+          "code": "CREATE TABLE messages (\n  id BIGINT AUTO_INCREMENT PRIMARY KEY,\n  texte TEXT NOT NULL\n) ENGINE = InnoDB DEFAULT CHARSET = utf8;",
+          "bugLines": [
+            4
+          ],
+          "explanation": "« utf8 » est un alias de utf8mb3, limité à 3 octets par caractère. Il faut utf8mb4.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "my-innodb-q5",
+          "prompt": "Complète cette clé primaire auto-incrémentée.",
+          "code": "CREATE TABLE clients (\n  id BIGINT UNSIGNED ___ PRIMARY KEY,\n  email VARCHAR(255) NOT NULL\n) ENGINE = ___;",
+          "answers": [
+            "AUTO_INCREMENT",
+            "InnoDB"
+          ],
+          "distractors": [
+            "IDENTITY",
+            "SERIAL",
+            "MyISAM"
+          ],
+          "explanation": "IDENTITY est la syntaxe de SQL Server ; SERIAL, un type raccourci hérité de PostgreSQL, ne s'emploie pas après BIGINT.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "my-innodb-q6",
+          "prompt": "Que gère InnoDB, contrairement à MyISAM ?",
+          "choices": [
+            "Les transactions",
+            "Les clés étrangères",
+            "Le verrouillage par ligne",
+            "Les requêtes SELECT"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "MyISAM verrouille des tables entières et ne connaît pas les transactions.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "my-requetes",
+      "title": "Index et requêtes",
+      "summary": "EXPLAIN, préfixe gauche et upsert.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "EXPLAIN",
+          "body": "EXPLAIN montre le plan : la colonne type vaut ALL pour un parcours complet de la table, ref ou range quand un index est utilisé ; key indique l'index choisi ; Extra « Using index » signale un index couvrant, qui répond sans lire la table. EXPLAIN ANALYZE exécute la requête et mesure les temps réels.",
+          "code": "EXPLAIN SELECT total FROM commandes\nWHERE client_id = 42\n  AND cree_le >= '2026-01-01';"
+        },
+        {
+          "title": "Le préfixe gauche",
+          "body": "Un index composite (client_id, cree_le) sert aux filtres sur client_id, ou sur client_id et cree_le, mais pas sur cree_le seul. Une fonction appliquée à la colonne, comme YEAR(cree_le) = 2026, empêche aussi l'usage de l'index : on écrit plutôt un intervalle."
+        },
+        {
+          "title": "Upsert",
+          "body": "INSERT … ON DUPLICATE KEY UPDATE insère la ligne ou met à jour celle qui viole une contrainte d'unicité. Depuis MySQL 8.0.19, on référence les nouvelles valeurs par un alias de ligne plutôt qu'avec la fonction VALUES(), dépréciée.",
+          "code": "INSERT INTO stocks (produit_id, quantite)\nVALUES (7, 5) AS nouv\nON DUPLICATE KEY UPDATE\n  quantite = stocks.quantite + nouv.quantite;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "my-requetes-q1",
+          "prompt": "Dans EXPLAIN, que signifie type = ALL ?",
+          "choices": [
+            "Un parcours complet de la table",
+            "Toutes les lignes viennent de l'index",
+            "La requête est optimale",
+            "Toutes les tables sont jointes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sur une grosse table, c'est le signe d'un index manquant ou inutilisable.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "my-requetes-q2",
+          "prompt": "L'index (client_id, cree_le) sert-il à WHERE cree_le >= '2026-01-01' seul ?",
+          "choices": [
+            "Non, la première colonne de l'index n'est pas filtrée",
+            "Oui, toujours",
+            "Oui, si la table est petite",
+            "Uniquement avec ORDER BY"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la règle du préfixe gauche, comme pour un annuaire trié par nom puis prénom.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "my-requetes-q3",
+          "prompt": "Cette requête parcourt toute la table malgré un index sur cree_le. Touche la ligne en cause.",
+          "code": "SELECT id, total\nFROM commandes\nWHERE YEAR(cree_le) = 2026;",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La fonction appliquée à la colonne empêche l'usage de l'index. On écrit cree_le >= '2026-01-01' AND cree_le < '2027-01-01'.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "my-requetes-q4",
+          "prompt": "Complète cet upsert MySQL.",
+          "code": "INSERT INTO stocks (produit_id, quantite)\nVALUES (7, 5) AS nouv\nON ___ KEY ___\n  quantite = stocks.quantite + nouv.quantite;",
+          "answers": [
+            "DUPLICATE",
+            "UPDATE"
+          ],
+          "distractors": [
+            "CONFLICT",
+            "REPLACE",
+            "UNIQUE"
+          ],
+          "explanation": "ON CONFLICT est la syntaxe de PostgreSQL et SQLite.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "my-requetes-q5",
+          "prompt": "Dans EXPLAIN, Extra affiche « Using index ». Qu'est-ce que cela signifie ?",
+          "choices": [
+            "L'index est couvrant : la requête est servie sans lire les lignes de la table",
+            "Un index a été créé",
+            "L'index est inutilisé",
+            "La requête utilise tous les index"
+          ],
+          "answerIndex": 0,
+          "explanation": "Toutes les colonnes nécessaires se trouvent dans l'index.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "my-requetes-q6",
+          "prompt": "Quelles conditions peuvent utiliser l'index (client_id, cree_le) ?",
+          "choices": [
+            "WHERE client_id = 42",
+            "WHERE client_id = 42 AND cree_le >= '2026-01-01'",
+            "WHERE client_id = 42 ORDER BY cree_le",
+            "WHERE cree_le >= '2026-01-01'"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le tri sur cree_le est même gratuit une fois client_id fixé.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "my-exploitation",
+      "title": "Transactions et réplication",
+      "summary": "Isolation, verrous, réplicas et mode strict.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "REPEATABLE READ",
+          "body": "Le niveau d'isolation par défaut d'InnoDB est REPEATABLE READ : une transaction lit un instantané cohérent. Pour les lectures verrouillantes (SELECT … FOR UPDATE) et les modifications, InnoDB pose des verrous « next-key », qui couvrent aussi les intervalles entre les lignes pour empêcher les insertions fantômes. Ils peuvent provoquer des attentes et des interblocages inattendus."
+        },
+        {
+          "title": "La réplication",
+          "body": "Le serveur principal écrit les modifications dans le binlog ; les réplicas le rejouent, de façon asynchrone par défaut. Un réplica peut donc être en retard : relire sur un réplica juste après une écriture peut renvoyer l'ancienne valeur. Les GTID identifient chaque transaction et simplifient les bascules ; la réplication semi-synchrone attend qu'au moins un réplica ait reçu la transaction."
+        },
+        {
+          "title": "Le mode strict",
+          "body": "Sans STRICT_TRANS_TABLES dans sql_mode, MySQL tronque silencieusement une chaîne trop longue ou remplace une date invalide, avec un simple avertissement. Le mode strict, actif par défaut depuis MySQL 5.7, transforme ces cas en erreurs : il ne faut pas le désactiver.",
+          "code": "SELECT @@sql_mode;\n-- ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,..."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "my-exploitation-q1",
+          "prompt": "Quel est le niveau d'isolation par défaut d'InnoDB ?",
+          "choices": [
+            "REPEATABLE READ",
+            "READ COMMITTED",
+            "SERIALIZABLE",
+            "READ UNCOMMITTED"
+          ],
+          "answerIndex": 0,
+          "explanation": "PostgreSQL et SQL Server utilisent READ COMMITTED par défaut.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "my-exploitation-q2",
+          "prompt": "Un utilisateur modifie son profil puis la page, lue sur un réplica, affiche l'ancienne valeur. Pourquoi ?",
+          "choices": [
+            "La réplication est asynchrone : le réplica n'a pas encore rejoué la modification",
+            "La transaction a échoué",
+            "Le cache du navigateur",
+            "InnoDB a perdu la donnée"
+          ],
+          "answerIndex": 0,
+          "explanation": "On lit ses propres écritures sur le principal pendant quelques secondes, ou on attend que le réplica ait rattrapé le GTID.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "my-exploitation-q3",
+          "prompt": "À quoi servent les verrous next-key d'InnoDB ?",
+          "choices": [
+            "À verrouiller aussi l'intervalle avant une ligne, pour empêcher les insertions fantômes",
+            "À verrouiller la table entière",
+            "À accélérer les lectures",
+            "À répliquer les données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ils expliquent des attentes surprenantes sur des insertions dans un intervalle verrouillé.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "my-exploitation-q4",
+          "prompt": "Des noms trop longs sont tronqués sans erreur. Touche la ligne en cause.",
+          "code": "SET SESSION sql_mode = 'NO_ENGINE_SUBSTITUTION';\nINSERT INTO clients (nom)\nVALUES ('Un nom bien plus long que la colonne');",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Sans STRICT_TRANS_TABLES, MySQL tronque et se contente d'un avertissement. On garde le mode strict par défaut.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "my-exploitation-q5",
+          "prompt": "Remets dans l'ordre le trajet d'une écriture répliquée de façon asynchrone.",
+          "language": "text",
+          "lines": [
+            "La transaction est validée sur le principal",
+            "Elle est écrite dans le binlog",
+            "Le réplica récupère l'événement dans son relay log",
+            "Le réplica rejoue la transaction",
+            "La modification devient visible sur le réplica"
+          ],
+          "explanation": "Le principal répond au client dès la première étape : le reste se fait en arrière-plan.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "my-exploitation-q6",
+          "prompt": "Quelles affirmations sur la réplication MySQL sont vraies ?",
+          "choices": [
+            "Elle est asynchrone par défaut",
+            "Les GTID simplifient les bascules",
+            "La semi-synchrone attend l'accusé de réception d'au moins un réplica",
+            "Un réplica n'a jamais de retard"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le retard des réplicas se surveille en permanence.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "my-defi",
+    "title": "Défi entretien : la boutique qui ralentit",
+    "summary": "Index, réplicas et verrous.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "my-defi-q1",
+        "prompt": "Cas pratique 1/3 — La page « mes commandes » d'une boutique MySQL met 3 secondes. EXPLAIN montre type = ALL sur 20 millions de lignes, pour WHERE client_id = ? ORDER BY cree_le DESC. Que faire ?",
+        "choices": [
+          "Créer l'index (client_id, cree_le)",
+          "Créer un index sur cree_le seul",
+          "Passer à MyISAM",
+          "Augmenter le délai d'attente"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le filtre et le tri sont servis par le même index.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "my-defi-q2",
+        "prompt": "Cas pratique 2/3 — Pour soulager le principal, les lectures passent sur des réplicas. Des clients voient leur nouvelle commande absente juste après l'avoir passée. Que faire ?",
+        "choices": [
+          "Lire sur le principal juste après une écriture de l'utilisateur, ou attendre que le réplica ait rattrapé",
+          "Supprimer les réplicas",
+          "Rendre toute la réplication synchrone",
+          "Demander aux clients de recharger"
+        ],
+        "answerIndex": 0,
+        "explanation": "La cohérence « lire ses propres écritures » suffit le plus souvent.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "my-defi-q3",
+        "prompt": "Cas pratique 3/3 — Des interblocages apparaissent sur la table des stocks pendant les soldes. Quelle piste ?",
+        "choices": [
+          "Accéder aux lignes toujours dans le même ordre, garder des transactions courtes, et réessayer la transaction en cas d'interblocage",
+          "Désactiver InnoDB",
+          "Supprimer les index",
+          "Augmenter la mémoire"
+        ],
+        "answerIndex": 0,
+        "explanation": "InnoDB détecte l'interblocage et annule une transaction : l'application doit la rejouer.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "my-defi-q4",
+        "prompt": "Pourquoi MariaDB n'est-elle pas toujours un remplacement direct de MySQL 8 ?",
+        "choices": [
+          "Les deux projets ont divergé : type JSON, fonctions et options de réplication diffèrent",
+          "MariaDB ne gère pas SQL",
+          "MariaDB est payante",
+          "MariaDB ne fonctionne que sous Windows"
+        ],
+        "answerIndex": 0,
+        "explanation": "Par exemple, JSON est un alias de LONGTEXT dans MariaDB, et un type binaire dans MySQL.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "my-defi-q5",
+        "prompt": "Ce compteur de stock ne suit pas les achats simultanés. Touche la ligne en cause.",
+        "code": "START TRANSACTION;\nSELECT quantite FROM stocks WHERE produit_id = 7;\n-- l'application calcule quantite - 1\nUPDATE stocks SET quantite = 4 WHERE produit_id = 7;\nCOMMIT;",
+        "bugLines": [
+          2
+        ],
+        "explanation": "La lecture n'est pas verrouillante : deux transactions lisent 5 et écrivent 4. On ajoute FOR UPDATE, ou on écrit directement quantite = quantite - 1.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "my-defi-q6",
+        "prompt": "Quelles bonnes pratiques pour MySQL ?",
+        "choices": [
+          "utf8mb4 comme jeu de caractères",
+          "Le mode SQL strict activé",
+          "Une clé primaire courte et croissante",
+          "MyISAM pour les données transactionnelles"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "MyISAM n'a ni transactions ni récupération fiable après un crash.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

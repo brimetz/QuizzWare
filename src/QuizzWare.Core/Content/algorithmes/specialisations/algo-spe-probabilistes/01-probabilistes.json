@@ -1,0 +1,433 @@
+{
+  "id": "prob-ch-essentiel",
+  "title": "Structures probabilistes : l'essentiel",
+  "summary": "Filtres de Bloom, HyperLogLog.",
+  "lessons": [
+    {
+      "id": "prob-bloom",
+      "title": "Le filtre de Bloom",
+      "summary": "« Peut-être présent » ou « certainement absent ».",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le principe",
+          "body": "Un filtre de Bloom est un tableau de m bits et k fonctions de hachage. Ajouter un élément met à 1 les k bits désignés. Pour tester un élément, on regarde ses k bits : s'il y en a un à 0, l'élément est certainement absent ; s'ils sont tous à 1, il est peut-être présent.",
+          "code": "def ajouter(bits, x):\n    for h in hachages(x):\n        bits[h % len(bits)] = 1\n\ndef peut_etre_present(bits, x):\n    return all(bits[h % len(bits)] for h in hachages(x))"
+        },
+        {
+          "title": "Faux positifs, pas de faux négatifs",
+          "body": "Des bits mis à 1 par d'autres éléments peuvent faire croire à la présence d'un élément jamais ajouté : c'est un faux positif. En revanche, un élément ajouté n'est jamais déclaré absent. Avec environ 10 bits par élément et k = 7, le taux de faux positifs tourne autour de 1 %."
+        },
+        {
+          "title": "Les usages",
+          "body": "On place le filtre devant une opération coûteuse pour éviter les recherches inutiles : une base comme Cassandra ou RocksDB évite de lire un fichier sur disque qui ne contient pas la clé ; un navigateur vérifie une URL dans une liste de sites dangereux sans la télécharger entièrement."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "prob-bloom-q1",
+          "prompt": "Que garantit un filtre de Bloom qui répond « absent » ?",
+          "choices": [
+            "L'élément n'a certainement jamais été ajouté",
+            "L'élément est peut-être absent",
+            "L'élément a été supprimé",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un élément ajouté a mis tous ses bits à 1 : aucun ne peut être à 0.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "prob-bloom-q2",
+          "prompt": "Qu'est-ce qu'un faux positif dans un filtre de Bloom ?",
+          "choices": [
+            "Un élément jamais ajouté dont tous les bits ont été mis à 1 par d'autres éléments",
+            "Un élément ajouté déclaré absent",
+            "Une collision de clés en base",
+            "Une erreur de mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le taux augmente à mesure que le tableau se remplit.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "prob-bloom-q3",
+          "prompt": "Pourquoi ne peut-on pas supprimer un élément d'un filtre de Bloom classique ?",
+          "choices": [
+            "Remettre ses bits à 0 effacerait aussi des bits partagés avec d'autres éléments, créant des faux négatifs",
+            "Parce que le tableau est en lecture seule",
+            "Parce que les hachages sont secrets",
+            "On peut, sans risque"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le filtre de Bloom à compteurs remplace chaque bit par un petit compteur pour permettre la suppression.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "prob-bloom-q4",
+          "prompt": "Complète le test de présence.",
+          "code": "def peut_etre_present(bits, x):\n    return ___(bits[h % len(bits)] for h in ___(x))",
+          "answers": [
+            "all",
+            "hachages"
+          ],
+          "distractors": [
+            "any",
+            "sum",
+            "range"
+          ],
+          "explanation": "Il suffit d'un bit à 0 pour conclure à l'absence : all est requis, pas any.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "prob-bloom-q5",
+          "prompt": "Ce filtre répond « peut-être présent » pour presque tout. Touche la ligne en cause.",
+          "code": "def peut_etre_present(bits, x):\n    return any(bits[h % len(bits)] for h in hachages(x))",
+          "bugLines": [
+            2
+          ],
+          "explanation": "any se contente d'un bit à 1 parmi k. Il faut que tous les bits soient à 1 : all.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "prob-bloom-q6",
+          "prompt": "Où trouve-t-on des filtres de Bloom ?",
+          "choices": [
+            "Dans les bases de données, pour éviter des lectures disque inutiles",
+            "Dans les caches, pour éviter les requêtes sur des clés inexistantes",
+            "Dans les navigateurs, pour vérifier des URL dangereuses",
+            "Dans le chiffrement des mots de passe"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le filtre de Bloom n'a aucune propriété cryptographique.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "prob-comptage",
+      "title": "Compter approximativement",
+      "summary": "HyperLogLog et Count-Min Sketch.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Compter les valeurs distinctes",
+          "body": "Compter exactement les visiteurs uniques d'un site exige de garder chaque identifiant : des centaines de mégaoctets. HyperLogLog estime ce nombre avec quelques kilo-octets. Son idée : dans des hachages aléatoires, voir un hachage commençant par k zéros suggère qu'on a vu environ 2^k valeurs distinctes."
+        },
+        {
+          "title": "HyperLogLog en pratique",
+          "body": "Pour réduire la variance, on répartit les hachages dans de nombreux registres et on combine leurs estimations. Redis l'implémente avec 12 Ko par compteur et une erreur standard de 0,81 %. Deux compteurs se fusionnent sans perte : on peut compter par jour puis obtenir la semaine.",
+          "code": "PFADD visiteurs:lundi alice bob carla\nPFADD visiteurs:mardi bob david\nPFCOUNT visiteurs:lundi visiteurs:mardi",
+          "language": "text"
+        },
+        {
+          "title": "Count-Min Sketch",
+          "body": "Pour estimer la fréquence de chaque élément d'un flux (les mots-clés les plus recherchés), Count-Min Sketch utilise d lignes de w compteurs, chacune avec sa fonction de hachage. On incrémente un compteur par ligne ; l'estimation est le minimum des d compteurs. Elle peut surestimer à cause des collisions, jamais sous-estimer."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "prob-comptage-q1",
+          "prompt": "Que compte HyperLogLog ?",
+          "choices": [
+            "Le nombre approximatif de valeurs distinctes, avec très peu de mémoire",
+            "La fréquence exacte de chaque valeur",
+            "La somme des valeurs",
+            "Le nombre exact de lignes d'une table"
+          ],
+          "answerIndex": 0,
+          "explanation": "On parle aussi d'estimation de cardinalité.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "prob-comptage-q2",
+          "prompt": "Combien de visiteurs distincts renvoie (approximativement) ce PFCOUNT ?",
+          "code": "PFADD visiteurs:lundi alice bob carla\nPFADD visiteurs:mardi bob david\nPFCOUNT visiteurs:lundi visiteurs:mardi",
+          "language": "text",
+          "choices": [
+            "4",
+            "5",
+            "3",
+            "2"
+          ],
+          "answerIndex": 0,
+          "explanation": "alice, bob, carla et david : bob n'est compté qu'une fois dans l'union.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "prob-comptage-q3",
+          "prompt": "Quelle mémoire occupe un compteur HyperLogLog dans Redis ?",
+          "choices": [
+            "Environ 12 Ko, quel que soit le nombre de valeurs",
+            "Proportionnelle au nombre de valeurs",
+            "1 octet",
+            "1 Go"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour une erreur standard de 0,81 %.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "prob-comptage-q4",
+          "prompt": "Dans quel sens se trompe Count-Min Sketch ?",
+          "choices": [
+            "Il peut surestimer une fréquence, jamais la sous-estimer",
+            "Il peut sous-estimer, jamais surestimer",
+            "Dans les deux sens",
+            "Il est exact"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les collisions ajoutent des comptes d'autres éléments ; le minimum limite l'effet.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "prob-comptage-q5",
+          "prompt": "Cette estimation Count-Min est bien trop élevée. Touche la ligne en cause.",
+          "code": "def estimer(table, x):\n    return max(table[i][h % len(table[i])]\n               for i, h in enumerate(hachages(x)))",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Chaque compteur surestime ; le moins pollué est le plus petit : il faut min.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "prob-comptage-q6",
+          "prompt": "Quelles propriétés d'HyperLogLog sont vraies ?",
+          "choices": [
+            "Une mémoire fixe et faible",
+            "Des compteurs fusionnables sans perte de précision",
+            "Une erreur relative d'environ 1 %",
+            "La liste des valeurs vues peut être retrouvée"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "On ne garde que des registres : les valeurs elles-mêmes sont perdues.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "prob-choisir",
+      "title": "Choisir et dimensionner",
+      "summary": "Échantillonnage, réglages et compromis.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "L'échantillonnage par réservoir",
+          "body": "Pour tirer k éléments uniformément d'un flux de taille inconnue, on garde les k premiers, puis on remplace un élément du réservoir par le i-ème élément avec une probabilité k/i. À tout moment, chaque élément vu a la même probabilité d'être dans le réservoir.",
+          "code": "import random\n\ndef reservoir(flux, k):\n    r = []\n    for i, x in enumerate(flux, 1):\n        if i <= k:\n            r.append(x)\n        else:\n            j = random.randint(1, i)\n            if j <= k:\n                r[j - 1] = x\n    return r"
+        },
+        {
+          "title": "Dimensionner un filtre de Bloom",
+          "body": "Pour n éléments et un taux de faux positifs p visé, on choisit m bits et k hachages. Le nombre optimal de hachages vaut k = (m / n) × ln 2. Si on ajoute bien plus d'éléments que prévu, le taux de faux positifs explose : on reconstruit un filtre plus grand."
+        },
+        {
+          "title": "Exact ou approximatif",
+          "body": "Ces structures échangent l'exactitude contre la mémoire et la vitesse. Elles conviennent aux statistiques, aux tableaux de bord et aux filtres devant un traitement exact ; pas à la facturation ni à ce qui exige une réponse juste à l'unité."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "prob-choisir-q1",
+          "prompt": "Avec quelle probabilité l'échantillonnage par réservoir garde-t-il le i-ème élément (i > k) ?",
+          "choices": [
+            "k / i",
+            "1 / k",
+            "1 / 2",
+            "i / k"
+          ],
+          "answerIndex": 0,
+          "explanation": "Cela garantit que chacun des i éléments vus a la même chance d'être dans le réservoir.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "prob-choisir-q2",
+          "prompt": "Un filtre de Bloom prévu pour 1 million d'éléments en reçoit 10 millions. Que se passe-t-il ?",
+          "choices": [
+            "Presque tous les bits passent à 1 et le taux de faux positifs explose",
+            "Rien",
+            "Il génère des faux négatifs",
+            "Il s'agrandit automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un filtre de Bloom se dimensionne à l'avance ; on le reconstruit plus grand.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "prob-choisir-q3",
+          "prompt": "Complète l'échantillonnage par réservoir.",
+          "code": "for i, x in enumerate(flux, 1):\n    if i <= k:\n        r.append(x)\n    else:\n        j = random.randint(1, ___)\n        if j <= ___:\n            r[j - 1] = x",
+          "answers": [
+            "i",
+            "k"
+          ],
+          "distractors": [
+            "len(r)",
+            "x",
+            "2"
+          ],
+          "explanation": "j tombe dans le réservoir avec une probabilité k / i.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "prob-choisir-q4",
+          "prompt": "Avec 10 bits par élément, combien de fonctions de hachage optimisent un filtre de Bloom ?",
+          "choices": [
+            "Environ 7",
+            "1",
+            "10",
+            "100"
+          ],
+          "answerIndex": 0,
+          "explanation": "k = (m / n) × ln 2 ≈ 10 × 0,693 ≈ 7, pour environ 1 % de faux positifs.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "prob-choisir-q5",
+          "prompt": "Ce réservoir n'est pas uniforme : les derniers éléments du flux sont surreprésentés. Touche la ligne en cause.",
+          "code": "def reservoir(flux, k):\n    r = []\n    for i, x in enumerate(flux, 1):\n        if i <= k:\n            r.append(x)\n        elif random.random() < 0.5:\n            r[random.randrange(k)] = x\n    return r",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Avec une probabilité fixe de 1/2, chaque nouvel élément a de fortes chances d'entrer, et les premiers sont vite remplacés. La probabilité doit décroître : k / i.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "prob-choisir-q6",
+          "prompt": "Pour quels besoins une structure probabiliste convient-elle ?",
+          "choices": [
+            "Le nombre approximatif de visiteurs uniques",
+            "Éviter des lectures disque inutiles",
+            "Les mots-clés les plus fréquents d'un flux",
+            "Le montant exact d'une facture"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une facture exige une réponse exacte.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "prob-defi",
+    "title": "Défi entretien : l'analytique à grande échelle",
+    "summary": "Des milliards d'événements, quelques kilo-octets.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "prob-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un site reçoit 2 milliards de pages vues par jour et veut le nombre de visiteurs uniques par page et par jour, pour 100 000 pages. Quelle approche ?",
+        "choices": [
+          "Un HyperLogLog par page et par jour",
+          "Un ensemble exact de visiteurs par page",
+          "Une requête SELECT COUNT(DISTINCT …) sur les journaux bruts à chaque affichage",
+          "Un filtre de Bloom par page"
+        ],
+        "answerIndex": 0,
+        "explanation": "100 000 × 12 Ko = 1,2 Go par jour, au lieu de dizaines de gigaoctets d'identifiants.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "prob-defi-q2",
+        "prompt": "Cas pratique 2/3 — On veut ensuite les visiteurs uniques de la semaine. Comment ?",
+        "choices": [
+          "Fusionner les sept HyperLogLog journaliers",
+          "Additionner les sept comptes journaliers",
+          "Recalculer depuis les journaux bruts",
+          "C'est impossible"
+        ],
+        "answerIndex": 0,
+        "explanation": "Additionner compterait plusieurs fois un visiteur revenu plusieurs jours.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "prob-defi-q3",
+        "prompt": "Cas pratique 3/3 — On veut aussi les 100 recherches les plus fréquentes, sur un flux sans fin. Quelle approche ?",
+        "choices": [
+          "Un Count-Min Sketch pour les fréquences, avec un tas des 100 meilleures",
+          "Un dictionnaire exact de toutes les recherches",
+          "Un HyperLogLog",
+          "Un filtre de Bloom"
+        ],
+        "answerIndex": 0,
+        "explanation": "La mémoire reste bornée quel que soit le nombre de recherches différentes.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "prob-defi-q4",
+        "prompt": "Un cache reçoit beaucoup de requêtes pour des clés qui n'existent pas en base. Quelle structure ajouter ?",
+        "choices": [
+          "Un filtre de Bloom des clés existantes, consulté avant la base",
+          "Un HyperLogLog",
+          "Un Count-Min Sketch",
+          "Un réservoir"
+        ],
+        "answerIndex": 0,
+        "explanation": "« Certainement absent » évite la requête en base.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "prob-defi-q5",
+        "prompt": "Le nombre de visiteurs uniques de la semaine est largement surestimé. Touche la ligne en cause.",
+        "code": "PFADD visiteurs:lundi alice bob\nPFADD visiteurs:mardi bob carla\nsemaine = PFCOUNT(visiteurs:lundi) + PFCOUNT(visiteurs:mardi)",
+        "language": "text",
+        "bugLines": [
+          3
+        ],
+        "explanation": "bob est compté deux fois. Il faut PFCOUNT visiteurs:lundi visiteurs:mardi, qui compte l'union.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "prob-defi-q6",
+        "prompt": "Quelles associations besoin → structure sont justes ?",
+        "choices": [
+          "Appartenance à un ensemble → filtre de Bloom",
+          "Nombre de valeurs distinctes → HyperLogLog",
+          "Fréquences dans un flux → Count-Min Sketch",
+          "Échantillon uniforme d'un flux → filtre de Bloom"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'échantillon uniforme d'un flux s'obtient par réservoir.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

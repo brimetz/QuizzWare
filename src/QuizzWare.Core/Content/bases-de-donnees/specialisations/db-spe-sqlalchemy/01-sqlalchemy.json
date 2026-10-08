@@ -1,0 +1,449 @@
+{
+  "id": "sqla-ch-essentiel",
+  "title": "SQLAlchemy : l'essentiel",
+  "summary": "L'ORM et la boîte à outils SQL de référence en Python.",
+  "lessons": [
+    {
+      "id": "sqla-modeles",
+      "title": "Modèles et sessions",
+      "summary": "Déclarer, ajouter, valider.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Core et ORM",
+          "body": "SQLAlchemy a deux couches : Core, qui construit du SQL en Python avec des objets Table et des expressions, et l'ORM, qui associe des classes aux tables. La version 2.0 unifie les deux autour de select() et d'annotations de types."
+        },
+        {
+          "title": "Déclarer un modèle",
+          "body": "On hérite d'une classe de base, on annote chaque colonne avec Mapped[...] et on la configure avec mapped_column(). Une annotation Optional rend la colonne nullable.",
+          "code": "class Base(DeclarativeBase):\n    pass\n\nclass Client(Base):\n    __tablename__ = \"clients\"\n    id: Mapped[int] = mapped_column(primary_key=True)\n    nom: Mapped[str] = mapped_column(String(100))\n    email: Mapped[str | None]",
+          "language": "python"
+        },
+        {
+          "title": "La session",
+          "body": "La session est une unité de travail : elle suit les objets ajoutés et modifiés, puis envoie les INSERT et UPDATE au commit. On l'utilise dans un bloc with, qui la ferme à la sortie.",
+          "code": "engine = create_engine(\"postgresql+psycopg://app@localhost/boutique\")\n\nwith Session(engine) as session:\n    session.add(Client(nom=\"Zoé\"))\n    session.commit()",
+          "language": "python"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sqla-modeles-q1",
+          "prompt": "Quelle différence entre Core et l'ORM de SQLAlchemy ?",
+          "choices": [
+            "Core construit du SQL avec des expressions Python ; l'ORM associe des classes aux tables",
+            "Core est payant",
+            "L'ORM ne génère pas de SQL",
+            "Ce sont deux bibliothèques concurrentes"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'ORM s'appuie sur Core.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "sqla-modeles-q2",
+          "prompt": "Complète ce modèle en style 2.0.",
+          "code": "class Client(Base):\n    __tablename__ = \"clients\"\n    id: ___[int] = mapped_column(primary_key=True)\n    nom: Mapped[str] = ___(String(100))",
+          "language": "python",
+          "answers": [
+            "Mapped",
+            "mapped_column"
+          ],
+          "distractors": [
+            "Column",
+            "Field",
+            "relationship"
+          ],
+          "explanation": "Column est l'ancienne syntaxe ; elle fonctionne encore mais sans le typage.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sqla-modeles-q3",
+          "prompt": "Quand l'INSERT est-il envoyé à la base après session.add(client) ?",
+          "choices": [
+            "Au flush, au plus tard au commit (ou avant une requête qui en dépend)",
+            "Immédiatement à l'appel de add",
+            "Jamais",
+            "À la fermeture du programme"
+          ],
+          "answerIndex": 0,
+          "explanation": "La session accumule les changements puis les envoie ensemble.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sqla-modeles-q4",
+          "prompt": "Que signifie l'annotation email: Mapped[str | None] ?",
+          "choices": [
+            "Une colonne nullable de type chaîne",
+            "Une colonne obligatoire",
+            "Une colonne ignorée par l'ORM",
+            "Une erreur de syntaxe"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'annotation suffit à déduire le type et la nullabilité.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sqla-modeles-q5",
+          "prompt": "Le client n'est jamais enregistré en base. Touche la ligne qui manque.",
+          "code": "with Session(engine) as session:\n    client = Client(nom=\"Zoé\")\n    session.add(client)\n    print(\"Client créé\")",
+          "language": "python",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Sans session.commit(), la transaction est annulée à la fermeture de la session.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sqla-modeles-q6",
+          "prompt": "Que fait la session de SQLAlchemy ?",
+          "choices": [
+            "Elle suit les objets ajoutés et modifiés",
+            "Elle regroupe les changements en une transaction",
+            "Elle garantit une seule instance par ligne dans la session (identity map)",
+            "Elle crée automatiquement les tables"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les tables se créent avec Base.metadata.create_all(engine) ou, mieux, des migrations.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "sqla-requetes",
+      "title": "Requêtes",
+      "summary": "select(), where et les pièges des opérateurs Python.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "select()",
+          "body": "En 2.0, on construit une requête avec select(), puis on l'exécute avec la session. session.scalars() renvoie directement les objets ; scalar_one() exige exactement un résultat.",
+          "code": "stmt = (\n    select(Client)\n    .where(Client.nom.startswith(\"Z\"))\n    .order_by(Client.nom)\n    .limit(10)\n)\nclients = session.scalars(stmt).all()",
+          "language": "python"
+        },
+        {
+          "title": "Les opérateurs",
+          "body": "Client.age > 18 ne s'évalue pas en Python : il produit une expression SQL. Plusieurs conditions passées à where() sont combinées par AND ; and_() et or_() les composent explicitement. Le mot-clé Python and, lui, ne peut pas être surchargé et lève une erreur."
+        },
+        {
+          "title": "NULL",
+          "body": "Client.email == None est traduit en email IS NULL. En revanche Client.email is None est une comparaison Python ordinaire, qui vaut toujours False. On préfère Client.email.is_(None), explicite et accepté par les linters."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sqla-requetes-q1",
+          "prompt": "Comment récupérer une liste d'objets Client avec SQLAlchemy 2.0 ?",
+          "choices": [
+            "session.scalars(select(Client)).all()",
+            "Client.objects.all()",
+            "session.query_all(Client)",
+            "select(Client).fetch()"
+          ],
+          "answerIndex": 0,
+          "explanation": "Client.objects.all() est la syntaxe de Django.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sqla-requetes-q2",
+          "prompt": "Cette requête lève TypeError: Boolean value of this clause is not defined. Touche la ligne en cause.",
+          "code": "stmt = select(Client).where(\n    Client.age >= 18 and Client.actif\n)\nclients = session.scalars(stmt).all()",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le and de Python force l'évaluation booléenne de l'expression SQL. On passe deux arguments à where(), ou on utilise and_().",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "sqla-requetes-q3",
+          "prompt": "Que produit .where(Client.email is None) ?",
+          "choices": [
+            "Une condition toujours fausse : is est évalué en Python et vaut False",
+            "email IS NULL",
+            "email = NULL",
+            "Une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il faut Client.email.is_(None) ou Client.email == None.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "sqla-requetes-q4",
+          "prompt": "Complète cette requête : les clients de Lyon ou de Lille.",
+          "code": "stmt = select(Client).where(\n    ___(Client.ville == \"Lyon\", Client.ville == \"Lille\")\n)\nclients = session.___(stmt).all()",
+          "language": "python",
+          "answers": [
+            "or_",
+            "scalars"
+          ],
+          "distractors": [
+            "or",
+            "and_",
+            "query"
+          ],
+          "explanation": "Client.ville.in_([\"Lyon\", \"Lille\"]) serait encore plus simple.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sqla-requetes-q5",
+          "prompt": "Que fait session.scalar_one(stmt) si aucune ligne ne correspond ?",
+          "choices": [
+            "Elle lève une exception NoResultFound",
+            "Elle renvoie None",
+            "Elle renvoie une liste vide",
+            "Elle crée la ligne"
+          ],
+          "answerIndex": 0,
+          "explanation": "scalar_one_or_none() renvoie None dans ce cas.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sqla-requetes-q6",
+          "prompt": "Quelles écritures produisent bien un filtre SQL ?",
+          "choices": [
+            ".where(Client.age >= 18, Client.actif)",
+            ".where(and_(Client.age >= 18, Client.actif))",
+            ".where(Client.email.is_(None))",
+            ".where(Client.age >= 18 and Client.actif)"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le and de Python ne peut pas être surchargé.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "sqla-relations",
+      "title": "Relations et migrations",
+      "summary": "N+1, chargement et Alembic.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les relations",
+          "body": "relationship() relie deux modèles à partir d'une clé étrangère ; back_populates synchronise les deux côtés. Par défaut, la relation est chargée paresseusement : la première lecture de client.commandes déclenche une requête.",
+          "code": "class Client(Base):\n    __tablename__ = \"clients\"\n    id: Mapped[int] = mapped_column(primary_key=True)\n    commandes: Mapped[list[\"Commande\"]] = relationship(\n        back_populates=\"client\")\n\nclass Commande(Base):\n    __tablename__ = \"commandes\"\n    id: Mapped[int] = mapped_column(primary_key=True)\n    client_id: Mapped[int] = mapped_column(ForeignKey(\"clients.id\"))\n    client: Mapped[Client] = relationship(back_populates=\"commandes\")",
+          "language": "python"
+        },
+        {
+          "title": "Le problème N+1",
+          "body": "Afficher 100 clients et leurs commandes déclenche 1 requête pour les clients, puis 100 pour les commandes. selectinload charge toutes les commandes en une seconde requête (WHERE client_id IN …) ; joinedload utilise une jointure, adaptée aux relations vers un seul objet. Avec AsyncSession, le chargement paresseux implicite est impossible : il faut charger explicitement.",
+          "code": "stmt = select(Client).options(selectinload(Client.commandes))",
+          "language": "python"
+        },
+        {
+          "title": "Alembic",
+          "body": "Alembic gère les migrations : il compare les modèles au schéma et génère un script, à relire avant de l'appliquer car il ne détecte pas tout (un renommage apparaît comme une suppression suivie d'un ajout).",
+          "code": "alembic revision --autogenerate -m \"ajout email client\"\nalembic upgrade head",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sqla-relations-q1",
+          "prompt": "Une page liste 50 clients et leurs commandes ; les logs montrent 51 requêtes. Que faire ?",
+          "choices": [
+            "Charger les commandes avec .options(selectinload(Client.commandes))",
+            "Ajouter un index",
+            "Augmenter le pool de connexions",
+            "Mettre la page en cache sans rien changer"
+          ],
+          "answerIndex": 0,
+          "explanation": "On passe à deux requêtes au total.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sqla-relations-q2",
+          "prompt": "Quelle différence entre selectinload et joinedload ?",
+          "choices": [
+            "selectinload fait une seconde requête avec IN ; joinedload ajoute une jointure à la requête principale",
+            "Aucune",
+            "joinedload est paresseux",
+            "selectinload ne fonctionne qu'avec SQLite"
+          ],
+          "answerIndex": 0,
+          "explanation": "joinedload sur une collection multiplie les lignes ; selectinload convient mieux aux collections.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "sqla-relations-q3",
+          "prompt": "Complète la relation bidirectionnelle.",
+          "code": "class Commande(Base):\n    __tablename__ = \"commandes\"\n    id: Mapped[int] = mapped_column(primary_key=True)\n    client_id: Mapped[int] = mapped_column(___(\"clients.id\"))\n    client: Mapped[Client] = relationship(___=\"commandes\")",
+          "language": "python",
+          "answers": [
+            "ForeignKey",
+            "back_populates"
+          ],
+          "distractors": [
+            "References",
+            "backref_to",
+            "lazy"
+          ],
+          "explanation": "Le côté Client déclare symétriquement back_populates=\"client\".",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "sqla-relations-q4",
+          "prompt": "Ce code async lève MissingGreenlet à l'accès aux commandes. Touche la ligne à corriger.",
+          "code": "async with AsyncSession(engine) as session:\n    stmt = select(Client).where(Client.id == 1)\n    client = await session.scalar(stmt)\n    print(len(client.commandes))",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le chargement paresseux implicite ne peut pas faire d'appel asynchrone. On ajoute .options(selectinload(Client.commandes)) à la requête.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "sqla-relations-q5",
+          "prompt": "Remets dans l'ordre l'ajout d'une colonne avec Alembic.",
+          "language": "text",
+          "lines": [
+            "Ajouter le champ au modèle",
+            "alembic revision --autogenerate -m \"ajout email\"",
+            "Relire et corriger le script généré",
+            "alembic upgrade head",
+            "Commiter le modèle et le script de migration"
+          ],
+          "explanation": "L'autogénération est une aide : le script doit être relu.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sqla-relations-q6",
+          "prompt": "Que peut manquer l'autogénération d'Alembic ?",
+          "choices": [
+            "Un renommage de colonne, vu comme une suppression et un ajout",
+            "Une migration de données",
+            "Certains changements de type ou de contraintes selon la base",
+            "L'ajout d'une nouvelle table"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une nouvelle table est bien détectée.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "sqla-defi",
+    "title": "Défi entretien : l'API FastAPI trop lente",
+    "summary": "Requêtes, chargement et sessions.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "sqla-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une API FastAPI avec SQLAlchemy renvoie 200 commandes avec leur client et leurs lignes. La réponse prend 4 secondes ; les logs SQL montrent 401 requêtes. Quelle cause ?",
+        "choices": [
+          "Un problème N+1 : le client et les lignes sont chargés paresseusement pour chaque commande",
+          "La base est trop petite",
+          "FastAPI est lent",
+          "La sérialisation JSON"
+        ],
+        "answerIndex": 0,
+        "explanation": "1 requête pour les commandes, puis 2 par commande.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sqla-defi-q2",
+        "prompt": "Cas pratique 2/3 — Comment corriger ?",
+        "choices": [
+          "joinedload(Commande.client) et selectinload(Commande.lignes) dans la requête",
+          "Un cache Redis devant chaque requête",
+          "Une session par commande",
+          "Augmenter le pool de connexions"
+        ],
+        "answerIndex": 0,
+        "explanation": "joinedload pour la relation vers un seul objet, selectinload pour la collection : trois requêtes au total.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "sqla-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment gérer la session dans les routes FastAPI ?",
+        "choices": [
+          "Une session par requête, fournie par une dépendance qui la ferme à la fin",
+          "Une session globale partagée par toutes les requêtes",
+          "Une nouvelle session par objet chargé",
+          "Aucune session"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une session n'est pas faite pour être partagée entre requêtes concurrentes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "sqla-defi-q4",
+        "prompt": "Après session.commit(), lire client.nom déclenche une nouvelle requête. Pourquoi ?",
+        "choices": [
+          "Par défaut, expire_on_commit=True expire les objets, qui sont rechargés au prochain accès",
+          "C'est un bug de SQLAlchemy",
+          "La transaction a échoué",
+          "Le cache est plein"
+        ],
+        "answerIndex": 0,
+        "explanation": "Cela garantit des valeurs fraîches. Après fermeture de la session, l'accès lève DetachedInstanceError.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "sqla-defi-q5",
+        "prompt": "Cette recherche des clients sans e-mail ne renvoie jamais rien. Touche la ligne en cause.",
+        "code": "stmt = select(Client).where(Client.email is None)\nsans_email = session.scalars(stmt).all()",
+        "language": "python",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Client.email is None vaut False en Python : la condition devient toujours fausse. Il faut Client.email.is_(None).",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "sqla-defi-q6",
+        "prompt": "Quelles bonnes pratiques avec SQLAlchemy ?",
+        "choices": [
+          "Activer les logs SQL (echo=True) en développement pour repérer les N+1",
+          "Charger explicitement les relations utilisées",
+          "Relire les migrations Alembic générées",
+          "Partager une session entre plusieurs threads"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une session n'est pas thread-safe.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

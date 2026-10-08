@@ -1,0 +1,441 @@
+{
+  "id": "ddb-ch-essentiel",
+  "title": "DynamoDB : l'essentiel",
+  "summary": "Partitions et modélisation à table unique.",
+  "lessons": [
+    {
+      "id": "ddb-cles",
+      "title": "Clés et accès",
+      "summary": "Clé de partition, clé de tri, Query et Scan.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Une base clé-valeur gérée",
+          "body": "DynamoDB est une base NoSQL entièrement gérée par AWS : pas de serveur à administrer, une latence de quelques millisecondes à n'importe quelle échelle. En échange, on ne peut interroger efficacement que par clé. Chaque élément pèse au plus 400 Ko."
+        },
+        {
+          "title": "Partition et tri",
+          "body": "La clé primaire est soit une clé de partition seule, soit une clé de partition et une clé de tri. La clé de partition est hachée pour choisir la partition physique ; la clé de tri ordonne les éléments d'une même partition, ce qui permet des requêtes par intervalle.",
+          "code": "PK = \"CLIENT#42\"   SK = \"COMMANDE#2026-03-01#981\"\nPK = \"CLIENT#42\"   SK = \"COMMANDE#2026-03-09#1204\"\nPK = \"CLIENT#42\"   SK = \"PROFIL\"",
+          "language": "text"
+        },
+        {
+          "title": "Query ou Scan",
+          "body": "Query exige une égalité sur la clé de partition, éventuellement une condition sur la clé de tri (begins_with, between) : elle ne lit que les éléments concernés. Scan lit toute la table, ce qui coûte cher et devient lent : on l'évite en production. Une FilterExpression s'applique après la lecture : les éléments filtrés sont tout de même facturés.",
+          "code": "await client.send(new QueryCommand({\n  TableName: \"Boutique\",\n  KeyConditionExpression: \"PK = :pk AND begins_with(SK, :sk)\",\n  ExpressionAttributeValues: {\n    \":pk\": \"CLIENT#42\",\n    \":sk\": \"COMMANDE#2026-03\",\n  },\n}));",
+          "language": "javascript"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ddb-cles-q1",
+          "prompt": "Quel rôle joue la clé de partition ?",
+          "choices": [
+            "Elle est hachée pour choisir la partition physique qui stocke l'élément",
+            "Elle trie les éléments",
+            "Elle chiffre l'élément",
+            "Elle n'a aucun rôle physique"
+          ],
+          "answerIndex": 0,
+          "explanation": "La clé de tri ordonne ensuite les éléments d'une même partition.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ddb-cles-q2",
+          "prompt": "Quelle différence entre Query et Scan ?",
+          "choices": [
+            "Query lit une partition donnée par sa clé ; Scan lit toute la table",
+            "Scan est plus rapide",
+            "Query lit toute la table",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un Scan sur une grosse table consomme énormément de capacité.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ddb-cles-q3",
+          "prompt": "Une Query avec FilterExpression lit 1 000 éléments et en renvoie 10. Combien sont facturés en lecture ?",
+          "choices": [
+            "Les 1 000 lus",
+            "Les 10 renvoyés",
+            "Aucun",
+            "La moitié"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le filtre s'applique après la lecture : il faut plutôt intégrer le critère dans la clé.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "ddb-cles-q4",
+          "prompt": "Complète cette requête : les commandes de mars 2026 du client 42.",
+          "code": "await client.send(new ___({\n  TableName: \"Boutique\",\n  KeyConditionExpression: \"PK = :pk AND ___(SK, :sk)\",\n  ExpressionAttributeValues: {\n    \":pk\": \"CLIENT#42\", \":sk\": \"COMMANDE#2026-03\",\n  },\n}));",
+          "language": "javascript",
+          "answers": [
+            "QueryCommand",
+            "begins_with"
+          ],
+          "distractors": [
+            "ScanCommand",
+            "contains",
+            "starts_with"
+          ],
+          "explanation": "contains n'est pas permis dans une condition de clé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ddb-cles-q5",
+          "prompt": "Quelle est la taille maximale d'un élément DynamoDB ?",
+          "choices": [
+            "400 Ko",
+            "16 Mo",
+            "1 Ko",
+            "Illimitée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les gros contenus vont dans S3, avec leur référence dans l'élément.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ddb-cles-q6",
+          "prompt": "Quelles conditions sont permises sur la clé de tri dans une Query ?",
+          "choices": [
+            "begins_with",
+            "between",
+            "Une comparaison < ou >=",
+            "contains"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "contains n'est possible que dans une FilterExpression.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "ddb-modelisation",
+      "title": "Modéliser par l'accès",
+      "summary": "Table unique et index secondaires.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Partir des requêtes",
+          "body": "En relationnel, on modélise les données puis on écrit les requêtes. Avec DynamoDB, on liste d'abord les accès (« les commandes d'un client par date », « une commande par son numéro »), puis on conçoit les clés pour que chacun soit une Query. Il n'y a pas de jointure."
+        },
+        {
+          "title": "La table unique",
+          "body": "La conception à table unique range des entités différentes dans la même table, avec des clés génériques PK et SK préfixées par le type. Le profil d'un client et ses commandes partagent la même partition : une seule Query les ramène ensemble."
+        },
+        {
+          "title": "Les index secondaires",
+          "body": "Un index secondaire global (GSI) offre une autre clé de partition et de tri, pour un autre accès : retrouver une commande par son numéro, par exemple. Il est mis à jour de façon asynchrone, donc lu de façon finalement cohérente. Un index secondaire local (LSI) garde la clé de partition, change la clé de tri, et doit être créé avec la table.",
+          "code": "PK = \"CLIENT#42\"  SK = \"COMMANDE#2026-03-09#1204\"\nGSI1PK = \"COMMANDE#1204\"  GSI1SK = \"COMMANDE#1204\"",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ddb-modelisation-q1",
+          "prompt": "Par quoi commence la modélisation d'une table DynamoDB ?",
+          "choices": [
+            "La liste des accès que l'application doit servir",
+            "Un schéma normalisé en troisième forme normale",
+            "Les jointures",
+            "Le choix de la taille des disques"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque accès doit devenir une Query sur une clé ou un index.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "ddb-modelisation-q2",
+          "prompt": "Quel est l'intérêt de ranger le profil et les commandes d'un client sous la même clé de partition ?",
+          "choices": [
+            "Une seule Query les ramène ensemble, à la place d'une jointure",
+            "Économiser des index",
+            "Chiffrer les données",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le cœur de la conception à table unique.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ddb-modelisation-q3",
+          "prompt": "On lit un GSI juste après une écriture et l'élément n'apparaît pas. Pourquoi ?",
+          "choices": [
+            "Les GSI sont mis à jour de façon asynchrone : leurs lectures sont finalement cohérentes",
+            "L'écriture a échoué",
+            "Les GSI ne contiennent jamais les nouveaux éléments",
+            "Il faut redémarrer la table"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les lectures fortement cohérentes ne sont pas disponibles sur un GSI.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "ddb-modelisation-q4",
+          "prompt": "Retrouver une commande par son numéro devient très lent quand la table grossit. Touche la ligne en cause.",
+          "code": "const r = await client.send(new ScanCommand({\n  TableName: \"Boutique\",\n  FilterExpression: \"numero = :n\",\n  ExpressionAttributeValues: { \":n\": \"1204\" },\n}));",
+          "language": "javascript",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Le Scan lit toute la table. Un GSI dont la clé de partition est le numéro de commande permet une Query directe.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "ddb-modelisation-q5",
+          "prompt": "Quelle contrainte a un index secondaire local (LSI) ?",
+          "choices": [
+            "Il doit être créé en même temps que la table et garde la même clé de partition",
+            "Il ne peut pas avoir de clé de tri",
+            "Il est réservé aux petites tables",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un GSI, lui, peut être ajouté à tout moment.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "ddb-modelisation-q6",
+          "prompt": "Quelles pratiques relèvent de la modélisation DynamoDB ?",
+          "choices": [
+            "Des clés préfixées par le type d'entité",
+            "La dénormalisation des données",
+            "Des GSI pour les accès secondaires",
+            "Des jointures entre tables"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "DynamoDB n'a pas de jointures.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "ddb-production",
+      "title": "En production",
+      "summary": "Capacité, partitions chaudes et écritures conditionnelles.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La capacité",
+          "body": "En mode à la demande, on paie chaque lecture et écriture, sans planification : adapté aux charges irrégulières. En mode provisionné, on réserve une capacité, moins chère pour une charge stable, avec mise à l'échelle automatique. Une Query renvoie au plus 1 Mo par page : on continue avec LastEvaluatedKey."
+        },
+        {
+          "title": "Les partitions chaudes",
+          "body": "Chaque partition a un débit limité. Si une seule clé reçoit l'essentiel du trafic (« COMPTEUR#GLOBAL », la date du jour), ses requêtes sont limitées même si la table a de la capacité. On répartit en ajoutant un suffixe aléatoire à la clé (sharding d'écriture), puis on agrège à la lecture."
+        },
+        {
+          "title": "Écritures conditionnelles et transactions",
+          "body": "Une ConditionExpression fait échouer une écriture si une condition n'est pas remplie : créer seulement si l'élément n'existe pas, mettre à jour seulement si la version attendue est la bonne (verrouillage optimiste). TransactWriteItems écrit plusieurs éléments de façon atomique. Les Streams diffusent chaque modification, et le TTL supprime les éléments expirés.",
+          "code": "await client.send(new PutCommand({\n  TableName: \"Boutique\",\n  Item: { PK: \"EMAIL#zoe@exemple.fr\", SK: \"EMAIL\" },\n  ConditionExpression: \"attribute_not_exists(PK)\",\n}));",
+          "language": "javascript"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "ddb-production-q1",
+          "prompt": "Comment garantir qu'une adresse e-mail n'est enregistrée qu'une fois ?",
+          "choices": [
+            "Un élément par e-mail, écrit avec ConditionExpression attribute_not_exists(PK)",
+            "Un Scan avant chaque inscription",
+            "Un index unique, comme en SQL",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "DynamoDB n'a pas de contrainte d'unicité hors clé primaire ; on combine souvent ce Put à la création du compte dans une transaction.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ddb-production-q2",
+          "prompt": "Qu'est-ce qu'une partition chaude ?",
+          "choices": [
+            "Une clé qui concentre une grande partie du trafic et atteint la limite de débit de sa partition",
+            "Une partition stockée en mémoire",
+            "Une partition récemment créée",
+            "Une partition chiffrée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les requêtes sont limitées même si la table dispose de capacité ailleurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "ddb-production-q3",
+          "prompt": "Ce code ne renvoie qu'une partie des commandes d'un gros client. Touche la ligne en cause.",
+          "code": "const r = await client.send(new QueryCommand(params));\nreturn r.Items;",
+          "language": "javascript",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Une Query renvoie au plus 1 Mo : tant que r.LastEvaluatedKey est présent, il faut relancer avec ExclusiveStartKey.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "ddb-production-q4",
+          "prompt": "Complète cette mise à jour avec verrouillage optimiste.",
+          "code": "await client.send(new UpdateCommand({\n  TableName: \"Boutique\",\n  Key: { PK: \"PRODUIT#7\", SK: \"STOCK\" },\n  UpdateExpression: \"SET quantite = :q, version = :v2\",\n  ___: \"version = :v1\",\n  ExpressionAttributeValues: { \":q\": 4, \":v1\": 3, \":v2\": 4 },\n}));",
+          "language": "javascript",
+          "answers": [
+            "ConditionExpression"
+          ],
+          "distractors": [
+            "FilterExpression",
+            "KeyConditionExpression",
+            "WhereExpression"
+          ],
+          "explanation": "Si un autre processus a modifié l'élément, la version ne correspond plus et l'écriture échoue.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "ddb-production-q5",
+          "prompt": "Quand choisir le mode de capacité à la demande ?",
+          "choices": [
+            "Pour une charge irrégulière ou imprévisible",
+            "Pour une charge parfaitement stable et élevée",
+            "Jamais",
+            "Uniquement pour les tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sous une charge stable, la capacité provisionnée revient moins cher.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "ddb-production-q6",
+          "prompt": "Que propose DynamoDB en plus des lectures et écritures ?",
+          "choices": [
+            "Des Streams qui diffusent chaque modification",
+            "Un TTL qui supprime les éléments expirés",
+            "Des transactions sur plusieurs éléments",
+            "Des jointures SQL"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les Streams déclenchent souvent des fonctions Lambda.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "ddb-defi",
+    "title": "Défi entretien : la billetterie",
+    "summary": "Modéliser et tenir la charge.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "ddb-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une billetterie sur DynamoDB doit lister les billets d'un spectateur par date, et retrouver un billet par son code QR. Quelle modélisation ?",
+        "choices": [
+          "PK = SPECTATEUR#id, SK = BILLET#date#code, et un GSI dont la clé est le code QR",
+          "Une table par spectateur",
+          "Un Scan avec filtre sur le code QR",
+          "Une seule clé pour tous les billets"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque accès devient une Query.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "ddb-defi-q2",
+        "prompt": "Cas pratique 2/3 — À l'ouverture des ventes d'un concert, toutes les réservations visent la clé CONCERT#99 et sont limitées. Que faire ?",
+        "choices": [
+          "Répartir les écritures sur plusieurs clés (CONCERT#99#0 à #9) et agréger à la lecture",
+          "Passer en Scan",
+          "Augmenter la taille des éléments",
+          "Ajouter un LSI"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le débit se répartit sur dix partitions au lieu d'une.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "ddb-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment éviter de vendre deux fois la même place ?",
+        "choices": [
+          "Un élément par place, réservé avec une écriture conditionnelle (attribute_not_exists), dans une transaction avec la création du billet",
+          "Vérifier par un Scan avant d'écrire",
+          "Accepter les doublons et rembourser",
+          "Une file d'attente sans vérification"
+        ],
+        "answerIndex": 0,
+        "explanation": "La condition est vérifiée de façon atomique par DynamoDB.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "ddb-defi-q4",
+        "prompt": "Les billets expirés doivent disparaître un an après le concert. Quelle fonctionnalité ?",
+        "choices": [
+          "Le TTL, avec un attribut d'expiration en secondes epoch",
+          "Un Scan quotidien de suppression",
+          "Une transaction",
+          "Un GSI"
+        ],
+        "answerIndex": 0,
+        "explanation": "La suppression par TTL ne consomme pas de capacité d'écriture.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "ddb-defi-q5",
+        "prompt": "Deux spectateurs obtiennent parfois la même place. Touche la ligne à compléter.",
+        "code": "await client.send(new PutCommand({\n  TableName: \"Billetterie\",\n  Item: { PK: \"CONCERT#99\", SK: \"PLACE#B12\", spectateur: id },\n}));",
+        "language": "javascript",
+        "bugLines": [
+          3
+        ],
+        "explanation": "Sans ConditionExpression: \"attribute_not_exists(SK)\", le second Put écrase simplement le premier.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "ddb-defi-q6",
+        "prompt": "Quels réflexes avoir avec DynamoDB ?",
+        "choices": [
+          "Partir des accès pour concevoir les clés",
+          "Éviter les Scan en production",
+          "Paginer avec LastEvaluatedKey",
+          "Compter sur les jointures pour relier les entités"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Il n'y a pas de jointure : on regroupe par clé.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,435 @@
+{
+  "id": "tsdb-ch-essentiel",
+  "title": "TimescaleDB : l'essentiel",
+  "summary": "Les séries temporelles dans PostgreSQL.",
+  "lessons": [
+    {
+      "id": "tsdb-hypertables",
+      "title": "Les hypertables",
+      "summary": "Une table découpée automatiquement par le temps.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des séries temporelles",
+          "body": "Mesures de capteurs, métriques, cours de bourse : des données horodatées, ajoutées en continu, rarement modifiées, et interrogées par intervalle de temps. TimescaleDB est une extension PostgreSQL optimisée pour ce cas, en gardant tout le SQL et l'écosystème PostgreSQL."
+        },
+        {
+          "title": "L'hypertable",
+          "body": "Une hypertable se manipule comme une table, mais elle est découpée en chunks, chacun couvrant un intervalle de temps (7 jours par défaut). Une requête sur la dernière heure ne touche que le chunk récent, et les index de chaque chunk restent petits.",
+          "code": "CREATE TABLE mesures (\n  instant timestamptz NOT NULL,\n  capteur_id int NOT NULL,\n  valeur double precision\n);\n\nSELECT create_hypertable('mesures', by_range('instant'));"
+        },
+        {
+          "title": "time_bucket",
+          "body": "time_bucket regroupe les instants dans des intervalles réguliers, comme un date_trunc qui accepte n'importe quelle durée.",
+          "code": "SELECT time_bucket('5 minutes', instant) AS tranche,\n       capteur_id, avg(valeur)\nFROM mesures\nWHERE instant > now() - INTERVAL '1 day'\nGROUP BY tranche, capteur_id\nORDER BY tranche;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "tsdb-hypertables-q1",
+          "prompt": "Qu'est-ce qu'une hypertable ?",
+          "choices": [
+            "Une table découpée automatiquement en chunks par intervalle de temps",
+            "Une table répliquée sur plusieurs serveurs",
+            "Une vue matérialisée",
+            "Une table en mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "On l'interroge comme une table ordinaire.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "tsdb-hypertables-q2",
+          "prompt": "Pourquoi une requête sur la dernière heure est-elle rapide sur une hypertable de plusieurs années ?",
+          "choices": [
+            "Seul le chunk récent est lu ; les autres sont exclus d'emblée",
+            "Toute la table est en cache",
+            "Les anciennes données sont supprimées",
+            "Elle n'est pas plus rapide"
+          ],
+          "answerIndex": 0,
+          "explanation": "On parle d'exclusion de chunks.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "tsdb-hypertables-q3",
+          "prompt": "Complète : la moyenne par tranche de 5 minutes.",
+          "code": "SELECT ___('5 minutes', instant) AS tranche,\n       avg(valeur)\nFROM mesures\n___ BY tranche\nORDER BY tranche;",
+          "answers": [
+            "time_bucket",
+            "GROUP"
+          ],
+          "distractors": [
+            "date_trunc",
+            "ORDER",
+            "PARTITION"
+          ],
+          "explanation": "date_trunc ne sait pas tronquer à 5 minutes.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "tsdb-hypertables-q4",
+          "prompt": "create_hypertable échoue sur cette table. Touche la ligne en cause.",
+          "code": "CREATE TABLE mesures (\n  id bigserial PRIMARY KEY,\n  instant timestamptz NOT NULL,\n  valeur double precision\n);\nSELECT create_hypertable('mesures', by_range('instant'));",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Toute contrainte d'unicité doit inclure la colonne de partitionnement. On écrit PRIMARY KEY (id, instant), ou on se passe d'identifiant.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "tsdb-hypertables-q5",
+          "prompt": "Quel est l'intervalle de temps par défaut d'un chunk ?",
+          "choices": [
+            "7 jours",
+            "1 heure",
+            "1 an",
+            "Il n'y en a pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "On l'ajuste pour que les chunks récents tiennent en mémoire.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "tsdb-hypertables-q6",
+          "prompt": "Quelles données se prêtent à TimescaleDB ?",
+          "choices": [
+            "Des mesures de capteurs",
+            "Des métriques d'infrastructure",
+            "Des cours de bourse",
+            "Un catalogue de produits rarement daté"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le catalogue tient très bien dans une table ordinaire.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "tsdb-agregats",
+      "title": "Agrégats continus",
+      "summary": "Des vues matérialisées tenues à jour.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le problème",
+          "body": "Un tableau de bord qui calcule la moyenne horaire sur un an de mesures relit des milliards de lignes à chaque affichage. Une vue matérialisée classique doit être entièrement recalculée à chaque rafraîchissement."
+        },
+        {
+          "title": "L'agrégat continu",
+          "body": "Un agrégat continu est une vue matérialisée qui ne recalcule que les tranches de temps modifiées. Une politique de rafraîchissement le tient à jour automatiquement.",
+          "code": "CREATE MATERIALIZED VIEW mesures_horaires\nWITH (timescaledb.continuous) AS\nSELECT time_bucket('1 hour', instant) AS heure,\n       capteur_id, avg(valeur) AS moyenne, max(valeur) AS maximum\nFROM mesures\nGROUP BY heure, capteur_id;\n\nSELECT add_continuous_aggregate_policy('mesures_horaires',\n  start_offset => INTERVAL '3 hours',\n  end_offset => INTERVAL '1 hour',\n  schedule_interval => INTERVAL '30 minutes');"
+        },
+        {
+          "title": "Temps réel",
+          "body": "Les tranches les plus récentes ne sont pas encore matérialisées. Un agrégat en temps réel complète à la lecture avec les données brutes récentes ; cette option est désactivée par défaut dans les versions récentes. On choisit selon le besoin de fraîcheur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "tsdb-agregats-q1",
+          "prompt": "Qu'apporte un agrégat continu par rapport à une vue matérialisée classique ?",
+          "choices": [
+            "Il ne recalcule que les tranches de temps modifiées, automatiquement",
+            "Il ne stocke rien",
+            "Il est toujours exact à la milliseconde sans coût",
+            "Aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le rafraîchissement reste peu coûteux même sur des années de données.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "tsdb-agregats-q2",
+          "prompt": "Complète la création d'un agrégat continu.",
+          "code": "CREATE ___ VIEW mesures_horaires\nWITH (timescaledb.___) AS\nSELECT time_bucket('1 hour', instant) AS heure,\n       avg(valeur) AS moyenne\nFROM mesures\nGROUP BY heure;",
+          "answers": [
+            "MATERIALIZED",
+            "continuous"
+          ],
+          "distractors": [
+            "TEMPORARY",
+            "realtime",
+            "hypertable"
+          ],
+          "explanation": "C'est une vue matérialisée avec l'option continuous.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "tsdb-agregats-q3",
+          "prompt": "La dernière heure n'apparaît pas dans l'agrégat. Pourquoi ?",
+          "choices": [
+            "Elle n'est pas encore matérialisée (end_offset), et l'agrégation en temps réel est désactivée",
+            "Les données sont perdues",
+            "L'agrégat est corrompu",
+            "time_bucket ignore l'heure courante"
+          ],
+          "answerIndex": 0,
+          "explanation": "On active l'agrégation en temps réel si cette fraîcheur est nécessaire.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "tsdb-agregats-q4",
+          "prompt": "Ce tableau de bord met 40 secondes à s'afficher. Touche la ligne à remplacer.",
+          "code": "SELECT time_bucket('1 hour', instant) AS heure, avg(valeur)\nFROM mesures\nWHERE instant > now() - INTERVAL '1 year'\nGROUP BY heure;",
+          "bugLines": [
+            2
+          ],
+          "explanation": "On relit un an de données brutes à chaque affichage. On interroge plutôt l'agrégat continu mesures_horaires.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "tsdb-agregats-q5",
+          "prompt": "Pourquoi un end_offset d'une heure dans la politique de rafraîchissement ?",
+          "choices": [
+            "Pour ne pas matérialiser la tranche en cours, encore incomplète",
+            "Pour supprimer les données d'une heure",
+            "Pour décaler le fuseau horaire",
+            "Il est obligatoire à zéro"
+          ],
+          "answerIndex": 0,
+          "explanation": "La dernière heure, encore en train de se remplir, serait recalculée sans cesse.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "tsdb-agregats-q6",
+          "prompt": "Que peut contenir un agrégat continu ?",
+          "choices": [
+            "Des moyennes par tranche",
+            "Des maximums par capteur",
+            "Des comptes par tranche",
+            "Des jointures arbitraires entre plusieurs hypertables"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les agrégats continus imposent des restrictions sur les requêtes possibles.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "tsdb-stockage",
+      "title": "Compression et rétention",
+      "summary": "Garder longtemps, à moindre coût.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La compression",
+          "body": "Les chunks anciens peuvent être convertis en stockage en colonnes compressé, souvent dix fois plus petit et plus rapide pour les agrégations. On choisit une colonne de segmentation (le capteur) pour regrouper les valeurs semblables. Les versions récentes appellent ce format le columnstore.",
+          "code": "ALTER TABLE mesures SET (\n  timescaledb.compress,\n  timescaledb.compress_segmentby = 'capteur_id'\n);\n\nSELECT add_compression_policy('mesures', INTERVAL '7 days');"
+        },
+        {
+          "title": "La rétention",
+          "body": "Supprimer des mesures anciennes avec DELETE est lent et laisse des lignes mortes à nettoyer. Une politique de rétention supprime des chunks entiers, presque instantanément.",
+          "code": "SELECT add_retention_policy('mesures', INTERVAL '90 days');"
+        },
+        {
+          "title": "Un plan de vie des données",
+          "body": "Un schéma courant : données brutes non compressées sur 7 jours, compressées jusqu'à 90 jours puis supprimées ; agrégats horaires gardés deux ans ; agrégats journaliers gardés indéfiniment."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "tsdb-stockage-q1",
+          "prompt": "Pourquoi une politique de rétention plutôt qu'un DELETE quotidien ?",
+          "choices": [
+            "Elle supprime des chunks entiers presque instantanément, sans lignes mortes à nettoyer",
+            "DELETE est interdit sur une hypertable",
+            "Elle conserve les données",
+            "Aucune différence"
+          ],
+          "answerIndex": 0,
+          "explanation": "Supprimer un chunk revient à supprimer une table.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "tsdb-stockage-q2",
+          "prompt": "À quoi sert compress_segmentby = 'capteur_id' ?",
+          "choices": [
+            "À regrouper les valeurs d'un même capteur pour mieux les compresser et les filtrer",
+            "À supprimer les capteurs inactifs",
+            "À trier les capteurs par nom",
+            "À chiffrer les données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les valeurs d'un capteur se ressemblent et se compressent bien ensemble.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "tsdb-stockage-q3",
+          "prompt": "Complète : compresser après 7 jours, supprimer après 90 jours.",
+          "code": "SELECT ___('mesures', INTERVAL '7 days');\nSELECT ___('mesures', INTERVAL '90 days');",
+          "answers": [
+            "add_compression_policy",
+            "add_retention_policy"
+          ],
+          "distractors": [
+            "drop_chunks",
+            "add_continuous_aggregate_policy",
+            "compress_chunk"
+          ],
+          "explanation": "drop_chunks et compress_chunk existent, mais s'appellent à la main.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "tsdb-stockage-q4",
+          "prompt": "Le nettoyage quotidien prend des heures et fait gonfler la base. Touche la ligne à remplacer.",
+          "code": "-- tâche planifiée chaque nuit\nDELETE FROM mesures\nWHERE instant < now() - INTERVAL '90 days';",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Un DELETE ligne par ligne laisse des lignes mortes. add_retention_policy supprime les chunks entiers.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "tsdb-stockage-q5",
+          "prompt": "Remets dans l'ordre la vie d'une mesure dans ce plan.",
+          "language": "text",
+          "lines": [
+            "Insertion dans le chunk courant",
+            "Lecture rapide pendant 7 jours, non compressée",
+            "Compression du chunk",
+            "Agrégation dans les vues horaires",
+            "Suppression du chunk après 90 jours"
+          ],
+          "explanation": "L'agrégation a lieu au fil de l'eau ; les agrégats survivent aux données brutes.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "tsdb-stockage-q6",
+          "prompt": "Quels bénéfices apporte la compression en colonnes ?",
+          "choices": [
+            "Moins d'espace disque",
+            "Des agrégations plus rapides sur les données anciennes",
+            "Moins de lectures disque",
+            "Des mises à jour fréquentes plus rapides"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Modifier des données compressées est plus coûteux : on compresse ce qui ne change plus.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "tsdb-defi",
+    "title": "Défi entretien : la supervision d'usine",
+    "summary": "Des années de mesures, des tableaux de bord rapides.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "tsdb-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une usine enregistre 5 000 capteurs à la seconde dans PostgreSQL. La table atteint 50 milliards de lignes et les requêtes récentes ralentissent. Que proposer sans quitter PostgreSQL ?",
+        "choices": [
+          "Convertir la table en hypertable TimescaleDB",
+          "Créer plus d'index sur la table",
+          "Passer à SQLite",
+          "Supprimer les mesures au bout d'une semaine"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les requêtes récentes ne touchent plus que les chunks récents.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "tsdb-defi-q2",
+        "prompt": "Cas pratique 2/3 — Les tableaux de bord affichent des moyennes horaires sur un an. Que mettre en place ?",
+        "choices": [
+          "Un agrégat continu horaire avec une politique de rafraîchissement",
+          "Un calcul à chaque affichage",
+          "Un export quotidien vers un tableur",
+          "Un cache navigateur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le tableau de bord lit 8 760 lignes par capteur au lieu de 31 millions.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "tsdb-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le stockage coûte trop cher. Les données brutes ne servent plus après 30 jours, les moyennes horaires pendant 5 ans. Quel plan ?",
+        "choices": [
+          "Compression après 7 jours, rétention à 30 jours sur les mesures, et rétention à 5 ans sur l'agrégat horaire",
+          "Tout garder sans compression",
+          "Supprimer aussi les agrégats après 30 jours",
+          "Compresser seulement les agrégats"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les agrégats survivent à la suppression des données brutes.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "tsdb-defi-q4",
+        "prompt": "Que fait time_bucket('15 minutes', '2026-03-09 10:37:00') ?",
+        "choices": [
+          "Il renvoie 2026-03-09 10:30:00",
+          "Il renvoie 2026-03-09 10:45:00",
+          "Il renvoie 2026-03-09 10:37:00",
+          "Il renvoie 2026-03-09 00:00:00"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'instant est ramené au début de sa tranche de 15 minutes.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "tsdb-defi-q5",
+        "prompt": "La conversion en hypertable échoue. Touche la ligne en cause.",
+        "code": "CREATE TABLE mesures (\n  instant timestamptz NOT NULL,\n  capteur_id int NOT NULL,\n  valeur double precision,\n  UNIQUE (capteur_id)\n);",
+        "bugLines": [
+          5
+        ],
+        "explanation": "La contrainte d'unicité doit inclure la colonne de temps, et de toute façon un capteur a plusieurs mesures : UNIQUE (capteur_id, instant).",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "tsdb-defi-q6",
+        "prompt": "Quels atouts TimescaleDB garde-t-il de PostgreSQL ?",
+        "choices": [
+          "Le SQL complet, avec jointures",
+          "Les outils et pilotes existants",
+          "Les autres extensions, comme PostGIS",
+          "Un langage de requête propriétaire"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "On interroge en SQL standard, sans nouveau langage.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

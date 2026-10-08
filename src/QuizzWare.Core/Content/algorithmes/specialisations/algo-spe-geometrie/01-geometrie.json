@@ -1,0 +1,430 @@
+{
+  "id": "geo-ch-essentiel",
+  "title": "Géométrie algorithmique : l'essentiel",
+  "summary": "Enveloppes convexes et intersections.",
+  "lessons": [
+    {
+      "id": "geo-orientation",
+      "title": "Le produit vectoriel",
+      "summary": "Le test d'orientation, brique de base.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Tourner à gauche ou à droite",
+          "body": "Pour trois points o, a et b, le produit vectoriel (a − o) × (b − o) indique le sens du virage : positif si o → a → b tourne à gauche (sens antihoraire), négatif à droite, nul si les points sont alignés. Ce seul test, en entiers, évite les angles et les divisions.",
+          "code": "def cross(o, a, b):\n    return ((a[0] - o[0]) * (b[1] - o[1])\n            - (a[1] - o[1]) * (b[0] - o[0]))\n\nprint(cross((0, 0), (1, 0), (0, 1)))"
+        },
+        {
+          "title": "L'aire d'un polygone",
+          "body": "La formule du lacet (shoelace) somme les produits vectoriels des sommets consécutifs : la moitié de la valeur absolue donne l'aire. Le signe indique le sens de parcours des sommets.",
+          "code": "def aire(p):\n    s = 0\n    for i in range(len(p)):\n        x1, y1 = p[i]\n        x2, y2 = p[(i + 1) % len(p)]\n        s += x1 * y2 - x2 * y1\n    return abs(s) / 2"
+        },
+        {
+          "title": "La précision",
+          "body": "Avec des coordonnées entières, ces calculs sont exacts. Avec des flottants, on compare à une tolérance (abs(x) < 1e-9) plutôt qu'à zéro, sinon trois points presque alignés donnent des réponses incohérentes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "geo-orientation-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def cross(o, a, b):\n    return ((a[0] - o[0]) * (b[1] - o[1])\n            - (a[1] - o[1]) * (b[0] - o[0]))\n\nprint(cross((0, 0), (1, 0), (0, 1)))",
+          "choices": [
+            "1",
+            "-1",
+            "0",
+            "2"
+          ],
+          "answerIndex": 0,
+          "explanation": "Aller de (1, 0) vers (0, 1) en partant de l'origine est un virage à gauche : valeur positive.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "geo-orientation-q2",
+          "prompt": "Que signifie un produit vectoriel nul pour trois points ?",
+          "choices": [
+            "Ils sont alignés",
+            "Ils forment un triangle rectangle",
+            "Ils sont confondus",
+            "Ils tournent à gauche"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le triangle formé a une aire nulle.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "geo-orientation-q3",
+          "prompt": "Quelle est l'aire du triangle (0, 0), (4, 0), (0, 3) ?",
+          "choices": [
+            "6",
+            "12",
+            "7",
+            "3,5"
+          ],
+          "answerIndex": 0,
+          "explanation": "Base 4, hauteur 3 : 4 × 3 / 2. La formule du lacet donne |12| / 2.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "geo-orientation-q4",
+          "prompt": "Complète la formule du lacet.",
+          "code": "for i in range(len(p)):\n    x1, y1 = p[i]\n    x2, y2 = p[(i + 1) ___ len(p)]\n    s += x1 * y2 - x2 * y1\nreturn ___(s) / 2",
+          "answers": [
+            "%",
+            "abs"
+          ],
+          "distractors": [
+            "//",
+            "max",
+            "sum"
+          ],
+          "explanation": "Le modulo relie le dernier sommet au premier ; la valeur absolue ignore le sens de parcours.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "geo-orientation-q5",
+          "prompt": "Avec des coordonnées flottantes, ce test déclare rarement des points alignés, même quand ils le sont. Touche la ligne en cause.",
+          "code": "def alignes(o, a, b):\n    return cross(o, a, b) == 0",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Les erreurs d'arrondi donnent 1e-17 au lieu de 0. On compare à une tolérance : abs(cross(o, a, b)) < 1e-9.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "geo-orientation-q6",
+          "prompt": "Que permet le produit vectoriel ?",
+          "choices": [
+            "Savoir si un virage tourne à gauche ou à droite",
+            "Tester l'alignement de trois points",
+            "Calculer l'aire d'un polygone",
+            "Trier des chaînes de caractères"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "C'est la brique de base de presque toute la géométrie algorithmique.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "geo-enveloppe",
+      "title": "L'enveloppe convexe",
+      "summary": "Le plus petit polygone convexe qui contient les points.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le problème",
+          "body": "L'enveloppe convexe d'un ensemble de points est le plus petit polygone convexe qui les contient tous, comme un élastique tendu autour de clous. Elle sert à la détection de collisions, au calcul du diamètre d'un nuage de points, à la cartographie."
+        },
+        {
+          "title": "La chaîne monotone d'Andrew",
+          "body": "On trie les points par x puis y. On construit la partie basse de gauche à droite en retirant le dernier point tant que le virage n'est pas à gauche, puis la partie haute de droite à gauche. Coût : O(n log n), dominé par le tri.",
+          "code": "def enveloppe(points):\n    pts = sorted(set(points))\n    if len(pts) <= 2:\n        return pts\n    bas, haut = [], []\n    for p in pts:\n        while len(bas) >= 2 and cross(bas[-2], bas[-1], p) <= 0:\n            bas.pop()\n        bas.append(p)\n    for p in reversed(pts):\n        while len(haut) >= 2 and cross(haut[-2], haut[-1], p) <= 0:\n            haut.pop()\n        haut.append(p)\n    return bas[:-1] + haut[:-1]"
+        },
+        {
+          "title": "Les points alignés",
+          "body": "Avec <= 0, les points alignés sur un côté sont retirés ; avec < 0, ils sont gardés. L'énoncé doit préciser lequel est attendu, car c'est une source fréquente d'erreurs."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "geo-enveloppe-q1",
+          "prompt": "Qu'est-ce que l'enveloppe convexe d'un ensemble de points ?",
+          "choices": [
+            "Le plus petit polygone convexe qui contient tous les points",
+            "Le cercle passant par tous les points",
+            "Le plus court chemin entre les points",
+            "Le rectangle aligné sur les axes"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'image de l'élastique tendu autour de clous.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "geo-enveloppe-q2",
+          "prompt": "Quel est le coût de l'algorithme de la chaîne monotone ?",
+          "choices": [
+            "O(n log n), dominé par le tri",
+            "O(n²)",
+            "O(n)",
+            "O(n³)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Après le tri, chaque point entre et sort au plus une fois de chaque chaîne.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "geo-enveloppe-q3",
+          "prompt": "Pourquoi retirer le dernier point quand cross(...) <= 0 ?",
+          "choices": [
+            "Le virage n'est pas à gauche : ce point est à l'intérieur ou aligné, il n'appartient pas à l'enveloppe stricte",
+            "Pour accélérer le tri",
+            "Pour éviter les doublons de x",
+            "Ce test est inutile"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ne garde que des virages à gauche, ce qui donne un polygone convexe.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "geo-enveloppe-q4",
+          "prompt": "Remets dans l'ordre la construction de la partie basse.",
+          "lines": [
+            "pts = sorted(set(points))",
+            "bas = []",
+            "for p in pts:",
+            "    while len(bas) >= 2 and cross(bas[-2], bas[-1], p) <= 0:",
+            "        bas.pop()",
+            "    bas.append(p)"
+          ],
+          "explanation": "On trie, puis on maintient une chaîne qui ne tourne qu'à gauche.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "geo-enveloppe-q5",
+          "prompt": "Le premier et le dernier point apparaissent deux fois dans l'enveloppe renvoyée. Touche la ligne en cause.",
+          "code": "def enveloppe(points):\n    pts = sorted(set(points))\n    bas = chaine(pts)\n    haut = chaine(list(reversed(pts)))\n    return bas + haut",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Chaque chaîne se termine par le point de départ de l'autre : bas[:-1] + haut[:-1].",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "geo-enveloppe-q6",
+          "prompt": "Où l'enveloppe convexe sert-elle ?",
+          "choices": [
+            "La détection de collisions approximative",
+            "Le calcul des deux points les plus éloignés d'un nuage",
+            "La délimitation d'une zone géographique",
+            "La compression de texte"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les deux points les plus éloignés sont toujours des sommets de l'enveloppe.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "geo-intersections",
+      "title": "Intersections et localisation",
+      "summary": "Segments, polygones et balayage.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Deux segments se coupent-ils ?",
+          "body": "Les segments [p1, p2] et [p3, p4] se coupent si p3 et p4 sont de part et d'autre de la droite (p1, p2), et p1 et p2 de part et d'autre de (p3, p4) : les produits vectoriels sont de signes opposés. Les cas alignés demandent de vérifier le recouvrement des projections.",
+          "code": "def se_coupent(p1, p2, p3, p4):\n    d1 = cross(p3, p4, p1)\n    d2 = cross(p3, p4, p2)\n    d3 = cross(p1, p2, p3)\n    d4 = cross(p1, p2, p4)\n    return d1 * d2 < 0 and d3 * d4 < 0"
+        },
+        {
+          "title": "Un point dans un polygone",
+          "body": "On trace une demi-droite depuis le point et on compte les côtés traversés : un nombre impair signifie que le point est à l'intérieur (lancer de rayon). Cela fonctionne pour les polygones non convexes. Pour un polygone convexe, une recherche dichotomique sur les angles donne O(log n)."
+        },
+        {
+          "title": "Le balayage",
+          "body": "Pour trouver toutes les intersections entre n segments sans tester toutes les paires, on fait glisser une droite verticale de gauche à droite, en traitant des événements (début et fin de segment) triés. Le même principe sert à fusionner des intervalles ou à calculer l'aire d'une union de rectangles."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "geo-intersections-q1",
+          "prompt": "Comment savoir si un point est dans un polygone non convexe ?",
+          "choices": [
+            "Compter les côtés traversés par une demi-droite issue du point : un nombre impair signifie intérieur",
+            "Vérifier qu'il est à gauche de tous les côtés",
+            "Comparer avec le centre du polygone",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "« À gauche de tous les côtés » ne fonctionne que pour un polygone convexe.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "geo-intersections-q2",
+          "prompt": "Que renvoie se_coupent((0, 0), (4, 4), (0, 4), (4, 0)) ?",
+          "code": "def se_coupent(p1, p2, p3, p4):\n    d1 = cross(p3, p4, p1)\n    d2 = cross(p3, p4, p2)\n    d3 = cross(p1, p2, p3)\n    d4 = cross(p1, p2, p4)\n    return d1 * d2 < 0 and d3 * d4 < 0",
+          "choices": [
+            "True",
+            "False",
+            "Une erreur",
+            "None"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux diagonales du carré se coupent en (2, 2).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "geo-intersections-q3",
+          "prompt": "Quel cas la fonction se_coupent ci-dessus manque-t-elle ?",
+          "choices": [
+            "Les segments qui se touchent en une extrémité ou qui sont alignés et se recouvrent",
+            "Les segments perpendiculaires",
+            "Les segments de longueur différente",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un produit nul donne d1 * d2 = 0, donc False ; il faut traiter ces cas à part.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "geo-intersections-q4",
+          "prompt": "Quel est l'intérêt de l'algorithme de balayage pour trouver les intersections de n segments ?",
+          "choices": [
+            "Éviter de tester toutes les paires, en O(n²), en ne comparant que des segments voisins",
+            "Trier les segments par longueur",
+            "Supprimer les segments",
+            "Il n'en a aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'algorithme de Bentley-Ottmann tourne en O((n + k) log n), k étant le nombre d'intersections.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "geo-intersections-q5",
+          "prompt": "Ce test de point dans un polygone se trompe sur les polygones en forme de L. Touche la ligne en cause.",
+          "code": "def interieur(point, polygone):\n    n = len(polygone)\n    for i in range(n):\n        a, b = polygone[i], polygone[(i + 1) % n]\n        if cross(a, b, point) < 0:\n            return False\n    return True",
+          "bugLines": [
+            5
+          ],
+          "explanation": "« À gauche de tous les côtés » ne vaut que pour un polygone convexe. Pour un L, il faut le lancer de rayon.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "geo-intersections-q6",
+          "prompt": "Quels problèmes se résolvent par balayage ?",
+          "choices": [
+            "Fusionner des intervalles qui se chevauchent",
+            "L'aire de l'union de rectangles",
+            "Les intersections entre segments",
+            "La distance d'édition entre deux mots"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La distance d'édition relève de la programmation dynamique.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "geo-defi",
+    "title": "Défi entretien : la zone de livraison",
+    "summary": "Polygones, points et enveloppes.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "geo-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une application de livraison reçoit des zones dessinées à la main, souvent non convexes. Comment savoir si une adresse est dans une zone ?",
+        "choices": [
+          "Le lancer de rayon sur le polygone de la zone",
+          "Comparer à la distance du centre",
+          "Vérifier que l'adresse est à gauche de chaque côté",
+          "Comparer les codes postaux"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le test « à gauche de chaque côté » échoue sur les zones non convexes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "geo-defi-q2",
+        "prompt": "Cas pratique 2/3 — Il y a 5 000 zones. Comment éviter de tester chacune pour chaque adresse ?",
+        "choices": [
+          "Pré-filtrer avec les rectangles englobants des zones, indexés spatialement (R-tree, grille)",
+          "Tester les 5 000 zones à chaque fois",
+          "Trier les zones par nom",
+          "Fusionner toutes les zones"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le test exact ne porte plus que sur quelques candidates.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "geo-defi-q3",
+        "prompt": "Cas pratique 3/3 — On veut proposer une zone automatiquement à partir des adresses déjà livrées. Quel point de départ simple ?",
+        "choices": [
+          "L'enveloppe convexe des adresses livrées",
+          "Le cercle centré sur la première adresse",
+          "La liste triée des adresses",
+          "Le plus court chemin entre les adresses"
+        ],
+        "answerIndex": 0,
+        "explanation": "Elle contient toutes les adresses ; on l'affine ensuite si besoin (enveloppe concave).",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "geo-defi-q4",
+        "prompt": "Les coordonnées sont des latitudes et longitudes. Quelle précaution prendre pour de grandes zones ?",
+        "choices": [
+          "Projeter les coordonnées, car la Terre n'est pas plane et les degrés de longitude rétrécissent vers les pôles",
+          "Aucune",
+          "Les arrondir à l'entier",
+          "Les trier"
+        ],
+        "answerIndex": 0,
+        "explanation": "Pour une ville, l'approximation plane suffit souvent ; pour un pays, non.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "geo-defi-q5",
+        "prompt": "L'aire de la zone est parfois négative. Touche la ligne en cause.",
+        "code": "def aire(p):\n    s = 0\n    for i in range(len(p)):\n        x1, y1 = p[i]\n        x2, y2 = p[(i + 1) % len(p)]\n        s += x1 * y2 - x2 * y1\n    return s / 2",
+        "bugLines": [
+          7
+        ],
+        "explanation": "Le signe dépend du sens de parcours des sommets : il faut abs(s) / 2.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "geo-defi-q6",
+        "prompt": "Quelles bonnes pratiques en géométrie algorithmique ?",
+        "choices": [
+          "Travailler en entiers quand c'est possible",
+          "Comparer les flottants avec une tolérance",
+          "Traiter explicitement les points alignés",
+          "Calculer des angles avec atan2 pour chaque test"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les produits vectoriels évitent les angles, plus lents et moins précis.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

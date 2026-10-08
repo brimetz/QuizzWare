@@ -1,0 +1,434 @@
+{
+  "id": "trie-ch-essentiel",
+  "title": "Tries et arbres de suffixes : l'essentiel",
+  "summary": "Rechercher dans des chaînes.",
+  "lessons": [
+    {
+      "id": "trie-bases",
+      "title": "Le trie",
+      "summary": "Un arbre de préfixes.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un arbre de préfixes",
+          "body": "Un trie stocke des mots caractère par caractère : chaque nœud correspond à un préfixe, et ses enfants aux caractères qui peuvent suivre. Les mots partageant un préfixe partagent un chemin. Un marqueur indique les nœuds où un mot se termine."
+        },
+        {
+          "title": "Insérer et chercher",
+          "body": "Insérer ou chercher un mot de longueur L coûte O(L), quel que soit le nombre de mots stockés.",
+          "code": "class Noeud:\n    def __init__(self):\n        self.enfants = {}\n        self.fin = False\n\ndef inserer(racine, mot):\n    n = racine\n    for c in mot:\n        n = n.enfants.setdefault(c, Noeud())\n    n.fin = True"
+        },
+        {
+          "title": "Mot ou préfixe",
+          "body": "Chercher un mot exige d'arriver sur un nœud marqué fin. Chercher un préfixe exige seulement que le chemin existe : avec « chat » inséré, « cha » est un préfixe mais pas un mot."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "trie-bases-q1",
+          "prompt": "Qu'est-ce qu'un trie ?",
+          "choices": [
+            "Un arbre où chaque nœud représente un préfixe, et les enfants les caractères suivants",
+            "Un algorithme de tri",
+            "Un tas binaire",
+            "Une table de hachage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le nom vient de « retrieval ».",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "trie-bases-q2",
+          "prompt": "Quel est le coût de la recherche d'un mot de longueur L dans un trie de n mots ?",
+          "choices": [
+            "O(L)",
+            "O(n)",
+            "O(n × L)",
+            "O(log n)"
+          ],
+          "answerIndex": 0,
+          "explanation": "On suit un enfant par caractère, indépendamment du nombre de mots.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "trie-bases-q3",
+          "prompt": "Complète l'insertion d'un mot.",
+          "code": "def inserer(racine, mot):\n    n = racine\n    for c in mot:\n        n = n.enfants.___(c, Noeud())\n    n.___ = True",
+          "answers": [
+            "setdefault",
+            "fin"
+          ],
+          "distractors": [
+            "get",
+            "mot",
+            "append"
+          ],
+          "explanation": "setdefault crée le nœud enfant s'il n'existe pas et le renvoie.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "trie-bases-q4",
+          "prompt": "Avec « chat » inséré, chercher(\"cha\") renvoie True. Touche la ligne en cause.",
+          "code": "def chercher(racine, mot):\n    n = racine\n    for c in mot:\n        if c not in n.enfants:\n            return False\n        n = n.enfants[c]\n    return True",
+          "bugLines": [
+            7
+          ],
+          "explanation": "Le chemin existe, mais « cha » n'est pas un mot : il faut return n.fin.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "trie-bases-q5",
+          "prompt": "On insère « car », « cas » et « chat ». Combien de nœuds, racine comprise ?",
+          "choices": [
+            "8",
+            "11",
+            "10",
+            "5"
+          ],
+          "answerIndex": 0,
+          "explanation": "Racine → c, puis c → a → {r, s} et c → h → a → t : racine, c, a, r, s, h, a, t. Le préfixe « c » est partagé par les trois mots, « ca » par deux.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "trie-bases-q6",
+          "prompt": "Que contient un nœud de trie ?",
+          "choices": [
+            "Ses enfants, indexés par caractère",
+            "Un marqueur de fin de mot",
+            "Éventuellement un compteur ou une valeur associée",
+            "Une copie de tous les mots du dictionnaire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un compteur de passages permet par exemple de compter les mots ayant un préfixe donné.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "trie-usages",
+      "title": "Les usages",
+      "summary": "Autocomplétion, dictionnaires, XOR.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "L'autocomplétion",
+          "body": "On descend jusqu'au nœud du préfixe tapé, puis on parcourt son sous-arbre pour lister les mots. Pour proposer les plus populaires, on stocke dans chaque nœud les meilleures suggestions de son sous-arbre, au prix de mémoire supplémentaire.",
+          "code": "def completer(racine, prefixe):\n    n = racine\n    for c in prefixe:\n        if c not in n.enfants:\n            return []\n        n = n.enfants[c]\n    res = []\n    def dfs(n, chemin):\n        if n.fin:\n            res.append(prefixe + chemin)\n        for c, e in sorted(n.enfants.items()):\n            dfs(e, chemin + c)\n    dfs(n, \"\")\n    return res"
+        },
+        {
+          "title": "Chercher plusieurs mots dans une grille",
+          "body": "Pour trouver une liste de mots dans une grille de lettres, on insère tous les mots dans un trie et on fait un seul parcours de la grille en suivant le trie : on abandonne une branche dès que le préfixe n'existe pas."
+        },
+        {
+          "title": "Le trie binaire",
+          "body": "En insérant des entiers bit par bit, du bit de poids fort au plus faible, on trouve pour un nombre x celui qui maximise x XOR y : à chaque niveau, on essaie de prendre le bit opposé. O(32) par requête."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "trie-usages-q1",
+          "prompt": "Avec « car », « cas » et « chat » insérés, que renvoie completer(racine, \"ca\") ?",
+          "code": "def completer(racine, prefixe):\n    n = racine\n    for c in prefixe:\n        if c not in n.enfants:\n            return []\n        n = n.enfants[c]\n    res = []\n    def dfs(n, chemin):\n        if n.fin:\n            res.append(prefixe + chemin)\n        for c, e in sorted(n.enfants.items()):\n            dfs(e, chemin + c)\n    dfs(n, \"\")\n    return res",
+          "choices": [
+            "['car', 'cas']",
+            "['car', 'cas', 'chat']",
+            "['r', 's']",
+            "[]"
+          ],
+          "answerIndex": 0,
+          "explanation": "« chat » passe par c → h, pas par c → a.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "trie-usages-q2",
+          "prompt": "Pourquoi un trie pour chercher 1 000 mots dans une grille de lettres ?",
+          "choices": [
+            "Un seul parcours de la grille suit tous les mots à la fois, et abandonne dès qu'un préfixe n'existe pas",
+            "Pour trier la grille",
+            "Parce qu'un dictionnaire est interdit",
+            "Il n'apporte rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chercher chaque mot séparément refait 1 000 fois le parcours.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "trie-usages-q3",
+          "prompt": "Comment proposer rapidement les 5 suggestions les plus populaires pour un préfixe ?",
+          "choices": [
+            "Stocker dans chaque nœud les meilleures suggestions de son sous-arbre",
+            "Parcourir tout le dictionnaire à chaque frappe",
+            "Trier tous les mots à chaque requête",
+            "C'est impossible avec un trie"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le coût en mémoire achète une réponse en O(longueur du préfixe).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "trie-usages-q4",
+          "prompt": "À quoi sert un trie binaire sur des entiers ?",
+          "choices": [
+            "Trouver le nombre qui maximise le XOR avec une valeur donnée, en O(nombre de bits)",
+            "Trier des entiers",
+            "Calculer une somme",
+            "Compresser des images"
+          ],
+          "answerIndex": 0,
+          "explanation": "À chaque niveau, on prend si possible le bit opposé à celui de x.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "trie-usages-q5",
+          "prompt": "L'autocomplétion de « ca » oublie « ca » lui-même quand c'est un mot. Touche la ligne en cause.",
+          "code": "def dfs(n, chemin):\n    for c, e in sorted(n.enfants.items()):\n        if e.fin:\n            res.append(prefixe + chemin + c)\n        dfs(e, chemin + c)",
+          "bugLines": [
+            3
+          ],
+          "explanation": "On ne teste fin que sur les enfants : le nœud de départ n'est jamais examiné. On teste n.fin au début de dfs.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "trie-usages-q6",
+          "prompt": "Dans quels cas un trie est-il adapté ?",
+          "choices": [
+            "L'autocomplétion",
+            "La recherche de nombreux mots dans une grille",
+            "La recherche de préfixes communs",
+            "Le calcul d'une moyenne"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le trie brille dès que les préfixes comptent.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "trie-suffixes",
+      "title": "Suffixes et compression",
+      "summary": "Arbres et tableaux de suffixes.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le trie compressé",
+          "body": "Dans un trie, une longue chaîne de nœuds à un seul enfant gaspille de la mémoire. Le trie compressé (radix tree) fusionne ces chaînes en une arête étiquetée par une sous-chaîne. Les tables de routage IP et de nombreux routeurs HTTP l'utilisent."
+        },
+        {
+          "title": "L'arbre de suffixes",
+          "body": "En insérant tous les suffixes d'un texte dans un trie compressé, on obtient un arbre de suffixes : savoir si un motif apparaît dans le texte revient à chercher un préfixe, en O(longueur du motif). On le construit en O(n) avec l'algorithme d'Ukkonen, assez complexe."
+        },
+        {
+          "title": "Le tableau de suffixes",
+          "body": "Plus simple et plus compact, le tableau de suffixes liste les positions de départ des suffixes triés par ordre alphabétique. On y cherche un motif par dichotomie, en O(m log n).",
+          "code": "def tableau_suffixes(s):\n    return sorted(range(len(s)), key=lambda i: s[i:])\n\nprint(tableau_suffixes(\"banane\"))"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "trie-suffixes-q1",
+          "prompt": "Que fait un trie compressé (radix tree) ?",
+          "choices": [
+            "Il fusionne les chaînes de nœuds à un seul enfant en une arête étiquetée par une sous-chaîne",
+            "Il compresse les mots avec gzip",
+            "Il supprime les mots rares",
+            "Il trie les mots"
+          ],
+          "answerIndex": 0,
+          "explanation": "Moins de nœuds, donc moins de mémoire et de sauts.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "trie-suffixes-q2",
+          "prompt": "Avec un arbre de suffixes du texte, combien coûte la recherche d'un motif de longueur m ?",
+          "choices": [
+            "O(m)",
+            "O(n)",
+            "O(n × m)",
+            "O(n log n)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le motif apparaît s'il est le préfixe d'un suffixe : on suit son chemin.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "trie-suffixes-q3",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def tableau_suffixes(s):\n    return sorted(range(len(s)), key=lambda i: s[i:])\n\nprint(tableau_suffixes(\"banane\"))",
+          "choices": [
+            "[1, 3, 0, 5, 2, 4]",
+            "[0, 1, 2, 3, 4, 5]",
+            "[5, 4, 3, 2, 1, 0]",
+            "[1, 3, 5, 0, 2, 4]"
+          ],
+          "answerIndex": 0,
+          "explanation": "Suffixes triés : anane (1), ane (3), banane (0), e (5), nane (2), ne (4).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "trie-suffixes-q4",
+          "prompt": "Comment cherche-t-on un motif dans un tableau de suffixes ?",
+          "choices": [
+            "Par dichotomie sur les suffixes triés, en O(m log n)",
+            "En parcourant tous les suffixes",
+            "Avec un BFS",
+            "Avec un tas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les suffixes commençant par le motif sont contigus dans le tableau trié.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "trie-suffixes-q5",
+          "prompt": "Complète la construction naïve d'un tableau de suffixes.",
+          "code": "def tableau_suffixes(s):\n    return ___(range(len(s)), key=lambda i: s[___])",
+          "answers": [
+            "sorted",
+            "i:"
+          ],
+          "distractors": [
+            "list",
+            ":i",
+            "i"
+          ],
+          "explanation": "s[i:] est le suffixe qui commence en i. Cette version est en O(n² log n), suffisante pour de petits textes.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "trie-suffixes-q6",
+          "prompt": "Où trouve-t-on des tries compressés ou des structures de suffixes ?",
+          "choices": [
+            "Les tables de routage IP (plus long préfixe)",
+            "Les routeurs HTTP de certains frameworks",
+            "La recherche de séquences en bio-informatique",
+            "Le calcul d'une racine carrée"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le routage IP cherche le plus long préfixe correspondant à l'adresse.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "trie-defi",
+    "title": "Défi entretien : la barre de recherche",
+    "summary": "Suggestions instantanées.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "trie-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une barre de recherche doit proposer des suggestions à chaque frappe, parmi 2 millions de titres de produits. Quelle structure ?",
+        "choices": [
+          "Un trie (ou trie compressé) des titres",
+          "Une liste parcourue à chaque frappe",
+          "Un tas",
+          "Une file"
+        ],
+        "answerIndex": 0,
+        "explanation": "La réponse dépend de la longueur du préfixe, pas du nombre de titres.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "trie-defi-q2",
+        "prompt": "Cas pratique 2/3 — Il faut afficher les 10 titres les plus vendus pour le préfixe. Comment éviter de parcourir tout le sous-arbre ?",
+        "choices": [
+          "Précalculer dans chaque nœud les 10 meilleurs titres de son sous-arbre",
+          "Trier le sous-arbre à chaque frappe",
+          "Afficher les 10 premiers par ordre alphabétique",
+          "Ce n'est pas possible"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le préfixe « a » couvre des centaines de milliers de titres.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "trie-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le trie consomme trop de mémoire. Quelle première piste ?",
+        "choices": [
+          "Le compresser : fusionner les chaînes de nœuds à un seul enfant",
+          "Supprimer le marqueur de fin",
+          "Passer à une liste",
+          "Dupliquer le trie"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les titres longs créent beaucoup de nœuds à un seul enfant.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "trie-defi-q4",
+        "prompt": "Pourquoi le trie ne trouve-t-il pas « téléphone » quand on tape « phone » ?",
+        "choices": [
+          "Il ne cherche que les préfixes ; pour une recherche en milieu de mot, il faut indexer les suffixes ou chaque mot du titre",
+          "Il est mal construit",
+          "Il ignore les accents",
+          "Il ne gère que l'anglais"
+        ],
+        "answerIndex": 0,
+        "explanation": "On insère souvent chaque mot d'un titre, voire ses suffixes.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "trie-defi-q5",
+        "prompt": "Ce compteur doit donner le nombre de mots commençant par un préfixe, mais il renvoie toujours 1 ou 0. Touche la ligne en cause.",
+        "code": "def inserer(racine, mot):\n    n = racine\n    for c in mot:\n        n = n.enfants.setdefault(c, Noeud())\n    n.passages += 1\n\ndef compter(racine, prefixe):\n    n = racine\n    for c in prefixe:\n        if c not in n.enfants:\n            return 0\n        n = n.enfants[c]\n    return n.passages",
+        "bugLines": [
+          5
+        ],
+        "explanation": "Le compteur n'est incrémenté que sur le nœud final. Il faut l'incrémenter sur chaque nœud traversé, dans la boucle.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "trie-defi-q6",
+        "prompt": "Quelles opérations un trie fait-il en O(longueur) ?",
+        "choices": [
+          "Insérer un mot",
+          "Tester si un mot est présent",
+          "Tester si un préfixe existe",
+          "Lister tous les mots du dictionnaire"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Lister tous les mots dépend de leur nombre total.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

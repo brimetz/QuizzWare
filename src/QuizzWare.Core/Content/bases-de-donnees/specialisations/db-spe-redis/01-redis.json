@@ -1,0 +1,447 @@
+{
+  "id": "redis-ch-essentiel",
+  "title": "Redis : l'essentiel",
+  "summary": "Structures, cache et usages avancés.",
+  "lessons": [
+    {
+      "id": "redis-structures",
+      "title": "Les structures de données",
+      "summary": "Chaînes, hashes, listes, ensembles et TTL.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un serveur de structures en mémoire",
+          "body": "Redis garde ses données en mémoire et les organise par clé. Chaque clé contient un type : chaîne (String), table de champs (Hash), liste, ensemble (Set), ensemble trié par score (Sorted Set), flux (Stream). On nomme les clés par convention avec des deux-points : user:42, session:abc.",
+          "code": "SET session:42 \"{...}\" EX 1800\nINCR vues:article:7\nHSET user:42 nom Ana pays FR\nZADD classement 1500 ana 1320 leo\nZREVRANGE classement 0 9 WITHSCORES",
+          "language": "text"
+        },
+        {
+          "title": "Expiration",
+          "body": "Une clé peut expirer : SET … EX 1800, ou EXPIRE après coup. TTL donne le temps restant en secondes : -1 si la clé n'a pas d'expiration, -2 si elle n'existe pas. C'est la base des sessions et des caches."
+        },
+        {
+          "title": "Atomique et rapide, à condition…",
+          "body": "Redis exécute les commandes une à une : INCR sur un compteur partagé par cent serveurs est donc sûr. En contrepartie, une commande lente bloque tout le monde : KEYS * parcourt toutes les clés d'un coup ; en production, on utilise SCAN, qui avance par petits lots."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "redis-structures-q1",
+          "prompt": "Quelle structure Redis convient à un classement des meilleurs scores ?",
+          "choices": [
+            "Un Sorted Set",
+            "Une liste",
+            "Une chaîne JSON",
+            "Un Set"
+          ],
+          "answerIndex": 0,
+          "explanation": "ZADD met à jour le score ; ZREVRANGE renvoie le haut du classement, efficacement.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "redis-structures-q2",
+          "prompt": "Pourquoi INCR est-il sûr pour un compteur partagé par plusieurs serveurs d'application ?",
+          "choices": [
+            "Redis exécute les commandes une par une : l'incrément est atomique",
+            "Parce que Redis verrouille la clé pendant une seconde",
+            "Parce que chaque serveur a sa copie",
+            "Il ne l'est pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Lire, ajouter un et réécrire depuis l'application perdrait des incréments ; INCR fait tout côté serveur.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "redis-structures-q3",
+          "prompt": "Toutes les minutes, Redis cesse de répondre pendant une seconde. Touche la ligne en cause.",
+          "code": "# Tâche de nettoyage, chaque minute en production\nKEYS session:*\nDEL session:a session:b",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "KEYS parcourt les millions de clés en une seule commande, qui bloque toutes les autres. On utilise SCAN avec MATCH, ou mieux, une expiration sur chaque session.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "redis-structures-q4",
+          "prompt": "Complète : créer une session de 30 minutes, puis vérifier son temps restant.",
+          "code": "SET session:42 \"{...}\" ___ 1800\n___ session:42",
+          "language": "text",
+          "answers": [
+            "EX",
+            "TTL"
+          ],
+          "distractors": [
+            "TIMEOUT",
+            "AGE",
+            "LIFE"
+          ],
+          "explanation": "EX donne une durée en secondes, PX en millisecondes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "redis-structures-q5",
+          "prompt": "Que renvoie TTL pour une clé qui existe mais n'a pas d'expiration ?",
+          "choices": [
+            "-1",
+            "-2",
+            "0",
+            "nil"
+          ],
+          "answerIndex": 0,
+          "explanation": "-2 signifie que la clé n'existe pas.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "redis-structures-q6",
+          "prompt": "Quels types de données Redis propose-t-il ?",
+          "choices": [
+            "Hash",
+            "Sorted Set",
+            "Stream",
+            "Table relationnelle avec jointures"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Redis n'a pas de jointures : on modélise selon les accès.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "redis-cache",
+      "title": "Redis comme cache",
+      "summary": "Cache-aside, invalidation et ruées.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le cache-aside",
+          "body": "L'application cherche d'abord dans Redis ; en cas d'absence, elle lit la base, puis écrit le résultat dans Redis avec une durée de vie. Le cache n'est qu'une copie : si Redis perd ses données, rien n'est perdu.",
+          "code": "def profil(user_id):\n    cle = f\"profil:{user_id}\"\n    if (v := r.get(cle)) is not None:\n        return json.loads(v)\n    p = db.charger_profil(user_id)\n    r.set(cle, json.dumps(p), ex=300)\n    return p",
+          "language": "python"
+        },
+        {
+          "title": "Invalider",
+          "body": "Quand la donnée change en base, on supprime la clé du cache : la prochaine lecture la rechargera complète. Réécrire soi-même une version partielle crée des incohérences. Le TTL reste un filet de sécurité. Ajouter un peu d'aléa aux TTL évite que des milliers de clés expirent au même moment."
+        },
+        {
+          "title": "Ruées et mémoire",
+          "body": "Quand une clé très demandée expire, des milliers de requêtes la recalculent en même temps et écrasent la base : c'est une ruée sur le cache (cache stampede). Remèdes : un verrou pour qu'une seule requête recalcule, ou un rafraîchissement anticipé. Quand la mémoire est pleine, maxmemory-policy allkeys-lru évince les clés les moins récemment utilisées."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "redis-cache-q1",
+          "prompt": "Qu'est-ce que le cache-aside ?",
+          "choices": [
+            "L'application lit le cache, et en cas d'absence lit la base puis remplit le cache",
+            "La base écrit elle-même dans le cache",
+            "Le cache est la seule source des données",
+            "Un cache stocké sur le disque"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'application qui gère le cache, à côté de la base.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "redis-cache-q2",
+          "prompt": "Après un renommage, le profil en cache ne contient plus que le nom. Touche la ligne en cause.",
+          "code": "def renommer(user_id, nom):\n    db.renommer(user_id, nom)\n    r.set(f\"profil:{user_id}\",\n          json.dumps({\"nom\": nom}))",
+          "language": "python",
+          "bugLines": [
+            3,
+            4
+          ],
+          "explanation": "On écrase le profil complet par une version partielle. Il suffit de supprimer la clé : r.delete(f\"profil:{user_id}\").",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "redis-cache-q3",
+          "prompt": "Une clé très demandée expire et 5 000 requêtes recalculent la même valeur en même temps. De quoi s'agit-il ?",
+          "choices": [
+            "D'une ruée sur le cache : on la limite par un verrou ou un rafraîchissement anticipé",
+            "D'une fuite mémoire",
+            "D'une injection",
+            "D'un fonctionnement normal et sans risque"
+          ],
+          "answerIndex": 0,
+          "explanation": "La base reçoit d'un coup la charge que le cache absorbait.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "redis-cache-q4",
+          "prompt": "Complète (redis-py) : écrire avec une durée de vie de 5 minutes, puis invalider.",
+          "code": "r.set(cle, json.dumps(p), ___=300)\nr.___(cle)   # après une mise à jour",
+          "language": "python",
+          "answers": [
+            "ex",
+            "delete"
+          ],
+          "distractors": [
+            "ttl",
+            "remove",
+            "expire"
+          ],
+          "explanation": "delete supprime la clé ; expire prend une durée et ne supprime pas tout de suite.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "redis-cache-q5",
+          "prompt": "Que fait maxmemory-policy allkeys-lru ?",
+          "choices": [
+            "Quand la mémoire est pleine, Redis évince les clés les moins récemment utilisées",
+            "Il refuse toute nouvelle écriture",
+            "Il écrit les clés sur disque",
+            "Il double la mémoire disponible"
+          ],
+          "answerIndex": 0,
+          "explanation": "noeviction, la politique par défaut, renvoie au contraire une erreur aux écritures.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "redis-cache-q6",
+          "prompt": "Quelles sont de bonnes pratiques de cache ?",
+          "choices": [
+            "Une durée de vie sur chaque clé",
+            "Supprimer la clé quand la donnée change",
+            "Un peu d'aléa dans les durées de vie",
+            "Faire du cache la seule copie des données"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un cache doit pouvoir être vidé à tout moment sans perte.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "redis-avance",
+      "title": "Redis avancé",
+      "summary": "Persistance, cluster, verrous et streams.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Persistance et haute disponibilité",
+          "body": "RDB écrit des instantanés périodiques : on peut perdre les dernières minutes. AOF journalise chaque écriture et la rejoue au redémarrage : plus sûr, plus volumineux. La réplication est asynchrone : une réplique peut être en retard. Redis Cluster répartit les clés sur 16 384 emplacements (slots) ; une commande portant sur plusieurs clés exige qu'elles soient dans le même slot, ce que les hash tags garantissent : {user:42}:profil et {user:42}:panier."
+        },
+        {
+          "title": "Verrous distribués",
+          "body": "SET cle jeton NX PX 30000 ne crée la clé que si elle n'existe pas, avec une expiration : un verrou simple. La valeur doit être un jeton unique, et on ne libère le verrou que s'il nous appartient encore, avec un petit script Lua, car il a pu expirer et être repris par un autre. Pour des garanties fortes, une base transactionnelle reste plus sûre.",
+          "code": "SET verrou:facture:42 <jeton-unique> NX PX 30000",
+          "language": "text"
+        },
+        {
+          "title": "Pub/Sub et Streams",
+          "body": "Pub/Sub diffuse un message aux abonnés connectés à cet instant, sans rien garder : un abonné déconnecté le manque. Un Stream conserve les messages ; des groupes de consommateurs se répartissent le travail et confirment chaque message (XACK), comme une petite file de messages durable. MULTI/EXEC enchaîne des commandes sans interruption, mais n'annule pas les précédentes si l'une échoue."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "redis-avance-q1",
+          "prompt": "Quelle différence entre Pub/Sub et Streams ?",
+          "choices": [
+            "Pub/Sub ne garde rien ; un Stream conserve les messages, avec des groupes de consommateurs et des accusés de traitement",
+            "Ce sont deux noms pour la même chose",
+            "Pub/Sub est persistant, pas les Streams",
+            "Les Streams ne servent qu'aux journaux"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour des tâches qui ne doivent pas se perdre, on choisit les Streams.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "redis-avance-q2",
+          "prompt": "Complète : prendre un verrou seulement s'il est libre, pour 30 secondes.",
+          "code": "SET verrou:facture:42 <jeton-unique> ___ PX 30000",
+          "language": "text",
+          "answers": [
+            "NX"
+          ],
+          "distractors": [
+            "XX",
+            "LOCK",
+            "ONCE"
+          ],
+          "explanation": "NX : seulement si la clé n'existe pas ; XX : seulement si elle existe.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "redis-avance-q3",
+          "prompt": "Un worker supprime parfois le verrou d'un autre worker. Touche une ligne en cause.",
+          "code": "if r.set(\"verrou:job\", \"1\", nx=True, px=30000):\n    try:\n        traiter()\n    finally:\n        r.delete(\"verrou:job\")",
+          "language": "python",
+          "bugLines": [
+            1,
+            5
+          ],
+          "explanation": "Si traiter dure plus de 30 s, le verrou expire et un autre worker le prend ; ce delete le lui retire. Il faut un jeton unique et une libération conditionnelle (script Lua).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "redis-avance-q4",
+          "prompt": "Quelle différence entre la persistance RDB et AOF ?",
+          "choices": [
+            "RDB prend des instantanés périodiques ; AOF journalise chaque écriture et la rejoue au redémarrage",
+            "RDB est en mémoire, AOF sur le réseau",
+            "AOF est plus compact que RDB",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "On combine souvent les deux.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "redis-avance-q5",
+          "prompt": "En Redis Cluster, MGET user:1 user:2 échoue avec CROSSSLOT. Pourquoi ?",
+          "choices": [
+            "Les deux clés tombent dans des slots différents ; des hash tags ({user}:1, {user}:2) les regrouperaient",
+            "MGET n'existe pas en cluster",
+            "Le cluster est en panne",
+            "Les clés n'existent pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Seule la partie entre accolades sert au calcul du slot.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "redis-avance-q6",
+          "prompt": "Quelles affirmations sur Redis sont vraies ?",
+          "choices": [
+            "Chaque commande s'exécute en entier avant la suivante",
+            "Une réplique peut être en retard sur le primaire",
+            "Un pipeline réduit le nombre d'allers-retours réseau",
+            "MULTI/EXEC annule les commandes précédentes si l'une échoue"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Redis n'a pas de retour arrière : les commandes déjà exécutées d'un MULTI restent appliquées.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "redis-defi",
+    "title": "Défi entretien : le produit vedette",
+    "summary": "Cache, ruée et quotas.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "redis-defi-q1",
+        "prompt": "Cas pratique 1/3 — Chaque visite d'une page produit lit la base (50 ms). On ajoute Redis. Quelle stratégie ?",
+        "choices": [
+          "Un cache-aside avec durée de vie, et une invalidation à chaque modification du produit",
+          "Copier toute la base dans Redis chaque nuit",
+          "Remplacer la base par Redis",
+          "Mettre en cache uniquement les produits jamais vus"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les lectures passent à moins d'une milliseconde, la base reste la référence.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "redis-defi-q2",
+        "prompt": "Cas pratique 2/3 — Pendant une promotion, la clé du produit vedette expire et la base sature. Pourquoi ?",
+        "choices": [
+          "Une ruée sur le cache : des milliers de requêtes recalculent la même clé en même temps",
+          "Redis est tombé en panne",
+          "La base est trop petite",
+          "Le TTL est trop long"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un verrou de recalcul ou un rafraîchissement anticipé évite ce pic.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "redis-defi-q3",
+        "prompt": "Cas pratique 3/3 — Et si Redis tombe ?",
+        "choices": [
+          "Le site doit continuer en lisant la base, avec un délai court sur les appels Redis",
+          "Le site doit s'arrêter",
+          "Il faut afficher des données vides",
+          "Il faut redémarrer tous les serveurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un cache est une optimisation : sa panne doit dégrader la performance, pas le service.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "redis-defi-q4",
+        "prompt": "Comment limiter un utilisateur à 100 requêtes par minute avec Redis ?",
+        "choices": [
+          "INCR sur une clé par utilisateur et par minute, avec une expiration de 60 secondes",
+          "Une liste de toutes les requêtes, relue entièrement à chaque fois",
+          "KEYS quota:* à chaque requête",
+          "Un Pub/Sub par utilisateur"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est la fenêtre fixe ; un Sorted Set permet une fenêtre glissante plus précise.",
+        "difficulty": 2
+      },
+      {
+        "type": "order",
+        "id": "redis-defi-q5",
+        "prompt": "Remets dans l'ordre cette limitation de débit.",
+        "language": "python",
+        "lines": [
+          "cle = f\"quota:{user}:{minute}\"",
+          "n = r.incr(cle)",
+          "if n == 1:",
+          "    r.expire(cle, 60)",
+          "if n > 100:",
+          "    refuser()"
+        ],
+        "explanation": "La première requête de la minute crée la clé et lui donne une expiration.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "redis-defi-q6",
+        "prompt": "Quels sont des usages courants de Redis ?",
+        "choices": [
+          "Un cache devant une base de données",
+          "Le stockage des sessions",
+          "Des files de tâches avec les Streams",
+          "La comptabilité de l'entreprise, sans persistance"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Des données critiques exigent une base durable et transactionnelle.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

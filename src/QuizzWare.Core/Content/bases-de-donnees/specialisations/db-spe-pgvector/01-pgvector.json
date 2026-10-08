@@ -1,0 +1,432 @@
+{
+  "id": "pgv-ch-essentiel",
+  "title": "pgvector : l'essentiel",
+  "summary": "Stocker et rechercher des vecteurs dans PostgreSQL.",
+  "lessons": [
+    {
+      "id": "pgv-bases",
+      "title": "Des vecteurs dans PostgreSQL",
+      "summary": "Type vector, distances et recherche des voisins.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Pourquoi des vecteurs",
+          "body": "Un modèle d'embeddings transforme un texte ou une image en un vecteur de quelques centaines à quelques milliers de nombres. Des contenus de sens proche donnent des vecteurs proches : on peut chercher « par le sens » plutôt que par mots-clés. C'est la base de la recherche sémantique et du RAG."
+        },
+        {
+          "title": "L'extension",
+          "body": "pgvector ajoute à PostgreSQL le type vector(n) et des opérateurs de distance. Les vecteurs vivent à côté des autres colonnes : on filtre, on joint et on sauvegarde comme d'habitude, sans base supplémentaire à exploiter.",
+          "code": "CREATE EXTENSION IF NOT EXISTS vector;\n\nCREATE TABLE documents (\n  id bigserial PRIMARY KEY,\n  contenu text NOT NULL,\n  embedding vector(1536) NOT NULL\n);"
+        },
+        {
+          "title": "Les distances",
+          "body": "<-> calcule la distance euclidienne, <=> la distance cosinus (1 − similarité cosinus), <#> le produit scalaire négatif. On cherche les plus proches voisins en triant par distance avec une limite.",
+          "code": "SELECT id, contenu\nFROM documents\nORDER BY embedding <=> $1\nLIMIT 5;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pgv-bases-q1",
+          "prompt": "Que représente un embedding ?",
+          "choices": [
+            "Un vecteur de nombres dont la proximité reflète la proximité de sens",
+            "Un résumé textuel",
+            "Une clé de chiffrement",
+            "Un index B-tree"
+          ],
+          "answerIndex": 0,
+          "explanation": "Deux phrases synonymes donnent des vecteurs proches.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "pgv-bases-q2",
+          "prompt": "Que renvoie SELECT '[1,0]'::vector <=> '[0,1]'::vector ?",
+          "choices": [
+            "1",
+            "0",
+            "1.414…",
+            "-1"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les vecteurs sont orthogonaux : similarité cosinus 0, donc distance cosinus 1.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "pgv-bases-q3",
+          "prompt": "Que renvoie SELECT '[3,4]'::vector <-> '[0,0]'::vector ?",
+          "choices": [
+            "5",
+            "7",
+            "25",
+            "1"
+          ],
+          "answerIndex": 0,
+          "explanation": "La distance euclidienne : √(3² + 4²).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "pgv-bases-q4",
+          "prompt": "Complète : les 5 documents les plus proches au sens du cosinus.",
+          "code": "SELECT id, contenu\nFROM documents\nORDER BY embedding ___ $1\n___ 5;",
+          "answers": [
+            "<=>",
+            "LIMIT"
+          ],
+          "distractors": [
+            "<->",
+            "<#>",
+            "TOP"
+          ],
+          "explanation": "<-> serait la distance euclidienne, <#> le produit scalaire négatif.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "pgv-bases-q5",
+          "prompt": "Les résultats sont les documents les moins pertinents. Touche la ligne en cause.",
+          "code": "SELECT id, contenu\nFROM documents\nORDER BY embedding <=> $1 DESC\nLIMIT 5;",
+          "bugLines": [
+            3
+          ],
+          "explanation": "<=> est une distance : les plus proches ont la plus petite valeur. Le tri doit être croissant.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "pgv-bases-q6",
+          "prompt": "Quels avantages à stocker les vecteurs dans PostgreSQL ?",
+          "choices": [
+            "Filtrer et joindre avec les autres colonnes en SQL",
+            "Pas de base supplémentaire à exploiter",
+            "Des sauvegardes et transactions communes",
+            "Des performances supérieures à toute base vectorielle dédiée, à toute échelle"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Pour des milliards de vecteurs, une base dédiée peut devenir pertinente.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "pgv-index",
+      "title": "Les index approximatifs",
+      "summary": "HNSW, IVFFlat et le rappel.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Exact ou approximatif",
+          "body": "Sans index, la recherche est exacte mais compare le vecteur à toutes les lignes. Les index approximatifs (ANN) sont bien plus rapides, au prix d'un rappel imparfait : ils peuvent manquer quelques vrais plus proches voisins. On mesure le rappel sur des requêtes de test."
+        },
+        {
+          "title": "HNSW",
+          "body": "HNSW construit un graphe navigable en plusieurs couches. Excellent compromis vitesse/rappel, il peut être créé sur une table vide et se met à jour à chaque insertion ; sa construction est plus lente et plus gourmande en mémoire. hnsw.ef_search règle le compromis à la requête. L'opérateur de l'index doit correspondre à celui de la requête.",
+          "code": "CREATE INDEX ON documents\nUSING hnsw (embedding vector_cosine_ops);\n\nSET hnsw.ef_search = 100;"
+        },
+        {
+          "title": "IVFFlat",
+          "body": "IVFFlat regroupe les vecteurs en listes autour de centres calculés à la création : il faut donc des données représentatives avant de le créer. Plus léger et plus rapide à construire, il offre un rappel moindre ; ivfflat.probes fixe le nombre de listes visitées (1 par défaut).",
+          "code": "CREATE INDEX ON documents\nUSING ivfflat (embedding vector_cosine_ops)\nWITH (lists = 1000);\n\nSET ivfflat.probes = 10;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pgv-index-q1",
+          "prompt": "Quel compromis fait un index vectoriel approximatif ?",
+          "choices": [
+            "Il accélère fortement la recherche, mais peut manquer quelques vrais plus proches voisins",
+            "Il est exact mais lent",
+            "Il réduit la taille des vecteurs",
+            "Aucun compromis"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le rappel mesure la part des vrais voisins retrouvés.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "pgv-index-q2",
+          "prompt": "L'index n'est jamais utilisé par cette requête. Touche la ligne en cause.",
+          "code": "CREATE INDEX ON documents\nUSING hnsw (embedding vector_l2_ops);\n\nSELECT id FROM documents\nORDER BY embedding <=> $1 LIMIT 5;",
+          "bugLines": [
+            2
+          ],
+          "explanation": "L'index est construit pour la distance euclidienne, la requête trie par distance cosinus. Il faut vector_cosine_ops.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "pgv-index-q3",
+          "prompt": "Pourquoi créer un index IVFFlat seulement après avoir chargé des données ?",
+          "choices": [
+            "Ses listes sont construites autour de centres calculés à partir des données présentes",
+            "Parce qu'il est en lecture seule",
+            "Pour économiser de la mémoire",
+            "Ce n'est pas nécessaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sur une table vide, les centres seraient arbitraires et le rappel mauvais.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "pgv-index-q4",
+          "prompt": "Complète un index HNSW pour la distance cosinus.",
+          "code": "CREATE INDEX ON documents\nUSING ___ (embedding ___);",
+          "answers": [
+            "hnsw",
+            "vector_cosine_ops"
+          ],
+          "distractors": [
+            "btree",
+            "gin",
+            "vector_l2_ops"
+          ],
+          "explanation": "Un B-tree ne sait pas chercher des plus proches voisins.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pgv-index-q5",
+          "prompt": "Le rappel d'un index HNSW est jugé insuffisant. Quel réglage augmenter ?",
+          "choices": [
+            "hnsw.ef_search, au prix de requêtes un peu plus lentes",
+            "ivfflat.probes",
+            "work_mem uniquement",
+            "La dimension des vecteurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "ef_search fixe la taille de la liste de candidats explorée.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "pgv-index-q6",
+          "prompt": "Quelles affirmations sur HNSW sont vraies ?",
+          "choices": [
+            "Il peut être créé sur une table vide",
+            "Il offre un bon compromis vitesse/rappel",
+            "Sa construction demande plus de mémoire qu'IVFFlat",
+            "Il donne toujours le résultat exact"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Comme tout index ANN, il est approximatif.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "pgv-rag",
+      "title": "Recherche sémantique en pratique",
+      "summary": "Filtres, modèles et recherche hybride.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le même modèle",
+          "body": "Les documents et les questions doivent être vectorisés par le même modèle, dans la même dimension. Changer de modèle impose de recalculer tous les embeddings. On stocke le nom du modèle avec le vecteur pour éviter les mélanges."
+        },
+        {
+          "title": "Filtrer et chercher",
+          "body": "Avec un index approximatif, le filtre WHERE s'applique aux candidats trouvés : avec un filtre très sélectif, on peut obtenir moins de résultats que la limite. Les versions récentes proposent des parcours itératifs (hnsw.iterative_scan) ; sinon, on crée des index partiels ou on partitionne par locataire.",
+          "code": "SET hnsw.iterative_scan = relaxed_order;\n\nSELECT id, contenu\nFROM documents\nWHERE locataire_id = $2\nORDER BY embedding <=> $1\nLIMIT 5;"
+        },
+        {
+          "title": "La recherche hybride",
+          "body": "Les embeddings captent le sens mais ratent parfois un mot exact (une référence produit, un nom propre). La recherche hybride combine la recherche plein texte de PostgreSQL (tsvector) et la recherche vectorielle, puis fusionne les deux classements, par exemple avec la fusion par rangs réciproques (RRF)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pgv-rag-q1",
+          "prompt": "Les questions sont vectorisées avec un autre modèle que les documents. Que se passe-t-il ?",
+          "choices": [
+            "Les distances n'ont plus de sens : les résultats deviennent arbitraires, ou la dimension ne correspond même pas",
+            "La recherche est plus précise",
+            "Rien",
+            "PostgreSQL convertit automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque modèle définit son propre espace vectoriel.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pgv-rag-q2",
+          "prompt": "Avec un filtre très sélectif et un index HNSW, la requête ne renvoie que 2 résultats au lieu de 5. Pourquoi ?",
+          "choices": [
+            "Le filtre s'applique aux candidats de l'index, dont peu correspondent au filtre",
+            "Il n'y a que 2 documents dans la table",
+            "L'index est corrompu",
+            "LIMIT est ignoré"
+          ],
+          "answerIndex": 0,
+          "explanation": "Parcours itératif, index partiel ou partitionnement corrigent ce problème.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "pgv-rag-q3",
+          "prompt": "Pourquoi combiner recherche plein texte et recherche vectorielle ?",
+          "choices": [
+            "La recherche vectorielle peut rater des termes exacts, comme une référence produit",
+            "Pour doubler la taille des résultats",
+            "Parce que pgvector l'exige",
+            "Ce n'est jamais utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "On fusionne ensuite les deux classements, par exemple avec RRF.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "pgv-rag-q4",
+          "prompt": "L'insertion échoue après le passage à un nouveau modèle d'embeddings de 3 072 dimensions. Touche la ligne en cause.",
+          "code": "CREATE TABLE documents (\n  id bigserial PRIMARY KEY,\n  contenu text NOT NULL,\n  embedding vector(1536) NOT NULL\n);",
+          "bugLines": [
+            4
+          ],
+          "explanation": "La dimension est fixée par la colonne. Changer de modèle implique une nouvelle colonne et le recalcul de tous les embeddings.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "pgv-rag-q5",
+          "prompt": "Remets dans l'ordre une recherche sémantique pour un assistant (RAG).",
+          "language": "text",
+          "lines": [
+            "Découper les documents en passages",
+            "Calculer et stocker l'embedding de chaque passage",
+            "Calculer l'embedding de la question",
+            "Chercher les passages les plus proches",
+            "Fournir ces passages au modèle de langage pour répondre"
+          ],
+          "explanation": "Les deux premières étapes se font à l'indexation, les suivantes à chaque question.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "pgv-rag-q6",
+          "prompt": "Que conserver avec chaque embedding ?",
+          "choices": [
+            "Le nom et la version du modèle",
+            "Le passage de texte d'origine",
+            "La référence du document source",
+            "La clé d'API du fournisseur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une clé d'API n'a rien à faire dans les données.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "pgv-defi",
+    "title": "Défi entretien : la base de connaissances",
+    "summary": "Une recherche sémantique multi-locataires.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "pgv-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une application SaaS sur PostgreSQL veut une recherche sémantique dans 2 millions de passages, répartis entre 500 clients. Quelle approche ?",
+        "choices": [
+          "pgvector dans la base existante, avec un index HNSW et un filtre par client",
+          "Une base vectorielle par client",
+          "Un LIKE sur le contenu",
+          "Charger tous les vecteurs en mémoire dans l'application"
+        ],
+        "answerIndex": 0,
+        "explanation": "2 millions de vecteurs restent un volume confortable pour pgvector.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pgv-defi-q2",
+        "prompt": "Cas pratique 2/3 — Les petits clients obtiennent souvent moins de 5 résultats. Pourquoi, et que faire ?",
+        "choices": [
+          "Le filtre par client écarte la plupart des candidats de l'index : activer le parcours itératif, ou partitionner par client",
+          "Leurs documents sont trop courts",
+          "Le modèle est mauvais pour eux",
+          "Augmenter LIMIT à 1000"
+        ],
+        "answerIndex": 0,
+        "explanation": "Pour un client avec 1 000 passages, une recherche exacte sur sa partition suffit même sans index.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "pgv-defi-q3",
+        "prompt": "Cas pratique 3/3 — Les utilisateurs cherchent souvent des codes d'erreur exacts (« E-4012 ») que la recherche ne trouve pas. Que faire ?",
+        "choices": [
+          "Ajouter une recherche plein texte et fusionner les deux classements",
+          "Augmenter la dimension des vecteurs",
+          "Supprimer les codes des documents",
+          "Utiliser la distance euclidienne"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le plein texte trouve exactement « E-4012 ».",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pgv-defi-q4",
+        "prompt": "La similarité cosinus vaut 0,92. Que renvoie l'opérateur <=> ?",
+        "choices": [
+          "0,08",
+          "0,92",
+          "-0,92",
+          "1,92"
+        ],
+        "answerIndex": 0,
+        "explanation": "La distance cosinus vaut 1 − similarité.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "pgv-defi-q5",
+        "prompt": "Le rappel de cet index est très mauvais. Touche la ligne en cause.",
+        "code": "CREATE TABLE passages (id bigserial, embedding vector(1024));\nCREATE INDEX ON passages\n  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 1000);\n-- chargement de 2 millions de passages ensuite",
+        "bugLines": [
+          3
+        ],
+        "explanation": "L'index IVFFlat est créé sur une table vide : ses centres ne représentent pas les données. On charge d'abord, ou on préfère HNSW.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "pgv-defi-q6",
+        "prompt": "Quels opérateurs pgvector existent ?",
+        "choices": [
+          "<-> pour la distance euclidienne",
+          "<=> pour la distance cosinus",
+          "<#> pour le produit scalaire négatif",
+          "<~> pour la distance de Levenshtein"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Levenshtein relève de l'extension fuzzystrmatch, pas de pgvector.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

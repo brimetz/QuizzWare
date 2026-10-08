@@ -1,0 +1,433 @@
+{
+  "id": "mssql-ch-essentiel",
+  "title": "SQL Server : l'essentiel",
+  "summary": "T-SQL, index et outillage.",
+  "lessons": [
+    {
+      "id": "mssql-tsql",
+      "title": "T-SQL",
+      "summary": "Le dialecte de SQL Server.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Les particularités",
+          "body": "T-SQL est le dialecte de SQL Server et d'Azure SQL. On y trouve TOP au lieu de LIMIT, IDENTITY pour l'auto-incrément, GETDATE() ou SYSUTCDATETIME() pour l'heure, et NVARCHAR pour les chaînes Unicode, dont les littéraux s'écrivent avec le préfixe N.",
+          "code": "CREATE TABLE dbo.Clients (\n  Id INT IDENTITY(1, 1) PRIMARY KEY,\n  Nom NVARCHAR(100) NOT NULL,\n  CreeLe DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()\n);\n\nINSERT INTO dbo.Clients (Nom) VALUES (N'Zoé');\nSELECT TOP (10) * FROM dbo.Clients ORDER BY CreeLe DESC;"
+        },
+        {
+          "title": "La pagination",
+          "body": "OFFSET … FETCH pagine un résultat ; il exige un ORDER BY. Pour de grandes tables, la pagination par clé (WHERE Id > dernier vu) reste plus efficace que de grands OFFSET.",
+          "code": "SELECT Id, Nom\nFROM dbo.Clients\nORDER BY Id\nOFFSET 40 ROWS FETCH NEXT 20 ROWS ONLY;"
+        },
+        {
+          "title": "L'identifiant inséré",
+          "body": "SCOPE_IDENTITY() renvoie la dernière valeur IDENTITY générée dans la portée courante. @@IDENTITY renvoie la dernière de la session, y compris celle d'un déclencheur qui insère dans une autre table : une source classique de bugs. La clause OUTPUT renvoie directement les valeurs insérées."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mssql-tsql-q1",
+          "prompt": "Comment limiter un résultat à 10 lignes en T-SQL ?",
+          "choices": [
+            "SELECT TOP (10) …",
+            "SELECT … LIMIT 10",
+            "SELECT … ROWNUM 10",
+            "SELECT FIRST 10 …"
+          ],
+          "answerIndex": 0,
+          "explanation": "OFFSET … FETCH est l'alternative standard, avec un ORDER BY.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mssql-tsql-q2",
+          "prompt": "Pourquoi écrire N'Zoé' plutôt que 'Zoé' ?",
+          "choices": [
+            "Le préfixe N crée un littéral Unicode (NVARCHAR), sans perte de caractères",
+            "Pour indiquer un nom propre",
+            "Pour rendre la chaîne nullable",
+            "C'est obligatoire pour toutes les chaînes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans N, la chaîne passe par la page de codes de la base, qui peut ne pas connaître certains caractères.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mssql-tsql-q3",
+          "prompt": "L'identifiant renvoyé est parfois celui d'une ligne du journal d'audit. Touche la ligne en cause.",
+          "code": "INSERT INTO dbo.Commandes (ClientId, Total)\nVALUES (@ClientId, @Total);\n-- un déclencheur insère dans dbo.Audit\nSELECT @@IDENTITY AS NouvelId;",
+          "bugLines": [
+            4
+          ],
+          "explanation": "@@IDENTITY renvoie la dernière valeur de la session, ici celle du déclencheur. Il faut SCOPE_IDENTITY() ou OUTPUT INSERTED.Id.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "mssql-tsql-q4",
+          "prompt": "Complète cette pagination.",
+          "code": "SELECT Id, Nom\nFROM dbo.Clients\nORDER BY Id\n___ 40 ROWS ___ NEXT 20 ROWS ONLY;",
+          "answers": [
+            "OFFSET",
+            "FETCH"
+          ],
+          "distractors": [
+            "SKIP",
+            "TAKE",
+            "LIMIT"
+          ],
+          "explanation": "La syntaxe standard SQL, que SQL Server accepte depuis 2012.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mssql-tsql-q5",
+          "prompt": "Que fait IDENTITY(1, 1) ?",
+          "choices": [
+            "Génère automatiquement une valeur commençant à 1 et augmentant de 1",
+            "Rend la colonne unique sans valeur générée",
+            "Copie l'identifiant d'une autre table",
+            "Crée une séquence aléatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux arguments sont la valeur de départ et l'incrément.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "mssql-tsql-q6",
+          "prompt": "Comment récupérer l'identifiant d'une ligne qu'on vient d'insérer ?",
+          "choices": [
+            "SCOPE_IDENTITY()",
+            "OUTPUT INSERTED.Id",
+            "Une séquence lue avant l'insertion (NEXT VALUE FOR)",
+            "SELECT MAX(Id) juste après"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "MAX(Id) peut renvoyer la ligne d'une autre session insérée entre-temps.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mssql-index",
+      "title": "Index et plans",
+      "summary": "Clusterisé, non clusterisé, INCLUDE.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Clusterisé ou non",
+          "body": "L'index clusterisé détermine l'ordre de stockage des lignes : il y en a au plus un par table, créé par défaut sur la clé primaire. Les index non clusterisés pointent vers la clé de l'index clusterisé. Une table sans index clusterisé s'appelle un tas (heap)."
+        },
+        {
+          "title": "INCLUDE et Key Lookup",
+          "body": "Quand un index non clusterisé ne contient pas toutes les colonnes demandées, le plan ajoute un Key Lookup par ligne trouvée pour aller chercher le reste. Sur beaucoup de lignes, c'est très coûteux. INCLUDE ajoute des colonnes aux feuilles de l'index sans les intégrer à la clé, pour le rendre couvrant.",
+          "code": "CREATE NONCLUSTERED INDEX IX_Commandes_Client\nON dbo.Commandes (ClientId, CreeLe)\nINCLUDE (Total);"
+        },
+        {
+          "title": "Les conversions implicites",
+          "body": "Comparer une colonne VARCHAR à un paramètre NVARCHAR oblige SQL Server à convertir la colonne, ce qui peut empêcher une recherche dans l'index (seek) et provoquer un parcours (scan). Les ORM qui envoient toutes les chaînes en NVARCHAR causent souvent ce problème : on aligne les types."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mssql-index-q1",
+          "prompt": "Combien d'index clusterisés une table peut-elle avoir ?",
+          "choices": [
+            "Au plus un",
+            "Autant que de colonnes",
+            "Exactement deux",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les lignes ne peuvent être physiquement rangées que dans un seul ordre.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mssql-index-q2",
+          "prompt": "Le plan d'exécution montre un Key Lookup exécuté 200 000 fois. Que faire ?",
+          "choices": [
+            "Rendre l'index couvrant avec INCLUDE pour les colonnes manquantes",
+            "Supprimer l'index clusterisé",
+            "Ajouter un index sur chaque colonne",
+            "Rien, c'est normal"
+          ],
+          "answerIndex": 0,
+          "explanation": "La requête est alors servie par l'index seul.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "mssql-index-q3",
+          "prompt": "Complète cet index couvrant.",
+          "code": "CREATE ___ INDEX IX_Commandes_Client\nON dbo.Commandes (ClientId, CreeLe)\n___ (Total);",
+          "answers": [
+            "NONCLUSTERED",
+            "INCLUDE"
+          ],
+          "distractors": [
+            "CLUSTERED",
+            "WITH",
+            "COVER"
+          ],
+          "explanation": "Total est disponible dans l'index sans faire partie de sa clé de tri.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mssql-index-q4",
+          "prompt": "Cette requête parcourt tout l'index alors que Code est une colonne VARCHAR indexée. Touche la ligne en cause.",
+          "code": "DECLARE @Code NVARCHAR(20) = N'ABC-42';\nSELECT Id, Libelle\nFROM dbo.Produits\nWHERE Code = @Code;",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Le paramètre NVARCHAR force une conversion de la colonne VARCHAR. Le paramètre doit être déclaré VARCHAR(20).",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mssql-index-q5",
+          "prompt": "Qu'est-ce qu'un tas (heap) dans SQL Server ?",
+          "choices": [
+            "Une table sans index clusterisé",
+            "Un index en mémoire",
+            "Une structure de tri",
+            "Une table temporaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les lignes y sont stockées sans ordre particulier.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mssql-index-q6",
+          "prompt": "Quels signes dans un plan d'exécution méritent attention ?",
+          "choices": [
+            "Un Key Lookup répété un grand nombre de fois",
+            "Un Index Scan là où on attendait un Seek",
+            "Un avertissement de conversion implicite",
+            "Un Index Seek sur la clé primaire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un Seek sur la clé primaire est le cas idéal.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mssql-exploitation",
+      "title": "Concurrence et exploitation",
+      "summary": "Isolation, plans en cache et Query Store.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "READ COMMITTED et RCSI",
+          "body": "En READ COMMITTED classique, les lectures posent des verrous partagés et attendent les écritures en cours : lecteurs et écrivains se bloquent. L'option READ_COMMITTED_SNAPSHOT (RCSI) fait lire la dernière version validée, conservée dans tempdb : les lecteurs ne bloquent plus. Elle est active par défaut dans Azure SQL Database. Le conseil NOLOCK, lui, autorise des lectures sales, voire des lignes lues deux fois ou manquées.",
+          "code": "ALTER DATABASE Boutique\nSET READ_COMMITTED_SNAPSHOT ON;"
+        },
+        {
+          "title": "Le parameter sniffing",
+          "body": "SQL Server met en cache le plan d'une procédure ou requête paramétrée, construit pour les valeurs du premier appel. Si ce premier client a 3 commandes et le suivant 3 millions, le plan mis en cache peut être désastreux. Solutions : OPTION (RECOMPILE) sur la requête, OPTIMIZE FOR, ou les fonctionnalités adaptatives des versions récentes."
+        },
+        {
+          "title": "Query Store et gestion d'erreurs",
+          "body": "Le Query Store enregistre les requêtes, leurs plans et leurs performances dans le temps : on y repère une régression et on peut forcer un ancien plan. Pour les erreurs, TRY…CATCH avec THROW, et SET XACT_ABORT ON pour annuler toute la transaction à la moindre erreur.",
+          "code": "SET XACT_ABORT ON;\nBEGIN TRY\n  BEGIN TRANSACTION;\n  UPDATE dbo.Comptes SET Solde -= 100 WHERE Id = 1;\n  UPDATE dbo.Comptes SET Solde += 100 WHERE Id = 2;\n  COMMIT;\nEND TRY\nBEGIN CATCH\n  IF @@TRANCOUNT > 0 ROLLBACK;\n  THROW;\nEND CATCH;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mssql-exploitation-q1",
+          "prompt": "Que change READ_COMMITTED_SNAPSHOT ?",
+          "choices": [
+            "Les lectures lisent la dernière version validée sans attendre les écritures en cours",
+            "Les écritures deviennent asynchrones",
+            "Les transactions sont désactivées",
+            "La base passe en lecture seule"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les versions des lignes sont conservées dans tempdb.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mssql-exploitation-q2",
+          "prompt": "Quel risque pose WITH (NOLOCK) ?",
+          "choices": [
+            "Des lectures de données non validées, et même des lignes manquées ou lues deux fois",
+            "Aucun, il accélère simplement",
+            "Il bloque toutes les écritures",
+            "Il supprime les verrous des autres sessions"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour éviter les blocages proprement, on préfère RCSI.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "mssql-exploitation-q3",
+          "prompt": "Une procédure est tantôt rapide, tantôt très lente selon le client. Quelle cause probable ?",
+          "choices": [
+            "Le parameter sniffing : un plan mis en cache pour des valeurs atypiques",
+            "Le réseau",
+            "Un index clusterisé",
+            "Le préfixe N"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le Query Store montre plusieurs plans et leurs performances respectives.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "mssql-exploitation-q4",
+          "prompt": "En cas d'erreur sur le second UPDATE, le premier reste appliqué et la transaction reste ouverte. Touche la ligne qui manque de traitement.",
+          "code": "BEGIN TRY\n  BEGIN TRANSACTION;\n  UPDATE dbo.Comptes SET Solde -= 100 WHERE Id = 1;\n  UPDATE dbo.Comptes SET Solde += 100 WHERE Id = 2;\n  COMMIT;\nEND TRY\nBEGIN CATCH\n  PRINT ERROR_MESSAGE();\nEND CATCH;",
+          "bugLines": [
+            8
+          ],
+          "explanation": "Le bloc CATCH affiche l'erreur sans annuler : il faut IF @@TRANCOUNT > 0 ROLLBACK; puis THROW pour propager l'erreur.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "mssql-exploitation-q5",
+          "prompt": "Complète l'activation de l'isolation par instantané pour READ COMMITTED.",
+          "code": "ALTER DATABASE Boutique\nSET ___ ON;",
+          "answers": [
+            "READ_COMMITTED_SNAPSHOT"
+          ],
+          "distractors": [
+            "NOLOCK",
+            "SNAPSHOT_READS",
+            "READ_UNCOMMITTED"
+          ],
+          "explanation": "ALLOW_SNAPSHOT_ISOLATION est une option voisine, qui active le niveau SNAPSHOT explicite.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mssql-exploitation-q6",
+          "prompt": "Que permet le Query Store ?",
+          "choices": [
+            "Suivre les performances des requêtes dans le temps",
+            "Repérer une régression liée à un changement de plan",
+            "Forcer un ancien plan",
+            "Sauvegarder la base"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les sauvegardes restent l'affaire de BACKUP DATABASE.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "mssql-defi",
+    "title": "Défi entretien : l'application .NET qui bloque",
+    "summary": "Blocages, plans et types.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mssql-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une application .NET sur SQL Server subit des blocages : les rapports en lecture attendent les mises à jour de commandes. Le code est truffé de NOLOCK ajoutés en urgence. Que proposer ?",
+        "choices": [
+          "Activer READ_COMMITTED_SNAPSHOT et retirer les NOLOCK",
+          "Ajouter NOLOCK partout",
+          "Passer en SERIALIZABLE",
+          "Redémarrer le serveur chaque nuit"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les lecteurs ne bloquent plus, sans lectures sales.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mssql-defi-q2",
+        "prompt": "Cas pratique 2/3 — Les recherches de produits par code font un Index Scan. Les colonnes sont VARCHAR et Entity Framework envoie des paramètres NVARCHAR. Que faire ?",
+        "choices": [
+          "Déclarer le type de colonne (varchar) dans le modèle EF pour que les paramètres soient du bon type",
+          "Supprimer l'index",
+          "Convertir la colonne en texte",
+          "Ajouter NOLOCK"
+        ],
+        "answerIndex": 0,
+        "explanation": "Avec des types alignés, le plan revient à un Index Seek.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mssql-defi-q3",
+        "prompt": "Cas pratique 3/3 — Depuis un déploiement, une requête est dix fois plus lente. Comment le confirmer et réagir vite ?",
+        "choices": [
+          "Consulter le Query Store, comparer les plans, et forcer l'ancien plan en attendant la correction",
+          "Redémarrer SQL Server",
+          "Supprimer tous les plans du cache en boucle",
+          "Attendre"
+        ],
+        "answerIndex": 0,
+        "explanation": "Forcer un plan est un pansement ; on cherche ensuite la cause.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mssql-defi-q4",
+        "prompt": "Quelle différence entre SQL Server et Azure SQL Database ?",
+        "choices": [
+          "Azure SQL Database est un service géré : sauvegardes, correctifs et haute disponibilité sont assurés par Azure",
+          "Azure SQL Database n'accepte pas le T-SQL",
+          "SQL Server ne fonctionne que dans le cloud",
+          "Aucune"
+        ],
+        "answerIndex": 0,
+        "explanation": "Certaines fonctions de niveau serveur n'y sont pas disponibles.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "mssql-defi-q5",
+        "prompt": "Cette requête lève une erreur. Touche la ligne en cause.",
+        "code": "SELECT Id, Nom\nFROM dbo.Clients\nOFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY;",
+        "bugLines": [
+          3
+        ],
+        "explanation": "OFFSET … FETCH exige un ORDER BY, à placer juste avant.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "mssql-defi-q6",
+        "prompt": "Quels outils servent à travailler avec SQL Server ?",
+        "choices": [
+          "SQL Server Management Studio",
+          "L'extension mssql de VS Code",
+          "sqlcmd en ligne de commande",
+          "psql"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "psql est le client de PostgreSQL.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

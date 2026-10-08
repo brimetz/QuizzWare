@@ -1,0 +1,434 @@
+{
+  "id": "duck-ch-essentiel",
+  "title": "DuckDB : l'essentiel",
+  "summary": "Du SQL analytique rapide sur des fichiers Parquet ou CSV.",
+  "lessons": [
+    {
+      "id": "duck-principes",
+      "title": "L'analytique embarquée",
+      "summary": "Le « SQLite de l'analytique ».",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Embarquée et en colonnes",
+          "body": "DuckDB est une bibliothèque, comme SQLite : pas de serveur, une base dans un fichier ou en mémoire. Mais elle est conçue pour l'analytique : stockage en colonnes, exécution vectorisée sur des blocs de valeurs, et utilisation de tous les cœurs. Une agrégation sur des centaines de millions de lignes tient sur un ordinateur portable."
+        },
+        {
+          "title": "Interroger des fichiers",
+          "body": "DuckDB lit directement des fichiers CSV, Parquet ou JSON, même avec des jokers, sans les importer. Avec l'extension httpfs, elle lit aussi depuis S3 ou HTTP.",
+          "code": "SELECT pays, sum(montant) AS total\nFROM 'ventes/2026-*.parquet'\nGROUP BY pays\nORDER BY total DESC;"
+        },
+        {
+          "title": "Les colonnes, pourquoi",
+          "body": "Un stockage en lignes lit toutes les colonnes de chaque ligne. En colonnes, sum(montant) ne lit que la colonne montant, compressée, au lieu des 50 colonnes de la table. C'est le principe de toutes les bases analytiques (OLAP)."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "duck-principes-q1",
+          "prompt": "Qu'est-ce qui distingue DuckDB de SQLite ?",
+          "choices": [
+            "DuckDB est conçue pour l'analytique, avec un stockage en colonnes ; SQLite pour le transactionnel, en lignes",
+            "DuckDB nécessite un serveur",
+            "SQLite est plus rapide pour les agrégations massives",
+            "DuckDB ne gère pas SQL"
+          ],
+          "answerIndex": 0,
+          "explanation": "Toutes deux sont embarquées, sans serveur.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "duck-principes-q2",
+          "prompt": "Pourquoi sum(montant) est-il rapide sur une table de 50 colonnes stockée en colonnes ?",
+          "choices": [
+            "Seule la colonne montant est lue, et elle est compressée",
+            "Toute la table est en mémoire",
+            "Le résultat est précalculé",
+            "Les autres colonnes sont supprimées"
+          ],
+          "answerIndex": 0,
+          "explanation": "On lit environ 1/50 des données.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "duck-principes-q3",
+          "prompt": "Complète : le total des ventes par pays, directement depuis des fichiers Parquet.",
+          "code": "SELECT pays, ___(montant) AS total\nFROM '___'\nGROUP BY pays;",
+          "answers": [
+            "sum",
+            "ventes/*.parquet"
+          ],
+          "distractors": [
+            "count",
+            "ventes",
+            "TABLE ventes"
+          ],
+          "explanation": "Le joker regroupe tous les fichiers du dossier.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "duck-principes-q4",
+          "prompt": "Que signifie « exécution vectorisée » ?",
+          "choices": [
+            "Les opérateurs traitent des blocs de milliers de valeurs à la fois plutôt qu'une ligne à la fois",
+            "Les données sont stockées en vecteurs d'embeddings",
+            "La base tourne sur GPU uniquement",
+            "Les requêtes sont parallélisées sur plusieurs serveurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Cela exploite bien les caches du processeur et les instructions SIMD.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "duck-principes-q5",
+          "prompt": "Ce script importe 20 Go de Parquet dans une table avant une seule requête. Touche la ligne inutile.",
+          "code": "CREATE TABLE ventes AS SELECT * FROM 'ventes/*.parquet';\nSELECT pays, sum(montant) FROM ventes GROUP BY pays;",
+          "bugLines": [
+            1
+          ],
+          "explanation": "DuckDB interroge les fichiers Parquet directement, en ne lisant que les colonnes utiles : l'import complet est superflu.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "duck-principes-q6",
+          "prompt": "Quels formats DuckDB lit-elle directement ?",
+          "choices": [
+            "CSV",
+            "Parquet",
+            "JSON",
+            "Des fichiers .docx"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les documents Word ne sont pas des données tabulaires.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "duck-sql",
+      "title": "Un SQL pratique",
+      "summary": "Raccourcis, Python et export.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des raccourcis",
+          "body": "DuckDB ajoute des facilités au SQL : GROUP BY ALL regroupe par toutes les colonnes non agrégées ; SELECT * EXCLUDE (…) retire des colonnes ; FROM peut venir en premier ; SUMMARIZE donne des statistiques sur chaque colonne d'une table.",
+          "code": "SELECT pays, produit, sum(montant)\nFROM ventes\nGROUP BY ALL;\n\nSELECT * EXCLUDE (commentaire) FROM ventes;\nSUMMARIZE ventes;"
+        },
+        {
+          "title": "Avec Python",
+          "body": "En Python, DuckDB interroge directement un DataFrame pandas ou Polars par son nom de variable, et renvoie un DataFrame. On combine ainsi la puissance du SQL et l'écosystème Python.",
+          "code": "import duckdb\nimport pandas as pd\n\nventes = pd.read_csv(\"ventes.csv\")\nres = duckdb.sql(\n    \"SELECT pays, sum(montant) AS total FROM ventes GROUP BY pays\"\n).df()",
+          "language": "python"
+        },
+        {
+          "title": "Exporter",
+          "body": "COPY écrit un résultat en Parquet ou CSV. On peut partitionner l'export par colonne, ce qui crée un dossier par valeur.",
+          "code": "COPY (SELECT * FROM ventes WHERE annee = 2026)\nTO 'export/ventes_2026.parquet' (FORMAT parquet);"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "duck-sql-q1",
+          "prompt": "Que fait GROUP BY ALL ?",
+          "choices": [
+            "Il regroupe par toutes les colonnes du SELECT qui ne sont pas agrégées",
+            "Il regroupe toutes les lignes en une seule",
+            "Il supprime les doublons",
+            "Il trie toutes les colonnes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Plus besoin de recopier la liste des colonnes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "duck-sql-q2",
+          "prompt": "Comment DuckDB interroge-t-elle un DataFrame pandas nommé ventes ?",
+          "choices": [
+            "En le citant par son nom dans le SQL : FROM ventes",
+            "Il faut d'abord l'exporter en CSV",
+            "C'est impossible",
+            "Avec un serveur intermédiaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "DuckDB repère la variable Python et lit ses colonnes sans copie inutile.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "duck-sql-q3",
+          "prompt": "Complète l'export en Parquet.",
+          "code": "___ (SELECT * FROM ventes WHERE annee = 2026)\nTO 'export/ventes_2026.parquet' (FORMAT ___);",
+          "answers": [
+            "COPY",
+            "parquet"
+          ],
+          "distractors": [
+            "EXPORT",
+            "INSERT",
+            "csv"
+          ],
+          "explanation": "COPY … TO écrit un fichier ; COPY … FROM en lit un.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "duck-sql-q4",
+          "prompt": "Que fait SUMMARIZE ventes ?",
+          "choices": [
+            "Il affiche des statistiques par colonne : type, min, max, valeurs distinctes, nulls…",
+            "Il supprime la table",
+            "Il compresse la table",
+            "Il résume le texte d'une colonne"
+          ],
+          "answerIndex": 0,
+          "explanation": "Très pratique pour découvrir un jeu de données.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "duck-sql-q5",
+          "prompt": "Ce script charge un CSV de 8 Go dans pandas, puis agrège ; il manque de mémoire. Touche la ligne à revoir.",
+          "code": "import duckdb, pandas as pd\nventes = pd.read_csv(\"ventes.csv\")\nprint(duckdb.sql(\n    \"SELECT pays, sum(montant) FROM ventes GROUP BY pays\").df())",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "pandas charge tout le fichier en mémoire. DuckDB peut lire le CSV directement en flux : FROM 'ventes.csv'.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "duck-sql-q6",
+          "prompt": "Quelles extensions de syntaxe propose DuckDB ?",
+          "choices": [
+            "GROUP BY ALL",
+            "SELECT * EXCLUDE (…)",
+            "FROM en tête de requête",
+            "Des jointures interdites"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les jointures sont évidemment permises.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "duck-usages",
+      "title": "Usages et limites",
+      "summary": "Où DuckDB brille, où elle ne convient pas.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Parquet et le pushdown",
+          "body": "Parquet stocke les données en colonnes, par groupes de lignes accompagnés de statistiques (min, max). DuckDB ne lit que les colonnes demandées (projection pushdown) et saute les groupes dont les statistiques excluent le filtre (filter pushdown). Un fichier trié par date rend les filtres par date très efficaces."
+        },
+        {
+          "title": "Les bons usages",
+          "body": "Analyses exploratoires, transformations de données dans des pipelines (avec dbt par exemple), traitements locaux de fichiers, tests de requêtes analytiques, et même analytique dans le navigateur grâce à WebAssembly."
+        },
+        {
+          "title": "Les limites",
+          "body": "DuckDB n'est pas faite pour un usage transactionnel : beaucoup de petites écritures concurrentes, plusieurs processus écrivant le même fichier. Un seul processus peut ouvrir une base en écriture. Pour l'analytique partagée par de nombreux utilisateurs sur des données massives, on passe à un entrepôt de données ou à ClickHouse."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "duck-usages-q1",
+          "prompt": "Que fait le filter pushdown sur des fichiers Parquet ?",
+          "choices": [
+            "Il saute les groupes de lignes dont les statistiques min/max excluent le filtre",
+            "Il filtre après avoir tout lu",
+            "Il supprime des lignes du fichier",
+            "Il trie le fichier"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un filtre sur une date peut ainsi éviter de lire la majorité du fichier.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "duck-usages-q2",
+          "prompt": "Pourquoi DuckDB ne convient-elle pas comme base d'une application web transactionnelle ?",
+          "choices": [
+            "Elle n'est pas faite pour de nombreuses petites écritures concurrentes, et un seul processus écrit à la fois",
+            "Elle ne gère pas SQL",
+            "Elle ne stocke pas de données",
+            "Elle est payante"
+          ],
+          "answerIndex": 0,
+          "explanation": "PostgreSQL ou MySQL conviennent à ce rôle.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "duck-usages-q3",
+          "prompt": "Un fichier Parquet est trié par date. Pourquoi est-ce utile ?",
+          "choices": [
+            "Les statistiques de chaque groupe de lignes couvrent des plages de dates étroites : un filtre par date en saute la plupart",
+            "Le fichier est plus petit",
+            "Le tri est obligatoire",
+            "Ce n'est pas utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le même principe guide la clé de tri des bases en colonnes.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "duck-usages-q4",
+          "prompt": "Le second service plante avec une erreur de verrou au démarrage. Touche la ligne en cause.",
+          "code": "# service A, permanent\ncon = duckdb.connect(\"analytique.duckdb\")\n# service B, permanent\ncon = duckdb.connect(\"analytique.duckdb\")",
+          "language": "python",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Un seul processus peut ouvrir la base en écriture. B doit l'ouvrir en lecture seule (read_only=True) pendant que personne n'écrit, ou passer par A.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "duck-usages-q5",
+          "prompt": "Remets dans l'ordre un petit pipeline avec DuckDB.",
+          "language": "text",
+          "lines": [
+            "Lire les CSV bruts du jour",
+            "Nettoyer et typer les colonnes en SQL",
+            "Joindre avec le référentiel des produits",
+            "Écrire le résultat en Parquet partitionné par date",
+            "Interroger le Parquet pour les rapports"
+          ],
+          "explanation": "Le Parquet produit est ensuite lisible par d'autres outils.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "duck-usages-q6",
+          "prompt": "Où DuckDB est-elle un bon choix ?",
+          "choices": [
+            "L'analyse exploratoire de fichiers sur un portable",
+            "Les étapes de transformation d'un pipeline de données",
+            "L'analytique dans le navigateur via WebAssembly",
+            "La base de commandes d'un site marchand très fréquenté"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le transactionnel relève d'une base comme PostgreSQL.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "duck-defi",
+    "title": "Défi entretien : l'analyste et ses fichiers",
+    "summary": "Des gigaoctets de CSV, un ordinateur portable.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "duck-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une analyste reçoit chaque mois 30 Go de CSV de ventes et les traite dans pandas, qui manque de mémoire. Que proposer ?",
+        "choices": [
+          "Interroger les CSV directement avec DuckDB, en SQL, sans tout charger en mémoire",
+          "Acheter un serveur de 512 Go",
+          "Découper les fichiers à la main",
+          "Ouvrir les fichiers dans un tableur"
+        ],
+        "answerIndex": 0,
+        "explanation": "DuckDB traite les données en flux et utilise tous les cœurs.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "duck-defi-q2",
+        "prompt": "Cas pratique 2/3 — Les mêmes fichiers sont relus pour chaque analyse. Comment accélérer les relectures ?",
+        "choices": [
+          "Les convertir une fois en Parquet, triés ou partitionnés par date",
+          "Les compresser en zip",
+          "Les relire à chaque fois en CSV",
+          "Les convertir en JSON"
+        ],
+        "answerIndex": 0,
+        "explanation": "Parquet est typé, en colonnes, compressé et permet le pushdown.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "duck-defi-q3",
+        "prompt": "Cas pratique 3/3 — Vingt personnes veulent maintenant des tableaux de bord sur ces données, mises à jour en continu. DuckDB reste-t-elle adaptée ?",
+        "choices": [
+          "Plus vraiment : un entrepôt de données ou ClickHouse, partagé et multi-utilisateurs, convient mieux",
+          "Oui, en partageant le fichier .duckdb sur un disque réseau",
+          "Oui, en ouvrant vingt connexions en écriture",
+          "Oui, sans aucune limite"
+        ],
+        "answerIndex": 0,
+        "explanation": "DuckDB reste excellente pour préparer les données en amont.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "duck-defi-q4",
+        "prompt": "Comment lire des fichiers Parquet stockés sur S3 avec DuckDB ?",
+        "choices": [
+          "Avec l'extension httpfs, en citant le chemin s3://…",
+          "Il faut les télécharger à la main d'abord",
+          "C'est impossible",
+          "Avec un pilote ODBC"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le pushdown limite les octets téléchargés.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "duck-defi-q5",
+        "prompt": "Cette requête lit tous les fichiers alors qu'on ne veut que mars 2026. Touche la ligne en cause.",
+        "code": "SELECT pays, sum(montant)\nFROM 'ventes/*.csv'\nWHERE CAST(date_vente AS VARCHAR) LIKE '2026-03%'\nGROUP BY pays;",
+        "bugLines": [
+          2
+        ],
+        "explanation": "Des CSV n'ont ni colonnes séparées ni statistiques : tout doit être lu. Avec des fichiers nommés par mois, on cible 'ventes/2026-03*.csv', ou on passe en Parquet partitionné.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "duck-defi-q6",
+        "prompt": "Quels atouts rendent DuckDB populaire chez les analystes ?",
+        "choices": [
+          "Aucune installation de serveur",
+          "La lecture directe de fichiers",
+          "L'intégration avec pandas et Polars",
+          "La gestion de milliers d'écritures concurrentes"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les écritures concurrentes ne sont pas son terrain.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

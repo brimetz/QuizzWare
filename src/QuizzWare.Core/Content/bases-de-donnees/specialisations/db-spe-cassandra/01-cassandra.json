@@ -1,0 +1,429 @@
+{
+  "id": "cass-ch-essentiel",
+  "title": "Cassandra : l'essentiel",
+  "summary": "Modéliser par requête, clés de partition et cohérence.",
+  "lessons": [
+    {
+      "id": "cass-modele",
+      "title": "Le modèle",
+      "summary": "Partitions, colonnes de clustering et CQL.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un anneau sans maître",
+          "body": "Cassandra répartit les données sur un anneau de nœuds égaux, sans nœud principal : n'importe quel nœud accepte une requête et la relaie. Chaque donnée est copiée sur plusieurs nœuds selon le facteur de réplication. Elle encaisse des volumes d'écriture énormes et la perte de nœuds, voire d'un centre de données."
+        },
+        {
+          "title": "La clé primaire",
+          "body": "La clé primaire se compose d'une clé de partition, qui détermine les nœuds qui stockent la ligne, et de colonnes de clustering, qui ordonnent les lignes au sein de la partition. Une partition se lit d'un bloc, sur un seul groupe de nœuds.",
+          "code": "CREATE TABLE mesures_par_capteur (\n  capteur_id text,\n  jour date,\n  instant timestamp,\n  valeur double,\n  PRIMARY KEY ((capteur_id, jour), instant)\n) WITH CLUSTERING ORDER BY (instant DESC);"
+        },
+        {
+          "title": "CQL",
+          "body": "CQL ressemble à SQL, mais sans jointure ni sous-requête, et une requête doit fournir la clé de partition complète. INSERT et UPDATE sont tous deux des upserts : écrire une ligne existante la remplace sans erreur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cass-modele-q1",
+          "prompt": "Dans PRIMARY KEY ((capteur_id, jour), instant), quelle est la clé de partition ?",
+          "choices": [
+            "Le couple (capteur_id, jour)",
+            "capteur_id seul",
+            "instant",
+            "Les trois colonnes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les doubles parenthèses regroupent les colonnes de la clé de partition ; instant est une colonne de clustering.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cass-modele-q2",
+          "prompt": "À quoi servent les colonnes de clustering ?",
+          "choices": [
+            "À ordonner les lignes au sein d'une partition",
+            "À choisir les nœuds de stockage",
+            "À chiffrer les données",
+            "À créer des index secondaires"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elles permettent des requêtes par intervalle triées dans une partition.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cass-modele-q3",
+          "prompt": "Que se passe-t-il si l'on fait un INSERT sur une clé primaire déjà existante ?",
+          "choices": [
+            "La ligne est remplacée, sans erreur (upsert)",
+            "Une erreur de clé dupliquée",
+            "Une seconde ligne est créée",
+            "L'insertion est ignorée"
+          ],
+          "answerIndex": 0,
+          "explanation": "INSERT … IF NOT EXISTS existe, mais au prix d'une transaction légère coûteuse.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cass-modele-q4",
+          "prompt": "Complète : les mesures d'un capteur par jour, les plus récentes d'abord.",
+          "code": "CREATE TABLE mesures_par_capteur (\n  capteur_id text, jour date,\n  instant timestamp, valeur double,\n  PRIMARY KEY (___, instant)\n) WITH ___ ORDER BY (instant DESC);",
+          "answers": [
+            "(capteur_id, jour)",
+            "CLUSTERING"
+          ],
+          "distractors": [
+            "capteur_id, jour",
+            "PARTITION",
+            "SORT"
+          ],
+          "explanation": "Sans parenthèses internes, jour deviendrait une colonne de clustering et toutes les mesures d'un capteur iraient dans une seule partition.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "cass-modele-q5",
+          "prompt": "Cette requête est refusée par Cassandra. Touche la ligne en cause.",
+          "code": "SELECT instant, valeur\nFROM mesures_par_capteur\nWHERE capteur_id = 'c-17';",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La clé de partition est (capteur_id, jour) : il faut aussi fournir jour = '2026-03-09'.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cass-modele-q6",
+          "prompt": "Quelles caractéristiques décrivent Cassandra ?",
+          "choices": [
+            "Pas de nœud principal",
+            "Des données répliquées sur plusieurs nœuds",
+            "De très hauts débits d'écriture",
+            "Des jointures entre tables"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "CQL n'a pas de jointure.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "cass-requetes",
+      "title": "Une table par requête",
+      "summary": "Dénormaliser et dimensionner les partitions.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Modéliser par requête",
+          "body": "On ne modélise pas les entités mais les requêtes : chaque requête importante a sa table, dont la clé de partition correspond au critère d'accès. « Les messages d'une conversation » et « les messages d'un utilisateur » donnent deux tables, et chaque message est écrit dans les deux. Les écritures étant peu coûteuses, la duplication est la norme."
+        },
+        {
+          "title": "La taille des partitions",
+          "body": "Une partition trop grosse (des centaines de mégaoctets, des millions de lignes) déséquilibre le cluster et ralentit lectures et compactions. On borne les partitions en ajoutant une composante temporelle à la clé (le jour, le mois), comme dans (capteur_id, jour)."
+        },
+        {
+          "title": "ALLOW FILTERING",
+          "body": "Une requête sur une colonne qui n'est pas dans la clé est refusée, sauf avec ALLOW FILTERING, qui fait parcourir des partitions entières, voire tout le cluster. En production, c'est presque toujours le signe qu'il manque une table.",
+          "code": "SELECT * FROM messages_par_conversation\nWHERE auteur = 'zoe' ALLOW FILTERING;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cass-requetes-q1",
+          "prompt": "Il faut lister les messages par conversation et par utilisateur. Que faire avec Cassandra ?",
+          "choices": [
+            "Deux tables, une par requête, et écrire chaque message dans les deux",
+            "Une table et une jointure",
+            "Une table et ALLOW FILTERING",
+            "Une table par utilisateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "La dénormalisation est la norme avec Cassandra.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cass-requetes-q2",
+          "prompt": "Pourquoi ajouter le jour à la clé de partition d'une table de mesures ?",
+          "choices": [
+            "Pour borner la taille des partitions, qui grandiraient sans fin sinon",
+            "Pour trier les capteurs",
+            "Pour chiffrer les données",
+            "Ce n'est pas utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un capteur qui mesure chaque seconde pendant des années créerait une partition géante.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cass-requetes-q3",
+          "prompt": "Cette requête fonctionne en test et met le cluster à genoux en production. Touche la ligne en cause.",
+          "code": "SELECT * FROM messages_par_conversation\nWHERE auteur = 'zoe'\nALLOW FILTERING;",
+          "bugLines": [
+            3
+          ],
+          "explanation": "ALLOW FILTERING parcourt toutes les partitions. Il faut une table messages_par_auteur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cass-requetes-q4",
+          "prompt": "Pourquoi la duplication des données est-elle acceptable avec Cassandra ?",
+          "choices": [
+            "Les écritures sont très peu coûteuses, et le stockage aussi comparé aux lectures dispersées",
+            "Cassandra compresse les doublons",
+            "Les doublons sont supprimés automatiquement",
+            "Elle ne l'est pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "On échange de l'espace contre des lectures en une seule partition.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "cass-requetes-q5",
+          "prompt": "Complète la table des messages d'une conversation, du plus récent au plus ancien.",
+          "code": "CREATE TABLE messages_par_conversation (\n  conversation_id uuid, envoye timeuuid,\n  auteur text, texte text,\n  PRIMARY KEY (___, envoye)\n) WITH CLUSTERING ORDER BY (envoye ___);",
+          "answers": [
+            "conversation_id",
+            "DESC"
+          ],
+          "distractors": [
+            "auteur",
+            "ASC",
+            "envoye"
+          ],
+          "explanation": "Une conversation par partition, messages triés par date décroissante.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cass-requetes-q6",
+          "prompt": "Quels signaux trahissent une mauvaise modélisation Cassandra ?",
+          "choices": [
+            "Des requêtes avec ALLOW FILTERING",
+            "Des partitions de plusieurs centaines de mégaoctets",
+            "Une partition qui reçoit tout le trafic",
+            "Une table par requête"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une table par requête est au contraire la bonne pratique.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "cass-coherence",
+      "title": "Cohérence et écritures",
+      "summary": "Niveaux de cohérence, LSM et tombstones.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La cohérence réglable",
+          "body": "Chaque requête choisit son niveau de cohérence : ONE (un réplica répond), QUORUM (une majorité), ALL (tous), et LOCAL_QUORUM (majorité dans le centre de données local). Avec un facteur de réplication de 3, écrire et lire en QUORUM (2 réplicas chacun) garantit de lire la dernière écriture, car 2 + 2 > 3."
+        },
+        {
+          "title": "Des écritures en ajout",
+          "body": "Une écriture va dans un journal (commit log) et une table en mémoire (memtable), vidée ensuite dans des fichiers immuables (SSTables) que la compaction fusionne. Pas de lecture avant écriture : c'est pourquoi les écritures sont si rapides. Les conflits se résolvent par horodatage : la dernière écriture gagne."
+        },
+        {
+          "title": "Les tombstones",
+          "body": "Supprimer écrit un marqueur (tombstone), conservé un certain temps (gc_grace_seconds, 10 jours par défaut) pour que tous les réplicas l'apprennent. Une table utilisée comme file, où l'on supprime beaucoup, accumule des tombstones que chaque lecture doit parcourir : les requêtes ralentissent puis échouent."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cass-coherence-q1",
+          "prompt": "Facteur de réplication 3 : combien de réplicas doivent répondre en QUORUM ?",
+          "choices": [
+            "2",
+            "1",
+            "3",
+            "Tous les nœuds du cluster"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une majorité de 3, soit 2.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cass-coherence-q2",
+          "prompt": "Pourquoi lire et écrire en QUORUM garantit-il de lire la dernière écriture avec RF = 3 ?",
+          "choices": [
+            "Les ensembles de réplicas lus et écrits se recouvrent toujours : 2 + 2 > 3",
+            "QUORUM verrouille la ligne",
+            "QUORUM lit tous les réplicas",
+            "Ce n'est pas garanti"
+          ],
+          "answerIndex": 0,
+          "explanation": "Au moins un réplica lu a reçu l'écriture.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cass-coherence-q3",
+          "prompt": "Pourquoi utiliser LOCAL_QUORUM avec plusieurs centres de données ?",
+          "choices": [
+            "Pour obtenir une majorité dans le centre local, sans attendre les réplicas distants",
+            "Pour écrire dans un seul nœud",
+            "Pour désactiver la réplication",
+            "Pour chiffrer les échanges"
+          ],
+          "answerIndex": 0,
+          "explanation": "La latence reste locale ; les autres centres reçoivent l'écriture en arrière-plan.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "cass-coherence-q4",
+          "prompt": "Remets dans l'ordre le trajet d'une écriture sur un nœud.",
+          "language": "text",
+          "lines": [
+            "Écriture dans le commit log",
+            "Écriture dans la memtable",
+            "Accusé de réception au coordinateur",
+            "Vidage de la memtable dans une SSTable",
+            "Fusion des SSTables par compaction"
+          ],
+          "explanation": "Le commit log garantit la durabilité en cas de crash avant le vidage.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cass-coherence-q5",
+          "prompt": "Cette table sert de file de tâches ; au bout de quelques jours, les lectures expirent. Touche la ligne en cause.",
+          "code": "SELECT * FROM taches WHERE file = 'emails' LIMIT 10;\n-- traitement des tâches\nDELETE FROM taches WHERE file = 'emails' AND id = ?;",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Chaque suppression laisse une tombstone que les lectures suivantes doivent parcourir. Cassandra est un mauvais choix pour une file : on prend un vrai système de messages.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cass-coherence-q6",
+          "prompt": "Quelles affirmations sur les écritures Cassandra sont vraies ?",
+          "choices": [
+            "Elles ne lisent pas la donnée existante",
+            "Les conflits se résolvent par horodatage",
+            "Une suppression écrit un marqueur",
+            "Elles verrouillent la partition"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Aucun verrou : c'est la clé de leur rapidité.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "cass-defi",
+    "title": "Défi entretien : la télémétrie",
+    "summary": "Un million de mesures par seconde.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cass-defi-q1",
+        "prompt": "Cas pratique 1/3 — 2 millions de capteurs envoient une mesure toutes les 5 secondes. On veut les mesures d'un capteur sur une journée. Quelle clé ?",
+        "choices": [
+          "PRIMARY KEY ((capteur_id, jour), instant)",
+          "PRIMARY KEY (instant)",
+          "PRIMARY KEY (capteur_id, instant)",
+          "PRIMARY KEY ((jour), capteur_id, instant)"
+        ],
+        "answerIndex": 0,
+        "explanation": "Partitions bornées à 17 280 mesures, et requête sur une seule partition.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cass-defi-q2",
+        "prompt": "Cas pratique 2/3 — Pourquoi PRIMARY KEY ((jour), capteur_id, instant) serait-elle une mauvaise idée ?",
+        "choices": [
+          "Toutes les mesures du jour iraient dans une seule partition : énorme et chaude",
+          "Elle est syntaxiquement invalide",
+          "Elle empêche le tri",
+          "Elle est parfaite"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un seul groupe de nœuds recevrait toutes les écritures.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cass-defi-q3",
+        "prompt": "Cas pratique 3/3 — Les mesures doivent être supprimées après 90 jours. Comment ?",
+        "choices": [
+          "Un TTL de 90 jours à l'écriture, avec une stratégie de compaction par fenêtre de temps",
+          "Un DELETE quotidien de chaque mesure",
+          "Supprimer et recréer la table",
+          "Les garder pour toujours"
+        ],
+        "answerIndex": 0,
+        "explanation": "TimeWindowCompactionStrategy supprime des fichiers entiers expirés, sans tombstones dispersées.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cass-defi-q4",
+        "prompt": "Les tableaux de bord tolèrent un léger retard, mais l'écriture doit être très rapide. Quel niveau de cohérence pour l'écriture ?",
+        "choices": [
+          "ONE ou LOCAL_ONE",
+          "ALL",
+          "SERIAL",
+          "EACH_QUORUM"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un seul réplica confirme ; les autres suivent.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "cass-defi-q5",
+        "prompt": "On veut lire la dernière écriture à coup sûr avec RF = 3. Touche la ligne qui l'empêche.",
+        "code": "-- écriture\nCONSISTENCY ONE;\nINSERT INTO comptes (id, solde) VALUES (42, 100);\n-- lecture\nCONSISTENCY QUORUM;\nSELECT solde FROM comptes WHERE id = 42;",
+        "bugLines": [
+          2
+        ],
+        "explanation": "1 + 2 = 3, pas plus que 3 : le recouvrement n'est pas garanti. Il faut écrire aussi en QUORUM.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "cass-defi-q6",
+        "prompt": "Pour quels usages Cassandra est-elle bien adaptée ?",
+        "choices": [
+          "La télémétrie et les séries de mesures",
+          "Les historiques d'événements massifs",
+          "Les messageries à très grande échelle",
+          "Une file de tâches avec suppressions constantes"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les suppressions massives créent des tombstones.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

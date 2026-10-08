@@ -1,0 +1,446 @@
+{
+  "id": "neo-ch-essentiel",
+  "title": "Neo4j : l'essentiel",
+  "summary": "Le modèle nœuds / relations et le langage Cypher.",
+  "lessons": [
+    {
+      "id": "neo-modele",
+      "title": "Le modèle graphe",
+      "summary": "Nœuds, relations, propriétés.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Nœuds et relations",
+          "body": "Neo4j stocke des nœuds, portant des étiquettes (Personne, Produit), et des relations typées et orientées entre eux (CONNAIT, A_ACHETE). Nœuds et relations portent des propriétés. Une relation est stockée comme un pointeur direct : la suivre ne coûte pas une recherche d'index, quelle que soit la taille du graphe."
+        },
+        {
+          "title": "Cypher",
+          "body": "Cypher décrit des motifs en « art ASCII » : les parenthèses sont des nœuds, les crochets et flèches des relations. MATCH cherche le motif, RETURN renvoie le résultat.",
+          "code": "MATCH (a:Personne {nom: 'Alice'})-[:CONNAIT]->(b:Personne)\nRETURN b.nom\nORDER BY b.nom;",
+          "language": "text"
+        },
+        {
+          "title": "Quand un graphe",
+          "body": "Le graphe brille quand la requête suit des relations sur plusieurs niveaux : amis d'amis, recommandations, chaînes de dépendances, détection de fraude par réseaux de comptes. En SQL, chaque niveau ajoute une jointure, et les profondeurs variables deviennent pénibles."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "neo-modele-q1",
+          "prompt": "Que représentent les parenthèses dans un motif Cypher ?",
+          "choices": [
+            "Des nœuds",
+            "Des relations",
+            "Des propriétés",
+            "Des sous-requêtes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les relations s'écrivent entre crochets : -[:CONNAIT]->.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "neo-modele-q2",
+          "prompt": "Pourquoi suivre une relation est-il rapide dans Neo4j ?",
+          "choices": [
+            "Chaque relation est un pointeur direct entre nœuds, sans recherche d'index",
+            "Toutes les données sont en cache",
+            "Neo4j utilise des jointures optimisées",
+            "Les relations sont triées"
+          ],
+          "answerIndex": 0,
+          "explanation": "On parle d'adjacence sans index (index-free adjacency).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "neo-modele-q3",
+          "prompt": "Complète : les personnes qu'Alice connaît.",
+          "code": "___ (a:Personne {nom: 'Alice'})-[:CONNAIT]->(b:Personne)\n___ b.nom;",
+          "language": "text",
+          "answers": [
+            "MATCH",
+            "RETURN"
+          ],
+          "distractors": [
+            "SELECT",
+            "FROM",
+            "WHERE"
+          ],
+          "explanation": "MATCH décrit le motif, RETURN le résultat.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "neo-modele-q4",
+          "prompt": "Quel cas d'usage convient le mieux à une base graphe ?",
+          "choices": [
+            "Recommander des produits achetés par des clients aux goûts proches",
+            "Stocker des factures à consulter par numéro",
+            "Compter les ventes par mois",
+            "Enregistrer des mesures de capteurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "La requête suit des relations client → produit → client → produit.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "neo-modele-q5",
+          "prompt": "On veut les personnes qui connaissent Alice, mais la requête renvoie celles qu'Alice connaît. Touche la ligne en cause.",
+          "code": "MATCH (a:Personne {nom: 'Alice'})-[:CONNAIT]->(b:Personne)\nRETURN b.nom;",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "La flèche indique le sens : il faut (a)<-[:CONNAIT]-(b).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "neo-modele-q6",
+          "prompt": "Que peut porter une relation Neo4j ?",
+          "choices": [
+            "Un type, comme CONNAIT",
+            "Une direction",
+            "Des propriétés, comme depuis: 2019",
+            "Plusieurs nœuds de départ"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une relation relie exactement deux nœuds.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "neo-cypher",
+      "title": "Écrire avec Cypher",
+      "summary": "CREATE, MERGE et chemins variables.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "CREATE et MERGE",
+          "body": "CREATE crée toujours, même si un nœud identique existe. MERGE cherche le motif et ne le crée que s'il est absent : c'est l'outil pour éviter les doublons. ON CREATE SET et ON MATCH SET précisent ce qui change dans chaque cas.",
+          "code": "MERGE (p:Personne {email: $email})\nON CREATE SET p.cree_le = datetime()\nON MATCH SET p.vu_le = datetime();",
+          "language": "text"
+        },
+        {
+          "title": "Le piège de MERGE",
+          "body": "MERGE travaille sur le motif entier : si le motif complet (a)-[:CONNAIT]->(b) n'existe pas, il crée tout, y compris des nœuds a et b en double. On fusionne d'abord chaque nœud séparément, puis la relation entre eux.",
+          "code": "MERGE (a:Personne {nom: 'Alice'})\nMERGE (b:Personne {nom: 'Bob'})\nMERGE (a)-[:CONNAIT]->(b);",
+          "language": "text"
+        },
+        {
+          "title": "Chemins de longueur variable",
+          "body": "[:CONNAIT*1..3] suit de 1 à 3 relations : les amis jusqu'au troisième degré. shortestPath trouve le plus court chemin entre deux nœuds. Sans borne supérieure, une telle requête peut exploser sur un graphe dense.",
+          "code": "MATCH (a:Personne {nom: 'Alice'})-[:CONNAIT*2]->(fof)\nWHERE NOT (a)-[:CONNAIT]->(fof) AND fof <> a\nRETURN DISTINCT fof.nom;",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "neo-cypher-q1",
+          "prompt": "Quelle différence entre CREATE et MERGE ?",
+          "choices": [
+            "CREATE crée toujours ; MERGE ne crée que si le motif n'existe pas",
+            "MERGE supprime les doublons existants",
+            "CREATE est plus lent",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "MERGE est la base des imports idempotents.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "neo-cypher-q2",
+          "prompt": "Alice et Bob existent déjà ; après cette requête, il y a deux Alice et deux Bob. Touche la ligne en cause.",
+          "code": "MERGE (a:Personne {nom: 'Alice'})-[:CONNAIT]->(b:Personne {nom: 'Bob'});",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Le motif complet n'existait pas : MERGE l'a créé en entier. On fusionne chaque nœud, puis la relation.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "neo-cypher-q3",
+          "prompt": "Que signifie [:CONNAIT*1..3] ?",
+          "choices": [
+            "Un chemin de 1 à 3 relations CONNAIT",
+            "Exactement 3 relations",
+            "Les 3 premières relations trouvées",
+            "Une relation de poids 1 à 3"
+          ],
+          "answerIndex": 0,
+          "explanation": "Toujours borner ces chemins pour éviter une explosion combinatoire.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "neo-cypher-q4",
+          "prompt": "Complète cet import idempotent.",
+          "code": "___ (p:Personne {email: $email})\nON ___ SET p.cree_le = datetime()\nON MATCH SET p.vu_le = datetime();",
+          "language": "text",
+          "answers": [
+            "MERGE",
+            "CREATE"
+          ],
+          "distractors": [
+            "MATCH",
+            "INSERT",
+            "UPDATE"
+          ],
+          "explanation": "$email est un paramètre : on n'insère jamais de valeur directement dans le texte de la requête.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "neo-cypher-q5",
+          "prompt": "Pourquoi utiliser des paramètres ($email) plutôt que concaténer les valeurs dans la requête ?",
+          "choices": [
+            "Pour éviter les injections Cypher et réutiliser le plan d'exécution",
+            "Pour la lisibilité uniquement",
+            "Parce que les chaînes sont interdites",
+            "Ce n'est pas utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Comme les requêtes préparées en SQL.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "neo-cypher-q6",
+          "prompt": "Que fait la requête des amis d'amis présentée plus haut ?",
+          "choices": [
+            "Elle suit exactement deux relations CONNAIT",
+            "Elle exclut les personnes qu'Alice connaît déjà",
+            "Elle exclut Alice elle-même",
+            "Elle renvoie les amis directs d'Alice"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "C'est la base d'une suggestion « vous connaissez peut-être ».",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "neo-performance",
+      "title": "Index et performance",
+      "summary": "Points d'entrée, contraintes et plans.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Trouver le point de départ",
+          "body": "Suivre les relations est rapide, mais trouver le nœud de départ (Alice par son nom) exige un index, sinon Neo4j parcourt tous les nœuds de l'étiquette. Une contrainte d'unicité crée l'index et empêche les doublons.",
+          "code": "CREATE CONSTRAINT personne_email IF NOT EXISTS\nFOR (p:Personne) REQUIRE p.email IS UNIQUE;\n\nCREATE INDEX personne_nom IF NOT EXISTS\nFOR (p:Personne) ON (p.nom);",
+          "language": "text"
+        },
+        {
+          "title": "EXPLAIN et PROFILE",
+          "body": "EXPLAIN montre le plan sans exécuter ; PROFILE l'exécute et compte les accès (db hits). Un NodeByLabelScan au départ signale un index manquant ; un CartesianProduct, deux motifs non reliés qui se multiplient."
+        },
+        {
+          "title": "Les super-nœuds",
+          "body": "Un nœud relié à des millions d'autres (un pays, un compte célèbre) ralentit toute requête qui le traverse. On le contourne en filtrant par type et direction de relation, ou en modélisant autrement, par exemple en ajoutant des nœuds intermédiaires par année."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "neo-performance-q1",
+          "prompt": "PROFILE montre un NodeByLabelScan sur 10 millions de Personne au début de la requête. Que faire ?",
+          "choices": [
+            "Créer un index (ou une contrainte d'unicité) sur la propriété qui sert de point de départ",
+            "Ajouter des relations",
+            "Supprimer l'étiquette",
+            "Augmenter la profondeur du chemin"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le point de départ se trouve alors directement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "neo-performance-q2",
+          "prompt": "Que signale un CartesianProduct dans un plan Cypher ?",
+          "choices": [
+            "Deux motifs non reliés, dont toutes les combinaisons sont produites",
+            "Une jointure optimale",
+            "Un index utilisé",
+            "Une erreur de syntaxe"
+          ],
+          "answerIndex": 0,
+          "explanation": "10 000 × 10 000 lignes intermédiaires arrivent vite.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "neo-performance-q3",
+          "prompt": "Complète cette contrainte d'unicité.",
+          "code": "CREATE ___ personne_email IF NOT EXISTS\nFOR (p:Personne) ___ p.email IS UNIQUE;",
+          "language": "text",
+          "answers": [
+            "CONSTRAINT",
+            "REQUIRE"
+          ],
+          "distractors": [
+            "INDEX",
+            "ASSERT",
+            "UNIQUE"
+          ],
+          "explanation": "ASSERT est l'ancienne syntaxe, remplacée par REQUIRE.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "neo-performance-q4",
+          "prompt": "Qu'est-ce qu'un super-nœud ?",
+          "choices": [
+            "Un nœud relié à un nombre énorme d'autres, qui ralentit les parcours",
+            "Le nœud racine du graphe",
+            "Un nœud avec beaucoup de propriétés",
+            "Un nœud répliqué"
+          ],
+          "answerIndex": 0,
+          "explanation": "On filtre par type et direction de relation, ou on remodèle.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "neo-performance-q5",
+          "prompt": "Cette requête produit un produit cartésien énorme. Touche la ligne en cause.",
+          "code": "MATCH (c:Client)\nMATCH (p:Produit)\nWHERE c.ville = 'Lyon'\nRETURN c.nom, p.nom;",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Les deux motifs ne sont pas reliés : chaque client est combiné à chaque produit. On relie par la relation voulue : (c)-[:A_ACHETE]->(p).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "neo-performance-q6",
+          "prompt": "Quelles pratiques améliorent les performances de Neo4j ?",
+          "choices": [
+            "Indexer les propriétés qui servent de point d'entrée",
+            "Borner les chemins de longueur variable",
+            "Utiliser des paramètres",
+            "Supprimer les étiquettes des nœuds"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les étiquettes sont au contraire essentielles pour restreindre la recherche.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "neo-defi",
+    "title": "Défi entretien : la détection de fraude",
+    "summary": "Des réseaux de comptes suspects.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "neo-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une banque veut détecter des réseaux de comptes qui partagent un téléphone, une adresse ou un appareil, sur plusieurs niveaux. Pourquoi une base graphe ?",
+        "choices": [
+          "La requête suit des relations sur une profondeur variable, ce qui demande des jointures récursives coûteuses en SQL",
+          "Les graphes stockent mieux les montants",
+          "Le SQL interdit les recherches de fraude",
+          "Pour remplacer la base des comptes"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le graphe complète souvent la base transactionnelle sans la remplacer.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "neo-defi-q2",
+        "prompt": "Cas pratique 2/3 — Comment modéliser le partage d'un téléphone ?",
+        "choices": [
+          "Un nœud Telephone, relié par UTILISE à chaque compte qui le déclare",
+          "Une propriété telephone sur chaque compte, comparée par un parcours",
+          "Une relation entre chaque paire de comptes",
+          "Une table SQL séparée"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les comptes qui partagent un téléphone sont à deux sauts.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "neo-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le nœud Telephone « 0000000000 », saisi par défaut, est relié à 400 000 comptes et fait exploser les requêtes. Que faire ?",
+        "choices": [
+          "Ne pas créer de nœud pour les valeurs par défaut ou invalides, et exclure les super-nœuds des parcours",
+          "Augmenter la mémoire",
+          "Supprimer tous les téléphones",
+          "Passer en chemins illimités"
+        ],
+        "answerIndex": 0,
+        "explanation": "La qualité des données est cruciale pour un graphe.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "neo-defi-q4",
+        "prompt": "Comment rendre l'import quotidien des comptes rejouable sans doublons ?",
+        "choices": [
+          "MERGE sur un identifiant unique couvert par une contrainte d'unicité",
+          "CREATE à chaque import",
+          "Supprimer et recréer tout le graphe",
+          "Un index sans contrainte"
+        ],
+        "answerIndex": 0,
+        "explanation": "La contrainte empêche aussi les doublons créés en concurrence.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "neo-defi-q5",
+        "prompt": "Cette requête ne se termine jamais sur le graphe de production. Touche la ligne en cause.",
+        "code": "MATCH (c:Compte {id: $id})-[*]-(autre:Compte)\nRETURN DISTINCT autre.id;",
+        "language": "text",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Le chemin n'a ni type de relation ni borne : il explore tout le graphe par toutes les combinaisons. On écrit par exemple -[:UTILISE*1..4]-.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "neo-defi-q6",
+        "prompt": "Quels outils Cypher servent à analyser une requête lente ?",
+        "choices": [
+          "EXPLAIN",
+          "PROFILE",
+          "Le nombre de db hits par opérateur",
+          "CREATE"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "PROFILE exécute la requête et mesure chaque étape.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

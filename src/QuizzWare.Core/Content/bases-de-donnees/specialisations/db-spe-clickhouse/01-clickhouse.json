@@ -1,0 +1,437 @@
+{
+  "id": "click-ch-essentiel",
+  "title": "ClickHouse : l'essentiel",
+  "summary": "Des requêtes analytiques en temps réel sur des milliards de lignes.",
+  "lessons": [
+    {
+      "id": "click-mergetree",
+      "title": "MergeTree",
+      "summary": "Le moteur de table et sa clé de tri.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Une base analytique",
+          "body": "ClickHouse est une base en colonnes, distribuée, conçue pour agréger très vite d'énormes volumes : journaux, événements web, métriques. Elle répond en secondes, voire en millisecondes, sur des milliards de lignes, mais n'est pas faite pour des mises à jour ligne par ligne."
+        },
+        {
+          "title": "Le moteur MergeTree",
+          "body": "Chaque insertion crée un « part » trié sur disque ; en arrière-plan, les parts sont fusionnés. ORDER BY définit la clé de tri, qui sert aussi d'index ; PARTITION BY découpe les données, souvent par mois.",
+          "code": "CREATE TABLE evenements (\n  date_evt Date,\n  instant DateTime,\n  site LowCardinality(String),\n  type LowCardinality(String),\n  utilisateur_id UInt64,\n  duree_ms UInt32\n)\nENGINE = MergeTree\nPARTITION BY toYYYYMM(date_evt)\nORDER BY (site, type, instant);"
+        },
+        {
+          "title": "L'index creux",
+          "body": "L'index primaire ne contient pas chaque ligne : il garde une entrée toutes les 8 192 lignes (granule). Il est petit, tient en mémoire, et permet de sauter les granules qui ne correspondent pas au filtre. Un filtre sur les premières colonnes de la clé de tri est donc très efficace."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "click-mergetree-q1",
+          "prompt": "Pour quel usage ClickHouse est-elle conçue ?",
+          "choices": [
+            "Des agrégations rapides sur des milliards de lignes",
+            "Des mises à jour fréquentes ligne par ligne",
+            "Des transactions bancaires",
+            "Le stockage de fichiers"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une base analytique (OLAP), pas transactionnelle.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "click-mergetree-q2",
+          "prompt": "Que contient l'index primaire d'une table MergeTree ?",
+          "choices": [
+            "Une entrée par granule de 8 192 lignes, pas une par ligne",
+            "Une entrée par ligne",
+            "Une entrée par colonne",
+            "Rien, il n'y a pas d'index"
+          ],
+          "answerIndex": 0,
+          "explanation": "On parle d'index creux (sparse) : petit et tenu en mémoire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "click-mergetree-q3",
+          "prompt": "Avec ORDER BY (site, type, instant), quel filtre profite le mieux de l'index ?",
+          "choices": [
+            "WHERE site = 'boutique' AND type = 'achat'",
+            "WHERE duree_ms > 500",
+            "WHERE instant > now() - 3600 seul",
+            "WHERE utilisateur_id = 42"
+          ],
+          "answerIndex": 0,
+          "explanation": "Comme pour un index composite, les premières colonnes de la clé comptent le plus.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "click-mergetree-q4",
+          "prompt": "Complète la définition du moteur.",
+          "code": "ENGINE = ___\nPARTITION BY toYYYYMM(date_evt)\n___ BY (site, type, instant);",
+          "answers": [
+            "MergeTree",
+            "ORDER"
+          ],
+          "distractors": [
+            "InnoDB",
+            "GROUP",
+            "CLUSTER"
+          ],
+          "explanation": "ORDER BY est obligatoire pour une table MergeTree.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "click-mergetree-q5",
+          "prompt": "À quoi sert le type LowCardinality(String) ?",
+          "choices": [
+            "À encoder par dictionnaire une colonne qui a peu de valeurs distinctes, pour gagner place et vitesse",
+            "À limiter la longueur des chaînes",
+            "À interdire les doublons",
+            "À chiffrer la colonne"
+          ],
+          "answerIndex": 0,
+          "explanation": "Idéal pour un pays, un type d'événement, un statut.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "click-mergetree-q6",
+          "prompt": "Quelles données conviennent à ClickHouse ?",
+          "choices": [
+            "Des journaux applicatifs",
+            "Des événements d'analytique web",
+            "Des métriques d'observabilité",
+            "Un panier d'achat modifié à chaque clic"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les modifications fréquentes ligne par ligne sont son point faible.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "click-ecriture",
+      "title": "Écrire et modifier",
+      "summary": "Insertions par lots, déduplication, mutations.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Insérer par gros lots",
+          "body": "Chaque INSERT crée un part. Des milliers de petites insertions par seconde créent des milliers de parts, que les fusions ne rattrapent plus : ClickHouse finit par refuser les insertions (« Too many parts »). On insère par lots de milliers de lignes, ou on active les insertions asynchrones, que le serveur regroupe lui-même.",
+          "code": "INSERT INTO evenements\nSETTINGS async_insert = 1, wait_for_async_insert = 1\nVALUES ('2026-03-09', now(), 'boutique', 'vue', 42, 120);"
+        },
+        {
+          "title": "Modifier et supprimer",
+          "body": "ALTER TABLE … UPDATE et ALTER TABLE … DELETE sont des mutations : elles réécrivent des parts entiers en arrière-plan, et coûtent cher. DELETE FROM (suppression légère) marque les lignes et les masque immédiatement. On évite d'en faire un usage courant."
+        },
+        {
+          "title": "Dédupliquer",
+          "body": "ReplacingMergeTree garde la dernière version des lignes de même clé de tri, mais seulement lors des fusions, à un moment imprévisible. Pour un résultat dédupliqué à coup sûr, on ajoute FINAL à la requête (plus coûteux) ou on agrège avec argMax.",
+          "code": "CREATE TABLE profils (\n  utilisateur_id UInt64,\n  email String,\n  version UInt64\n)\nENGINE = ReplacingMergeTree(version)\nORDER BY utilisateur_id;\n\nSELECT * FROM profils FINAL WHERE utilisateur_id = 42;"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "click-ecriture-q1",
+          "prompt": "Une application insère chaque événement par un INSERT séparé, 5 000 fois par seconde. Que se passe-t-il ?",
+          "choices": [
+            "Les parts s'accumulent plus vite que les fusions, jusqu'à l'erreur « Too many parts »",
+            "Rien, c'est l'usage prévu",
+            "Les données sont compressées plus fort",
+            "ClickHouse regroupe toujours tout automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "On regroupe côté client, ou on active async_insert.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "click-ecriture-q2",
+          "prompt": "Quand ReplacingMergeTree supprime-t-elle les doublons ?",
+          "choices": [
+            "Lors des fusions en arrière-plan, à un moment imprévisible",
+            "À chaque insertion",
+            "Jamais",
+            "Chaque nuit à minuit"
+          ],
+          "answerIndex": 0,
+          "explanation": "En attendant, des doublons sont visibles : on utilise FINAL ou argMax.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "click-ecriture-q3",
+          "prompt": "Complète : garder la version la plus récente de chaque profil.",
+          "code": "ENGINE = ___(version)\nORDER BY utilisateur_id;\n\nSELECT * FROM profils ___ WHERE utilisateur_id = 42;",
+          "answers": [
+            "ReplacingMergeTree",
+            "FINAL"
+          ],
+          "distractors": [
+            "SummingMergeTree",
+            "DISTINCT",
+            "LATEST"
+          ],
+          "explanation": "La colonne version départage les lignes de même clé.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "click-ecriture-q4",
+          "prompt": "Ce traitement fait ramer tout le cluster. Touche la ligne en cause.",
+          "code": "-- exécuté pour chaque commande annulée, 20 fois par minute\nALTER TABLE ventes UPDATE statut = 'annulee'\nWHERE commande_id = 81234;",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Chaque mutation réécrit des parts entiers. On insère plutôt une nouvelle version de la ligne (ReplacingMergeTree) ou un événement d'annulation.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "click-ecriture-q5",
+          "prompt": "Que fait async_insert = 1 ?",
+          "choices": [
+            "Le serveur regroupe les petites insertions en lots avant de les écrire",
+            "L'insertion est ignorée",
+            "L'insertion est répliquée de façon synchrone",
+            "L'insertion devient transactionnelle"
+          ],
+          "answerIndex": 0,
+          "explanation": "wait_for_async_insert = 1 attend que le lot soit écrit avant de répondre.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "click-ecriture-q6",
+          "prompt": "Quelles pratiques d'écriture conviennent à ClickHouse ?",
+          "choices": [
+            "Insérer par lots de milliers de lignes",
+            "Utiliser les insertions asynchrones pour de nombreux petits clients",
+            "Modéliser les changements comme de nouvelles lignes",
+            "Mettre à jour chaque ligne au fil de l'eau avec ALTER TABLE UPDATE"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les mutations sont réservées aux corrections ponctuelles.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "click-performance",
+      "title": "Requêtes et vues",
+      "summary": "Fonctions approximatives et vues matérialisées.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des fonctions dédiées",
+          "body": "ClickHouse propose de nombreuses fonctions d'agrégation : uniq() estime le nombre de valeurs distinctes, rapidement et avec peu de mémoire, quand uniqExact() est exact mais plus coûteux ; quantile() estime des percentiles ; argMax(x, y) renvoie x là où y est maximal.",
+          "code": "SELECT site,\n       uniq(utilisateur_id) AS visiteurs,\n       quantile(0.95)(duree_ms) AS p95\nFROM evenements\nWHERE date_evt >= today() - 7\nGROUP BY site;"
+        },
+        {
+          "title": "Les vues matérialisées",
+          "body": "Une vue matérialisée ClickHouse agit comme un déclencheur : à chaque insertion dans la table source, elle transforme le lot inséré et écrit le résultat dans une table cible, souvent une AggregatingMergeTree ou SummingMergeTree. Les tableaux de bord lisent ces agrégats précalculés. Elle ne traite pas les données déjà présentes à sa création.",
+          "code": "CREATE MATERIALIZED VIEW vues_par_heure_mv\nTO vues_par_heure AS\nSELECT toStartOfHour(instant) AS heure, site,\n       count() AS vues\nFROM evenements\nGROUP BY heure, site;"
+        },
+        {
+          "title": "Bien choisir la clé de tri",
+          "body": "La clé de tri se choisit d'après les filtres les plus fréquents, en plaçant souvent les colonnes de faible cardinalité en premier : elles regroupent des lignes semblables, ce qui améliore aussi la compression. Une mauvaise clé force à lire toute la table."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "click-performance-q1",
+          "prompt": "Quelle différence entre uniq() et uniqExact() ?",
+          "choices": [
+            "uniq() estime le nombre de valeurs distinctes avec peu de mémoire ; uniqExact() est exact mais plus coûteux",
+            "uniq() est exact, uniqExact() approximatif",
+            "Aucune",
+            "uniq() supprime les doublons de la table"
+          ],
+          "answerIndex": 0,
+          "explanation": "Pour un tableau de bord, une erreur de 1 % est souvent acceptable.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "click-performance-q2",
+          "prompt": "Quand une vue matérialisée ClickHouse calcule-t-elle ses résultats ?",
+          "choices": [
+            "À chaque insertion dans la table source, sur le lot inséré",
+            "À chaque lecture de la vue",
+            "Une fois par jour",
+            "Uniquement à sa création, sur toutes les données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les données antérieures à sa création doivent être chargées à part.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "click-performance-q3",
+          "prompt": "Après création de cette vue, le tableau de bord n'affiche que les données des dernières minutes. Touche la ligne qui explique pourquoi.",
+          "code": "CREATE MATERIALIZED VIEW vues_par_heure_mv\nTO vues_par_heure AS\nSELECT toStartOfHour(instant) AS heure, site, count() AS vues\nFROM evenements\nGROUP BY heure, site;",
+          "bugLines": [
+            1
+          ],
+          "explanation": "La vue ne traite que les insertions postérieures à sa création. On remplit l'historique avec un INSERT INTO vues_par_heure SELECT … sur les données existantes.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "click-performance-q4",
+          "prompt": "Complète : visiteurs uniques estimés et 95e percentile de durée.",
+          "code": "SELECT site,\n       ___(utilisateur_id) AS visiteurs,\n       ___(0.95)(duree_ms) AS p95\nFROM evenements\nGROUP BY site;",
+          "answers": [
+            "uniq",
+            "quantile"
+          ],
+          "distractors": [
+            "count",
+            "percentile",
+            "avg"
+          ],
+          "explanation": "quantile prend le niveau en paramètre, puis la colonne.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "click-performance-q5",
+          "prompt": "Pourquoi placer des colonnes de faible cardinalité en tête de la clé de tri ?",
+          "choices": [
+            "Elles regroupent des lignes semblables : meilleure compression, et filtres efficaces sur ces colonnes",
+            "Parce qu'elles sont plus courtes",
+            "C'est obligatoire",
+            "Pour accélérer les insertions uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "À adapter toujours aux filtres réellement utilisés.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "click-performance-q6",
+          "prompt": "Quels moteurs servent souvent de cible aux vues matérialisées ?",
+          "choices": [
+            "SummingMergeTree",
+            "AggregatingMergeTree",
+            "MergeTree",
+            "InnoDB"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "InnoDB est un moteur de MySQL.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "click-defi",
+    "title": "Défi entretien : l'analytique web",
+    "summary": "Des milliards d'événements, des tableaux de bord instantanés.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "click-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une plateforme d'analytique web reçoit 3 milliards d'événements par jour ; les clients veulent leurs tableaux de bord en moins d'une seconde. PostgreSQL ne suit plus. Que proposer ?",
+        "choices": [
+          "ClickHouse, avec une clé de tri commençant par le site client",
+          "Plus d'index sur PostgreSQL",
+          "Une base graphe",
+          "Un fichier CSV par client"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque tableau de bord filtre par site : il ne lit que les granules de ce site.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "click-defi-q2",
+        "prompt": "Cas pratique 2/3 — Les événements arrivent un par un depuis des milliers de navigateurs. Comment les insérer ?",
+        "choices": [
+          "Les regrouper (file de messages ou async_insert) pour insérer par lots",
+          "Un INSERT par événement",
+          "Les écrire dans un fichier et l'importer une fois par an",
+          "Une mutation par événement"
+        ],
+        "answerIndex": 0,
+        "explanation": "On évite l'erreur « Too many parts ».",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "click-defi-q3",
+        "prompt": "Cas pratique 3/3 — Le tableau de bord principal affiche des vues par heure et par site. Comment le rendre instantané ?",
+        "choices": [
+          "Une vue matérialisée qui alimente une table d'agrégats horaires à chaque insertion",
+          "Recalculer depuis les événements bruts à chaque affichage",
+          "Un cache navigateur",
+          "Un index sur chaque colonne"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le tableau de bord lit quelques milliers de lignes au lieu de milliards.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "click-defi-q4",
+        "prompt": "Un client demande la suppression de ses données (RGPD). Comment faire ?",
+        "choices": [
+          "Une suppression ponctuelle (DELETE FROM ou mutation), acceptable car rare, ou supprimer des partitions entières si le modèle s'y prête",
+          "C'est impossible dans ClickHouse",
+          "Recréer toute la base",
+          "Masquer les données dans l'interface seulement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les mutations sont coûteuses mais légitimes pour des opérations rares.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "click-defi-q5",
+        "prompt": "Les tableaux de bord, tous filtrés par site, lisent toute la table. Touche la ligne en cause.",
+        "code": "CREATE TABLE evenements (\n  instant DateTime, site LowCardinality(String),\n  type LowCardinality(String), utilisateur_id UInt64\n)\nENGINE = MergeTree\nORDER BY (utilisateur_id, instant);",
+        "bugLines": [
+          6
+        ],
+        "explanation": "La clé de tri ne commence pas par site : l'index ne peut pas sauter les granules des autres sites. On écrit ORDER BY (site, type, instant).",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "click-defi-q6",
+        "prompt": "Quelles affirmations sur ClickHouse sont vraies ?",
+        "choices": [
+          "Elle stocke les données en colonnes",
+          "Son index primaire est creux",
+          "Elle préfère les insertions par lots",
+          "Elle est optimisée pour les transactions courtes et fréquentes"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le transactionnel relève des bases OLTP.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

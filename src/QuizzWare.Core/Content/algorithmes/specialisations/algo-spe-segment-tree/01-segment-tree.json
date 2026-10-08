@@ -1,0 +1,435 @@
+{
+  "id": "segt-ch-essentiel",
+  "title": "Arbres de segments : l'essentiel",
+  "summary": "Requêtes sur des intervalles.",
+  "lessons": [
+    {
+      "id": "segt-prefixes",
+      "title": "Sommes préfixes",
+      "summary": "Le point de départ des requêtes d'intervalle.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le problème",
+          "body": "« Quelle est la somme des éléments entre les positions g et d ? » Parcourir l'intervalle à chaque question coûte O(n) ; avec un million de questions, c'est trop lent."
+        },
+        {
+          "title": "Les sommes préfixes",
+          "body": "On précalcule pre[i], la somme des i premiers éléments. La somme de t[g] à t[d] inclus vaut alors pre[d + 1] − pre[g] : O(n) de préparation, puis O(1) par question.",
+          "code": "def prefixes(t):\n    pre = [0]\n    for x in t:\n        pre.append(pre[-1] + x)\n    return pre\n\npre = prefixes([3, 1, 4, 1, 5])\nprint(pre[4] - pre[1])"
+        },
+        {
+          "title": "La limite",
+          "body": "Si les valeurs changent, il faut recalculer tous les préfixes suivants : O(n) par modification. Quand questions et modifications s'entremêlent, on passe à un arbre de segments ou à un arbre de Fenwick, en O(log n) pour les deux."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "segt-prefixes-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "def prefixes(t):\n    pre = [0]\n    for x in t:\n        pre.append(pre[-1] + x)\n    return pre\n\npre = prefixes([3, 1, 4, 1, 5])\nprint(pre[4] - pre[1])",
+          "choices": [
+            "6",
+            "9",
+            "5",
+            "8"
+          ],
+          "answerIndex": 0,
+          "explanation": "pre = [0, 3, 4, 8, 9, 14] : 9 − 3 = 6, soit t[1] + t[2] + t[3] = 1 + 4 + 1.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "segt-prefixes-q2",
+          "prompt": "Quel est le coût d'une question de somme d'intervalle avec des sommes préfixes ?",
+          "choices": [
+            "O(1), après O(n) de préparation",
+            "O(n)",
+            "O(log n)",
+            "O(n²)"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une simple soustraction de deux préfixes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "segt-prefixes-q3",
+          "prompt": "Quand les sommes préfixes ne suffisent-elles plus ?",
+          "choices": [
+            "Quand les valeurs changent entre les questions : chaque modification coûte O(n)",
+            "Quand le tableau dépasse 100 éléments",
+            "Quand les valeurs sont négatives",
+            "Jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les valeurs négatives ne posent aucun problème aux sommes préfixes.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "segt-prefixes-q4",
+          "prompt": "Complète la somme de t[g] à t[d] inclus.",
+          "code": "def somme(pre, g, d):\n    return pre[___] - pre[___]",
+          "answers": [
+            "d + 1",
+            "g"
+          ],
+          "distractors": [
+            "d",
+            "g - 1",
+            "g + 1"
+          ],
+          "explanation": "pre[d + 1] contient t[0..d] ; on retire t[0..g − 1], soit pre[g].",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "segt-prefixes-q5",
+          "prompt": "Cette somme d'intervalle oublie toujours le premier élément. Touche la ligne en cause.",
+          "code": "def somme(pre, g, d):\n    # somme de t[g] à t[d] inclus\n    return pre[d + 1] - pre[g + 1]",
+          "bugLines": [
+            3
+          ],
+          "explanation": "pre[g + 1] inclut t[g], qui est donc retiré. Il faut pre[g].",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "segt-prefixes-q6",
+          "prompt": "Quelles requêtes les sommes préfixes traitent-elles en O(1) ?",
+          "choices": [
+            "La somme d'un intervalle",
+            "Le nombre d'éléments pairs dans un intervalle, avec un préfixe de comptage",
+            "La moyenne d'un intervalle",
+            "Le minimum d'un intervalle"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le minimum ne se « soustrait » pas : il faut une autre structure.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "segt-arbre",
+      "title": "L'arbre de segments",
+      "summary": "Construire, interroger, modifier en O(log n).",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La structure",
+          "body": "Chaque nœud résume un intervalle : la racine couvre tout le tableau, ses deux enfants chacun une moitié, et ainsi de suite jusqu'aux feuilles, une par élément. Le résumé peut être une somme, un minimum, un maximum, un PGCD : toute opération associative."
+        },
+        {
+          "title": "Une version compacte",
+          "body": "Dans un tableau de taille 2n, les feuilles occupent les positions n à 2n − 1, et le nœud i a pour enfants 2i et 2i + 1. La racine est en position 1.",
+          "code": "def construire(t):\n    n = len(t)\n    arbre = [0] * n + t\n    for i in range(n - 1, 0, -1):\n        arbre[i] = arbre[2 * i] + arbre[2 * i + 1]\n    return arbre"
+        },
+        {
+          "title": "Modifier et interroger",
+          "body": "Modifier un élément met à jour sa feuille puis remonte jusqu'à la racine : O(log n). Une requête sur [g, d) combine au plus O(log n) nœuds qui couvrent exactement l'intervalle.",
+          "code": "def modifier(arbre, n, i, v):\n    i += n\n    arbre[i] = v\n    while i > 1:\n        i //= 2\n        arbre[i] = arbre[2 * i] + arbre[2 * i + 1]"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "segt-arbre-q1",
+          "prompt": "Que vaut arbre[1] après construire([5, 3, 2, 4]) ?",
+          "code": "def construire(t):\n    n = len(t)\n    arbre = [0] * n + t\n    for i in range(n - 1, 0, -1):\n        arbre[i] = arbre[2 * i] + arbre[2 * i + 1]\n    return arbre",
+          "choices": [
+            "14",
+            "8",
+            "6",
+            "0"
+          ],
+          "answerIndex": 0,
+          "explanation": "arbre = [0, 14, 8, 6, 5, 3, 2, 4] : la racine contient la somme totale.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "segt-arbre-q2",
+          "prompt": "Quel est le coût d'une modification et d'une requête dans un arbre de segments ?",
+          "choices": [
+            "O(log n) pour les deux",
+            "O(1) pour les deux",
+            "O(n) pour les deux",
+            "O(1) et O(n)"
+          ],
+          "answerIndex": 0,
+          "explanation": "La hauteur de l'arbre est log n.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "segt-arbre-q3",
+          "prompt": "Quelles opérations un arbre de segments peut-il résumer ?",
+          "choices": [
+            "Toute opération associative : somme, minimum, maximum, PGCD…",
+            "Uniquement la somme",
+            "Uniquement le tri",
+            "Uniquement la moyenne"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'associativité permet de combiner les résumés de deux moitiés.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "segt-arbre-q4",
+          "prompt": "Complète la remontée après une modification.",
+          "code": "i += n\narbre[i] = v\nwhile i > 1:\n    i ___ 2\n    arbre[i] = arbre[2 * i] + arbre[___]",
+          "answers": [
+            "//=",
+            "2 * i + 1"
+          ],
+          "distractors": [
+            "*=",
+            "i + 1",
+            "2 * i - 1"
+          ],
+          "explanation": "On remonte au parent et on recalcule son résumé à partir de ses deux enfants.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "segt-arbre-q5",
+          "prompt": "Cet arbre de segments pour le minimum renvoie des résultats faux. Touche la ligne en cause.",
+          "code": "def construire_min(t):\n    n = len(t)\n    arbre = [0] * n + t\n    for i in range(n - 1, 0, -1):\n        arbre[i] = min(arbre[i], arbre[2 * i + 1])\n    return arbre",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Il faut combiner les deux enfants : min(arbre[2 * i], arbre[2 * i + 1]). Ici, la valeur initiale 0 l'emporte presque toujours.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "segt-arbre-q6",
+          "prompt": "Quelles affirmations sur la version compacte sont vraies ?",
+          "choices": [
+            "Les feuilles occupent les positions n à 2n − 1",
+            "Le nœud i a pour enfants 2i et 2i + 1",
+            "La racine est en position 1",
+            "La racine est en position 0"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La position 0 reste inutilisée.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "segt-avance",
+      "title": "Fenwick et propagation paresseuse",
+      "summary": "Plus léger, ou plus puissant.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "L'arbre de Fenwick",
+          "body": "L'arbre de Fenwick (Binary Indexed Tree) gère les sommes préfixes avec modifications en O(log n), dans un simple tableau indexé à partir de 1. Il s'appuie sur i & -i, le bit de poids faible de i. Plus court à écrire qu'un arbre de segments, il se limite aux opérations inversibles comme la somme.",
+          "code": "def ajouter(i, v):\n    while i <= n:\n        arbre[i] += v\n        i += i & -i\n\ndef prefixe(i):\n    s = 0\n    while i > 0:\n        s += arbre[i]\n        i -= i & -i\n    return s"
+        },
+        {
+          "title": "Modifier un intervalle entier",
+          "body": "« Ajouter 5 à tous les éléments de g à d » coûterait O(n) feuilles. La propagation paresseuse enregistre la modification en attente sur les nœuds qui couvrent l'intervalle, et ne la transmet aux enfants que lorsqu'une requête y descend : O(log n) pour les deux opérations."
+        },
+        {
+          "title": "Choisir",
+          "body": "Sommes sans modification : sommes préfixes. Sommes avec modifications ponctuelles : Fenwick. Minimum, maximum, ou modifications d'intervalles : arbre de segments, avec propagation paresseuse si nécessaire."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "segt-avance-q1",
+          "prompt": "Que vaut 12 & -12 ?",
+          "choices": [
+            "4",
+            "12",
+            "8",
+            "-12"
+          ],
+          "answerIndex": 0,
+          "explanation": "12 = 1100 en binaire : son bit de poids faible vaut 4.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "segt-avance-q2",
+          "prompt": "Quelle limite a l'arbre de Fenwick par rapport à l'arbre de segments ?",
+          "choices": [
+            "Il ne gère que des opérations inversibles comme la somme, pas le minimum d'un intervalle quelconque",
+            "Il est plus lent",
+            "Il ne gère pas les modifications",
+            "Il exige un tableau trié"
+          ],
+          "answerIndex": 0,
+          "explanation": "La somme d'un intervalle se calcule comme différence de deux préfixes ; le minimum, non.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "segt-avance-q3",
+          "prompt": "À quoi sert la propagation paresseuse ?",
+          "choices": [
+            "À modifier tout un intervalle en O(log n), en reportant la modification sur les enfants seulement quand c'est nécessaire",
+            "À retarder les requêtes",
+            "À économiser de la mémoire",
+            "À trier l'arbre"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les nœuds gardent une modification en attente.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "segt-avance-q4",
+          "prompt": "Ce calcul de préfixe de Fenwick ne s'arrête jamais. Touche la ligne en cause.",
+          "code": "def prefixe(i):\n    s = 0\n    while i > 0:\n        s += arbre[i]\n        i += i & -i\n    return s",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Pour un préfixe, on descend : i -= i & -i. L'ajout, lui, monte avec +=.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "segt-avance-q5",
+          "prompt": "Complète l'ajout dans un arbre de Fenwick.",
+          "code": "def ajouter(i, v):\n    while i <= ___:\n        arbre[i] += v\n        i += i ___ -i",
+          "answers": [
+            "n",
+            "&"
+          ],
+          "distractors": [
+            "0",
+            "|",
+            "^"
+          ],
+          "explanation": "On remonte vers les nœuds qui couvrent i, jusqu'à la fin du tableau.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "segt-avance-q6",
+          "prompt": "Quelles associations problème → structure sont justes ?",
+          "choices": [
+            "Sommes d'intervalles sans modification → sommes préfixes",
+            "Sommes avec modifications ponctuelles → Fenwick",
+            "Minimum d'intervalle avec modifications → arbre de segments",
+            "Ajout sur des intervalles → sommes préfixes simples"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les ajouts d'intervalles demandent une propagation paresseuse (ou un tableau de différences, sans requêtes intercalées).",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "segt-defi",
+    "title": "Défi entretien : le tableau de bord",
+    "summary": "Des requêtes et des mises à jour en continu.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "segt-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un tableau de bord affiche le chiffre d'affaires d'un intervalle de jours choisi, sur dix ans d'historique figé. Quelle structure ?",
+        "choices": [
+          "Des sommes préfixes : les données ne changent pas",
+          "Un arbre de segments avec propagation paresseuse",
+          "Un tas",
+          "Un trie"
+        ],
+        "answerIndex": 0,
+        "explanation": "La solution la plus simple suffit quand rien ne change.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "segt-defi-q2",
+        "prompt": "Cas pratique 2/3 — Les ventes du jour arrivent en continu, et l'on veut toujours des sommes d'intervalles. Quelle structure ?",
+        "choices": [
+          "Un arbre de Fenwick ou un arbre de segments : O(log n) par vente et par requête",
+          "Recalculer les sommes préfixes à chaque vente",
+          "Parcourir l'intervalle à chaque requête",
+          "Un trie"
+        ],
+        "answerIndex": 0,
+        "explanation": "Recalculer les préfixes coûterait O(n) par vente.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "segt-defi-q3",
+        "prompt": "Cas pratique 3/3 — On veut aussi le jour de plus faible vente sur un intervalle, et appliquer une correction de +2 % sur des périodes entières. Quelle structure ?",
+        "choices": [
+          "Un arbre de segments pour le minimum, avec propagation paresseuse",
+          "Un arbre de Fenwick",
+          "Des sommes préfixes",
+          "Un tableau trié"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le minimum n'est pas inversible, et les modifications portent sur des intervalles.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "segt-defi-q4",
+        "prompt": "Quelle mémoire occupe la version compacte de l'arbre de segments pour n éléments ?",
+        "choices": [
+          "2n cases",
+          "n cases",
+          "n² cases",
+          "log n cases"
+        ],
+        "answerIndex": 0,
+        "explanation": "n feuilles plus n − 1 nœuds internes.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "segt-defi-q5",
+        "prompt": "Après modifier, les requêtes renvoient d'anciennes valeurs. Touche la ligne en cause.",
+        "code": "def modifier(arbre, n, i, v):\n    i += n\n    arbre[i] = v\n    while i > 1:\n        i //= 2",
+        "bugLines": [
+          5
+        ],
+        "explanation": "On remonte sans recalculer les nœuds : il manque arbre[i] = arbre[2 * i] + arbre[2 * i + 1] dans la boucle.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "segt-defi-q6",
+        "prompt": "Quelles opérations un arbre de segments peut-il résumer ?",
+        "choices": [
+          "La somme",
+          "Le maximum",
+          "Le PGCD",
+          "La médiane"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La médiane de deux moitiés ne se déduit pas de leurs médianes.",
+        "difficulty": 3
+      }
+    ]
+  }
+}

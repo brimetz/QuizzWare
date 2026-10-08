@@ -1,0 +1,439 @@
+{
+  "id": "lite-ch-essentiel",
+  "title": "SQLite : l'essentiel",
+  "summary": "Une base complète dans un seul fichier.",
+  "lessons": [
+    {
+      "id": "lite-bases",
+      "title": "Une base embarquée",
+      "summary": "Un fichier, une bibliothèque, pas de serveur.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Pas de serveur",
+          "body": "SQLite est une bibliothèque liée à l'application, qui lit et écrit un seul fichier. Pas de processus, pas de configuration, pas de réseau. On la trouve dans Android, iOS, les navigateurs, les avions et une multitude d'applications de bureau : c'est probablement la base la plus déployée au monde."
+        },
+        {
+          "title": "Le typage dynamique",
+          "body": "Par défaut, le type d'une colonne n'est qu'une affinité : SQLite tente une conversion, et à défaut stocke la valeur telle quelle. On peut ainsi ranger 'abc' dans une colonne INTEGER. Les tables STRICT, depuis la version 3.37, refusent ces valeurs.",
+          "code": "CREATE TABLE t (id INTEGER PRIMARY KEY, age INTEGER);\nINSERT INTO t (age) VALUES ('abc'), ('42');\nSELECT age, typeof(age) FROM t;\n-- abc | text\n-- 42  | integer"
+        },
+        {
+          "title": "INTEGER PRIMARY KEY",
+          "body": "Chaque table a un rowid entier. Une colonne déclarée exactement INTEGER PRIMARY KEY devient un alias de ce rowid : insérer sans valeur prend le plus grand rowid existant plus un."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "lite-bases-q1",
+          "prompt": "Qu'est-ce qui distingue SQLite de PostgreSQL ou MySQL ?",
+          "choices": [
+            "C'est une bibliothèque embarquée qui lit un fichier, sans processus serveur",
+            "Elle ne gère pas SQL",
+            "Elle ne fonctionne que dans le navigateur",
+            "Elle n'a pas de transactions"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les transactions de SQLite sont pleinement ACID.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "lite-bases-q2",
+          "prompt": "Que renvoie typeof(age) pour la valeur 'abc' insérée dans une colonne INTEGER d'une table ordinaire ?",
+          "code": "CREATE TABLE t (id INTEGER PRIMARY KEY, age INTEGER);\nINSERT INTO t (age) VALUES ('abc');\nSELECT typeof(age) FROM t;",
+          "choices": [
+            "text",
+            "integer",
+            "null",
+            "Une erreur à l'insertion"
+          ],
+          "answerIndex": 0,
+          "explanation": "'abc' ne se convertit pas en entier : SQLite la garde comme texte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "lite-bases-q3",
+          "prompt": "Que fait une table déclarée STRICT ?",
+          "choices": [
+            "Elle refuse les valeurs qui ne correspondent pas au type déclaré",
+            "Elle interdit les NULL",
+            "Elle est en lecture seule",
+            "Elle chiffre les données"
+          ],
+          "answerIndex": 0,
+          "explanation": "« cannot store TEXT value in INTEGER column ».",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "lite-bases-q4",
+          "prompt": "Complète cette table au typage strict.",
+          "code": "CREATE TABLE mesures (\n  id INTEGER PRIMARY KEY,\n  valeur REAL NOT NULL\n) ___;\nSELECT ___(valeur) FROM mesures;",
+          "answers": [
+            "STRICT",
+            "typeof"
+          ],
+          "distractors": [
+            "TYPED",
+            "type",
+            "WITHOUT ROWID"
+          ],
+          "explanation": "WITHOUT ROWID existe aussi, mais il change le stockage, pas le typage.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "lite-bases-q5",
+          "prompt": "La table contient les id 1, 2, 3 et 10. On insère une ligne sans préciser d'id. Quelle valeur reçoit-elle ?",
+          "choices": [
+            "11",
+            "4",
+            "1",
+            "Une valeur aléatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "INTEGER PRIMARY KEY prend le plus grand rowid plus un (sans AUTOINCREMENT, si la ligne au plus grand rowid est supprimée, sa valeur peut resservir).",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "lite-bases-q6",
+          "prompt": "Où trouve-t-on SQLite ?",
+          "choices": [
+            "Dans les applications Android et iOS",
+            "Dans les navigateurs web",
+            "Dans les applications de bureau et l'embarqué",
+            "Uniquement sur des serveurs dédiés"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Elle n'a justement besoin d'aucun serveur.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "lite-pieges",
+      "title": "Les pièges",
+      "summary": "Clés étrangères, division et performances d'écriture.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les clés étrangères",
+          "body": "Pour la compatibilité, SQLite n'applique pas les clés étrangères par défaut : il faut exécuter PRAGMA foreign_keys = ON à chaque ouverture de connexion. Certains pilotes l'activent d'office, d'autres non.",
+          "code": "PRAGMA foreign_keys = ON;"
+        },
+        {
+          "title": "Les types numériques",
+          "body": "La division entre deux entiers est entière : 1 / 2 vaut 0. Une chaîne numérique est convertie dans une addition : '10' + 5 vaut 15. Les dates n'ont pas de type dédié : on les stocke en texte ISO 8601, en nombre de secondes ou en jour julien, et on les manipule avec date(), datetime() ou strftime().",
+          "code": "SELECT 1 / 2, 1 / 2.0, '10' + 5;\n-- 0 | 0.5 | 15"
+        },
+        {
+          "title": "Écrire vite",
+          "body": "Hors transaction explicite, chaque INSERT est sa propre transaction, avec une synchronisation du disque. Insérer 10 000 lignes ainsi peut prendre des secondes ; dans une seule transaction, quelques millisecondes. On réutilise aussi les requêtes préparées."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "lite-pieges-q1",
+          "prompt": "Les clés étrangères sont-elles vérifiées par défaut dans SQLite ?",
+          "choices": [
+            "Non, il faut PRAGMA foreign_keys = ON à chaque connexion",
+            "Oui, toujours",
+            "Seulement pour les tables STRICT",
+            "Seulement en mode WAL"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un oubli fréquent : des lignes orphelines s'accumulent sans erreur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "lite-pieges-q2",
+          "prompt": "Que renvoie SELECT 1 / 2 dans SQLite ?",
+          "choices": [
+            "0",
+            "0.5",
+            "1",
+            "Une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Division entière entre deux entiers ; 1 / 2.0 donne 0.5.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "lite-pieges-q3",
+          "prompt": "Cette importation de 100 000 lignes prend plusieurs minutes. Touche la ligne à revoir.",
+          "code": "for ligne in lignes:\n    connexion.execute(\n        \"INSERT INTO mesures VALUES (?, ?)\", ligne)\n    connexion.commit()",
+          "language": "python",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Un commit par ligne force une synchronisation du disque à chaque fois. On valide une seule fois après la boucle (ou par gros lots), idéalement avec executemany.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "lite-pieges-q4",
+          "prompt": "Comment stocker des dates dans SQLite ?",
+          "choices": [
+            "En texte ISO 8601, en nombre (secondes ou jour julien), manipulés avec date() ou strftime()",
+            "Avec le type DATE natif",
+            "En binaire uniquement",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le texte ISO 8601 se trie correctement dans l'ordre chronologique.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "lite-pieges-q5",
+          "prompt": "Complète l'activation des clés étrangères puis une insertion groupée.",
+          "code": "PRAGMA ___ = ON;\n___;\nINSERT INTO lignes VALUES (1, 10);\nINSERT INTO lignes VALUES (2, 11);\nCOMMIT;",
+          "answers": [
+            "foreign_keys",
+            "BEGIN"
+          ],
+          "distractors": [
+            "constraints",
+            "START",
+            "references"
+          ],
+          "explanation": "BEGIN ouvre une transaction explicite ; COMMIT la valide en une fois.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "lite-pieges-q6",
+          "prompt": "Quels comportements de SQLite surprennent les habitués d'autres bases ?",
+          "choices": [
+            "Les clés étrangères désactivées par défaut",
+            "Le typage par affinité",
+            "L'absence de type date natif",
+            "La prise en charge du SQL standard"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "SQLite comprend la grande majorité du SQL courant.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "lite-concurrence",
+      "title": "Concurrence et production",
+      "summary": "WAL, un seul écrivain, et les bons usages.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le mode WAL",
+          "body": "Par défaut, un écrivain bloque les lecteurs pendant la validation. En mode WAL (journal d'écriture anticipée), les écritures vont dans un fichier séparé : les lecteurs continuent de lire pendant qu'un écrivain travaille. Le réglage est persistant dans le fichier de base.",
+          "code": "PRAGMA journal_mode = WAL;\nPRAGMA busy_timeout = 5000;"
+        },
+        {
+          "title": "Un seul écrivain",
+          "body": "Même en WAL, une seule écriture à la fois. Un second écrivain reçoit SQLITE_BUSY (« database is locked ») ; busy_timeout le fait patienter au lieu d'échouer aussitôt. Une transaction de lecture qui devient écriture peut aussi échouer : BEGIN IMMEDIATE prend le verrou d'écriture dès le début."
+        },
+        {
+          "title": "Quand l'utiliser",
+          "body": "SQLite convient aux applications mobiles et de bureau, aux tests, aux outils, et à de nombreux sites à trafic modeste avec un seul serveur. Elle convient mal à de nombreux écrivains concurrents ou à plusieurs serveurs qui partagent la base, et ne doit pas être placée sur un partage réseau, dont le verrouillage de fichiers est peu fiable."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "lite-concurrence-q1",
+          "prompt": "Qu'apporte le mode WAL ?",
+          "choices": [
+            "Les lecteurs ne sont plus bloqués par un écrivain",
+            "Plusieurs écrivains simultanés",
+            "Le chiffrement du fichier",
+            "La réplication"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il reste un seul écrivain à la fois.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "lite-concurrence-q2",
+          "prompt": "Une application reçoit souvent « database is locked ». Quelle première mesure ?",
+          "choices": [
+            "Passer en WAL et fixer un busy_timeout",
+            "Supprimer le fichier de verrouillage",
+            "Ouvrir une connexion par requête sans transaction",
+            "Désactiver la journalisation"
+          ],
+          "answerIndex": 0,
+          "explanation": "On raccourcit aussi les transactions d'écriture.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "lite-concurrence-q3",
+          "prompt": "Pourquoi utiliser BEGIN IMMEDIATE pour une transaction qui va écrire ?",
+          "choices": [
+            "Elle prend le verrou d'écriture dès le début, évitant un échec SQLITE_BUSY au moment de passer de la lecture à l'écriture",
+            "Elle accélère les lectures",
+            "Elle désactive les contraintes",
+            "Elle valide immédiatement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sinon, deux transactions qui lisent puis écrivent peuvent s'interbloquer.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "lite-concurrence-q4",
+          "prompt": "Trois serveurs web partagent cette configuration ; la base se corrompt de temps en temps. Touche la ligne en cause.",
+          "code": "DATABASE_URL=sqlite:////mnt/partage-nfs/app.db\nPOOL_SIZE=5",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Un fichier SQLite sur un partage réseau, écrit par plusieurs machines : le verrouillage réseau n'est pas fiable. Plusieurs serveurs appellent une base client-serveur.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "lite-concurrence-q5",
+          "prompt": "Complète la configuration pour un usage concurrent.",
+          "code": "PRAGMA journal_mode = ___;\nPRAGMA ___ = 5000;",
+          "answers": [
+            "WAL",
+            "busy_timeout"
+          ],
+          "distractors": [
+            "DELETE",
+            "timeout",
+            "MEMORY"
+          ],
+          "explanation": "DELETE est le mode de journal par défaut.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "lite-concurrence-q6",
+          "prompt": "Dans quels cas SQLite est-elle un bon choix ?",
+          "choices": [
+            "Une application mobile hors ligne",
+            "Les tests automatisés",
+            "Un site modeste servi par une seule machine",
+            "Une plateforme avec des milliers d'écrivains concurrents sur plusieurs serveurs"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Pour le dernier cas, une base client-serveur s'impose.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "lite-defi",
+    "title": "Défi entretien : l'application hors ligne",
+    "summary": "Stocker, synchroniser, ne rien perdre.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "lite-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une application mobile de relevés terrain doit fonctionner sans réseau, avec des milliers de relevés. Quel stockage local ?",
+        "choices": [
+          "SQLite",
+          "Un fichier JSON réécrit à chaque relevé",
+          "Une base PostgreSQL sur le téléphone",
+          "La mémoire vive"
+        ],
+        "answerIndex": 0,
+        "explanation": "Transactions, index et requêtes, sans serveur.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "lite-defi-q2",
+        "prompt": "Cas pratique 2/3 — Des relevés orphelins (sans chantier existant) apparaissent malgré une clé étrangère déclarée. Pourquoi ?",
+        "choices": [
+          "Les clés étrangères ne sont pas activées : il manque PRAGMA foreign_keys = ON à l'ouverture",
+          "SQLite ne connaît pas les clés étrangères",
+          "Le téléphone a corrompu la base",
+          "La clé étrangère est trop longue"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le réglage vaut par connexion, il faut l'appliquer à chaque ouverture.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "lite-defi-q3",
+        "prompt": "Cas pratique 3/3 — La synchronisation importe 50 000 relevés et prend deux minutes. Que faire ?",
+        "choices": [
+          "Insérer dans une seule transaction, avec une requête préparée réutilisée",
+          "Ajouter des index sur toutes les colonnes avant l'import",
+          "Insérer un relevé par seconde",
+          "Désactiver le mode WAL"
+        ],
+        "answerIndex": 0,
+        "explanation": "On passe de 50 000 synchronisations disque à une seule.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "lite-defi-q4",
+        "prompt": "Que renvoie SELECT '10' + 5 dans SQLite ?",
+        "choices": [
+          "15",
+          "'105'",
+          "Une erreur",
+          "NULL"
+        ],
+        "answerIndex": 0,
+        "explanation": "La chaîne numérique est convertie en nombre pour l'addition ; la concaténation s'écrit ||.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "lite-defi-q5",
+        "prompt": "Le tri par date donne un ordre incohérent. Touche la ligne en cause.",
+        "code": "INSERT INTO releves (date, valeur) VALUES ('09/03/2026', 4.2);\nINSERT INTO releves (date, valeur) VALUES ('2026-03-10', 3.9);\nSELECT * FROM releves ORDER BY date;",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Les dates sont du texte : '09/03/2026' et '2026-03-10' se comparent caractère par caractère. On stocke toujours le format ISO 8601.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "lite-defi-q6",
+        "prompt": "Quels réglages appliquer à l'ouverture de la base dans cette application ?",
+        "choices": [
+          "PRAGMA foreign_keys = ON",
+          "PRAGMA journal_mode = WAL",
+          "PRAGMA busy_timeout = 5000",
+          "PRAGMA writable_schema = ON"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "writable_schema permet de modifier le schéma interne à la main : dangereux.",
+        "difficulty": 3
+      }
+    ]
+  }
+}

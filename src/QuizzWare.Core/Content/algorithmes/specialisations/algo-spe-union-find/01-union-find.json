@@ -1,0 +1,431 @@
+{
+  "id": "uf-ch-essentiel",
+  "title": "Union-Find : l'essentiel",
+  "summary": "Composantes connexes en temps quasi constant.",
+  "lessons": [
+    {
+      "id": "uf-bases",
+      "title": "Le principe",
+      "summary": "Des ensembles disjoints représentés par des arbres.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Deux opérations",
+          "body": "Union-Find (ensembles disjoints) gère une partition d'éléments. trouver(x) renvoie le représentant de l'ensemble de x ; unir(a, b) fusionne les ensembles de a et b. Deux éléments sont dans le même ensemble si et seulement s'ils ont le même représentant."
+        },
+        {
+          "title": "Des arbres dans un tableau",
+          "body": "Chaque élément pointe vers un parent ; la racine est son propre parent et sert de représentant. trouver remonte jusqu'à la racine ; unir rattache une racine à l'autre.",
+          "code": "parent = list(range(n))\n\ndef trouver(x):\n    while parent[x] != x:\n        x = parent[x]\n    return x\n\ndef unir(a, b):\n    ra, rb = trouver(a), trouver(b)\n    if ra != rb:\n        parent[ra] = rb"
+        },
+        {
+          "title": "Les usages",
+          "body": "Composantes connexes d'un graphe construit arête par arête, détection de cycle dans un graphe non orienté (une arête entre deux nœuds déjà reliés), algorithme de Kruskal pour l'arbre couvrant minimal, regroupement de comptes partageant un e-mail."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "uf-bases-q1",
+          "prompt": "Que renvoie trouver(x) ?",
+          "choices": [
+            "Le représentant (la racine) de l'ensemble contenant x",
+            "Le nombre d'éléments de l'ensemble",
+            "La position de x dans le tableau",
+            "Le parent direct de x"
+          ],
+          "answerIndex": 0,
+          "explanation": "Deux éléments sont reliés s'ils ont la même racine.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "uf-bases-q2",
+          "prompt": "Comment détecter un cycle dans un graphe non orienté avec Union-Find ?",
+          "choices": [
+            "Une arête dont les deux extrémités ont déjà le même représentant ferme un cycle",
+            "En comptant les arêtes",
+            "Avec un BFS",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les deux nœuds étaient déjà reliés par un autre chemin.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "uf-bases-q3",
+          "prompt": "Complète trouver.",
+          "code": "def trouver(x):\n    while ___[x] != x:\n        x = parent[x]\n    return ___",
+          "answers": [
+            "parent",
+            "x"
+          ],
+          "distractors": [
+            "taille",
+            "0"
+          ],
+          "explanation": "On remonte de parent en parent jusqu'à la racine, son propre parent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "uf-bases-q4",
+          "prompt": "n = 5 ; on fait unir(0, 1), unir(2, 3), puis unir(1, 3). Combien d'ensembles restent ?",
+          "choices": [
+            "2",
+            "3",
+            "1",
+            "4"
+          ],
+          "answerIndex": 0,
+          "explanation": "{0, 1, 2, 3} et {4}.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "uf-bases-q5",
+          "prompt": "Après unir(0, 1) puis unir(0, 2), les éléments 1 et 2 ne sont pas dans le même ensemble. Touche la ligne en cause.",
+          "code": "def unir(a, b):\n    ra, rb = trouver(a), trouver(b)\n    if ra != rb:\n        parent[a] = rb",
+          "bugLines": [
+            4
+          ],
+          "explanation": "On rattache l'élément a au lieu de sa racine : il quitte son ancien ensemble au lieu de le fusionner. Il faut parent[ra] = rb.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "uf-bases-q6",
+          "prompt": "Quels problèmes Union-Find résout-il bien ?",
+          "choices": [
+            "Les composantes connexes d'un graphe construit arête par arête",
+            "La détection de cycle dans un graphe non orienté",
+            "L'arbre couvrant minimal (Kruskal)",
+            "Le plus court chemin pondéré"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le plus court chemin pondéré relève de Dijkstra.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "uf-optimisations",
+      "title": "Les optimisations",
+      "summary": "Compression de chemin et union par rang.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le risque",
+          "body": "Sans précaution, les unions successives peuvent former une longue chaîne : trouver coûte alors O(n). unir(0, 1), unir(1, 2), unir(2, 3)… en rattachant toujours à droite construit exactement ce cas."
+        },
+        {
+          "title": "Compression de chemin",
+          "body": "Pendant trouver, on rattache chaque nœud traversé directement à la racine : les recherches suivantes deviennent quasi immédiates.",
+          "code": "def trouver(x):\n    if parent[x] != x:\n        parent[x] = trouver(parent[x])\n    return parent[x]"
+        },
+        {
+          "title": "Union par rang ou par taille",
+          "body": "On rattache l'arbre le moins haut (ou le plus petit) sous l'autre, pour garder des arbres plats. Combinées à la compression, ces deux optimisations donnent un coût amorti en O(α(n)), où α, l'inverse de la fonction d'Ackermann, ne dépasse pas 4 en pratique.",
+          "code": "def unir(a, b):\n    ra, rb = trouver(a), trouver(b)\n    if ra == rb:\n        return False\n    if taille[ra] < taille[rb]:\n        ra, rb = rb, ra\n    parent[rb] = ra\n    taille[ra] += taille[rb]\n    return True"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "uf-optimisations-q1",
+          "prompt": "Que fait la compression de chemin ?",
+          "choices": [
+            "Elle rattache chaque nœud traversé par trouver directement à la racine",
+            "Elle compresse le tableau en mémoire",
+            "Elle supprime des ensembles",
+            "Elle trie les éléments"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les arbres s'aplatissent au fil des recherches.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "uf-optimisations-q2",
+          "prompt": "Quel est le coût amorti de trouver et unir avec les deux optimisations ?",
+          "choices": [
+            "O(α(n)), quasi constant en pratique",
+            "O(n)",
+            "O(log n) au mieux",
+            "O(n log n)"
+          ],
+          "answerIndex": 0,
+          "explanation": "α(n), l'inverse de la fonction d'Ackermann, reste inférieur à 5 pour toute taille réaliste.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "uf-optimisations-q3",
+          "prompt": "Complète trouver avec compression de chemin.",
+          "code": "def trouver(x):\n    if parent[x] != x:\n        parent[x] = ___(parent[x])\n    return ___[x]",
+          "answers": [
+            "trouver",
+            "parent"
+          ],
+          "distractors": [
+            "unir",
+            "taille"
+          ],
+          "explanation": "L'appel récursif renvoie la racine, que l'on mémorise comme parent direct.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "uf-optimisations-q4",
+          "prompt": "Cette union par taille fabrique des arbres profonds. Touche la ligne en cause.",
+          "code": "def unir(a, b):\n    ra, rb = trouver(a), trouver(b)\n    if ra == rb:\n        return False\n    if taille[ra] > taille[rb]:\n        ra, rb = rb, ra\n    parent[rb] = ra\n    taille[ra] += taille[rb]\n    return True",
+          "bugLines": [
+            5
+          ],
+          "explanation": "La comparaison est inversée : le grand arbre finit sous le petit. Il faut échanger quand taille[ra] < taille[rb], pour que ra soit le plus grand.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "uf-optimisations-q5",
+          "prompt": "Sans aucune optimisation, quel est le pire coût de trouver ?",
+          "choices": [
+            "O(n), quand les unions forment une longue chaîne",
+            "O(1)",
+            "O(log n)",
+            "O(n²)"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'arbre dégénère en liste.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "uf-optimisations-q6",
+          "prompt": "Que permet de suivre un tableau taille entretenu à chaque union ?",
+          "choices": [
+            "La taille de chaque ensemble, lue à sa racine",
+            "Le choix de l'arbre à rattacher sous l'autre",
+            "La taille du plus grand ensemble, mise à jour à chaque union",
+            "L'ordre d'insertion des éléments"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Seule la valeur stockée à la racine est à jour.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "uf-problemes",
+      "title": "Problèmes classiques",
+      "summary": "Kruskal, comptes, grilles.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Kruskal",
+          "body": "Pour l'arbre couvrant minimal, on trie les arêtes par poids croissant et on garde chaque arête qui relie deux composantes différentes. Union-Find répond à « sont-ils déjà reliés ? » en temps quasi constant. Le tri domine : O(E log E).",
+          "code": "def kruskal(n, aretes):\n    total = 0\n    for poids, a, b in sorted(aretes):\n        if unir(a, b):\n            total += poids\n    return total"
+        },
+        {
+          "title": "Fusionner des comptes",
+          "body": "Des comptes partagent parfois une adresse e-mail : on unit les comptes qui ont une adresse commune, en gardant un dictionnaire adresse → premier compte rencontré. Les groupes finaux sont les ensembles."
+        },
+        {
+          "title": "Les grilles",
+          "body": "Pour compter les îles quand des cases deviennent terre une à une, on numérote chaque case ligne × colonnes + colonne et on unit chaque nouvelle case de terre avec ses voisines déjà terre. Un compteur d'ensembles, décrémenté à chaque union réussie, donne le nombre d'îles après chaque ajout."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "uf-problemes-q1",
+          "prompt": "Quel rôle joue Union-Find dans l'algorithme de Kruskal ?",
+          "choices": [
+            "Savoir si une arête relie deux composantes déjà connectées, ce qui créerait un cycle",
+            "Trier les arêtes",
+            "Calculer les plus courts chemins",
+            "Choisir le nœud de départ"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ne garde que les arêtes qui relient deux composantes différentes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "uf-problemes-q2",
+          "prompt": "4 nœuds, arêtes (poids, a, b) : (1, 0, 1), (2, 1, 2), (3, 0, 2), (4, 2, 3). Que renvoie kruskal ?",
+          "code": "def kruskal(n, aretes):\n    total = 0\n    for poids, a, b in sorted(aretes):\n        if unir(a, b):\n            total += poids\n    return total",
+          "choices": [
+            "7",
+            "10",
+            "6",
+            "3"
+          ],
+          "answerIndex": 0,
+          "explanation": "On garde 1, 2 et 4 ; l'arête de poids 3 relierait 0 et 2, déjà connectés.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "uf-problemes-q3",
+          "prompt": "Quel numéro donner à la case (ligne 2, colonne 3) d'une grille de 5 colonnes ?",
+          "choices": [
+            "13",
+            "10",
+            "15",
+            "23"
+          ],
+          "answerIndex": 0,
+          "explanation": "ligne × colonnes + colonne = 2 × 5 + 3.",
+          "difficulty": 1
+        },
+        {
+          "type": "order",
+          "id": "uf-problemes-q4",
+          "prompt": "Remets dans l'ordre Kruskal.",
+          "lines": [
+            "def kruskal(n, aretes):",
+            "    total = 0",
+            "    for poids, a, b in sorted(aretes):",
+            "        if unir(a, b):",
+            "            total += poids",
+            "    return total"
+          ],
+          "explanation": "unir renvoie False quand les deux nœuds sont déjà reliés.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "uf-problemes-q5",
+          "prompt": "Le nombre d'îles affiché est trop petit. Touche la ligne en cause.",
+          "code": "def ajouter_terre(case, voisins_terre):\n    global iles\n    iles += 1\n    for v in voisins_terre:\n        unir(case, v)\n        iles -= 1\n    return iles",
+          "bugLines": [
+            5,
+            6
+          ],
+          "explanation": "On décrémente même quand les deux cases étaient déjà dans la même île. Il faut décrémenter seulement si unir réussit : if unir(case, v): iles -= 1.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "uf-problemes-q6",
+          "prompt": "Dans quels cas préférer Union-Find à un BFS ou un DFS ?",
+          "choices": [
+            "Les arêtes arrivent une à une et il faut répondre après chaque ajout",
+            "On doit souvent demander si deux éléments sont reliés",
+            "Kruskal, pour l'arbre couvrant minimal",
+            "On doit trouver le plus court chemin entre deux nœuds"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un BFS à chaque ajout coûterait bien plus cher.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "uf-defi",
+    "title": "Défi entretien : le réseau d'amis",
+    "summary": "Connexions qui arrivent au fil de l'eau.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "uf-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un réseau social reçoit un flux de nouvelles amitiés. À tout moment, il faut savoir si deux personnes sont reliées, directement ou non. Quelle structure ?",
+        "choices": [
+          "Union-Find, avec compression de chemin et union par taille",
+          "Un BFS à chaque question",
+          "Une matrice d'adjacence recalculée",
+          "Un tas"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque ajout et chaque question coûtent un temps quasi constant.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "uf-defi-q2",
+        "prompt": "Cas pratique 2/3 — On veut connaître après chaque amitié la taille du plus grand groupe. Comment ?",
+        "choices": [
+          "Maintenir la taille de chaque ensemble à sa racine, et un maximum mis à jour à chaque union",
+          "Recompter tous les groupes à chaque ajout",
+          "Trier les groupes",
+          "C'est impossible avec Union-Find"
+        ],
+        "answerIndex": 0,
+        "explanation": "La taille d'une fusion est la somme des deux tailles.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "uf-defi-q3",
+        "prompt": "Cas pratique 3/3 — On doit aussi supprimer des amitiés. Union-Find convient-il encore ?",
+        "choices": [
+          "Non : il ne sait pas défaire une union ; il faut une autre approche (traitement hors ligne à rebours, structures dynamiques)",
+          "Oui, avec une fonction séparer",
+          "Oui, sans rien changer",
+          "Oui, avec la compression de chemin"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une astuce classique : traiter les suppressions à rebours comme des ajouts, quand on connaît tout le flux à l'avance.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "uf-defi-q4",
+        "prompt": "Les identifiants sont des chaînes (\"alice\", \"bob\"), pas des entiers. Comment adapter ?",
+        "choices": [
+          "Utiliser un dictionnaire pour parent, ou associer chaque identifiant à un entier",
+          "Union-Find n'accepte que des entiers",
+          "Trier les noms",
+          "Hacher les noms et ignorer les collisions"
+        ],
+        "answerIndex": 0,
+        "explanation": "parent = {} avec parent.setdefault(x, x) dans trouver fonctionne très bien.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "uf-defi-q5",
+        "prompt": "Ce compteur de groupes est faux dès qu'une amitié relie deux personnes déjà connectées. Touche la ligne en cause.",
+        "code": "def ajouter_amitie(a, b):\n    global groupes\n    ra, rb = trouver(a), trouver(b)\n    parent[ra] = rb\n    groupes -= 1",
+        "bugLines": [
+          5
+        ],
+        "explanation": "Si ra == rb, aucun groupe n'est fusionné : il ne faut décrémenter qu'après avoir vérifié ra != rb.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "uf-defi-q6",
+        "prompt": "Quelles affirmations sur Union-Find sont vraies ?",
+        "choices": [
+          "Il ne gère pas efficacement la suppression d'une union",
+          "Il répond à « sont-ils reliés ? » sans donner le chemin",
+          "Ses deux optimisations rendent les opérations quasi constantes",
+          "Il trouve le plus court chemin entre deux nœuds"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Pour le chemin lui-même, il faut un parcours de graphe.",
+        "difficulty": 2
+      }
+    ]
+  }
+}
