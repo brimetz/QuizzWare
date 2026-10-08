@@ -19,7 +19,7 @@ public sealed class ContentRepository
     private readonly Dictionary<string, Category> _byId;
     private readonly Dictionary<string, QuestionLocation> _questions;
 
-    public ContentRepository(IEnumerable<Category> categories)
+    public ContentRepository(IEnumerable<Category> categories, IReadOnlyDictionary<string, string?>? renames = null)
     {
         Categories = categories.OrderBy(c => c.Order).ToList();
         ContentValidator.Validate(Categories);
@@ -28,7 +28,21 @@ public sealed class ContentRepository
             .SelectMany(c => c.AllChapters.SelectMany(ch => Units(ch).Select(u => (Category: c, Chapter: ch, Unit: u))))
             .SelectMany(x => x.Unit.Questions.Select(q => new QuestionLocation(x.Category, x.Chapter, x.Unit, q)))
             .ToDictionary(l => l.Question.Id);
+        Renames = renames ?? new Dictionary<string, string?>();
+        ContentValidator.ValidateRenames(Renames, ProgressIds(Categories));
     }
+
+    /// <summary>Identifiants renommés (ancien → nouveau) ou retirés (ancien → null), appliqués aux sauvegardes.</summary>
+    public IReadOnlyDictionary<string, string?> Renames { get; }
+
+    /// <summary>
+    /// Identifiants qui servent de clés dans la sauvegarde : catégories, leçons, défis et questions.
+    /// Une fois publiés, ils ne doivent plus disparaître sans entrée dans la table des renommages.
+    /// </summary>
+    public static IEnumerable<string> ProgressIds(IEnumerable<Category> categories) =>
+        categories.SelectMany(c => c.AllChapters
+            .SelectMany(ch => Units(ch).SelectMany(u => u.Questions.Select(q => q.Id).Prepend(u.Id)))
+            .Prepend(c.Id));
 
     private static IEnumerable<IQuizUnit> Units(Chapter chapter) =>
         chapter.Challenge is { } challenge ? chapter.Lessons.Append<IQuizUnit>(challenge) : chapter.Lessons;
@@ -150,7 +164,25 @@ public sealed class ContentRepository
             return category with { Specializations = specializations with { Nodes = AttachTracks(specializations.Nodes, tracks) } };
         });
 
-        return new ContentRepository(singleFiles.Concat(folders));
+        return new ContentRepository(singleFiles.Concat(folders), LoadEmbeddedRenames());
+    }
+
+    private sealed record RenameFile(Dictionary<string, string?> Renommages);
+
+    /// <summary>Table des renommages embarquée (<c>Progress/renommages.json</c>).</summary>
+    public static IReadOnlyDictionary<string, string?> LoadEmbeddedRenames()
+    {
+        using var stream = typeof(ContentRepository).Assembly.GetManifestResourceStream("renommages.json");
+        if (stream is null)
+            return new Dictionary<string, string?>();
+        try
+        {
+            return JsonSerializer.Deserialize<RenameFile>(stream, JsonOptions)?.Renommages ?? [];
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidDataException($"JSON invalide dans renommages.json : {ex.Message}", ex);
+        }
     }
 
     private static List<SpecializationNode> AttachTracks(IEnumerable<SpecializationNode> nodes, IReadOnlyDictionary<string, List<Chapter>> tracks) =>

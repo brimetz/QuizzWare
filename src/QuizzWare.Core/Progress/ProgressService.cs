@@ -69,7 +69,7 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         await _lock.WaitAsync();
         try
         {
-            return _progress ??= await store.LoadAsync();
+            return _progress ??= await LoadAsync();
         }
         finally
         {
@@ -85,7 +85,7 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         await _lock.WaitAsync();
         try
         {
-            progress = _progress ??= await store.LoadAsync();
+            progress = _progress ??= await LoadAsync();
             var today = Today();
             var goalBefore = GetDailyGoal(progress);
 
@@ -162,7 +162,7 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         await _lock.WaitAsync();
         try
         {
-            progress = _progress ??= await store.LoadAsync();
+            progress = _progress ??= await LoadAsync();
             var today = Today();
             var goalBefore = GetDailyGoal(progress);
             var category = progress.GetOrCreate(test.Category.Id);
@@ -209,7 +209,7 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         await _lock.WaitAsync();
         try
         {
-            progress = _progress ??= await store.LoadAsync();
+            progress = _progress ??= await LoadAsync();
             change(progress.Settings);
             await SaveAsync(progress);
         }
@@ -227,7 +227,7 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         await _lock.WaitAsync();
         try
         {
-            var progress = _progress ??= await store.LoadAsync();
+            var progress = _progress ??= await LoadAsync();
             var now = time.GetUtcNow();
             progress.InterviewStarts.RemoveAll(d => now - d > TimeSpan.FromDays(30));
             progress.InterviewStarts.Add(now);
@@ -248,7 +248,7 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         await _lock.WaitAsync();
         try
         {
-            var old = _progress ??= await store.LoadAsync();
+            var old = _progress ??= await LoadAsync();
             // Les réglages restent, et l'historique des entretiens aussi : réinitialiser ne doit pas rendre le quota gratuit.
             progress = _progress = new UserProgress { Settings = old.Settings, InterviewStarts = old.InterviewStarts };
             await SaveAsync(progress);
@@ -286,6 +286,18 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
     public int CountMasteredQuestions(UserProgress progress) =>
         progress.Reviews.Values.Count(SpacedRepetition.IsMastered);
 
+    /// <summary>
+    /// Charge la sauvegarde et l'adapte au contenu actuel (identifiants renommés ou retirés) : une mise à jour
+    /// du contenu ne fait jamais perdre la progression. À appeler sous <see cref="_lock"/>.
+    /// </summary>
+    private async Task<UserProgress> LoadAsync()
+    {
+        var progress = await store.LoadAsync();
+        if (ProgressMigration.Apply(progress, content.Renames))
+            await SaveAsync(progress);
+        return progress;
+    }
+
     private async Task SaveAsync(UserProgress progress)
     {
         progress.SchemaVersion = UserProgress.CurrentSchemaVersion;
@@ -315,6 +327,8 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
     /// <summary>
     /// Les leçons se débloquent dans l'ordre de leur parcours (tronc commun ou spécialisation), chapitre après chapitre :
     /// il faut valider la leçon précédente. Les parcours de spécialisation attendent en plus l'ouverture de l'arbre.
+    /// Une leçon ajoutée par une mise à jour du contenu ne bloque jamais ce que l'utilisateur avait déjà atteint :
+    /// une leçon est aussi ouverte dès qu'une leçon située plus loin dans le même parcours est validée.
     /// </summary>
     public UnitState GetLessonState(UserProgress progress, Category category, string lessonId)
     {
@@ -325,29 +339,31 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         foreach (var path in category.Paths)
         {
             // Les leçons « à venir » sont sautées : elles ne bloquent pas la suite du parcours.
-            string? previous = null;
-            foreach (var lesson in path.SelectMany(c => c.Lessons))
-            {
-                if (lesson.Id == lessonId)
-                {
-                    if (lesson.IsPlanned)
-                        return UnitState.Planned;
+            var lessons = path.SelectMany(c => c.Lessons).ToList();
+            var index = lessons.FindIndex(l => l.Id == lessonId);
+            if (index < 0)
+                continue;
 
-                    var isSpecialization = !ReferenceEquals(path, category.Chapters);
-                    if (isSpecialization && !AreSpecializationsUnlocked(progress, category))
-                        return UnitState.Locked;
-                    return previous is null || completed.Contains(previous) ? UnitState.Available : UnitState.Locked;
-                }
+            if (lessons[index].IsPlanned)
+                return UnitState.Planned;
 
-                if (!lesson.IsPlanned)
-                    previous = lesson.Id;
-            }
+            var isSpecialization = !ReferenceEquals(path, category.Chapters);
+            if (isSpecialization && !AreSpecializationsUnlocked(progress, category))
+                return UnitState.Locked;
+
+            var previous = lessons.Take(index).LastOrDefault(l => !l.IsPlanned);
+            var reachedBeyond = lessons.Skip(index + 1).Any(l => completed.Contains(l.Id));
+            return previous is null || completed.Contains(previous.Id) || reachedBeyond ? UnitState.Available : UnitState.Locked;
         }
 
         throw new KeyNotFoundException($"Leçon inconnue : {category.Id}/{lessonId}");
     }
 
-    /// <summary>L'arbre des spécialisations s'ouvre quand le chapitre <see cref="SpecializationTree.UnlockedBy"/> est terminé.</summary>
+    /// <summary>
+    /// L'arbre des spécialisations s'ouvre quand le chapitre <see cref="SpecializationTree.UnlockedBy"/> est terminé.
+    /// Il reste ouvert si une mise à jour ajoute une leçon à ce chapitre : il suffit que l'utilisateur ait déjà validé
+    /// une leçon de spécialisation, ou une leçon du tronc commun située après ce chapitre.
+    /// </summary>
     public bool AreSpecializationsUnlocked(UserProgress progress, Category category)
     {
         if (category.Specializations is not { } tree)
@@ -356,9 +372,14 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
             return true;
 
         var completed = Completed(progress, category);
-        return category.Chapters.First(c => c.Id == tree.UnlockedBy).Lessons
+        var unlockIndex = category.Chapters.ToList().FindIndex(c => c.Id == tree.UnlockedBy);
+        var unlockChapterDone = category.Chapters[unlockIndex].Lessons
             .Where(l => !l.IsPlanned)
             .All(l => completed.Contains(l.Id));
+
+        return unlockChapterDone
+            || category.Chapters.Skip(unlockIndex + 1).SelectMany(c => c.Lessons).Any(l => completed.Contains(l.Id))
+            || tree.AllNodes.SelectMany(n => n.Track).SelectMany(c => c.Lessons).Any(l => completed.Contains(l.Id));
     }
 
     /// <summary>Leçons jouables validées / leçons jouables au total, dans le parcours d'un nœud et de ses descendants.</summary>
@@ -369,7 +390,10 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         return (lessons.Count(l => completed.Contains(l.Id)), lessons.Count);
     }
 
-    /// <summary>Le défi d'un chapitre s'ouvre quand toutes ses leçons sont validées.</summary>
+    /// <summary>
+    /// Le défi d'un chapitre s'ouvre quand toutes ses leçons sont validées, ou quand l'utilisateur a déjà validé
+    /// une leçon d'un chapitre suivant du même parcours (une leçon ajoutée au chapitre ne le referme pas).
+    /// </summary>
     public UnitState GetChallengeState(UserProgress progress, Category category, Chapter chapter)
     {
         if (chapter.Challenge is null)
@@ -381,7 +405,12 @@ public sealed class ProgressService(IProgressStore store, ContentRepository cont
         var completed = Completed(progress, category);
         if (completed.Contains(chapter.Challenge.Id))
             return UnitState.Completed;
-        return chapter.Lessons.Where(l => !l.IsPlanned).All(l => completed.Contains(l.Id)) ? UnitState.Available : UnitState.Locked;
+        if (chapter.Lessons.Where(l => !l.IsPlanned).All(l => completed.Contains(l.Id)))
+            return UnitState.Available;
+
+        var path = category.Paths.FirstOrDefault(p => p.Contains(chapter))?.ToList() ?? [];
+        var reachedBeyond = path.Skip(path.IndexOf(chapter) + 1).SelectMany(c => c.Lessons).Any(l => completed.Contains(l.Id));
+        return reachedBeyond ? UnitState.Available : UnitState.Locked;
     }
 
     /// <summary>Leçons déjà accessibles : l'entraînement ne pioche que dans ce que l'utilisateur a vu ou peut voir.</summary>

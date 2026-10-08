@@ -91,7 +91,49 @@ foreach (var cat in categories)
 File.WriteAllText(mapPath, BuildMap(categories, contentDir));
 Console.WriteLine($"Carte : {mapPath}");
 
+// 4. Identifiants publiés : la liste ne fait que grandir. Un test vérifie qu'aucun ne disparaît du contenu
+//    sans entrée dans Progress/renommages.json, pour que la progression des utilisateurs survive aux mises à jour.
+var idsPath = Path.Combine(root, "src", "QuizzWare.Core", "Progress", "identifiants-publies.txt");
+var published = File.Exists(idsPath)
+    ? File.ReadAllLines(idsPath).Where(l => l.Length > 0 && !l.StartsWith('#')).ToHashSet(StringComparer.Ordinal)
+    : new HashSet<string>(StringComparer.Ordinal);
+var before = published.Count;
+published.UnionWith(ProgressIds(contentDir));
+File.WriteAllLines(idsPath,
+[
+    "# Identifiants publiés (catégories, leçons et défis jouables, questions), tenus à jour par tools/GenerateurContenu.",
+    "# Ils servent de clés dans la sauvegarde des utilisateurs : ne jamais en retirer une ligne.",
+    "# Pour renommer ou supprimer un élément publié, l'inscrire dans Progress/renommages.json.",
+    .. published.Order(StringComparer.Ordinal),
+]);
+Console.WriteLine($"Identifiants publiés : {published.Count} (+{published.Count - before})");
+
 // ---------------------------------------------------------------------------------------------
+
+static IEnumerable<string> ProgressIds(string contentDir)
+{
+    foreach (var file in Directory.GetFiles(contentDir, "*.json", SearchOption.AllDirectories))
+    {
+        if (Path.GetFileName(file) == "arbre.json")
+            continue;
+        var node = JsonNode.Parse(File.ReadAllText(file))!;
+        if (Path.GetFileName(file) == "category.json")
+        {
+            yield return node["id"]!.GetValue<string>();
+            continue;
+        }
+
+        var units = (node["lessons"]?.AsArray() ?? []).Append(node["challenge"]);
+        foreach (var unit in units)
+        {
+            if (unit?["questions"] is not JsonArray { Count: > 0 } questions)
+                continue;
+            yield return unit["id"]!.GetValue<string>();
+            foreach (var q in questions)
+                yield return q!["id"]!.GetValue<string>();
+        }
+    }
+}
 
 void Write(string path, JsonNode node)
 {

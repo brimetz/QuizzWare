@@ -125,6 +125,24 @@ src/QuizzWare.Core/Content/
 
 Le chargeur accepte aussi un fichier unique `<categorie>.json` contenant tous les chapitres, pratique pour un prototype.
 
+## Faire évoluer le contenu
+
+La sauvegarde de l'utilisateur (`progress.json`, sur l'appareil) range sa progression par **identifiant** : leçons et défis validés, meilleurs scores, fiches de révision par question, XP par catégorie. Une mise à jour du contenu ne doit jamais lui faire perdre son avancée.
+
+| Changement | Ce qu'il faut faire |
+|---|---|
+| Corriger un texte, une explication, une réponse | Rien : l'identifiant ne change pas |
+| Ajouter une leçon, une question ou un chapitre | Rien de plus : l'utilisateur garde ce qu'il a validé, et une leçon insérée ne bloque pas ce qu'il avait déjà atteint |
+| Renommer un identifiant publié | L'inscrire dans `src/QuizzWare.Core/Progress/renommages.json` : `"ancien": "nouveau"` |
+| Supprimer un élément publié | L'inscrire dans `renommages.json` avec `null` : `"ancien": null` (l'XP déjà gagnée est conservée) |
+
+Au chargement, la sauvegarde suit les renommages (y compris en chaîne) puis est réenregistrée. La liste `src/QuizzWare.Core/Progress/identifiants-publies.txt` contient tous les identifiants jouables déjà publiés ; elle ne fait que grandir et c'est `tools/GenerateurContenu` qui la tient à jour. Deux tests veillent :
+
+- un identifiant de la liste absent du contenu et de `renommages.json` fait échouer `dotnet test` ;
+- un identifiant du contenu absent de la liste aussi : lancer `dotnet run --project tools/GenerateurContenu` puis commiter.
+
+Règles de déblocage qui protègent l'avancée : une leçon est ouverte si la précédente est validée **ou** si une leçon plus loin dans le même parcours l'est déjà ; un défi, si les leçons du chapitre sont validées ou si l'utilisateur a déjà avancé au-delà ; l'arbre des spécialisations reste ouvert dès qu'une leçon de spécialisation ou une leçon située après le chapitre qui l'ouvre a été validée.
+
 ## Relecture
 
 Chaque question est relue techniquement avant d'être publiée : une réponse fausse dans une app pour ingénieurs fait perdre toute crédibilité. Pour les questions « qu'affiche ce code ? », on **compile et on exécute** l'extrait ; pour « que se passe-t-il ? », on vérifie que l'erreur de compilation annoncée est bien la bonne (en C++, sans le mode de compatibilité MSVC : `clang++ -std=c++23 -fno-ms-compatibility`).

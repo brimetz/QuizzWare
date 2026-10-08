@@ -1,0 +1,4 @@
+{
+  "//": "Identifiants renommés (ancien → nouveau) ou retirés (ancien → null) après avoir été publiés. La progression des utilisateurs suit ces renommages au chargement. Voir docs/CONTENU.md, « Faire évoluer le contenu ».",
+  "renommages": {}
+}

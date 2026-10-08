@@ -157,6 +157,35 @@ public static class ContentValidator
         }
     }
 
+    /// <summary>
+    /// Vérifie la table des renommages : un ancien identifiant ne doit plus exister dans le contenu (sinon la progression
+    /// serait déplacée à tort), et une chaîne de renommages doit aboutir à un identifiant existant (ou à un retrait).
+    /// </summary>
+    public static void ValidateRenames(IReadOnlyDictionary<string, string?> renames, IEnumerable<string> contentIds)
+    {
+        var existing = contentIds.ToHashSet();
+        var errors = new List<string>();
+        foreach (var (oldId, newId) in renames)
+        {
+            if (existing.Contains(oldId))
+                errors.Add($"« {oldId} » est renommé mais existe toujours dans le contenu.");
+            if (newId is null)
+                continue;
+            try
+            {
+                if (Progress.ProgressMigration.Resolve(oldId, renames) is { } target && !existing.Contains(target))
+                    errors.Add($"« {oldId} » est renommé en « {target} », qui n'existe pas dans le contenu.");
+            }
+            catch (InvalidDataException ex)
+            {
+                errors.Add(ex.Message);
+            }
+        }
+
+        if (errors.Count > 0)
+            throw new InvalidDataException("Renommages invalides :" + Environment.NewLine + string.Join(Environment.NewLine, errors));
+    }
+
     /// <summary>Découpe un renvoi « categorie/noeud ».</summary>
     public static (string CategoryId, string NodeId) SplitLink(string link)
     {
