@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 175 (175 écrits) | 428 (428 écrites) | 185 (84 écrites) | 28 | 41 |
+| 20 | 175 (175 écrits) | 428 (428 écrites) | 183 (84 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -824,9 +824,6 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 **Spécialisations**
 
-- Sécurité offensive
-  - 🕓 Tests d'intrusion
-  - 🕓 CTF
 - Sécurité défensive
   - 🕓 Détection et réponse
   - 🕓 Investigation numérique

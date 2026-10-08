@@ -722,9 +722,6 @@
 - sec-analyses | Analyses automatiques | SAST, DAST et détection de secrets. | 2
 #ch 09 sec-ch-detection | Détecter et réagir | Journaux de sécurité et incidents.
 - sec-journalisation | Journaliser pour la sécurité | Quoi enregistrer, quoi surveiller. | 2
-+ sec-spe-offensif | Sécurité offensive | Penser comme un attaquant. | RED
-* sec-spe-pentest | Tests d'intrusion | Méthodologie et outils du pentest. | PEN | concept
-* sec-spe-ctf | CTF | S'entraîner sur des challenges de sécurité. | CTF | concept
 + sec-spe-defensif | Sécurité défensive | Détecter et répondre. | BLUE
 * sec-spe-soc | Détection et réponse | SOC, SIEM et gestion d'incident de sécurité. | SOC | concept
 * sec-spe-forensic | Investigation numérique | Comprendre ce qui s'est passé après une attaque. | DFIR | concept

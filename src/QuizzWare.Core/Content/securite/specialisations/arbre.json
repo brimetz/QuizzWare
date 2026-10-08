@@ -2,29 +2,6 @@
   "unlockedBy": "sec-ch-fondamentaux",
   "nodes": [
     {
-      "id": "sec-spe-offensif",
-      "title": "Sécurité offensive",
-      "summary": "Penser comme un attaquant.",
-      "icon": "RED",
-      "kind": "famille",
-      "children": [
-        {
-          "id": "sec-spe-pentest",
-          "title": "Tests d'intrusion",
-          "summary": "Méthodologie et outils du pentest.",
-          "icon": "PEN",
-          "kind": "concept"
-        },
-        {
-          "id": "sec-spe-ctf",
-          "title": "CTF",
-          "summary": "S'entraîner sur des challenges de sécurité.",
-          "icon": "CTF",
-          "kind": "concept"
-        }
-      ]
-    },
-    {
       "id": "sec-spe-defensif",
       "title": "Sécurité défensive",
       "summary": "Détecter et répondre.",
