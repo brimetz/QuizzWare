@@ -7,7 +7,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 | Catégories | Chapitres de tronc commun | Leçons de tronc commun | Spécialisations | Renvois | Portes |
 |---|---|---|---|---|---|
-| 20 | 133 (133 écrits) | 341 (341 écrites) | 185 (7 écrites) | 28 | 41 |
+| 20 | 175 (175 écrits) | 428 (428 écrites) | 185 (84 écrites) | 28 | 41 |
 
 ## Architecture système
 
@@ -47,29 +47,29 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 **Spécialisations**
 
 - Conception logicielle
-  - 🕓 Design patterns
-  - 🕓 Clean architecture et hexagonale
-  - 🕓 Domain-Driven Design
-  - 🕓 Refactoring et code legacy
+  - ✅ Design patterns
+  - ✅ Clean architecture et hexagonale
+  - ✅ Domain-Driven Design
+  - ✅ Refactoring et code legacy
 - APIs
-  - 🕓 REST
-  - 🕓 gRPC
-  - 🕓 GraphQL
-  - 🕓 OpenAPI et contrats
+  - ✅ REST
+  - ✅ gRPC
+  - ✅ GraphQL
+  - ✅ OpenAPI et contrats
 - Systèmes distribués
-  - 🕓 Kafka
-  - 🕓 RabbitMQ
-  - 🕓 Event sourcing et CQRS
-  - 🕓 Workflows durables
+  - ✅ Kafka
+  - ✅ RabbitMQ
+  - ✅ Event sourcing et CQRS
+  - ✅ Workflows durables
 - Architecture cloud
-  - 🕓 Serverless
-  - 🕓 Multi-régions
+  - ✅ Serverless
+  - ✅ Multi-régions
 - Observabilité
-  - 🕓 OpenTelemetry
+  - ✅ OpenTelemetry
   - ↪ Prometheus et Grafana → Architecture infra
 - System design d'entretien
   - ✅ Démarche et estimations
-  - 🕓 Études de cas
+  - ✅ Études de cas
 - Autres horizons
   - 🚪 Sécurité applicative → catégorie Sécurité applicative
   - 🚪 Algorithmes et structures de données → catégorie Algorithmes et structures de données
@@ -112,33 +112,33 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 **Spécialisations**
 
 - Conteneurs et orchestration
-  - 🕓 Docker
+  - ✅ Docker
   - ✅ Kubernetes
-  - 🕓 Helm
-  - 🕓 Service mesh
+  - ✅ Helm
+  - ✅ Service mesh
 - Cloud public
-  - 🕓 AWS
-  - 🕓 Azure
-  - 🕓 Google Cloud
+  - ✅ AWS
+  - ✅ Azure
+  - ✅ Google Cloud
 - Infrastructure as Code
-  - 🕓 Terraform
-  - 🕓 Ansible
-  - 🕓 Pulumi
+  - ✅ Terraform
+  - ✅ Ansible
+  - ✅ Pulumi
 - CI/CD
-  - 🕓 GitHub Actions
-  - 🕓 GitLab CI
-  - 🕓 Argo CD et GitOps
+  - ✅ GitHub Actions
+  - ✅ GitLab CI
+  - ✅ Argo CD et GitOps
 - Observabilité et SRE
-  - 🕓 Prometheus et Grafana
-  - 🕓 Centralisation des logs
-  - 🕓 SLI, SLO et gestion d'incident
+  - ✅ Prometheus et Grafana
+  - ✅ Centralisation des logs
+  - ✅ SLI, SLO et gestion d'incident
 - Systèmes Linux
-  - 🕓 Administration Linux
-  - 🕓 Bash et scripts
-  - 🕓 Nginx
+  - ✅ Administration Linux
+  - ✅ Bash et scripts
+  - ✅ Nginx
 - Platform engineering
-  - 🕓 Portails développeurs
-  - 🕓 FinOps
+  - ✅ Portails développeurs
+  - ✅ FinOps
 - Autres horizons
   - 🚪 Systèmes d'exploitation → catégorie Systèmes d'exploitation
   - 🚪 Sécurité applicative → catégorie Sécurité applicative
@@ -447,7 +447,7 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 **Spécialisations**
 
 - Développement web
-  - 🕓 Django
+  - ✅ Django
   - ✅ FastAPI
   - 🕓 Flask
 - Data et IA
@@ -508,32 +508,32 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 
 - Bases relationnelles
   - ✅ PostgreSQL
-  - 🕓 MySQL et MariaDB
-  - 🕓 SQL Server
-  - 🕓 SQLite
+  - ✅ MySQL et MariaDB
+  - ✅ SQL Server
+  - ✅ SQLite
   - ✅ Entity Framework Core
-  - 🕓 SQLAlchemy
+  - ✅ SQLAlchemy
 - Bases document
   - ✅ MongoDB
 - Clé-valeur
-  - 🕓 Redis
-  - 🕓 DynamoDB
+  - ✅ Redis
+  - ✅ DynamoDB
 - Colonnes larges
-  - 🕓 Cassandra
+  - ✅ Cassandra
 - Graphe
-  - 🕓 Neo4j
+  - ✅ Neo4j
 - Moteurs de recherche
-  - 🕓 Elasticsearch
+  - ✅ Elasticsearch
 - Bases vectorielles
-  - 🕓 pgvector
+  - ✅ pgvector
 - Séries temporelles
-  - 🕓 TimescaleDB
+  - ✅ TimescaleDB
 - Analytique
-  - 🕓 DuckDB
-  - 🕓 ClickHouse
+  - ✅ DuckDB
+  - ✅ ClickHouse
 - Flux de données
   - ↪ Kafka → Architecture système
-  - 🕓 Capture des changements (CDC)
+  - ✅ Capture des changements (CDC)
 - Autres horizons
   - 🚪 Intelligence artificielle → catégorie Intelligence artificielle
   - 🚪 Algorithmes et structures de données → catégorie Algorithmes et structures de données
@@ -572,16 +572,16 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 **Spécialisations**
 
 - Préparation aux entretiens
-  - 🕓 Problèmes par patterns
-  - 🕓 Coder en direct
+  - ✅ Problèmes par patterns
+  - ✅ Coder en direct
 - Structures avancées
-  - 🕓 Tries et arbres de suffixes
-  - 🕓 Union-Find
-  - 🕓 Arbres de segments
+  - ✅ Tries et arbres de suffixes
+  - ✅ Union-Find
+  - ✅ Arbres de segments
 - Algorithmes par domaine
-  - 🕓 Algorithmes sur les chaînes
-  - 🕓 Géométrie algorithmique
-  - 🕓 Structures probabilistes
+  - ✅ Algorithmes sur les chaînes
+  - ✅ Géométrie algorithmique
+  - ✅ Structures probabilistes
 - Autres horizons
   - 🚪 Intelligence artificielle → catégorie Intelligence artificielle
   - 🚪 Architecture système → catégorie Architecture système
@@ -597,30 +597,39 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 2. ✅ Objets et prototypes
    - ✅ Objets et déstructuration
    - ✅ Prototypes et classes
-3. ✅ Asynchrone
+3. ✅ Collections et itération
+   - ✅ Méthodes de tableaux
+   - ✅ Map, Set et générateurs
+4. ✅ Asynchrone
    - ✅ La boucle d'événements
    - ✅ Promesses
    - ✅ async / await
-4. ✅ TypeScript
+5. ✅ Erreurs et mémoire
+   - ✅ Gestion des erreurs
+   - ✅ Mémoire et fuites
+6. ✅ TypeScript
    - ✅ Types de base
    - ✅ Types avancés
    - ✅ Narrowing
-5. ✅ Modules et outillage
+7. ✅ Modules et outillage
    - ✅ Modules
    - ✅ npm et les dépendances
-6. ✅ Le navigateur
+8. ✅ Le navigateur
    - ✅ Le DOM
    - ✅ Événements
+9. ✅ Node.js
+   - ✅ Le runtime Node.js
+   - ✅ Fichiers, flux et HTTP
 
 **Spécialisations**
 
 - Frameworks frontend
-  - 🕓 React
+  - ✅ React
   - 🕓 Vue
   - 🕓 Angular
   - 🕓 Svelte
 - JavaScript côté serveur
-  - 🕓 Node.js
+  - ✅ Node.js
   - 🕓 Express et NestJS
   - 🕓 Deno et Bun
 - Outillage
@@ -641,25 +650,34 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 2. ✅ Orienté objet
    - ✅ Héritage et interfaces
    - ✅ Records et sealed classes
-3. ✅ Collections et génériques
+3. ✅ Génériques et lambdas
+   - ✅ Génériques
+   - ✅ Lambdas et interfaces fonctionnelles
+4. ✅ Collections et génériques
    - ✅ Le framework Collections
    - ✅ equals et hashCode
    - ✅ Streams
-4. ✅ Exceptions
+5. ✅ Exceptions
    - ✅ Exceptions
    - ✅ Optional et null
-5. ✅ Concurrence
+6. ✅ Fichiers et dates
+   - ✅ Fichiers avec NIO
+   - ✅ Dates et heures
+7. ✅ Concurrence
    - ✅ Threads et synchronized
    - ✅ Executors et CompletableFuture
    - ✅ Virtual threads
-6. ✅ La JVM
+8. ✅ La JVM
    - ✅ Mémoire et garbage collectors
    - ✅ Bytecode et JIT
+9. ✅ Outillage et tests
+   - ✅ Maven et Gradle
+   - ✅ JUnit 5 et Mockito
 
 **Spécialisations**
 
 - Écosystème Spring
-  - 🕓 Spring Boot
+  - ✅ Spring Boot
   - 🕓 Spring Data JPA
   - 🕓 Spring Security
 - Accès aux données
@@ -686,23 +704,37 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
    - ✅ Structs et méthodes
    - ✅ Interfaces
    - ✅ Génériques
-3. ✅ Concurrence
+3. ✅ Idiomes du langage
+   - ✅ defer, panic et recover
+   - ✅ Pointeurs et valeurs
+   - ✅ Chaînes, octets et runes
+4. ✅ Erreurs en profondeur
+   - ✅ Envelopper les erreurs
+   - ✅ Concevoir ses erreurs
+5. ✅ Concurrence
    - ✅ Goroutines
    - ✅ Channels et select
    - ✅ sync et context
-4. ✅ Outillage et tests
+6. ✅ La bibliothèque standard
+   - ✅ io.Reader et io.Writer
+   - ✅ encoding/json
+   - ✅ Serveur HTTP
+7. ✅ Outillage et tests
    - ✅ Modules
    - ✅ Tests et benchmarks
+8. ✅ Runtime et performance
+   - ✅ Le runtime
+   - ✅ Profilage
 
 **Spécialisations**
 
 - Services web
-  - 🕓 net/http
-  - 🕓 Gin
+  - ✅ net/http
+  - ✅ Gin
   - ↪ gRPC en Go → Architecture système
 - Outillage cloud
-  - 🕓 Outils en ligne de commande
-  - 🕓 Opérateurs Kubernetes
+  - ✅ Outils en ligne de commande
+  - ✅ Opérateurs Kubernetes
 - Autres horizons
   - 🚪 Architecture infra → catégorie Architecture infra
   - 🚪 Rust → catégorie Rust
@@ -721,12 +753,25 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 3. ✅ Structs, enums et traits
    - ✅ Structs et enums
    - ✅ Traits
-4. ✅ Gestion des erreurs
+4. ✅ Collections et chaînes
+   - ✅ Vec et HashMap
+   - ✅ String et &str
+5. ✅ Gestion des erreurs
    - ✅ Result et ?
    - ✅ panic! et unwrap
-5. ✅ Concurrence
+6. ✅ Closures et itérateurs
+   - ✅ Closures
+   - ✅ Itérateurs
+7. ✅ Pointeurs intelligents
+   - ✅ Box et dyn Trait
+   - ✅ Rc et RefCell
+   - ✅ Drop et RAII
+8. ✅ Concurrence
    - ✅ Threads, Arc et Mutex
    - ✅ async et Tokio
+9. ✅ Modules et outillage
+   - ✅ Modules et crates
+   - ✅ Cargo et tests
 
 **Spécialisations**
 
@@ -755,16 +800,27 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
    - ✅ Injections
    - ✅ XSS
    - ✅ CSRF et SSRF
-3. ✅ Authentification et autorisation
+3. ✅ Sécurité des API
+   - ✅ Contrôle d'accès
+   - ✅ Abus d'API
+4. ✅ Authentification et autorisation
    - ✅ Mots de passe
    - ✅ Sessions et JWT
    - ✅ OAuth 2 et OpenID Connect
-4. ✅ Cryptographie appliquée
+5. ✅ Cryptographie appliquée
    - ✅ Chiffrement symétrique et asymétrique
    - ✅ Hachage et signatures
-5. ✅ Sécurité dans le cycle de développement
+6. ✅ Vulnérabilités avancées
+   - ✅ Désérialisation et fichiers
+   - ✅ Mauvaises configurations
+7. ✅ Protéger les données
+   - ✅ Gestion des secrets
+   - ✅ Données personnelles
+8. ✅ Sécurité dans le cycle de développement
    - ✅ Dépendances et supply chain
    - ✅ Analyses automatiques
+9. ✅ Détecter et réagir
+   - ✅ Journaliser pour la sécurité
 
 **Spécialisations**
 
@@ -800,12 +856,23 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
    - ✅ Sections critiques
    - ✅ Primitives de synchronisation
    - ✅ Interblocages
-4. ✅ Systèmes de fichiers
+4. ✅ Communication entre processus
+   - ✅ Tubes et signaux
+   - ✅ Mémoire partagée et sockets
+5. ✅ Systèmes de fichiers
    - ✅ Fichiers et inodes
    - ✅ Journalisation
-5. ✅ Entrées / sorties
+6. ✅ Entrées / sorties
    - ✅ Interruptions et appels système
    - ✅ E/S asynchrones
+7. ✅ Le noyau et le démarrage
+   - ✅ Le démarrage
+   - ✅ Architecture du noyau
+8. ✅ Isolation et virtualisation
+   - ✅ Machines virtuelles
+   - ✅ Les briques des conteneurs
+9. ✅ Observer un système
+   - ✅ Les outils d'observation
 
 **Spécialisations**
 
@@ -813,8 +880,8 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
   - ↪ Noyau Linux → C
   - ↪ Administration Linux → Architecture infra
 - Virtualisation
-  - 🕓 Hyperviseurs
-  - 🕓 Namespaces et cgroups
+  - ✅ Hyperviseurs
+  - ✅ Namespaces et cgroups
 - Systèmes temps réel
   - ↪ FreeRTOS → C
 - Autres horizons
@@ -832,28 +899,40 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
    - ✅ Branches
    - ✅ merge ou rebase
    - ✅ Résoudre les conflits
-3. ✅ Travail à distance
+3. ✅ Outils du quotidien
+   - ✅ stash, cherry-pick et worktree
+   - ✅ Fouiller l'historique
+4. ✅ Travail à distance
    - ✅ Remotes
    - ✅ Pull requests et revue de code
-4. ✅ Git avancé
+5. ✅ Git avancé
    - ✅ reset, revert et reflog
    - ✅ Rebase interactif
    - ✅ bisect
-5. ✅ Workflows d'équipe
+6. ✅ Les coulisses de Git
+   - ✅ Objets et références
+   - ✅ Configuration et hooks
+7. ✅ Workflows d'équipe
    - ✅ Stratégies de branches
    - ✅ Conventions
+8. ✅ Projets et versions
+   - ✅ Tags et releases
+   - ✅ Sous-modules et subtree
+9. ✅ Sécurité et hygiène
+   - ✅ Un secret dans l'historique
+   - ✅ Signer ses commits
 
 **Spécialisations**
 
 - Plateformes
-  - 🕓 GitHub
-  - 🕓 GitLab
+  - ✅ GitHub
+  - ✅ GitLab
 - Automatisation
   - ↪ GitHub Actions → Architecture infra
   - ↪ GitLab CI → Architecture infra
 - Grands dépôts
-  - 🕓 Monorepos
-  - 🕓 Git LFS
+  - ✅ Monorepos
+  - ✅ Git LFS
 
 ## Tests et qualité
 
@@ -866,17 +945,28 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
    - ✅ Arrange, Act, Assert
    - ✅ Doublures de test
    - ✅ TDD
-3. ✅ Tests d'intégration et de bout en bout
+3. ✅ Concevoir des tests
+   - ✅ Choisir ses cas de test
+   - ✅ Du code testable
+4. ✅ Tests d'intégration et de bout en bout
    - ✅ Tests d'intégration
    - ✅ Tests de bout en bout
-4. ✅ Qualité du code
+5. ✅ Tester des services
+   - ✅ Tests de contrat
+   - ✅ Données de test
+6. ✅ Qualité du code
    - ✅ Code lisible
    - ✅ Revue de code
    - ✅ Refactoring
-5. ✅ Tests avancés
+7. ✅ Tester en continu
+   - ✅ Tests en intégration continue
+   - ✅ La couverture de code
+8. ✅ Tests avancés
    - ✅ Tests par propriétés
    - ✅ Tests de mutation
    - ✅ Tests de charge
+9. ✅ Code existant
+   - ✅ Tests de caractérisation
 
 **Spécialisations**
 
@@ -886,13 +976,13 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
   - ↪ JUnit (Java) → Java
   - ↪ GoogleTest (C++) → C++
 - Tests de bout en bout
-  - 🕓 Playwright
-  - 🕓 Cypress
+  - ✅ Playwright
+  - ✅ Cypress
 - Performance
-  - 🕓 k6
+  - ✅ k6
 - Pratiques
-  - 🕓 BDD
-  - 🕓 Tests de contrat
+  - ✅ BDD
+  - ✅ Tests de contrat
 
 ## Développement web frontend
 
@@ -905,15 +995,29 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
    - ✅ Cascade et spécificité
    - ✅ Flexbox et Grid
    - ✅ Responsive design
-3. ✅ Accessibilité
+3. ✅ CSS avancé
+   - ✅ Positionnement et empilement
+   - ✅ Variables CSS et thèmes
+   - ✅ Transitions et animations
+4. ✅ Accessibilité
    - ✅ Principes WCAG
    - ✅ ARIA et navigation au clavier
-4. ✅ Performance web
+5. ✅ Chargement des ressources
+   - ✅ Images et polices
+   - ✅ Charger les scripts
+   - ✅ Cache HTTP et service workers
+6. ✅ Performance web
    - ✅ Le rendu du navigateur
    - ✅ Core Web Vitals
-5. ✅ Architecture frontend
+7. ✅ Sécurité frontend
+   - ✅ XSS et Content Security Policy
+   - ✅ CORS et cookies
+8. ✅ Architecture frontend
    - ✅ CSR, SSR et SSG
    - ✅ Gestion de l'état
+9. ✅ Outillage
+   - ✅ La chaîne de build
+   - ✅ Les DevTools
 
 **Spécialisations**
 
@@ -943,10 +1047,26 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
 2. ✅ Interfaces mobiles
    - ✅ Navigation
    - ✅ Mises en page adaptatives
-3. ✅ Données et réseau
+3. ✅ Architecture d'application
+   - ✅ MVVM et flux unidirectionnel
+   - ✅ Injection et modularisation
+4. ✅ Thread principal et tâches de fond
+   - ✅ Le thread principal
+   - ✅ Tâches de fond
+5. ✅ Données et réseau
    - ✅ Stockage local
    - ✅ Mode hors ligne
-4. ✅ Publication
+6. ✅ Réseau et API
+   - ✅ Consommer une API
+   - ✅ Sécurité mobile
+7. ✅ Capacités de la plateforme
+   - ✅ Permissions
+   - ✅ Notifications
+8. ✅ Qualité et performance
+   - ✅ Tester une application mobile
+   - ✅ Performance
+   - ✅ Accessibilité mobile
+9. ✅ Publication
    - ✅ Signature et stores
    - ✅ CI/CD mobile
 
@@ -975,17 +1095,26 @@ Fichier généré par `tools/GenerateurContenu` à partir du plan et du contenu 
    - ✅ Régression linéaire et logistique
    - ✅ Arbres et forêts
    - ✅ Clustering
-3. ✅ Deep learning
+3. ✅ Bien entraîner un modèle
+   - ✅ Validation croisée et hyperparamètres
+   - ✅ Déséquilibre et fuite de données
+4. ✅ Deep learning
    - ✅ Réseaux de neurones
    - ✅ Architectures classiques
    - ✅ Transformers
-4. ✅ Les LLM dans les applications
+5. ✅ Embeddings et recherche
+   - ✅ Embeddings
+   - ✅ Recherche vectorielle
+6. ✅ Les LLM dans les applications
    - ✅ Prompting
    - ✅ RAG
    - ✅ Agents et outils
-5. ✅ L'IA en production
+7. ✅ L'IA en production
    - ✅ MLOps
    - ✅ Évaluer des LLM
+8. ✅ IA responsable
+   - ✅ Biais et explicabilité
+   - ✅ Sécurité des LLM
 
 **Spécialisations**
 
