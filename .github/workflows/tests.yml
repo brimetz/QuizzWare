@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      # Le Core et ses tests n'ont pas besoin du workload MAUI.
+      - name: Tests du Core et validation du contenu
+        run: dotnet test tests/QuizzWare.Core.Tests -c Release --logger "console;verbosity=normal"
+
+      # Le plan, les arbres de spécialisations et la carte doivent rester synchronisés.
+      - name: Contenu synchronisé avec le plan
+        run: |
+          dotnet run --project tools/GenerateurContenu -c Release
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Le contenu n'est pas à jour : lancer 'dotnet run --project tools/GenerateurContenu' puis commiter."
+            git status --short
+            git diff --stat
+            exit 1
+          fi
