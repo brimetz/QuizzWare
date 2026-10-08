@@ -1,0 +1,446 @@
+{
+  "id": "pw-ch-essentiel",
+  "title": "Playwright : l'essentiel",
+  "summary": "Tests multi-navigateurs fiables.",
+  "lessons": [
+    {
+      "id": "pw-bases",
+      "title": "Premiers tests",
+      "summary": "Localisateurs, actions et assertions.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un test",
+          "body": "Playwright pilote Chromium, Firefox et WebKit. Chaque test reçoit une page dans un contexte de navigateur neuf, isolé des autres tests : pas de cookies ni de stockage partagés.",
+          "code": "import { test, expect } from \"@playwright/test\";\n\ntest(\"connexion réussie\", async ({ page }) => {\n  await page.goto(\"/connexion\");\n  await page.getByLabel(\"E-mail\").fill(\"zoe@exemple.fr\");\n  await page.getByLabel(\"Mot de passe\").fill(\"secret\");\n  await page.getByRole(\"button\", { name: \"Se connecter\" }).click();\n  await expect(page.getByRole(\"heading\", { name: \"Bienvenue\" })).toBeVisible();\n});",
+          "language": "javascript"
+        },
+        {
+          "title": "Les localisateurs",
+          "body": "On cherche les éléments comme un utilisateur les perçoit : getByRole (rôle et nom accessible), getByLabel, getByText, getByPlaceholder. getByTestId sert de recours. Les sélecteurs CSS liés à la mise en page (div > span:nth-child(3)) cassent au moindre changement de style."
+        },
+        {
+          "title": "L'attente automatique",
+          "body": "Avant de cliquer, Playwright attend que l'élément soit visible, stable, activé et prêt à recevoir l'événement. Les assertions web, comme expect(locator).toBeVisible(), réessaient jusqu'au délai imparti. On n'a donc presque jamais besoin d'attentes fixes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pw-bases-q1",
+          "prompt": "Quel localisateur privilégier pour un bouton « Se connecter » ?",
+          "choices": [
+            "page.getByRole(\"button\", { name: \"Se connecter\" })",
+            "page.locator(\"div > div:nth-child(4) > button\")",
+            "page.locator(\"#btn-1729\")",
+            "page.locator(\"xpath=//body/div[2]/button\")"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il décrit l'élément comme l'utilisateur le perçoit, et vérifie au passage l'accessibilité.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "pw-bases-q2",
+          "prompt": "Que fait Playwright avant d'exécuter un click() ?",
+          "choices": [
+            "Il attend que l'élément soit visible, stable et activé",
+            "Rien, il clique immédiatement",
+            "Il attend toujours 5 secondes",
+            "Il recharge la page"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'attente automatique (auto-waiting).",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "pw-bases-q3",
+          "prompt": "Complète : remplir le champ e-mail, puis vérifier le message de bienvenue.",
+          "code": "await page.___(\"E-mail\").fill(\"zoe@exemple.fr\");\nawait page.getByRole(\"button\", { name: \"Se connecter\" }).click();\nawait expect(page.getByText(\"Bienvenue\")).___();",
+          "language": "javascript",
+          "answers": [
+            "getByLabel",
+            "toBeVisible"
+          ],
+          "distractors": [
+            "getById",
+            "isVisible",
+            "toExist"
+          ],
+          "explanation": "isVisible() est une méthode du localisateur, sans attente ni réessai.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pw-bases-q4",
+          "prompt": "Pourquoi chaque test reçoit-il un nouveau contexte de navigateur ?",
+          "choices": [
+            "Pour isoler les tests : pas de cookies ni de stockage partagés, et des tests indépendants de leur ordre",
+            "Pour ralentir les tests",
+            "Parce que le navigateur plante sinon",
+            "Pour économiser la mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un contexte est bien plus léger qu'un nouveau navigateur.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "pw-bases-q5",
+          "prompt": "Ce test casse dès qu'un développeur change la mise en page. Touche la ligne en cause.",
+          "code": "await page.goto(\"/panier\");\nawait page.locator(\"div.col-8 > div:nth-child(3) > button\").click();\nawait expect(page.getByText(\"Panier vide\")).toBeVisible();",
+          "language": "javascript",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le sélecteur dépend de la structure HTML. On cible le bouton par son rôle et son nom : getByRole(\"button\", { name: \"Vider le panier\" }).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "pw-bases-q6",
+          "prompt": "Quels navigateurs Playwright pilote-t-il ?",
+          "choices": [
+            "Chromium",
+            "Firefox",
+            "WebKit",
+            "Internet Explorer"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "WebKit permet de tester le moteur de Safari.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "pw-fiabilite",
+      "title": "Des tests fiables",
+      "summary": "Assertions web, réseau et authentification.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Pas d'attente fixe",
+          "body": "page.waitForTimeout(3000) rend le test lent quand l'application est rapide, et instable quand elle est lente. Une assertion web attend exactement ce qu'il faut. À l'inverse, lire un état ponctuel (await locator.isVisible()) puis l'asserter ne réessaie pas."
+        },
+        {
+          "title": "Maîtriser le réseau",
+          "body": "page.route intercepte les requêtes : on renvoie une réponse simulée pour tester un cas d'erreur ou rendre un test indépendant d'un service externe instable.",
+          "code": "await page.route(\"**/api/meteo\", (route) =>\n  route.fulfill({ status: 503, json: { erreur: \"indisponible\" } })\n);\nawait page.goto(\"/\");\nawait expect(page.getByText(\"Météo indisponible\")).toBeVisible();",
+          "language": "javascript"
+        },
+        {
+          "title": "S'authentifier une fois",
+          "body": "Se connecter par l'interface dans chaque test est lent. Un projet de préparation se connecte une fois et enregistre l'état du navigateur (cookies, stockage) dans un fichier ; les autres tests le réutilisent avec storageState.",
+          "code": "// auth.setup.js\nsetup(\"authentification\", async ({ page }) => {\n  await page.goto(\"/connexion\");\n  // ... remplir et valider\n  await page.context().storageState({ path: \".auth/zoe.json\" });\n});",
+          "language": "javascript"
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "pw-fiabilite-q1",
+          "prompt": "Ce test échoue de temps en temps quand le serveur est lent. Touche la ligne en cause.",
+          "code": "await page.getByRole(\"button\", { name: \"Enregistrer\" }).click();\nexpect(await page.getByText(\"Enregistré\").isVisible()).toBe(true);",
+          "language": "javascript",
+          "bugLines": [
+            2
+          ],
+          "explanation": "isVisible() lit l'état à l'instant, sans réessai. Il faut await expect(page.getByText(\"Enregistré\")).toBeVisible().",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "pw-fiabilite-q2",
+          "prompt": "Pourquoi éviter page.waitForTimeout(3000) ?",
+          "choices": [
+            "Le test est lent quand l'application est rapide, et instable quand elle est lente",
+            "Cette fonction n'existe pas",
+            "Elle bloque le navigateur pour toujours",
+            "Elle est interdite en CI"
+          ],
+          "answerIndex": 0,
+          "explanation": "On attend une condition observable plutôt qu'une durée.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "pw-fiabilite-q3",
+          "prompt": "Complète : simuler une erreur 503 de l'API météo.",
+          "code": "await page.___(\"**/api/meteo\", (route) =>\n  route.___({ status: 503, json: { erreur: \"indisponible\" } })\n);",
+          "language": "javascript",
+          "answers": [
+            "route",
+            "fulfill"
+          ],
+          "distractors": [
+            "intercept",
+            "respond",
+            "continue"
+          ],
+          "explanation": "route.continue() laisserait passer la requête réelle.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pw-fiabilite-q4",
+          "prompt": "Comment éviter de se connecter par l'interface dans chacun des 200 tests ?",
+          "choices": [
+            "Se connecter une fois dans un projet de préparation, enregistrer storageState, et le réutiliser",
+            "Désactiver l'authentification en test",
+            "Partager une même page entre tous les tests",
+            "Écrire un seul test géant"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque test démarre déjà connecté, dans un contexte isolé.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pw-fiabilite-q5",
+          "prompt": "Pourquoi simuler une API externe dans certains tests ?",
+          "choices": [
+            "Pour tester des cas d'erreur et ne pas dépendre d'un service tiers instable",
+            "Pour tricher sur les résultats",
+            "Parce que le réseau est interdit",
+            "Pour accélérer la compilation"
+          ],
+          "answerIndex": 0,
+          "explanation": "On garde quelques tests de bout en bout réels pour vérifier l'intégration.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "pw-fiabilite-q6",
+          "prompt": "Quelles assertions web réessaient automatiquement ?",
+          "choices": [
+            "expect(locator).toBeVisible()",
+            "expect(locator).toHaveText(\"…\")",
+            "expect(page).toHaveURL(/panier/)",
+            "expect(await locator.textContent()).toBe(\"…\")"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La dernière lit une valeur une fois, puis compare sans réessayer.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "pw-outillage",
+      "title": "Outillage et CI",
+      "summary": "Configuration, traces et parallélisme.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La configuration",
+          "body": "playwright.config déclare les projets (un par navigateur ou appareil), l'URL de base, le serveur à démarrer avant les tests, les nouvelles tentatives et l'enregistrement des traces.",
+          "code": "export default defineConfig({\n  use: { baseURL: \"http://localhost:3000\", trace: \"on-first-retry\" },\n  retries: process.env.CI ? 2 : 0,\n  webServer: { command: \"npm run start\", url: \"http://localhost:3000\" },\n  projects: [\n    { name: \"chromium\", use: { ...devices[\"Desktop Chrome\"] } },\n    { name: \"webkit\", use: { ...devices[\"iPhone 15\"] } },\n  ],\n});",
+          "language": "javascript"
+        },
+        {
+          "title": "Déboguer",
+          "body": "Le mode UI (npx playwright test --ui) rejoue les tests pas à pas. Le visualiseur de traces montre pour chaque action une capture du DOM, la console et le réseau : idéal pour comprendre un échec survenu en CI. codegen enregistre des actions pour amorcer un test.",
+          "code": "npx playwright test --ui\nnpx playwright show-trace test-results/panier/trace.zip\nnpx playwright codegen http://localhost:3000",
+          "language": "shell"
+        },
+        {
+          "title": "Parallélisme et instabilité",
+          "body": "Les fichiers de test s'exécutent en parallèle sur plusieurs workers : les tests ne doivent pas partager de données modifiables (un même compte, un même panier). Un test qui passe après une nouvelle tentative est marqué « flaky » : c'est un signal à corriger, pas à masquer."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pw-outillage-q1",
+          "prompt": "Que fait trace: \"on-first-retry\" ?",
+          "choices": [
+            "Il enregistre une trace lors de la première nouvelle tentative d'un test échoué",
+            "Il enregistre une trace pour chaque test",
+            "Il désactive les traces",
+            "Il relance le test à l'infini"
+          ],
+          "answerIndex": 0,
+          "explanation": "On obtient de quoi diagnostiquer sans ralentir les exécutions réussies.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pw-outillage-q2",
+          "prompt": "Un test passe à la deuxième tentative en CI. Que faire ?",
+          "choices": [
+            "Le considérer comme instable et en chercher la cause avec sa trace",
+            "Augmenter les tentatives à 10",
+            "Le supprimer",
+            "Ignorer le résultat"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les tentatives cachent le symptôme sans traiter la cause.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "pw-outillage-q3",
+          "prompt": "Des tests échouent aléatoirement quand ils tournent en parallèle. Touche la ligne en cause.",
+          "code": "test(\"vider le panier\", async ({ page }) => {\n  await connecter(page, \"compte-test-partage@exemple.fr\");\n  await page.goto(\"/panier\");\n  await page.getByRole(\"button\", { name: \"Vider\" }).click();\n});",
+          "language": "javascript",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Tous les workers modifient le panier du même compte. Chaque worker (ou test) doit avoir ses propres données.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "pw-outillage-q4",
+          "prompt": "Complète la configuration : démarrer l'application avant les tests et relancer deux fois en CI.",
+          "code": "export default defineConfig({\n  ___: process.env.CI ? 2 : 0,\n  ___: { command: \"npm run start\", url: \"http://localhost:3000\" },\n});",
+          "language": "javascript",
+          "answers": [
+            "retries",
+            "webServer"
+          ],
+          "distractors": [
+            "repeat",
+            "server",
+            "workers"
+          ],
+          "explanation": "webServer attend que l'URL réponde avant de lancer les tests.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pw-outillage-q5",
+          "prompt": "Que montre le visualiseur de traces ?",
+          "choices": [
+            "Pour chaque action, l'état du DOM, la console et les requêtes réseau",
+            "Seulement le code du test",
+            "La couverture de code",
+            "Les métriques du serveur"
+          ],
+          "answerIndex": 0,
+          "explanation": "On remonte le fil d'un échec survenu sur une machine distante.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "pw-outillage-q6",
+          "prompt": "Quels outils Playwright aident à écrire et déboguer les tests ?",
+          "choices": [
+            "Le mode UI",
+            "Le visualiseur de traces",
+            "codegen",
+            "Un débogueur de base de données"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La base de données se débogue avec d'autres outils.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "pw-defi",
+    "title": "Défi entretien : la suite instable",
+    "summary": "Rendre les tests de bout en bout fiables.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "pw-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une suite de 300 tests de bout en bout échoue aléatoirement sur 5 % des exécutions. Le code contient beaucoup de waitForTimeout et de sélecteurs CSS profonds. Par quoi commencer ?",
+        "choices": [
+          "Remplacer les attentes fixes par des assertions web et les sélecteurs par des localisateurs par rôle ou libellé",
+          "Augmenter tous les délais à 10 secondes",
+          "Passer les tentatives à 5",
+          "Supprimer les tests instables"
+        ],
+        "answerIndex": 0,
+        "explanation": "On traite les deux causes d'instabilité les plus fréquentes.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pw-defi-q2",
+        "prompt": "Cas pratique 2/3 — La suite prend 40 minutes, dont un tiers pour se connecter dans chaque test. Que faire ?",
+        "choices": [
+          "Se connecter une fois et réutiliser storageState dans les tests",
+          "Désactiver la connexion en production",
+          "Partager une même page entre tous les tests",
+          "Lancer les tests en série"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le parallélisme fait ensuite gagner le reste.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pw-defi-q3",
+        "prompt": "Cas pratique 3/3 — Un test dépend d'un service de paiement externe qui tombe parfois. Que faire ?",
+        "choices": [
+          "Simuler ce service avec page.route dans la plupart des tests, et garder quelques tests d'intégration réels séparés",
+          "Supprimer le test",
+          "Augmenter le délai",
+          "Ne tester qu'en production"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les tests principaux deviennent stables ; l'intégration réelle reste vérifiée à part.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "pw-defi-q4",
+        "prompt": "Comment vérifier que le site fonctionne aussi sur un iPhone ?",
+        "choices": [
+          "Ajouter un projet utilisant les réglages d'appareil iPhone, exécuté avec WebKit",
+          "Ce n'est possible qu'avec un vrai téléphone",
+          "Réduire la fenêtre de Chromium",
+          "Playwright ne gère pas le mobile"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les réglages d'appareil fixent la taille d'écran, l'agent utilisateur et le tactile.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "pw-defi-q5",
+        "prompt": "Ce test vérifie le total trop tôt et échoue parfois. Touche la ligne en cause.",
+        "code": "await page.getByRole(\"button\", { name: \"Ajouter au panier\" }).click();\nconst total = await page.getByTestId(\"total\").textContent();\nexpect(total).toBe(\"24,90 €\");",
+        "language": "javascript",
+        "bugLines": [
+          2
+        ],
+        "explanation": "textContent lit la valeur une seule fois, peut-être avant la mise à jour. Il faut await expect(page.getByTestId(\"total\")).toHaveText(\"24,90 €\").",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "pw-defi-q6",
+        "prompt": "Quelles pratiques rendent une suite Playwright fiable ?",
+        "choices": [
+          "Des localisateurs centrés sur l'utilisateur",
+          "Des assertions web qui réessaient",
+          "Des données de test propres à chaque test",
+          "Des attentes fixes généreuses partout"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les attentes fixes sont une source d'instabilité.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

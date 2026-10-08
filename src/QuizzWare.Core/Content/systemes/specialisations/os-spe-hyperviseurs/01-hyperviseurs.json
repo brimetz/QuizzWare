@@ -1,0 +1,439 @@
+{
+  "id": "hyp-ch-essentiel",
+  "title": "Hyperviseurs : l'essentiel",
+  "summary": "KVM, Hyper-V et machines virtuelles.",
+  "lessons": [
+    {
+      "id": "hyp-principes",
+      "title": "Virtualiser une machine",
+      "summary": "Types d'hyperviseurs et aide du processeur.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "L'hyperviseur",
+          "body": "Un hyperviseur fait tourner plusieurs machines virtuelles (VM) sur une même machine physique. Chaque VM a son propre noyau et croit disposer de son processeur, de sa mémoire et de ses périphériques. L'hyperviseur partage les ressources et isole les VM entre elles."
+        },
+        {
+          "title": "Type 1 ou type 2",
+          "body": "Un hyperviseur de type 1 s'exécute directement sur le matériel : ESXi, Hyper-V, Xen, et KVM intégré au noyau Linux. Il équipe les serveurs et le cloud. Un hyperviseur de type 2 est une application sur un système existant, comme VirtualBox ou VMware Workstation, pratique sur un poste de travail."
+        },
+        {
+          "title": "L'aide du processeur",
+          "body": "Les extensions Intel VT-x et AMD-V permettent d'exécuter le code des VM directement sur le processeur, en interceptant seulement les instructions sensibles. La traduction d'adresses à deux niveaux (EPT, NPT) accélère la gestion de la mémoire des VM.",
+          "code": "grep -cE 'vmx|svm' /proc/cpuinfo   # > 0 : extensions présentes\nls -l /dev/kvm                       # KVM disponible",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "hyp-principes-q1",
+          "prompt": "Quelle différence entre un hyperviseur de type 1 et de type 2 ?",
+          "choices": [
+            "Le type 1 s'exécute directement sur le matériel ; le type 2 est une application sur un système existant",
+            "Le type 1 est gratuit",
+            "Le type 2 est plus rapide",
+            "Le type 1 ne gère qu'une VM"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les serveurs utilisent le type 1 ; les postes de travail, souvent le type 2.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "hyp-principes-q2",
+          "prompt": "Quelle est la différence fondamentale entre une VM et un conteneur ?",
+          "choices": [
+            "La VM a son propre noyau ; le conteneur partage le noyau de l'hôte",
+            "Le conteneur a son propre noyau",
+            "La VM ne peut pas avoir de réseau",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "D'où une isolation plus forte pour la VM, et une légèreté plus grande pour le conteneur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "hyp-principes-q3",
+          "prompt": "À quoi servent Intel VT-x et AMD-V ?",
+          "choices": [
+            "À exécuter le code des VM directement sur le processeur, en n'interceptant que les instructions sensibles",
+            "À chiffrer les disques",
+            "À accélérer le réseau",
+            "À compresser la mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans eux, il faudrait émuler ou traduire le code, bien plus lentement.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "hyp-principes-q4",
+          "prompt": "Complète : vérifier les extensions de virtualisation et la présence de KVM.",
+          "code": "grep -cE 'vmx|___' /proc/cpuinfo\nls -l /dev/___",
+          "language": "shell",
+          "answers": [
+            "svm",
+            "kvm"
+          ],
+          "distractors": [
+            "vtx",
+            "hyperv",
+            "qemu"
+          ],
+          "explanation": "vmx pour Intel, svm pour AMD.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "hyp-principes-q5",
+          "prompt": "Que fait la traduction d'adresses à deux niveaux (EPT chez Intel) ?",
+          "choices": [
+            "Le processeur traduit lui-même les adresses de la VM vers la mémoire physique, sans intervention constante de l'hyperviseur",
+            "Elle chiffre la mémoire",
+            "Elle double la mémoire disponible",
+            "Elle partage la mémoire entre VM"
+          ],
+          "answerIndex": 0,
+          "explanation": "Avant elle, l'hyperviseur maintenait des tables de pages fantômes, coûteuses.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "hyp-principes-q6",
+          "prompt": "Lesquels sont des hyperviseurs de type 1 ?",
+          "choices": [
+            "VMware ESXi",
+            "Microsoft Hyper-V",
+            "Xen",
+            "VirtualBox"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "VirtualBox s'installe comme une application : type 2.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "hyp-kvm",
+      "title": "KVM et QEMU",
+      "summary": "Le duo de la virtualisation sous Linux.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le partage des rôles",
+          "body": "KVM est un module du noyau Linux qui expose la virtualisation matérielle via /dev/kvm : il exécute le code des vCPU. QEMU, en espace utilisateur, émule le reste de la machine (disques, cartes réseau, BIOS) et pilote KVM. Chaque VM est un processus QEMU sur l'hôte."
+        },
+        {
+          "title": "Les pilotes virtio",
+          "body": "Émuler une vraie carte réseau ou un vrai contrôleur de disque est lent. Les pilotes paravirtualisés virtio, installés dans la VM, dialoguent directement avec l'hyperviseur par des files partagées : bien plus efficaces. On choisit virtio pour les disques et le réseau."
+        },
+        {
+          "title": "libvirt",
+          "body": "libvirt et son outil virsh gèrent les VM, leurs réseaux et leurs volumes de façon uniforme. Les disques sont souvent des fichiers qcow2, qui grossissent à l'usage et permettent des instantanés.",
+          "code": "qemu-img create -f qcow2 /var/lib/libvirt/images/web.qcow2 20G\nvirsh list --all\nvirsh start web\nvirsh snapshot-create-as web avant-maj",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "hyp-kvm-q1",
+          "prompt": "Quel rôle joue QEMU aux côtés de KVM ?",
+          "choices": [
+            "Il émule les périphériques de la VM et pilote KVM, qui exécute le code des vCPU",
+            "Il remplace le noyau Linux",
+            "Il gère uniquement le réseau de l'hôte",
+            "Aucun, KVM fait tout"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque VM apparaît comme un processus qemu sur l'hôte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "hyp-kvm-q2",
+          "prompt": "Pourquoi utiliser des pilotes virtio dans une VM ?",
+          "choices": [
+            "Ils dialoguent directement avec l'hyperviseur au lieu de passer par un matériel émulé : bien plus rapides",
+            "Ils chiffrent les données",
+            "Ils sont obligatoires pour démarrer",
+            "Ils réduisent la taille du disque"
+          ],
+          "answerIndex": 0,
+          "explanation": "On parle de paravirtualisation.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "hyp-kvm-q3",
+          "prompt": "Complète : créer un disque de 20 Go au format qcow2, puis lister les VM.",
+          "code": "qemu-img ___ -f qcow2 web.qcow2 20G\nvirsh ___ --all",
+          "language": "shell",
+          "answers": [
+            "create",
+            "list"
+          ],
+          "distractors": [
+            "new",
+            "show",
+            "ps"
+          ],
+          "explanation": "--all inclut les VM arrêtées.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "hyp-kvm-q4",
+          "prompt": "Quel avantage offre le format de disque qcow2 ?",
+          "choices": [
+            "Il grossit à l'usage et permet des instantanés",
+            "Il est plus rapide qu'un disque brut dans tous les cas",
+            "Il est lisible par Windows sans outil",
+            "Il chiffre toujours les données"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un disque brut (raw) reste un peu plus rapide, mais occupe toute sa taille.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "hyp-kvm-q5",
+          "prompt": "Les disques de cette VM sont très lents. Touche la ligne en cause.",
+          "code": "<disk type='file' device='disk'>\n  <driver name='qemu' type='qcow2'/>\n  <source file='/var/lib/libvirt/images/web.qcow2'/>\n  <target dev='hda' bus='ide'/>\n</disk>",
+          "language": "text",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le bus IDE émule un vieux contrôleur. On utilise bus='virtio' (dev='vda').",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "hyp-kvm-q6",
+          "prompt": "Que permet virsh ?",
+          "choices": [
+            "Démarrer et arrêter des VM",
+            "Créer des instantanés",
+            "Lister les VM et leurs états",
+            "Compiler le noyau de l'hôte"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "virsh pilote libvirt, pas la compilation du noyau.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "hyp-ressources",
+      "title": "Ressources et mobilité",
+      "summary": "Surallocation, migration et accès direct au matériel.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "La surallocation",
+          "body": "On peut attribuer plus de vCPU au total qu'il n'y a de cœurs : les VM rarement occupées en même temps se partagent le processeur. Trop de surallocation crée du temps d'attente (steal time) visible dans les VM. Pour la mémoire, le ballooning permet à l'hyperviseur de récupérer la mémoire inutilisée d'une VM, mais la surallocation mémoire est plus risquée."
+        },
+        {
+          "title": "La migration à chaud",
+          "body": "La migration à chaud déplace une VM en marche d'un hôte à l'autre : la mémoire est copiée pendant que la VM tourne, puis les pages modifiées entretemps, et une très courte pause termine le transfert. On vide ainsi un hôte avant une maintenance sans couper les services."
+        },
+        {
+          "title": "L'accès direct au matériel",
+          "body": "Le passthrough PCI, grâce à l'IOMMU (VT-d, AMD-Vi), confie un périphérique physique, comme une carte graphique, directement à une VM. SR-IOV découpe une carte réseau en fonctions virtuelles attribuables à plusieurs VM. Les microVM (Firecracker) réduisent au contraire la machine à l'essentiel pour démarrer en une fraction de seconde."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "hyp-ressources-q1",
+          "prompt": "Dans une VM, la commande top montre un « steal time » élevé. Qu'est-ce que cela signifie ?",
+          "choices": [
+            "Les vCPU attendent que l'hyperviseur leur donne un cœur physique, occupé par d'autres VM",
+            "Un logiciel malveillant vole du temps processeur",
+            "Le disque est lent",
+            "La mémoire est pleine"
+          ],
+          "answerIndex": 0,
+          "explanation": "Signe d'une surallocation excessive du processeur sur l'hôte.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "hyp-ressources-q2",
+          "prompt": "Que permet la migration à chaud ?",
+          "choices": [
+            "Déplacer une VM en marche vers un autre hôte, avec une pause imperceptible",
+            "Copier une VM éteinte",
+            "Mettre à jour le noyau de la VM sans redémarrer",
+            "Fusionner deux VM"
+          ],
+          "answerIndex": 0,
+          "explanation": "Utile pour vider un hôte avant une maintenance.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "hyp-ressources-q3",
+          "prompt": "Remets dans l'ordre une migration à chaud.",
+          "language": "text",
+          "lines": [
+            "Copier la mémoire pendant que la VM tourne",
+            "Recopier les pages modifiées entretemps",
+            "Mettre la VM en pause un court instant",
+            "Copier les dernières pages et l'état des vCPU",
+            "Reprendre la VM sur l'hôte de destination"
+          ],
+          "explanation": "Les copies successives réduisent la pause finale à quelques millisecondes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "hyp-ressources-q4",
+          "prompt": "Que faut-il pour confier une carte graphique physique à une VM ?",
+          "choices": [
+            "Le passthrough PCI, avec une IOMMU activée (VT-d ou AMD-Vi)",
+            "Un pilote virtio",
+            "Un disque qcow2",
+            "Rien de particulier"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'IOMMU protège la mémoire de l'hôte contre les accès directs du périphérique.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "hyp-ressources-q5",
+          "prompt": "Cet hôte de 64 Go plante sous charge, avec des VM tuées faute de mémoire. Touche la ligne en cause.",
+          "code": "Hôte : 32 cœurs, 64 Go de RAM\nVM web x 8 : 4 vCPU, 8 Go chacune\nVM base x 2 : 8 vCPU, 16 Go chacune",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "8 × 8 + 2 × 16 = 96 Go alloués sur 64 : la surallocation mémoire est trop forte. Celle du processeur (48 vCPU sur 32 cœurs) reste souvent acceptable.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "hyp-ressources-q6",
+          "prompt": "Quelles techniques concernent la mémoire des VM ?",
+          "choices": [
+            "Le ballooning",
+            "La traduction d'adresses à deux niveaux (EPT, NPT)",
+            "Les pages partagées identiques entre VM (KSM)",
+            "SR-IOV"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "SR-IOV concerne les périphériques, souvent des cartes réseau.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "hyp-defi",
+    "title": "Défi entretien : la salle serveur",
+    "summary": "Consolider, déplacer, isoler.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "hyp-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une entreprise a 20 serveurs physiques occupés à 10 %. Elle veut réduire ses coûts sans changer ses applications. Que proposer ?",
+        "choices": [
+          "Les virtualiser sur quelques hôtes avec un hyperviseur de type 1",
+          "Les conteneuriser tous en une semaine",
+          "Acheter des serveurs plus puissants",
+          "Éteindre la moitié des serveurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque serveur devient une VM, sans modification applicative.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "hyp-defi-q2",
+        "prompt": "Cas pratique 2/3 — Un hôte doit être mis à jour sans interrompre ses VM. Comment ?",
+        "choices": [
+          "Migrer ses VM à chaud vers d'autres hôtes, puis faire la maintenance",
+          "Éteindre les VM pendant la nuit",
+          "Mettre à jour pendant que les VM tournent sur l'hôte",
+          "Supprimer les VM et les recréer"
+        ],
+        "answerIndex": 0,
+        "explanation": "Cela suppose un stockage partagé ou une migration du stockage.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "hyp-defi-q3",
+        "prompt": "Cas pratique 3/3 — Une VM de base de données subit des latences imprévisibles. Le steal time atteint 30 %. Que faire ?",
+        "choices": [
+          "Réduire la surallocation du processeur sur l'hôte, ou réserver des cœurs à cette VM",
+          "Ajouter des vCPU à la VM",
+          "Changer de système de fichiers",
+          "Augmenter le swap"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ajouter des vCPU aggraverait la contention.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "hyp-defi-q4",
+        "prompt": "Un service exécute du code non fiable envoyé par des clients. Pourquoi préférer des microVM à de simples conteneurs ?",
+        "choices": [
+          "Chaque microVM a son propre noyau : une faille du noyau ne compromet pas l'hôte aussi facilement",
+          "Les microVM sont toujours plus rapides",
+          "Les conteneurs ne gèrent pas le réseau",
+          "Il n'y a aucune différence"
+        ],
+        "answerIndex": 0,
+        "explanation": "C'est le choix de services comme AWS Lambda avec Firecracker.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "hyp-defi-q5",
+        "prompt": "Le réseau de la VM plafonne à quelques centaines de Mbit/s. Touche la ligne en cause.",
+        "code": "<interface type='bridge'>\n  <source bridge='br0'/>\n  <model type='e1000'/>\n</interface>",
+        "language": "text",
+        "bugLines": [
+          3
+        ],
+        "explanation": "e1000 émule une ancienne carte Intel. Le modèle virtio est bien plus performant.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "hyp-defi-q6",
+        "prompt": "Quels avantages apporte la virtualisation ?",
+        "choices": [
+          "Consolider plusieurs serveurs sur moins de matériel",
+          "Des instantanés avant une opération risquée",
+          "La migration à chaud",
+          "Des performances toujours supérieures au matériel nu"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La virtualisation ajoute un léger surcoût par rapport au matériel nu.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

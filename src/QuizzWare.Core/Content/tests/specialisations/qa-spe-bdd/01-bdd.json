@@ -1,0 +1,442 @@
+{
+  "id": "bdd-ch-essentiel",
+  "title": "BDD : l'essentiel",
+  "summary": "Des spécifications exécutables.",
+  "lessons": [
+    {
+      "id": "bdd-principes",
+      "title": "Décrire par l'exemple",
+      "summary": "Comportements, exemples et conversations.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le développement piloté par le comportement",
+          "body": "Le BDD (Behaviour-Driven Development) part de conversations entre métier, développement et test pour décrire le comportement attendu à l'aide d'exemples concrets. Ces exemples, écrits dans un langage compréhensible par tous, deviennent ensuite des tests automatisés : une documentation qui ne peut pas devenir obsolète sans que les tests échouent."
+        },
+        {
+          "title": "Les trois amis",
+          "body": "Avant de développer une fonctionnalité, un représentant du métier, un développeur et un testeur discutent des règles et des exemples. L'exercice du « example mapping » range sur des cartes la fonctionnalité, ses règles, les exemples qui les illustrent et les questions ouvertes. On découvre les malentendus avant d'écrire du code."
+        },
+        {
+          "title": "Le format Gherkin",
+          "body": "Gherkin structure un scénario en trois temps : un contexte (Étant donné), une action (Quand), un résultat attendu (Alors). Les mots-clés existent en de nombreuses langues, dont le français.",
+          "code": "# language: fr\nFonctionnalité: Réduction fidélité\n\n  Scénario: Un client fidèle obtient 10 % de réduction\n    Étant donné un client avec 5 commandes passées\n    Quand il valide un panier de 100 €\n    Alors le total à payer est de 90 €",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "bdd-principes-q1",
+          "prompt": "Quel est le but premier du BDD ?",
+          "choices": [
+            "Partager une compréhension du comportement attendu à travers des exemples, qui deviennent des tests",
+            "Remplacer tous les tests unitaires",
+            "Écrire les tests après la mise en production",
+            "Générer du code automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "La conversation compte autant que l'automatisation.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "bdd-principes-q2",
+          "prompt": "Qui participe à une séance des « trois amis » ?",
+          "choices": [
+            "Le métier, le développement et le test",
+            "Trois développeurs",
+            "Le client, le commercial et le directeur",
+            "Trois testeurs"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chacun apporte un regard différent sur la fonctionnalité.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "bdd-principes-q3",
+          "prompt": "Complète ce scénario Gherkin en français.",
+          "code": "Scénario: Un client fidèle obtient 10 % de réduction\n  ___ un client avec 5 commandes passées\n  Quand il valide un panier de 100 €\n  ___ le total à payer est de 90 €",
+          "language": "text",
+          "answers": [
+            "Étant donné",
+            "Alors"
+          ],
+          "distractors": [
+            "Si",
+            "Ensuite",
+            "Donc"
+          ],
+          "explanation": "Étant donné pose le contexte, Quand l'action, Alors le résultat.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "bdd-principes-q4",
+          "prompt": "Que range-t-on sur les cartes de l'example mapping ?",
+          "choices": [
+            "La fonctionnalité, ses règles, des exemples pour chaque règle, et les questions ouvertes",
+            "Le code des tests",
+            "Les bugs de production",
+            "Les estimations de charge uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Beaucoup de questions ouvertes signalent une fonctionnalité pas encore prête.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "bdd-principes-q5",
+          "prompt": "Touche la ligne qui met une action à la place d'un résultat attendu.",
+          "code": "Scénario: Réinitialiser son mot de passe\n  Étant donné un utilisateur inscrit avec l'adresse zoe@exemple.fr\n  Quand il demande la réinitialisation de son mot de passe\n  Alors il clique sur le lien reçu par e-mail",
+          "language": "text",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Alors doit décrire un résultat observable (« un e-mail de réinitialisation lui est envoyé »), pas une nouvelle action.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "bdd-principes-q6",
+          "prompt": "Qu'apporte le BDD bien pratiqué ?",
+          "choices": [
+            "Des malentendus découverts avant le développement",
+            "Une documentation vivante, vérifiée par les tests",
+            "Un vocabulaire commun entre métier et technique",
+            "La disparition de tous les bugs"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le BDD réduit les malentendus, pas tous les défauts.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "bdd-gherkin",
+      "title": "Bien écrire en Gherkin",
+      "summary": "Déclaratif, plans de scénarios et contexte.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Déclaratif plutôt qu'impératif",
+          "body": "Un bon scénario décrit ce que fait l'utilisateur et ce qu'il obtient, pas comment il clique. « Quand il se connecte » survit à une refonte de l'écran ; « Quand il saisit zoe dans le champ #login et clique sur le bouton bleu » casse au moindre changement et noie la règle métier."
+        },
+        {
+          "title": "Les plans de scénario",
+          "body": "Quand plusieurs exemples suivent le même schéma, un plan de scénario et un tableau d'exemples évitent la répétition.",
+          "code": "Plan du scénario: Réduction selon l'ancienneté\n  Étant donné un client avec <commandes> commandes passées\n  Quand il valide un panier de 100 €\n  Alors le total à payer est de <total> €\n\n  Exemples:\n    | commandes | total |\n    | 0         | 100   |\n    | 5         | 90    |\n    | 20        | 85    |",
+          "language": "text"
+        },
+        {
+          "title": "Le contexte",
+          "body": "Le mot-clé Contexte regroupe les étapes communes à tous les scénarios d'une fonctionnalité. On le garde court : un lecteur doit comprendre chaque scénario sans remonter loin. Un scénario ne teste qu'un comportement, avec un seul bloc Quand/Alors."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "bdd-gherkin-q1",
+          "prompt": "Quelle étape est la mieux écrite ?",
+          "choices": [
+            "Quand il se connecte avec un compte valide",
+            "Quand il saisit zoe dans #login, saisit secret dans #pwd et clique sur .btn-primary",
+            "Quand le test appelle la fonction login()",
+            "Quand la requête POST /api/session renvoie 200"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle décrit l'intention, compréhensible par le métier et stable face aux refontes.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "bdd-gherkin-q2",
+          "prompt": "Combien de scénarios exécute le plan de scénario présenté plus haut ?",
+          "choices": [
+            "3, un par ligne d'exemples",
+            "1",
+            "2",
+            "6"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque ligne du tableau remplace <commandes> et <total>.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "bdd-gherkin-q3",
+          "prompt": "Complète ce plan de scénario.",
+          "code": "___: Réduction selon l'ancienneté\n  Étant donné un client avec <commandes> commandes passées\n  Alors le total à payer est de <total> €\n\n  ___:\n    | commandes | total |\n    | 5         | 90    |",
+          "language": "text",
+          "answers": [
+            "Plan du scénario",
+            "Exemples"
+          ],
+          "distractors": [
+            "Scénario",
+            "Données",
+            "Tableau"
+          ],
+          "explanation": "En anglais : Scenario Outline et Examples.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "bdd-gherkin-q4",
+          "prompt": "Ce scénario teste deux comportements à la fois. Touche la ligne qui en commence un second.",
+          "code": "Scénario: Commande et annulation\n  Étant donné un client connecté avec un panier\n  Quand il valide sa commande\n  Alors il reçoit un e-mail de confirmation\n  Quand il annule la commande\n  Alors il est remboursé",
+          "language": "text",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Un second Quand/Alors signale un second comportement : on écrit deux scénarios, le second partant d'une commande déjà passée.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "bdd-gherkin-q5",
+          "prompt": "À quoi sert le mot-clé Contexte ?",
+          "choices": [
+            "À regrouper les étapes Étant donné communes à tous les scénarios d'une fonctionnalité",
+            "À décrire l'environnement technique",
+            "À désactiver un scénario",
+            "À commenter le fichier"
+          ],
+          "answerIndex": 0,
+          "explanation": "En anglais : Background.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "bdd-gherkin-q6",
+          "prompt": "Quelles règles suivent de bons scénarios Gherkin ?",
+          "choices": [
+            "Un seul comportement par scénario",
+            "Un style déclaratif, sans détails d'interface",
+            "Un vocabulaire du métier",
+            "Des sélecteurs CSS dans les étapes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les détails techniques vont dans les définitions d'étapes.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "bdd-automatisation",
+      "title": "Automatiser",
+      "summary": "Définitions d'étapes, outils et pièges.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les définitions d'étapes",
+          "body": "Chaque étape est reliée à du code par une expression. Les paramètres comme {int} ou {string} sont extraits du texte. Les outils : Cucumber (JavaScript, Java), Reqnroll (successeur de SpecFlow en .NET), Behave ou pytest-bdd (Python).",
+          "code": "Given(\"un client avec {int} commandes passées\", function (n) {\n  this.client = creerClient({ commandes: n });\n});\n\nThen(\"le total à payer est de {int} €\", function (total) {\n  assert.strictEqual(this.panier.total(), total);\n});",
+          "language": "javascript"
+        },
+        {
+          "title": "À quel niveau tester",
+          "body": "Un scénario BDD n'est pas forcément un test d'interface. Une règle de calcul de réduction se vérifie très bien en appelant directement le domaine ou l'API : plus rapide et plus stable. On réserve le navigateur aux parcours où l'interface fait partie du comportement."
+        },
+        {
+          "title": "Les pièges",
+          "body": "Des scénarios écrits par les seuls développeurs, sans conversation, ne sont que des tests verbeux. Des milliers de scénarios d'interface deviennent lents et fragiles. Des définitions d'étapes trop spécifiques se multiplient sans réutilisation. Le BDD vaut surtout par les discussions qu'il provoque."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "bdd-automatisation-q1",
+          "prompt": "Que fait l'expression {int} dans une définition d'étape ?",
+          "choices": [
+            "Elle extrait un nombre entier du texte de l'étape et le passe à la fonction",
+            "Elle limite le scénario aux entiers",
+            "Elle répète l'étape",
+            "Elle commente l'étape"
+          ],
+          "answerIndex": 0,
+          "explanation": "« un client avec 5 commandes passées » appelle la fonction avec 5.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "bdd-automatisation-q2",
+          "prompt": "Une règle de calcul de réduction doit-elle être vérifiée par le navigateur ?",
+          "choices": [
+            "Non : on peut automatiser le scénario au niveau du domaine ou de l'API, plus rapide et plus stable",
+            "Oui, toujours",
+            "Oui, sinon ce n'est pas du BDD",
+            "Elle ne peut pas être testée"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le scénario reste le même ; seul le code des étapes change.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "bdd-automatisation-q3",
+          "prompt": "Complète cette définition d'étape avec Cucumber.",
+          "code": "___(\"un client avec {___} commandes passées\", function (n) {\n  this.client = creerClient({ commandes: n });\n});",
+          "language": "javascript",
+          "answers": [
+            "Given",
+            "int"
+          ],
+          "distractors": [
+            "When",
+            "string",
+            "number"
+          ],
+          "explanation": "Les définitions d'étapes se déclarent avec Given, When ou Then, quelle que soit la langue du scénario.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "bdd-automatisation-q4",
+          "prompt": "Cette assertion ne vérifie rien d'utile. Touche la ligne en cause.",
+          "code": "Then(\"le total à payer est de {int} €\", function (total) {\n  const affiche = this.panier.total();\n  assert.ok(affiche);\n});",
+          "language": "javascript",
+          "bugLines": [
+            3
+          ],
+          "explanation": "assert.ok vérifie seulement que la valeur est « vraie ». Il faut la comparer au paramètre : assert.strictEqual(affiche, total).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "bdd-automatisation-q5",
+          "prompt": "Quel outil succède à SpecFlow pour le BDD en .NET ?",
+          "choices": [
+            "Reqnroll",
+            "Behave",
+            "Cypress",
+            "JUnit"
+          ],
+          "answerIndex": 0,
+          "explanation": "Behave est un outil Python.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "bdd-automatisation-q6",
+          "prompt": "Quels signes montrent un BDD mal pratiqué ?",
+          "choices": [
+            "Des scénarios écrits par les développeurs seuls, sans conversation",
+            "Des milliers de scénarios d'interface lents et fragiles",
+            "Des étapes pleines de détails techniques",
+            "Des exemples discutés avec le métier"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La discussion avec le métier est précisément le cœur du BDD.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "bdd-defi",
+    "title": "Défi entretien : les règles de livraison",
+    "summary": "Des règles métier ambiguës à clarifier.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "bdd-defi-q1",
+        "prompt": "Cas pratique 1/3 — Le métier annonce : « La livraison est gratuite au-dessus de 50 €. » Développeurs et testeurs ne sont pas d'accord sur ce que cela couvre. Que faire ?",
+        "choices": [
+          "Une séance des trois amis avec des exemples concrets : 49,99 €, 50 €, avec une réduction, hors France…",
+          "Coder selon sa propre interprétation",
+          "Attendre les retours des clients",
+          "Demander un document de 30 pages"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les exemples limites révèlent les ambiguïtés.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "bdd-defi-q2",
+        "prompt": "Cas pratique 2/3 — Comment écrire les exemples retenus de façon compacte ?",
+        "choices": [
+          "Un plan de scénario avec un tableau d'exemples : montant, réduction, pays, frais attendus",
+          "Un scénario par cas, recopié à l'identique",
+          "Un tableur hors du dépôt",
+          "Un commentaire dans le code"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le tableau se lit comme une table de vérité de la règle.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "bdd-defi-q3",
+        "prompt": "Cas pratique 3/3 — À quel niveau automatiser ces scénarios ?",
+        "choices": [
+          "Au niveau du service de calcul des frais, sans navigateur",
+          "Uniquement de bout en bout dans le navigateur",
+          "En production",
+          "À la main avant chaque livraison"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un ou deux scénarios de bout en bout suffisent pour vérifier l'affichage.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "bdd-defi-q4",
+        "prompt": "Que signifie une carte rouge (question ouverte) restée sans réponse à la fin de l'example mapping ?",
+        "choices": [
+          "La règle n'est pas assez claire pour commencer le développement",
+          "Un bug en production",
+          "Un test qui échoue",
+          "Rien de particulier"
+        ],
+        "answerIndex": 0,
+        "explanation": "On obtient la réponse avant de coder, plutôt que de deviner.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "bdd-defi-q5",
+        "prompt": "Touche l'étape écrite dans un style impératif, trop liée à l'interface.",
+        "code": "Scénario: Livraison gratuite à partir de 50 €\n  Étant donné un panier de 50 €\n  Quand il clique sur le bouton vert « Commander » en bas à droite\n  Alors les frais de livraison sont de 0 €",
+        "language": "text",
+        "bugLines": [
+          3
+        ],
+        "explanation": "La couleur et la position du bouton n'ont rien à voir avec la règle. On écrit « Quand il valide sa commande ».",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "bdd-defi-q6",
+        "prompt": "Quels exemples limites tester pour « livraison gratuite au-dessus de 50 € » ?",
+        "choices": [
+          "Un panier de 49,99 €",
+          "Un panier d'exactement 50 €",
+          "Un panier de 55 € ramené à 45 € par une réduction",
+          "Un panier de 500 €, identique à 51 € pour la règle"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "500 € n'apporte rien de plus que 51 € : il ne touche aucune limite.",
+        "difficulty": 3
+      }
+    ]
+  }
+}

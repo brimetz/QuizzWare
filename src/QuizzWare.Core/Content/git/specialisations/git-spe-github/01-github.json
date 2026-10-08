@@ -1,0 +1,438 @@
+{
+  "id": "gh-ch-essentiel",
+  "title": "GitHub : l'essentiel",
+  "summary": "Pull requests, issues, protections de branches.",
+  "lessons": [
+    {
+      "id": "gh-pr",
+      "title": "Les pull requests",
+      "summary": "Proposer, relire, fusionner.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Proposer un changement",
+          "body": "Une pull request (PR) propose de fusionner une branche dans une autre, en général main. Elle réunit le diff, la discussion, les relectures et le résultat des vérifications automatiques. Une PR en brouillon (draft) signale un travail en cours, qui ne peut pas encore être fusionné.",
+          "code": "git switch -c fix/total-panier\ngit commit -am \"Corrige l'arrondi du total\"\ngit push -u origin fix/total-panier\ngh pr create --fill --draft"
+        },
+        {
+          "title": "Relire",
+          "body": "Les relecteurs commentent des lignes, suggèrent des modifications applicables en un clic, puis rendent un avis : approbation, simple commentaire ou demande de changements. Les nouveaux commits poussés sur la branche mettent la PR à jour."
+        },
+        {
+          "title": "Fusionner",
+          "body": "Trois méthodes : un commit de fusion, qui garde tous les commits et l'historique de la branche ; squash, qui les réunit en un seul commit sur main ; rebase, qui rejoue chaque commit sur main sans commit de fusion. Le dépôt peut n'autoriser que certaines méthodes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gh-pr-q1",
+          "prompt": "Qu'est-ce qu'une pull request ?",
+          "choices": [
+            "Une proposition de fusionner une branche, avec diff, discussion, relectures et vérifications",
+            "Une commande git pull",
+            "Une copie du dépôt",
+            "Un ticket de bug"
+          ],
+          "answerIndex": 0,
+          "explanation": "GitLab parle de merge request pour la même chose.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gh-pr-q2",
+          "prompt": "Que produit la méthode squash sur main ?",
+          "choices": [
+            "Un seul commit qui réunit tous ceux de la branche",
+            "Un commit de fusion et tous les commits de la branche",
+            "Tous les commits rejoués un par un",
+            "Aucun commit"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'historique de main reste lisible, un commit par PR.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "gh-pr-q3",
+          "prompt": "Complète : pousser la branche puis ouvrir une PR en brouillon avec GitHub CLI.",
+          "code": "git push ___ origin fix/total-panier\ngh pr ___ --fill --draft",
+          "answers": [
+            "-u",
+            "create"
+          ],
+          "distractors": [
+            "--force",
+            "open",
+            "new"
+          ],
+          "explanation": "-u associe la branche locale à la branche distante.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gh-pr-q4",
+          "prompt": "À quoi sert une PR en brouillon ?",
+          "choices": [
+            "À partager un travail en cours, qui ne peut pas encore être fusionné",
+            "À cacher la PR aux autres",
+            "À supprimer la branche",
+            "À fusionner sans relecture"
+          ],
+          "answerIndex": 0,
+          "explanation": "On la passe en « prête pour relecture » quand elle est terminée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gh-pr-q5",
+          "prompt": "Un relecteur a demandé des changements. Comment mettre à jour la PR ?",
+          "choices": [
+            "Pousser de nouveaux commits sur la même branche",
+            "Ouvrir une nouvelle PR",
+            "Modifier la PR dans l'interface sans commit",
+            "Supprimer les commentaires"
+          ],
+          "answerIndex": 0,
+          "explanation": "La PR suit automatiquement la branche.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gh-pr-q6",
+          "prompt": "Quels avis un relecteur peut-il rendre ?",
+          "choices": [
+            "Approuver",
+            "Demander des changements",
+            "Commenter sans se prononcer",
+            "Fusionner à la place de l'auteur sans droits"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Fusionner demande des droits d'écriture sur le dépôt.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "gh-protections",
+      "title": "Protéger les branches",
+      "summary": "Règles, vérifications obligatoires et CODEOWNERS.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les règles de branche",
+          "body": "Les règles de protection (ou les rulesets, plus récents) empêchent de pousser directement sur main ou de la réécrire, exigent une PR, un nombre d'approbations et la réussite de vérifications désignées. On peut aussi exiger une branche à jour avec main ou un historique linéaire."
+        },
+        {
+          "title": "CODEOWNERS",
+          "body": "Le fichier CODEOWNERS associe des chemins à des personnes ou des équipes, demandées automatiquement en relecture. Avec la règle adéquate, leur approbation devient obligatoire. Quand plusieurs motifs correspondent, le dernier du fichier l'emporte.",
+          "code": "# .github/CODEOWNERS\n*                @org/plateforme\n/apps/paiement/  @org/paiement\n*.sql            @org/donnees",
+          "language": "text"
+        },
+        {
+          "title": "La file de fusion",
+          "body": "Quand beaucoup de PR fusionnent, chacune peut être verte isolément mais casser main une fois combinée aux autres. La file de fusion (merge queue) teste chaque PR avec celles qui la précèdent avant de fusionner."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gh-protections-q1",
+          "prompt": "À quoi sert une règle de protection sur main ?",
+          "choices": [
+            "Imposer une PR, des approbations et des vérifications avant toute modification",
+            "Chiffrer la branche",
+            "Masquer la branche",
+            "Accélérer les clones"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle empêche aussi les push forcés et la suppression.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gh-protections-q2",
+          "prompt": "Avec ce CODEOWNERS, qui doit relire un changement de /apps/paiement/migration.sql ?",
+          "code": "*                @org/plateforme\n/apps/paiement/  @org/paiement\n*.sql            @org/donnees",
+          "language": "text",
+          "choices": [
+            "@org/donnees",
+            "@org/paiement",
+            "@org/plateforme",
+            "Les trois équipes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le dernier motif correspondant l'emporte : *.sql.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gh-protections-q3",
+          "prompt": "Quel problème résout la file de fusion ?",
+          "choices": [
+            "Des PR vertes isolément qui cassent main une fois combinées",
+            "Les conflits de fusion",
+            "La lenteur des relectures",
+            "Le stockage des gros fichiers"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque PR est testée avec celles qui la précèdent dans la file.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gh-protections-q4",
+          "prompt": "L'équipe paiement n'est jamais demandée en relecture sur ses fichiers. Touche la ligne en cause.",
+          "code": "# .github/CODEOWNERS\n/apps/paiement/  @org/paiement\n*                @org/plateforme",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La dernière règle correspondante gagne : * placé en dernier écrase tout. La règle générale doit venir en premier.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gh-protections-q5",
+          "prompt": "Où placer le fichier CODEOWNERS ?",
+          "choices": [
+            "Dans .github/, à la racine du dépôt ou dans docs/",
+            "Dans le dossier .git/",
+            "Uniquement dans les paramètres web",
+            "Dans chaque dossier concerné"
+          ],
+          "answerIndex": 0,
+          "explanation": "GitHub cherche dans ces trois emplacements.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gh-protections-q6",
+          "prompt": "Que peut exiger une règle de protection de branche ?",
+          "choices": [
+            "Un nombre minimal d'approbations",
+            "La réussite de vérifications désignées",
+            "Un historique linéaire",
+            "Que chaque commit compte moins de 10 lignes"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La taille des commits n'est pas une règle de protection.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "gh-collaboration",
+      "title": "Issues et collaboration",
+      "summary": "Mots-clés, forks et sécurité du dépôt.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Relier PR et issues",
+          "body": "Un mot-clé comme « Closes #128 » ou « Fixes #128 » dans la description d'une PR ferme l'issue quand la PR est fusionnée dans la branche par défaut. Une simple mention (#128) crée seulement un lien.",
+          "code": "Corrige l'arrondi du total du panier.\n\nCloses #128",
+          "language": "text"
+        },
+        {
+          "title": "Les forks",
+          "body": "Sans droit d'écriture, on contribue depuis un fork : une copie du dépôt sous son compte, d'où l'on ouvre une PR vers l'original. Les workflows d'une PR venant d'un fork n'ont pas accès aux secrets du dépôt, pour éviter qu'un contributeur inconnu les exfiltre."
+        },
+        {
+          "title": "La sécurité",
+          "body": "Dependabot propose des PR de mise à jour des dépendances vulnérables ; l'analyse des secrets détecte les clés poussées par erreur et peut bloquer le push ; les avis de sécurité permettent de corriger une faille en privé avant de la publier."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gh-collaboration-q1",
+          "prompt": "La description contient « Closes #128 ». Quand l'issue est-elle fermée ?",
+          "choices": [
+            "Quand la PR est fusionnée dans la branche par défaut",
+            "À l'ouverture de la PR",
+            "Au premier commentaire",
+            "Jamais automatiquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une fusion dans une autre branche ne ferme pas l'issue.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gh-collaboration-q2",
+          "prompt": "Pourquoi les workflows d'une PR venant d'un fork n'ont-ils pas accès aux secrets ?",
+          "choices": [
+            "Un contributeur inconnu pourrait modifier le workflow pour les exfiltrer",
+            "Par manque de place",
+            "Les forks n'exécutent jamais de workflows",
+            "C'est un bug"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le déclencheur pull_request_target, qui y a accès, est à manier avec une extrême prudence.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gh-collaboration-q3",
+          "prompt": "Une clé AWS a été poussée dans un commit public. Que faire en priorité ?",
+          "choices": [
+            "Révoquer la clé immédiatement, puis nettoyer l'historique",
+            "Supprimer le fichier dans un nouveau commit et continuer",
+            "Rendre le dépôt privé et considérer le problème réglé",
+            "Attendre l'alerte de Dependabot"
+          ],
+          "answerIndex": 0,
+          "explanation": "La clé a pu être copiée en quelques secondes : seule la révocation la rend inoffensive.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "gh-collaboration-q4",
+          "prompt": "Complète : récupérer localement la PR 128 pour la tester, puis l'approuver.",
+          "code": "gh pr ___ 128\ngh pr review 128 --___",
+          "answers": [
+            "checkout",
+            "approve"
+          ],
+          "distractors": [
+            "clone",
+            "merge",
+            "accept"
+          ],
+          "explanation": "gh pr checkout crée une branche locale à partir de la PR.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gh-collaboration-q5",
+          "prompt": "L'issue #128 reste ouverte après la fusion de la PR dans main. Touche la ligne en cause.",
+          "code": "Corrige l'arrondi du total du panier.\n\nVoir #128",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "« Voir » n'est pas un mot-clé de fermeture : il faut Closes, Fixes ou Resolves.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gh-collaboration-q6",
+          "prompt": "Quels outils de sécurité GitHub propose-t-il ?",
+          "choices": [
+            "Dependabot pour les dépendances vulnérables",
+            "L'analyse des secrets poussés",
+            "Les avis de sécurité privés",
+            "Un antivirus pour les postes des développeurs"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les postes de travail relèvent d'autres outils.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "gh-defi",
+    "title": "Défi entretien : le dépôt qui casse",
+    "summary": "Protéger main et fluidifier les relectures.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "gh-defi-q1",
+        "prompt": "Cas pratique 1/3 — Dans une équipe de 15 développeurs, main est cassée plusieurs fois par semaine : certains poussent directement, d'autres fusionnent avec des tests rouges. Que mettre en place ?",
+        "choices": [
+          "Une règle de protection : PR obligatoire, une approbation et les tests requis au vert",
+          "Un message dans le canal de l'équipe",
+          "Interdire les branches",
+          "Un seul développeur autorisé à pousser"
+        ],
+        "answerIndex": 0,
+        "explanation": "La règle rend la bonne pratique obligatoire, sans dépendre de la discipline de chacun.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "gh-defi-q2",
+        "prompt": "Cas pratique 2/3 — Les changements du module de paiement doivent toujours être relus par l'équipe paiement. Comment ?",
+        "choices": [
+          "Un CODEOWNERS pour /apps/paiement/ et l'obligation d'approbation des propriétaires",
+          "Une note dans le README",
+          "Un dépôt séparé",
+          "Relire après la fusion"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'équipe est demandée automatiquement et son approbation est exigée.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gh-defi-q3",
+        "prompt": "Cas pratique 3/3 — Avec 40 PR fusionnées par jour, main casse encore : deux PR vertes séparément entrent en conflit logique. Que faire ?",
+        "choices": [
+          "Activer la file de fusion",
+          "Exiger trois approbations",
+          "Fusionner seulement le vendredi",
+          "Désactiver les tests"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque PR est testée combinée aux précédentes.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "gh-defi-q4",
+        "prompt": "L'équipe veut un historique de main avec un commit par fonctionnalité. Quelle méthode de fusion autoriser ?",
+        "choices": [
+          "Squash",
+          "Commit de fusion",
+          "Rebase",
+          "Aucune"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les commits intermédiaires de la branche disparaissent de main.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "gh-defi-q5",
+        "prompt": "Le fichier CODEOWNERS n'a aucun effet. Touche la ligne en cause.",
+        "code": "git add .git/CODEOWNERS\ngit commit -m \"Ajoute les propriétaires du code\"\ngit push",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Le dossier .git/ n'est pas versionné. Le fichier va dans .github/, à la racine ou dans docs/.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "gh-defi-q6",
+        "prompt": "Quelles pratiques rendent les PR plus faciles à relire ?",
+        "choices": [
+          "Des PR petites et ciblées",
+          "Une description qui explique le pourquoi",
+          "Des vérifications automatiques qui passent avant la relecture",
+          "Une PR unique de 5 000 lignes par mois"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une énorme PR est relue en diagonale.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

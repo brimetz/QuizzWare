@@ -1,0 +1,435 @@
+{
+  "id": "gin-ch-essentiel",
+  "title": "Gin : l'essentiel",
+  "summary": "Un framework web minimaliste et rapide.",
+  "lessons": [
+    {
+      "id": "gin-routes",
+      "title": "Routes et contexte",
+      "summary": "Paramètres, requête et réponses JSON.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Démarrer",
+          "body": "gin.Default() crée un moteur avec deux middlewares : la journalisation et la récupération des panics. Chaque handler reçoit un *gin.Context qui réunit la requête, la réponse et des utilitaires.",
+          "code": "r := gin.Default()\nr.GET(\"/produits/:id\", func(c *gin.Context) {\n\tc.JSON(http.StatusOK, gin.H{\n\t\t\"id\":   c.Param(\"id\"),\n\t\t\"page\": c.DefaultQuery(\"page\", \"1\"),\n\t})\n})\nr.Run(\":8080\")"
+        },
+        {
+          "title": "Paramètres et requête",
+          "body": "c.Param lit un paramètre de chemin (:id) ; c.Query lit la chaîne de requête, et c.DefaultQuery fournit une valeur par défaut. *chemin capture tout le reste de l'URL."
+        },
+        {
+          "title": "Les groupes",
+          "body": "Un groupe partage un préfixe et des middlewares : pratique pour versionner une API ou protéger une partie des routes.",
+          "code": "api := r.Group(\"/api/v1\")\n{\n\tapi.GET(\"/produits\", lister)\n\tadmin := api.Group(\"/admin\", authAdmin)\n\tadmin.DELETE(\"/produits/:id\", supprimer)\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gin-routes-q1",
+          "prompt": "Que contient gin.Default() de plus que gin.New() ?",
+          "choices": [
+            "Les middlewares de journalisation et de récupération des panics",
+            "Une base de données",
+            "Un système de templates obligatoire",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "gin.New() crée un moteur vide de middlewares.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gin-routes-q2",
+          "prompt": "Que renvoie GET /produits/7?page=3 avec le handler ci-dessus ?",
+          "code": "r.GET(\"/produits/:id\", func(c *gin.Context) {\n\tc.JSON(http.StatusOK, gin.H{\n\t\t\"id\":   c.Param(\"id\"),\n\t\t\"page\": c.DefaultQuery(\"page\", \"1\"),\n\t})\n})",
+          "choices": [
+            "{\"id\":\"7\",\"page\":\"3\"}",
+            "{\"id\":7,\"page\":3}",
+            "{\"id\":\"7\",\"page\":\"1\"}",
+            "Une erreur 404"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les paramètres sont des chaînes ; page est fourni, la valeur par défaut ne sert pas.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "gin-routes-q3",
+          "prompt": "Complète : lire l'id du chemin et le tri de la requête.",
+          "code": "r.GET(\"/produits/:id\", func(c *gin.Context) {\n\tid := c.___(\"id\")\n\ttri := c.___(\"tri\")\n\tc.JSON(http.StatusOK, gin.H{\"id\": id, \"tri\": tri})\n})",
+          "answers": [
+            "Param",
+            "Query"
+          ],
+          "distractors": [
+            "PathValue",
+            "Get",
+            "FormValue"
+          ],
+          "explanation": "PathValue est la méthode de net/http, pas de Gin.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gin-routes-q4",
+          "prompt": "Quel est l'intérêt de r.Group(\"/api/v1\") ?",
+          "choices": [
+            "Partager un préfixe et des middlewares entre plusieurs routes",
+            "Lancer un second serveur",
+            "Créer une base de données",
+            "Limiter le nombre de requêtes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les sous-groupes héritent du préfixe et des middlewares du parent.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gin-routes-q5",
+          "prompt": "c.Param(\"id\") renvoie toujours une chaîne vide. Touche la ligne en cause.",
+          "code": "r.GET(\"/produits/{id}\", func(c *gin.Context) {\n\tc.JSON(http.StatusOK, gin.H{\"id\": c.Param(\"id\")})\n})",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Gin note les paramètres avec deux-points : /produits/:id. La syntaxe {id} est celle du ServeMux standard.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gin-routes-q6",
+          "prompt": "Que permet *gin.Context ?",
+          "choices": [
+            "Lire les paramètres et la requête",
+            "Écrire une réponse JSON",
+            "Partager des valeurs entre middlewares avec Set et Get",
+            "Compiler des templates C++"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le contexte est le point d'entrée de presque tout dans Gin.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "gin-binding",
+      "title": "Liaison et validation",
+      "summary": "Décoder et valider les entrées.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "ShouldBindJSON",
+          "body": "c.ShouldBindJSON décode le corps dans une structure et valide ses étiquettes binding. En cas d'erreur, il la renvoie et laisse le handler choisir la réponse. BindJSON, lui, répond automatiquement 400 et ne laisse pas la main sur le format de l'erreur.",
+          "code": "type NouveauProduit struct {\n\tNom  string  `json:\"nom\" binding:\"required\"`\n\tPrix float64 `json:\"prix\" binding:\"required,gt=0\"`\n}\n\nfunc creer(c *gin.Context) {\n\tvar p NouveauProduit\n\tif err := c.ShouldBindJSON(&p); err != nil {\n\t\tc.JSON(http.StatusBadRequest, gin.H{\"erreur\": err.Error()})\n\t\treturn\n\t}\n\tc.JSON(http.StatusCreated, p)\n}"
+        },
+        {
+          "title": "Les règles",
+          "body": "Les règles viennent de la bibliothèque validator : required, min, max, gt, email, oneof… Pour lier la chaîne de requête ou un formulaire, on utilise ShouldBindQuery ou ShouldBind et l'étiquette form."
+        },
+        {
+          "title": "Le return",
+          "body": "Écrire une réponse d'erreur ne termine pas la fonction : sans return, le code continue et peut écrire une seconde réponse, que Gin signale par un avertissement."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gin-binding-q1",
+          "prompt": "Quelle différence entre ShouldBindJSON et BindJSON ?",
+          "choices": [
+            "ShouldBindJSON renvoie l'erreur au handler ; BindJSON répond lui-même 400",
+            "BindJSON ne valide pas",
+            "ShouldBindJSON ne décode pas",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "ShouldBindJSON laisse le choix du format de l'erreur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gin-binding-q2",
+          "prompt": "Le corps {} est envoyé à creer. Quelle réponse ?",
+          "choices": [
+            "400, car nom et prix sont requis",
+            "201 avec des valeurs vides",
+            "500",
+            "404"
+          ],
+          "answerIndex": 0,
+          "explanation": "binding:\"required\" refuse les valeurs zéro.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "gin-binding-q3",
+          "prompt": "Complète : le nom est requis, le prix doit être strictement positif.",
+          "code": "type NouveauProduit struct {\n\tNom  string  `json:\"nom\" ___:\"required\"`\n\tPrix float64 `json:\"prix\" binding:\"required,___=0\"`\n}",
+          "answers": [
+            "binding",
+            "gt"
+          ],
+          "distractors": [
+            "validate",
+            "min",
+            "gte"
+          ],
+          "explanation": "gte=0 accepterait 0 ; gt=0 l'exclut.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "gin-binding-q4",
+          "prompt": "Un JSON invalide produit un avertissement d'écriture double et une réponse incohérente. Touche la ligne qui manque.",
+          "code": "func creer(c *gin.Context) {\n\tvar p NouveauProduit\n\tif err := c.ShouldBindJSON(&p); err != nil {\n\t\tc.JSON(http.StatusBadRequest, gin.H{\"erreur\": err.Error()})\n\t}\n\tc.JSON(http.StatusCreated, p)\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Il manque return après la réponse d'erreur : le handler continue et tente d'écrire 201.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gin-binding-q5",
+          "prompt": "Comment lier la chaîne de requête ?page=2&taille=20 dans une structure ?",
+          "choices": [
+            "ShouldBindQuery avec des étiquettes form",
+            "ShouldBindJSON",
+            "c.Param",
+            "C'est impossible"
+          ],
+          "answerIndex": 0,
+          "explanation": "type Pagination struct { Page int `form:\"page\"` … }.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gin-binding-q6",
+          "prompt": "Quelles règles de validation existent ?",
+          "choices": [
+            "required",
+            "email",
+            "oneof=petit moyen grand",
+            "sql_injection_free"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les injections SQL se préviennent avec des requêtes paramétrées, pas une règle de validation.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "gin-middlewares",
+      "title": "Middlewares et tests",
+      "summary": "Next, Abort, goroutines et httptest.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Next et Abort",
+          "body": "Un middleware Gin est un handler. c.Next() exécute la suite de la chaîne puis revient : on peut mesurer une durée ou lire le statut final. c.Abort() empêche les handlers suivants de s'exécuter, mais ne quitte pas la fonction courante : on ajoute return.",
+          "code": "func auth(c *gin.Context) {\n\tif c.GetHeader(\"Authorization\") == \"\" {\n\t\tc.AbortWithStatusJSON(http.StatusUnauthorized,\n\t\t\tgin.H{\"erreur\": \"non authentifié\"})\n\t\treturn\n\t}\n\tc.Set(\"utilisateur\", \"zoe\")\n\tc.Next()\n}"
+        },
+        {
+          "title": "Les goroutines",
+          "body": "Le *gin.Context est réutilisé après la fin de la requête. Une goroutine lancée depuis un handler qui continue de s'exécuter doit travailler sur une copie, obtenue avec c.Copy()."
+        },
+        {
+          "title": "Tester",
+          "body": "Le moteur Gin est un http.Handler : on le teste avec httptest.NewRecorder et ServeHTTP, sans lancer de serveur.",
+          "code": "func TestProduit(t *testing.T) {\n\tgin.SetMode(gin.TestMode)\n\tr := routeur()\n\trec := httptest.NewRecorder()\n\tr.ServeHTTP(rec, httptest.NewRequest(\"GET\", \"/produits/7\", nil))\n\tif rec.Code != http.StatusOK {\n\t\tt.Fatalf(\"statut %d\", rec.Code)\n\t}\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gin-middlewares-q1",
+          "prompt": "Que fait c.Next() dans un middleware ?",
+          "choices": [
+            "Il exécute la suite de la chaîne, puis revient dans le middleware",
+            "Il termine la requête",
+            "Il passe à la requête suivante",
+            "Il relance le handler"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le code placé après c.Next() s'exécute une fois la réponse produite.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gin-middlewares-q2",
+          "prompt": "Après c.AbortWithStatusJSON(401, …) sans return, que se passe-t-il ?",
+          "choices": [
+            "Les handlers suivants ne s'exécutent pas, mais le reste de la fonction courante, si",
+            "La fonction s'arrête immédiatement",
+            "Le handler suivant s'exécute quand même",
+            "Le serveur s'arrête"
+          ],
+          "answerIndex": 0,
+          "explanation": "Abort agit sur la chaîne, pas sur le flux de la fonction en cours.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "gin-middlewares-q3",
+          "prompt": "L'adresse journalisée est parfois celle d'une autre requête. Touche la ligne en cause.",
+          "code": "r.POST(\"/commandes\", func(c *gin.Context) {\n\tgo func() {\n\t\ttime.Sleep(time.Second)\n\t\tlog.Println(\"commande de\", c.ClientIP())\n\t}()\n\tc.JSON(http.StatusAccepted, gin.H{\"statut\": \"reçue\"})\n})",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le contexte original est réutilisé pour d'autres requêtes après la réponse. La goroutine doit utiliser cp := c.Copy(), créé avant son lancement.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "gin-middlewares-q4",
+          "prompt": "Complète ce middleware d'authentification.",
+          "code": "func auth(c *gin.Context) {\n\tif c.GetHeader(\"Authorization\") == \"\" {\n\t\tc.___(http.StatusUnauthorized, gin.H{\"erreur\": \"non authentifié\"})\n\t\treturn\n\t}\n\tc.___()\n}",
+          "answers": [
+            "AbortWithStatusJSON",
+            "Next"
+          ],
+          "distractors": [
+            "JSON",
+            "Abort",
+            "Continue"
+          ],
+          "explanation": "c.JSON seul écrirait la réponse sans empêcher le handler suivant.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gin-middlewares-q5",
+          "prompt": "Comment tester une route Gin sans démarrer de serveur ?",
+          "choices": [
+            "Appeler r.ServeHTTP avec un httptest.NewRecorder et une requête de test",
+            "Lancer r.Run dans le test et appeler localhost",
+            "C'est impossible",
+            "Utiliser un navigateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le moteur Gin implémente http.Handler.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gin-middlewares-q6",
+          "prompt": "Quelles affirmations sur les middlewares Gin sont vraies ?",
+          "choices": [
+            "Un middleware a la même signature qu'un handler",
+            "c.Set et c.Get transmettent des valeurs aux handlers suivants",
+            "Un middleware peut s'appliquer à un groupe de routes",
+            "c.Abort() quitte la fonction courante"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il faut return après c.Abort().",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "gin-defi",
+    "title": "Défi entretien : l'API de commandes",
+    "summary": "Valider, protéger, tester.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "gin-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une API Gin accepte des commandes avec des quantités négatives et des e-mails invalides. Que faire ?",
+        "choices": [
+          "Ajouter des règles binding (gt=0, email) et répondre 400 en cas d'erreur de liaison",
+          "Vérifier dans la base après insertion",
+          "Faire confiance au frontend",
+          "Ignorer les champs invalides"
+        ],
+        "answerIndex": 0,
+        "explanation": "La validation côté serveur est indispensable.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "gin-defi-q2",
+        "prompt": "Cas pratique 2/3 — Seuls les administrateurs doivent accéder à /api/v1/admin. Comment ?",
+        "choices": [
+          "Un groupe /admin avec un middleware qui vérifie le rôle et interrompt la chaîne sinon",
+          "Une vérification copiée dans chaque handler",
+          "Masquer les routes dans la documentation",
+          "Un port différent"
+        ],
+        "answerIndex": 0,
+        "explanation": "Toute nouvelle route du groupe est protégée d'office.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gin-defi-q3",
+        "prompt": "Cas pratique 3/3 — L'envoi de l'e-mail de confirmation ralentit la réponse. L'équipe le lance dans une goroutine. Quelle précaution ?",
+        "choices": [
+          "Passer à la goroutine une copie du contexte (c.Copy()) ou seulement les données nécessaires",
+          "Utiliser c directement",
+          "Attendre la goroutine avant de répondre",
+          "Aucune"
+        ],
+        "answerIndex": 0,
+        "explanation": "Pour de la fiabilité, une file de messages vaut mieux qu'une goroutine perdue au redémarrage.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "gin-defi-q4",
+        "prompt": "Quel mode activer en production pour réduire les journaux de débogage de Gin ?",
+        "choices": [
+          "gin.SetMode(gin.ReleaseMode), ou GIN_MODE=release",
+          "gin.SetMode(gin.DebugMode)",
+          "gin.New() suffit",
+          "Aucun réglage n'existe"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le mode debug affiche notamment toutes les routes au démarrage.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "gin-defi-q5",
+        "prompt": "Les requêtes sans jeton atteignent quand même le handler de suppression. Touche la ligne en cause.",
+        "code": "func authAdmin(c *gin.Context) {\n\tif !estAdmin(c.GetHeader(\"Authorization\")) {\n\t\tc.JSON(http.StatusForbidden, gin.H{\"erreur\": \"interdit\"})\n\t\treturn\n\t}\n\tc.Next()\n}",
+        "bugLines": [
+          3
+        ],
+        "explanation": "c.JSON écrit une réponse mais n'interrompt pas la chaîne : le handler suivant s'exécute. Il faut c.AbortWithStatusJSON.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "gin-defi-q6",
+        "prompt": "Quelles bonnes pratiques avec Gin ?",
+        "choices": [
+          "return après chaque réponse d'erreur",
+          "ShouldBind et une réponse d'erreur maîtrisée",
+          "Des tests avec httptest",
+          "Partager *gin.Context entre goroutines"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "On copie le contexte avant de le passer à une goroutine.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

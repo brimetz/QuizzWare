@@ -1,0 +1,440 @@
+{
+  "id": "react-ch-essentiel",
+  "title": "React : l'essentiel",
+  "summary": "Composants, état, effets et performance.",
+  "lessons": [
+    {
+      "id": "react-composants",
+      "title": "Composants, props et listes",
+      "summary": "Construire une interface par composition.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Des fonctions qui renvoient de l'interface",
+          "body": "Un composant React est une fonction qui reçoit des props et renvoie du JSX, une syntaxe proche du HTML compilée en appels de fonctions. Son nom commence par une majuscule : en minuscules, JSX le prendrait pour une balise HTML. Il renvoie un seul élément racine, ou un fragment <>…</>.",
+          "code": "function Carte({ titre, children }) {\n  return (\n    <section className=\"carte\">\n      <h2>{titre}</h2>\n      {children}\n    </section>\n  );\n}"
+        },
+        {
+          "title": "Les props",
+          "body": "Les props sont en lecture seule : un composant ne modifie jamais les siennes. Les données descendent du parent vers l'enfant ; pour remonter une action, le parent passe une fonction (onChange, onSupprimer) que l'enfant appelle. children permet d'imbriquer du contenu, et la composition remplace l'héritage."
+        },
+        {
+          "title": "Listes, clés et conditions",
+          "body": "On rend une liste avec map, et chaque élément reçoit une key stable et unique, comme un identifiant. Avec l'index comme clé, supprimer ou réordonner un élément associe l'état interne (un champ saisi) au mauvais élément. Pour l'affichage conditionnel, attention à {n && …} : si n vaut 0, React affiche « 0 ».",
+          "code": "<ul>\n  {taches.map((t) => (\n    <li key={t.id}>{t.titre}</li>\n  ))}\n</ul>"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "react-composants-q1",
+          "prompt": "items est un tableau vide. Qu'affiche ce JSX ?",
+          "code": "<div>\n  {items.length && <Liste items={items} />}\n</div>",
+          "choices": [
+            "0",
+            "Rien",
+            "La liste vide",
+            "Une erreur"
+          ],
+          "answerIndex": 0,
+          "explanation": "items.length vaut 0, valeur que && renvoie telle quelle, et React affiche les nombres. On écrit items.length > 0 && …",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "react-composants-q2",
+          "prompt": "Après la suppression d'une tâche, les champs affichent les textes des mauvaises tâches. Touche la ligne en cause.",
+          "code": "function Taches({ taches, supprimer }) {\n  return taches.map((t, i) => (\n    <li key={i}>\n      <input defaultValue={t.titre} />\n      <button onClick={() => supprimer(t.id)}>×</button>\n    </li>\n  ));\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Avec l'index comme clé, l'élément qui suit la tâche supprimée hérite de sa clé, donc de son champ. key={t.id} associe l'état à la bonne tâche.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "react-composants-q3",
+          "prompt": "Complète ce composant.",
+          "code": "function Bouton({ ___, onClick }) {\n  return <button onClick={___}>{libelle}</button>;\n}",
+          "answers": [
+            "libelle",
+            "onClick"
+          ],
+          "distractors": [
+            "props",
+            "this.onClick",
+            "click"
+          ],
+          "explanation": "On déstructure les props reçues ; un composant fonction n'a pas de this.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "react-composants-q4",
+          "prompt": "Un composant peut-il modifier les props qu'il reçoit ?",
+          "choices": [
+            "Non : elles sont en lecture seule, il appelle une fonction fournie par le parent",
+            "Oui, directement",
+            "Oui, avec setProps",
+            "Seulement les props numériques"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le parent possède la donnée et décide de la changer : c'est le flux de données unidirectionnel.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "react-composants-q5",
+          "prompt": "Pourquoi le nom d'un composant commence-t-il par une majuscule ?",
+          "choices": [
+            "JSX traite les noms en minuscules comme des balises HTML ; la majuscule désigne un composant",
+            "C'est une simple convention de style",
+            "Pour qu'il s'affiche plus vite",
+            "Parce que JavaScript l'exige pour les fonctions"
+          ],
+          "answerIndex": 0,
+          "explanation": "<carte /> créerait un élément HTML inconnu nommé carte.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "react-composants-q6",
+          "prompt": "Quelles valeurs conviennent comme key dans une liste ?",
+          "choices": [
+            "L'identifiant en base de l'élément",
+            "Un identifiant stable généré à la création de l'élément",
+            "Un nom unique qui ne change pas",
+            "Math.random() à chaque rendu"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une clé aléatoire à chaque rendu recrée tous les éléments, et perd leur état, à chaque fois.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "react-etat-effets",
+      "title": "État et effets",
+      "summary": "useState, immutabilité et useEffect.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "useState",
+          "body": "useState renvoie la valeur courante et une fonction pour la changer. Appeler le setter programme un nouveau rendu ; dans le rendu en cours, la variable garde sa valeur (c'est un instantané). Pour enchaîner des mises à jour, on passe une fonction : setN((v) => v + 1). L'état doit être remplacé, jamais modifié : React compare l'ancienne et la nouvelle référence.",
+          "code": "const [taches, setTaches] = useState([]);\n\nfunction ajouter(titre) {\n  setTaches((t) => [...t, { id: crypto.randomUUID(), titre }]);\n}"
+        },
+        {
+          "title": "useEffect",
+          "body": "Un effet synchronise le composant avec l'extérieur après l'affichage : abonnement, minuteur, requête, widget non React. Le tableau de dépendances dit quand le relancer : [] au montage seulement, [id] quand id change, rien du tout à chaque rendu. La fonction renvoyée sert au nettoyage. En développement, le mode strict monte, démonte et remonte chaque composant pour révéler les nettoyages oubliés.",
+          "code": "useEffect(() => {\n  const id = setInterval(tick, 1000);\n  return () => clearInterval(id);\n}, []);"
+        },
+        {
+          "title": "Pas toujours besoin d'un effet",
+          "body": "Une valeur dérivée (un nom complet, une liste filtrée) se calcule directement pendant le rendu, sans état ni effet supplémentaires. Pour charger des données, un effet doit gérer l'annulation des réponses obsolètes ; une bibliothèque comme TanStack Query ou le framework (Next.js) le fait mieux."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "react-etat-effets-q1",
+          "prompt": "n vaut 0. Après un clic, combien vaut n ?",
+          "code": "const [n, setN] = useState(0);\nfunction clic() {\n  setN(n + 1);\n  setN(n + 1);\n  setN(n + 1);\n}",
+          "choices": [
+            "1",
+            "3",
+            "0",
+            "Une boucle infinie"
+          ],
+          "answerIndex": 0,
+          "explanation": "Dans ce rendu, n vaut 0 : les trois appels demandent tous 1. Avec setN((v) => v + 1), on obtiendrait 3.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "react-etat-effets-q2",
+          "prompt": "La liste ne se met pas à jour quand on ajoute une tâche. Touche une ligne en cause.",
+          "code": "const [taches, setTaches] = useState([]);\nfunction ajouter(titre) {\n  taches.push({ id: crypto.randomUUID(), titre });\n  setTaches(taches);\n}",
+          "bugLines": [
+            3,
+            4
+          ],
+          "explanation": "Le tableau est modifié sur place et la même référence est renvoyée : React n'y voit aucun changement. On crée un nouveau tableau : setTaches([...taches, nouvelle]).",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "react-etat-effets-q3",
+          "prompt": "Complète : un minuteur démarré au montage et arrêté au démontage.",
+          "code": "useEffect(() => {\n  const id = setInterval(tick, 1000);\n  ___ () => clearInterval(id);\n}, ___);",
+          "answers": [
+            "return",
+            "[]"
+          ],
+          "distractors": [
+            "await",
+            "null",
+            "finally"
+          ],
+          "explanation": "La fonction renvoyée est appelée au démontage ; [] limite l'effet au montage.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "react-etat-effets-q4",
+          "prompt": "Ce composant envoie des requêtes en boucle. Touche la ligne en cause.",
+          "code": "const [user, setUser] = useState(null);\nuseEffect(() => {\n  fetch(`/api/users/${id}`)\n    .then((r) => r.json())\n    .then(setUser);\n});",
+          "bugLines": [
+            6
+          ],
+          "explanation": "Sans tableau de dépendances, l'effet se relance après chaque rendu ; or setUser provoque un rendu. Il faut [id].",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "react-etat-effets-q5",
+          "prompt": "Un composant affiche nomComplet, calculé à partir des états prenom et nom. Faut-il un état et un effet pour nomComplet ?",
+          "choices": [
+            "Non : on le calcule directement pendant le rendu",
+            "Oui, un état et un effet qui le met à jour",
+            "Oui, un contexte",
+            "Il faut un useRef"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un état dérivé synchronisé par effet ajoute un rendu inutile et risque de se désynchroniser.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "react-etat-effets-q6",
+          "prompt": "Quels sont de bons usages de useEffect ?",
+          "choices": [
+            "S'abonner à un événement du navigateur et se désabonner au nettoyage",
+            "Synchroniser un widget qui n'est pas écrit en React",
+            "Démarrer un minuteur",
+            "Calculer une valeur dérivée de l'état"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les effets servent à parler avec l'extérieur de React, pas à calculer.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "react-performance",
+      "title": "Rendus et performance",
+      "summary": "memo, useMemo, useCallback et état serveur.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Quand un composant se rend-il ?",
+          "body": "Un composant se rend quand son état change, quand son parent se rend, ou quand un contexte qu'il lit change. Se rendre ne veut pas dire toucher le DOM : React compare le résultat et n'applique que les différences. Avant d'optimiser, on mesure avec le Profiler des React DevTools."
+        },
+        {
+          "title": "memo, useMemo et useCallback",
+          "body": "memo évite de rendre un composant si ses props n'ont pas changé, en les comparant par référence. Un objet ou une fonction créés pendant le rendu du parent sont nouveaux à chaque fois, ce qui annule memo : useMemo et useCallback conservent la même référence tant que leurs dépendances ne changent pas. Le React Compiler automatise ces mémoïsations.",
+          "code": "const Ligne = memo(function Ligne({ item, onChoisir }) {\n  /* rendu coûteux */\n});\n\nconst choisir = useCallback((id) => setChoix(id), []);\nconst tries = useMemo(() => trier(items), [items]);"
+        },
+        {
+          "title": "Contexte et état serveur",
+          "body": "Le contexte transmet une valeur à tout un sous-arbre sans passer de props ; chaque changement de cette valeur rend tous ses consommateurs : il convient au thème ou à l'utilisateur connecté, pas à une saisie qui change à chaque frappe. Les données venues du serveur (cache, revalidation, chargement, erreurs) se gèrent mieux avec TanStack Query ou SWR qu'avec des useState et useEffect écrits à la main."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "react-performance-q1",
+          "prompt": "Un composant parent se rend à nouveau. Ses enfants aussi ?",
+          "choices": [
+            "Oui par défaut, même si leurs props n'ont pas changé, sauf s'ils sont enveloppés dans memo",
+            "Non, jamais",
+            "Seulement si leurs props ont changé",
+            "Seulement les enfants qui ont un état"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est généralement rapide ; on n'optimise que les rendus coûteux mesurés.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "react-performance-q2",
+          "prompt": "Liste se rend à chaque frappe dans le champ, malgré memo. Touche la ligne en cause.",
+          "code": "const Liste = memo(function Liste({ items, options }) {\n  /* rendu coûteux */\n});\n\nfunction Page({ items }) {\n  const [q, setQ] = useState(\"\");\n  return <>\n    <input value={q} onChange={(e) => setQ(e.target.value)} />\n    <Liste items={items} options={{ tri: \"nom\" }} />\n  </>;\n}",
+          "bugLines": [
+            9
+          ],
+          "explanation": "{ tri: \"nom\" } crée un nouvel objet à chaque rendu de Page : la comparaison des props échoue toujours. On le sort du composant ou on le mémoïse avec useMemo.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "react-performance-q3",
+          "prompt": "Complète : stabiliser une fonction, et mémoïser un tri coûteux.",
+          "code": "const choisir = ___((id) => setChoix(id), []);\nconst tries = ___(() => trier(items), [items]);",
+          "answers": [
+            "useCallback",
+            "useMemo"
+          ],
+          "distractors": [
+            "useEffect",
+            "useRef",
+            "memo"
+          ],
+          "explanation": "useCallback(f, deps) équivaut à useMemo(() => f, deps).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "react-performance-q4",
+          "prompt": "Un contexte contient le texte d'un champ de recherche, et 200 composants le lisent. Quel est le problème ?",
+          "choices": [
+            "À chaque frappe, les 200 consommateurs se rendent",
+            "Le contexte ne peut pas contenir de texte",
+            "Le champ perd le focus",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "On garde cet état au plus près de qui l'utilise, ou on découpe le contexte.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "react-performance-q5",
+          "prompt": "Pourquoi utiliser TanStack Query plutôt que useState et useEffect pour des données serveur ?",
+          "choices": [
+            "Il gère le cache, la déduplication, la revalidation, le chargement, les erreurs et les réponses obsolètes",
+            "Il remplace le serveur",
+            "Il rend React plus léger",
+            "Il est obligatoire avec React 19"
+          ],
+          "answerIndex": 0,
+          "explanation": "Réécrire tout cela à la main dans chaque composant est long et source de bugs.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "react-performance-q6",
+          "prompt": "Qu'est-ce qui déclenche le rendu d'un composant ?",
+          "choices": [
+            "Un changement de son état",
+            "Le rendu de son parent",
+            "Un changement d'un contexte qu'il lit",
+            "La modification d'une variable locale ordinaire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une variable ordinaire est recréée à chaque rendu et sa modification ne prévient pas React.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "react-defi",
+    "title": "Défi entretien : la recherche qui se trompe",
+    "summary": "Conditions de course et fermetures figées.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "react-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une recherche lance un fetch à chaque frappe. Parfois, les résultats affichés correspondent à une ancienne saisie. Pourquoi ?",
+        "choices": [
+          "Une condition de course : la réponse lente d'une ancienne requête arrive après celle de la plus récente",
+          "Le serveur renvoie des résultats faux",
+          "React affiche les états dans le désordre",
+          "Le navigateur met les réponses en cache"
+        ],
+        "answerIndex": 0,
+        "explanation": "Rien ne garantit que les réponses arrivent dans l'ordre des requêtes.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "react-defi-q2",
+        "prompt": "Cas pratique 2/3 — Quel correctif dans l'effet ?",
+        "choices": [
+          "Annuler la requête précédente dans le nettoyage de l'effet (AbortController), ou ignorer sa réponse",
+          "Ajouter un délai d'une seconde",
+          "Supprimer le tableau de dépendances",
+          "Mettre les résultats dans un contexte"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le nettoyage s'exécute avant l'effet suivant : il invalide la requête devenue obsolète.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "react-defi-q3",
+        "prompt": "Cas pratique 3/3 — Remets l'effet dans l'ordre.",
+        "lines": [
+          "useEffect(() => {",
+          "  const ctrl = new AbortController();",
+          "  fetch(`/api/recherche?q=${q}`, { signal: ctrl.signal })",
+          "    .then((r) => r.json())",
+          "    .then(setResultats);",
+          "  return () => ctrl.abort();",
+          "}, [q]);"
+        ],
+        "explanation": "À chaque nouvelle valeur de q, la requête précédente est annulée. Un .catch qui ignore l'AbortError évite un rejet non géré.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "react-defi-q4",
+        "prompt": "Que montre ce compteur au bout de 5 secondes ?",
+        "code": "function Compteur() {\n  const [n, setN] = useState(0);\n  useEffect(() => {\n    const id = setInterval(() => setN(n + 1), 1000);\n    return () => clearInterval(id);\n  }, []);\n  return <p>{n}</p>;\n}",
+        "choices": [
+          "1",
+          "5",
+          "0",
+          "Il augmente de plus en plus vite"
+        ],
+        "answerIndex": 0,
+        "explanation": "La fonction du minuteur a capturé n = 0 au premier rendu : elle demande toujours 0 + 1.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "react-defi-q5",
+        "prompt": "Comment corriger un setInterval dont le callback lit une valeur d'état figée au premier rendu ?",
+        "choices": [
+          "Utiliser la mise à jour fonctionnelle : setN((v) => v + 1)",
+          "Retirer le tableau de dépendances",
+          "Remplacer useState par une variable globale",
+          "Appeler setN deux fois"
+        ],
+        "answerIndex": 0,
+        "explanation": "La fonction reçoit toujours la valeur la plus récente, sans dépendre de la fermeture.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "react-defi-q6",
+        "prompt": "Quand la mémoïsation est-elle justifiée ?",
+        "choices": [
+          "Quand le Profiler montre un rendu coûteux et répété",
+          "Pour une liste lourde dont les props changent rarement",
+          "Pour stabiliser une fonction passée à un composant mémoïsé",
+          "Systématiquement, sur chaque composant"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Mémoïser a un coût (comparaisons, mémoire, lisibilité) : on le réserve aux cas mesurés.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,444 @@
+{
+  "id": "k6-ch-essentiel",
+  "title": "k6 : l'essentiel",
+  "summary": "Des tests de charge écrits en JavaScript.",
+  "lessons": [
+    {
+      "id": "k6-bases",
+      "title": "Un premier script",
+      "summary": "Utilisateurs virtuels, requêtes et vérifications.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le script",
+          "body": "Un script k6 exporte une fonction par défaut, exécutée en boucle par chaque utilisateur virtuel (VU). Les options fixent le nombre de VU et la durée. k6 est écrit en Go et exécute le JavaScript dans son propre moteur, pas dans Node.js : les modules npm ne sont pas disponibles directement.",
+          "code": "import http from \"k6/http\";\nimport { check, sleep } from \"k6\";\n\nexport const options = { vus: 50, duration: \"2m\" };\n\nexport default function () {\n  const res = http.get(\"https://boutique.exemple/api/produits\");\n  check(res, { \"statut 200\": (r) => r.status === 200 });\n  sleep(1);\n}",
+          "language": "javascript"
+        },
+        {
+          "title": "Les vérifications",
+          "body": "check valide une réponse et compte les succès et échecs dans le rapport, mais un échec ne fait pas échouer le test : il faut des seuils pour cela. sleep simule le temps de réflexion d'un utilisateur entre deux actions."
+        },
+        {
+          "title": "Le rapport",
+          "body": "À la fin, k6 affiche des métriques : http_req_duration (temps de réponse, avec médiane et percentiles), http_req_failed (taux d'erreurs), http_reqs (débit), iterations et vus. On regarde les percentiles (p95, p99) plutôt que la moyenne.",
+          "code": "k6 run charge.js",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "k6-bases-q1",
+          "prompt": "Que fait chaque utilisateur virtuel d'un script k6 ?",
+          "choices": [
+            "Il exécute la fonction par défaut en boucle, pendant la durée du test",
+            "Il exécute le script une seule fois",
+            "Il ouvre un vrai navigateur",
+            "Il attend les instructions d'un humain"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque exécution complète est une itération.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "k6-bases-q2",
+          "prompt": "Un check échoue sur 30 % des requêtes. Le test k6 échoue-t-il ?",
+          "choices": [
+            "Non : un check compte les échecs, mais seul un seuil fait échouer le test",
+            "Oui, immédiatement",
+            "Oui, à la fin",
+            "Le test s'arrête au premier échec"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ajoute un seuil, par exemple checks: [\"rate>0.99\"].",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "k6-bases-q3",
+          "prompt": "Complète : 50 utilisateurs virtuels pendant 2 minutes.",
+          "code": "export const options = { ___: 50, ___: \"2m\" };",
+          "language": "javascript",
+          "answers": [
+            "vus",
+            "duration"
+          ],
+          "distractors": [
+            "users",
+            "time",
+            "iterations"
+          ],
+          "explanation": "vus est le nombre d'utilisateurs virtuels simultanés.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "k6-bases-q4",
+          "prompt": "Pourquoi regarder le p95 plutôt que la moyenne des temps de réponse ?",
+          "choices": [
+            "La moyenne masque les requêtes lentes que subit une partie des utilisateurs",
+            "Le p95 est toujours plus bas",
+            "La moyenne n'est pas calculée par k6",
+            "Pour des raisons esthétiques"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le p95 est la valeur sous laquelle se trouvent 95 % des requêtes.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "k6-bases-q5",
+          "prompt": "Ce script ne fonctionne pas avec k6. Touche la ligne en cause.",
+          "code": "import axios from \"axios\";\n\nexport default async function () {\n  await axios.get(\"https://boutique.exemple/api/produits\");\n}",
+          "language": "javascript",
+          "bugLines": [
+            1
+          ],
+          "explanation": "k6 n'est pas Node.js : les modules npm comme axios ne sont pas disponibles. On utilise k6/http.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "k6-bases-q6",
+          "prompt": "Quelles métriques k6 fournit-il par défaut ?",
+          "choices": [
+            "http_req_duration",
+            "http_req_failed",
+            "http_reqs",
+            "La consommation mémoire du serveur testé"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les métriques du serveur viennent de sa propre supervision.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "k6-scenarios",
+      "title": "Profils de charge et seuils",
+      "summary": "Paliers, types de tests et critères de réussite.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les paliers",
+          "body": "stages fait varier le nombre de VU dans le temps : montée progressive, plateau, descente. On évite ainsi de frapper le système à pleine charge dès la première seconde.",
+          "code": "export const options = {\n  stages: [\n    { duration: \"2m\", target: 200 },\n    { duration: \"10m\", target: 200 },\n    { duration: \"1m\", target: 0 },\n  ],\n  thresholds: {\n    http_req_duration: [\"p(95)<400\"],\n    http_req_failed: [\"rate<0.01\"],\n  },\n};",
+          "language": "javascript"
+        },
+        {
+          "title": "Les seuils",
+          "body": "Les seuils (thresholds) définissent les critères de réussite : 95 % des requêtes sous 400 ms, moins de 1 % d'erreurs. Si un seuil n'est pas tenu, k6 se termine avec un code de sortie non nul : la CI peut bloquer une livraison qui dégrade les performances."
+        },
+        {
+          "title": "Les types de tests",
+          "body": "Le test de fumée vérifie le script avec très peu de charge. Le test de charge reproduit le trafic attendu. Le test de stress monte au-delà, pour trouver le point de rupture. Le test de pic simule une hausse brutale. Le test d'endurance maintient la charge pendant des heures, pour révéler fuites de mémoire et dégradations lentes."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "k6-scenarios-q1",
+          "prompt": "Que signifie le seuil http_req_duration: [\"p(95)<400\"] ?",
+          "choices": [
+            "95 % des requêtes doivent répondre en moins de 400 ms",
+            "La moyenne doit être inférieure à 400 ms",
+            "Au plus 95 requêtes de plus de 400 ms",
+            "Le test dure 400 secondes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sinon, k6 termine en échec.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "k6-scenarios-q2",
+          "prompt": "Quel type de test révèle une fuite de mémoire qui n'apparaît qu'au bout de plusieurs heures ?",
+          "choices": [
+            "Le test d'endurance",
+            "Le test de fumée",
+            "Le test de pic",
+            "Le test unitaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une charge normale maintenue longtemps fait apparaître les dégradations lentes.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "k6-scenarios-q3",
+          "prompt": "Complète : moins de 1 % d'erreurs et un p99 sous une seconde.",
+          "code": "thresholds: {\n  http_req_failed: [\"___<0.01\"],\n  http_req_duration: [\"___(99)<1000\"],\n},",
+          "language": "javascript",
+          "answers": [
+            "rate",
+            "p"
+          ],
+          "distractors": [
+            "avg",
+            "count",
+            "max"
+          ],
+          "explanation": "rate pour une proportion, p(N) pour un percentile.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "k6-scenarios-q4",
+          "prompt": "Que se passe-t-il en CI quand un seuil k6 n'est pas tenu ?",
+          "choices": [
+            "k6 se termine avec un code non nul, ce qui fait échouer l'étape",
+            "Rien, le rapport l'indique seulement",
+            "Le test recommence",
+            "Le serveur est redémarré"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les performances deviennent un critère de livraison.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "k6-scenarios-q5",
+          "prompt": "Ce test de charge frappe le système à pleine puissance dès la première seconde. Touche la ligne à corriger.",
+          "code": "stages: [\n  { duration: \"0s\", target: 500 },\n  { duration: \"10m\", target: 500 },\n  { duration: \"1m\", target: 0 },\n],",
+          "language": "javascript",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Le premier palier dure 0 seconde : pas de montée progressive. On monte par exemple en 3 minutes, sauf pour un test de pic volontaire.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "k6-scenarios-q6",
+          "prompt": "Lesquels sont des types de tests de performance ?",
+          "choices": [
+            "Le test de stress",
+            "Le test de pic",
+            "Le test d'endurance",
+            "Le test de mutation"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le test de mutation évalue la qualité d'une suite de tests unitaires.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "k6-realisme",
+      "title": "Des tests réalistes",
+      "summary": "Modèle ouvert, données et interprétation.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Modèle ouvert ou fermé",
+          "body": "Avec un nombre fixe de VU (modèle fermé), si le serveur ralentit, chaque VU envoie moins de requêtes : la charge baisse d'elle-même, et le test sous-estime les temps de réponse. Les exécuteurs à taux d'arrivée (constant-arrival-rate) fixent un nombre de requêtes par seconde, comme des utilisateurs réels qui arrivent quoi qu'il arrive : c'est le modèle ouvert.",
+          "code": "export const options = {\n  scenarios: {\n    vitrine: {\n      executor: \"constant-arrival-rate\",\n      rate: 300, timeUnit: \"1s\",\n      duration: \"10m\",\n      preAllocatedVUs: 100, maxVUs: 1000,\n    },\n  },\n};",
+          "language": "javascript"
+        },
+        {
+          "title": "Des données variées",
+          "body": "Toujours demander le même produit teste surtout le cache. On varie les données : une liste d'identifiants chargée une fois dans un SharedArray, partagé entre les VU sans être dupliqué en mémoire. setup() prépare des données avant le test, teardown() nettoie ensuite."
+        },
+        {
+          "title": "Interpréter",
+          "body": "On croise les résultats de k6 avec la supervision du système (processeur, base, files) pour trouver le goulot d'étranglement. On teste dans un environnement proche de la production, jamais la production sans accord, et on vérifie que la machine qui lance k6 n'est pas elle-même saturée."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "k6-realisme-q1",
+          "prompt": "Pourquoi un nombre fixe de VU peut-il sous-estimer les temps de réponse ?",
+          "choices": [
+            "Quand le serveur ralentit, chaque VU envoie moins de requêtes : la charge baisse d'elle-même",
+            "Les VU ne mesurent pas le temps",
+            "k6 arrondit les temps",
+            "Ce n'est pas le cas"
+          ],
+          "answerIndex": 0,
+          "explanation": "De vrais utilisateurs continuent d'arriver même quand le site ralentit.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "k6-realisme-q2",
+          "prompt": "Que fait l'exécuteur constant-arrival-rate ?",
+          "choices": [
+            "Il lance un nombre fixe d'itérations par unité de temps, en ajoutant des VU si nécessaire",
+            "Il garde un nombre fixe de VU",
+            "Il exécute une seule itération",
+            "Il ralentit quand le serveur ralentit"
+          ],
+          "answerIndex": 0,
+          "explanation": "maxVUs plafonne le nombre de VU qu'il peut mobiliser.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "k6-realisme-q3",
+          "prompt": "Les temps de réponse sont excellents en test et mauvais en production. Touche la ligne en cause.",
+          "code": "export default function () {\n  http.get(\"https://boutique.exemple/api/produits/42\");\n  sleep(1);\n}",
+          "language": "javascript",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Toujours le même produit : le cache répond à tout. On tire des identifiants variés depuis un SharedArray.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "k6-realisme-q4",
+          "prompt": "Complète : charger une liste d'identifiants partagée entre tous les VU.",
+          "code": "import { ___ } from \"k6/data\";\n\nconst ids = new SharedArray(\"produits\", () =>\n  JSON.parse(open(\"./produits.json\")));\n\nexport default function () {\n  const id = ids[Math.floor(Math.random() * ids.___)];\n  http.get(`https://boutique.exemple/api/produits/${id}`);\n}",
+          "language": "javascript",
+          "answers": [
+            "SharedArray",
+            "length"
+          ],
+          "distractors": [
+            "Array",
+            "size",
+            "count"
+          ],
+          "explanation": "Le tableau est chargé une fois et partagé en lecture seule.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "k6-realisme-q5",
+          "prompt": "Le débit plafonne à 800 requêtes par seconde, quel que soit le nombre de VU, et le serveur est peu chargé. Que vérifier d'abord ?",
+          "choices": [
+            "Que la machine qui lance k6 (processeur, réseau) n'est pas elle-même saturée",
+            "La couleur du rapport",
+            "La version de JavaScript",
+            "Le nombre de checks"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un générateur de charge saturé fausse tout le test.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "k6-realisme-q6",
+          "prompt": "Qu'est-ce qui rend un test de charge réaliste ?",
+          "choices": [
+            "Des données variées",
+            "Un modèle d'arrivée proche du trafic réel",
+            "Un environnement proche de la production",
+            "Une seule URL répétée sans pause"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Une URL répétée mesure surtout le cache.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "k6-defi",
+    "title": "Défi entretien : préparer le Black Friday",
+    "summary": "Savoir si le site tiendra.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "k6-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un site marchand attend 5 fois son trafic habituel pour le Black Friday. Comment s'y préparer ?",
+        "choices": [
+          "Un test de charge au trafic attendu, puis un test de stress au-delà pour trouver le point de rupture, en environnement de préproduction",
+          "Attendre le jour J et observer",
+          "Doubler les serveurs sans tester",
+          "Un test unitaire de plus"
+        ],
+        "answerIndex": 0,
+        "explanation": "On connaît alors la marge et le premier composant qui cède.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "k6-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le parcours réel : voir la vitrine, chercher, consulter un produit, puis pour 5 % des visiteurs commander. Comment le modéliser ?",
+        "choices": [
+          "Des scénarios distincts avec des taux d'arrivée proportionnels, et des données variées",
+          "Une seule requête sur la page d'accueil",
+          "Uniquement des commandes",
+          "Un VU par page"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque parcours a son poids dans le trafic.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "k6-defi-q3",
+        "prompt": "Cas pratique 3/3 — Au-delà de 2 000 requêtes par seconde, le p95 explose. La supervision montre la base à 100 % de processeur. Que conclure ?",
+        "choices": [
+          "La base est le goulot d'étranglement : optimiser ses requêtes, ajouter du cache ou des répliques de lecture",
+          "Ajouter des serveurs web",
+          "Le test est faux",
+          "Réduire le nombre de VU"
+        ],
+        "answerIndex": 0,
+        "explanation": "Ajouter des serveurs web ajouterait encore de la charge sur la base.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "k6-defi-q4",
+        "prompt": "Comment empêcher qu'une livraison dégrade les performances sans qu'on s'en aperçoive ?",
+        "choices": [
+          "Un test de charge court en CI, avec des seuils qui font échouer le pipeline",
+          "Un rapport mensuel",
+          "Demander aux clients",
+          "Comparer à l'œil les graphiques"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les seuils transforment la performance en critère objectif.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "k6-defi-q5",
+        "prompt": "Le pipeline reste vert alors que 20 % des requêtes échouent. Touche la ligne qu'il faudrait renforcer.",
+        "code": "export const options = {\n  vus: 100, duration: \"5m\",\n  thresholds: { http_req_duration: [\"p(95)<500\"] },\n};",
+        "language": "javascript",
+        "bugLines": [
+          3
+        ],
+        "explanation": "Aucun seuil sur les erreurs : il faut ajouter http_req_failed: [\"rate<0.01\"]. Des erreurs rapides peuvent même améliorer le p95.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "k6-defi-q6",
+        "prompt": "Quelles précautions avant de lancer un test de charge ?",
+        "choices": [
+          "Obtenir l'accord des équipes concernées",
+          "Choisir un environnement proche de la production",
+          "Prévoir la supervision du système testé",
+          "Le lancer sur la production sans prévenir"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un test de charge non annoncé ressemble à une attaque.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

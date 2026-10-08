@@ -1,0 +1,436 @@
+{
+  "id": "gl-ch-essentiel",
+  "title": "GitLab : l'essentiel",
+  "summary": "Merge requests, groupes et intégration continue.",
+  "lessons": [
+    {
+      "id": "gl-mr",
+      "title": "Les merge requests",
+      "summary": "Proposer et fusionner dans GitLab.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "La merge request",
+          "body": "La merge request (MR) est l'équivalent GitLab de la pull request : une branche à fusionner, avec diff, discussions, approbations et pipeline. Un titre commençant par « Draft: » la marque comme brouillon, impossible à fusionner."
+        },
+        {
+          "title": "Créer depuis le terminal",
+          "body": "Les options de push créent une MR au moment du push, sans passer par l'interface. L'outil glab offre aussi des commandes complètes.",
+          "code": "git push -u origin fix/total-panier \\\n  -o merge_request.create \\\n  -o merge_request.target=main \\\n  -o merge_request.draft"
+        },
+        {
+          "title": "Les actions rapides",
+          "body": "Dans une description ou un commentaire, des actions rapides commençant par / agissent sur la MR ou l'issue : /assign @zoe, /label ~bug, /milestone %v2.1, /approve. On automatise ainsi le tri sans quitter le clavier.",
+          "code": "/assign @zoe\n/label ~bug ~paiement\n/milestone %v2.1",
+          "language": "text"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gl-mr-q1",
+          "prompt": "Quel est l'équivalent GitLab d'une pull request GitHub ?",
+          "choices": [
+            "La merge request",
+            "L'issue",
+            "Le snippet",
+            "Le runner"
+          ],
+          "answerIndex": 0,
+          "explanation": "Même rôle, nom différent.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gl-mr-q2",
+          "prompt": "Comment marquer une MR comme brouillon ?",
+          "choices": [
+            "Préfixer son titre par « Draft: »",
+            "Ajouter le label ~draft",
+            "Ne pas pousser la branche",
+            "La fermer"
+          ],
+          "answerIndex": 0,
+          "explanation": "La commande /draft bascule aussi l'état.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "gl-mr-q3",
+          "prompt": "Complète : créer une MR vers main au moment du push.",
+          "code": "git push -u origin fix/total-panier \\\n  -o merge_request.___ \\\n  -o merge_request.___=main",
+          "answers": [
+            "create",
+            "target"
+          ],
+          "distractors": [
+            "open",
+            "branch",
+            "base"
+          ],
+          "explanation": "Les options de push (-o) sont lues par le serveur GitLab.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gl-mr-q4",
+          "prompt": "Que fait /label ~bug dans un commentaire ?",
+          "choices": [
+            "Ajoute le label bug à la MR ou à l'issue",
+            "Crée un nouveau label",
+            "Supprime tous les labels",
+            "Rien, c'est du texte"
+          ],
+          "answerIndex": 0,
+          "explanation": "~ désigne un label, @ un utilisateur, % un jalon.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gl-mr-q5",
+          "prompt": "Cette MR est fusionnable alors que le travail n'est pas terminé. Touche la ligne en cause.",
+          "code": "Titre : WIP - refonte du panier\nBranche : refonte-panier → main\nPipeline : réussi",
+          "language": "text",
+          "bugLines": [
+            1
+          ],
+          "explanation": "« WIP - » n'est pas reconnu. Le titre doit commencer par « Draft: » (ou utiliser /draft).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gl-mr-q6",
+          "prompt": "Quelles actions rapides existent dans GitLab ?",
+          "choices": [
+            "/assign",
+            "/label",
+            "/approve",
+            "/deploy-prod"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le déploiement passe par les pipelines et environnements.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "gl-organisation",
+      "title": "Groupes et droits",
+      "summary": "Groupes, rôles, branches protégées.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Groupes et sous-groupes",
+          "body": "GitLab organise les projets dans des groupes et sous-groupes imbriqués (entreprise/paiement/api). Les membres, variables CI, runners et labels définis sur un groupe sont hérités par ses projets : on gère les droits une fois pour toute une équipe."
+        },
+        {
+          "title": "Les rôles",
+          "body": "Chaque membre a un rôle : Guest, Reporter (lecture, issues), Developer (pousser sur les branches non protégées), Maintainer (gérer le projet, fusionner sur les branches protégées), Owner. On donne le rôle minimal nécessaire."
+        },
+        {
+          "title": "Branches protégées et approbations",
+          "body": "Une branche protégée précise qui peut pousser et qui peut fusionner, et interdit les push forcés. Les règles d'approbation (éditions payantes) exigent un nombre d'approbations, éventuellement par des propriétaires désignés dans un fichier CODEOWNERS. Les méthodes de fusion vont du commit de fusion à l'avance rapide (fast-forward), avec ou sans squash."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gl-organisation-q1",
+          "prompt": "Quel est l'intérêt de définir les membres et variables CI au niveau d'un groupe ?",
+          "choices": [
+            "Tous les projets du groupe en héritent : on gère une fois pour toute l'équipe",
+            "Les projets deviennent publics",
+            "Les pipelines sont plus rapides",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est l'un des atouts de l'organisation en groupes de GitLab.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gl-organisation-q2",
+          "prompt": "Quel rôle minimal permet de pousser sur une branche non protégée ?",
+          "choices": [
+            "Developer",
+            "Reporter",
+            "Guest",
+            "Owner"
+          ],
+          "answerIndex": 0,
+          "explanation": "Reporter permet de lire et de gérer les issues, pas de pousser.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gl-organisation-q3",
+          "prompt": "Que garantit la méthode de fusion « fast-forward » ?",
+          "choices": [
+            "Un historique linéaire, sans commit de fusion : la branche doit être à jour avec la cible",
+            "Une fusion plus rapide sur le serveur",
+            "La suppression de la branche source",
+            "Un commit de fusion systématique"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si la cible a avancé, il faut d'abord rebaser la branche.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "gl-organisation-q4",
+          "prompt": "Un stagiaire a pu réécrire l'historique de main avec un push forcé. Touche la ligne en cause.",
+          "code": "Branche protégée : main\nAutorisés à fusionner : Maintainers\nAutorisés à pousser : Developers + Maintainers\nPush forcé autorisé : oui",
+          "language": "text",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Le push forcé doit être interdit sur main ; et pousser directement devrait être réservé, voire interdit à tous (« No one »).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gl-organisation-q5",
+          "prompt": "Où placer un projet API de l'équipe paiement pour hériter de ses réglages ?",
+          "choices": [
+            "Dans le sous-groupe entreprise/paiement",
+            "Dans un compte personnel",
+            "Dans un groupe sans rapport",
+            "Hors de tout groupe"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le chemin devient entreprise/paiement/api.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "gl-organisation-q6",
+          "prompt": "Que peut-on configurer sur une branche protégée ?",
+          "choices": [
+            "Qui peut pousser",
+            "Qui peut fusionner",
+            "L'autorisation ou non du push forcé",
+            "Le langage de programmation du projet"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le langage n'a rien à voir avec les protections.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "gl-integration",
+      "title": "MR et pipelines",
+      "summary": "Pipelines de MR, issues et environnements.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le pipeline de la MR",
+          "body": "Le fichier .gitlab-ci.yml décrit le pipeline. Les pipelines de merge request s'exécutent pour chaque MR ; les « merged results pipelines » testent le résultat de la fusion avec la cible, et les « merge trains » enchaînent les fusions en testant chacune avec les précédentes. On peut exiger un pipeline réussi pour fusionner.",
+          "code": "tests:\n  stage: test\n  script:\n    - npm ci\n    - npm test\n  rules:\n    - if: $CI_PIPELINE_SOURCE == \"merge_request_event\"\n    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH",
+          "language": "yaml"
+        },
+        {
+          "title": "Relier les issues",
+          "body": "« Closes #128 » dans la description d'une MR ferme l'issue à la fusion dans la branche par défaut. Depuis une issue, le bouton « Create merge request » crée une branche et une MR liées. Les tableaux d'issues organisent le travail en colonnes par label."
+        },
+        {
+          "title": "Environnements et revue",
+          "body": "Un job peut déployer vers un environnement nommé (staging, production), dont GitLab garde l'historique. Les review apps déploient chaque MR dans un environnement temporaire, lien affiché dans la MR, supprimé à la fermeture."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gl-integration-q1",
+          "prompt": "Que teste un « merged results pipeline » ?",
+          "choices": [
+            "Le résultat de la fusion de la branche avec la cible à jour",
+            "La branche seule",
+            "La cible seule",
+            "Uniquement la syntaxe du code"
+          ],
+          "answerIndex": 0,
+          "explanation": "On détecte les problèmes d'intégration avant la fusion.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "gl-integration-q2",
+          "prompt": "Complète : lancer les tests sur les MR et sur la branche par défaut.",
+          "code": "tests:\n  script:\n    - npm test\n  ___:\n    - if: $CI_PIPELINE_SOURCE == \"___\"\n    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH",
+          "language": "yaml",
+          "answers": [
+            "rules",
+            "merge_request_event"
+          ],
+          "distractors": [
+            "only",
+            "push",
+            "pull_request"
+          ],
+          "explanation": "rules remplace les anciens only/except.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gl-integration-q3",
+          "prompt": "Qu'est-ce qu'une review app ?",
+          "choices": [
+            "Un environnement temporaire déployé pour chaque MR, accessible depuis la MR",
+            "Une application de relecture de code",
+            "Un tableau d'issues",
+            "Une application mobile GitLab"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les relecteurs testent le changement sans rien installer.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gl-integration-q4",
+          "prompt": "Les tests ne se lancent jamais sur les merge requests. Touche la ligne en cause.",
+          "code": "tests:\n  script:\n    - npm test\n  rules:\n    - if: $CI_COMMIT_BRANCH == \"main\"",
+          "language": "yaml",
+          "bugLines": [
+            5
+          ],
+          "explanation": "La seule règle vise main. Il faut ajouter if: $CI_PIPELINE_SOURCE == \"merge_request_event\".",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gl-integration-q5",
+          "prompt": "Que fait un merge train ?",
+          "choices": [
+            "Il met les MR en file et teste chacune combinée aux précédentes avant de fusionner",
+            "Il fusionne toutes les MR d'un coup sans test",
+            "Il supprime les MR anciennes",
+            "Il déploie en production"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'équivalent de la file de fusion de GitHub.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "gl-integration-q6",
+          "prompt": "Que propose GitLab autour des merge requests ?",
+          "choices": [
+            "Des pipelines de MR",
+            "Des review apps",
+            "La fermeture automatique d'issues à la fusion",
+            "La rédaction automatique du code par le serveur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le code reste écrit par l'équipe.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "gl-defi",
+    "title": "Défi entretien : la migration vers GitLab",
+    "summary": "Organiser, protéger, automatiser.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "gl-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une entreprise migre 120 dépôts de 8 équipes vers GitLab. Comment organiser les droits ?",
+        "choices": [
+          "Un groupe par entreprise, un sous-groupe par équipe, les membres et variables définis au niveau des groupes",
+          "Tous les projets dans le compte de l'administrateur",
+          "Ajouter chaque personne à chaque projet à la main",
+          "Un seul projet géant"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'héritage évite de gérer 120 listes de membres.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gl-defi-q2",
+        "prompt": "Cas pratique 2/3 — Comment empêcher qu'on pousse directement sur main ?",
+        "choices": [
+          "Protéger main : pousser autorisé à personne, fusion réservée aux Maintainers, push forcé interdit",
+          "Une consigne dans le README",
+          "Supprimer main",
+          "Donner le rôle Guest à tout le monde"
+        ],
+        "answerIndex": 0,
+        "explanation": "Toute modification passe alors par une MR.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gl-defi-q3",
+        "prompt": "Cas pratique 3/3 — Les MR sont fusionnées avec des pipelines en échec. Quel réglage ?",
+        "choices": [
+          "Exiger qu'un pipeline réussisse pour fusionner",
+          "Supprimer les pipelines",
+          "Fusionner seulement le lundi",
+          "Exiger cinq approbations"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le bouton de fusion reste bloqué tant que le pipeline n'est pas vert.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "gl-defi-q4",
+        "prompt": "Quelle est la différence entre GitLab.com et GitLab auto-hébergé ?",
+        "choices": [
+          "GitLab.com est le service hébergé par GitLab ; l'auto-hébergé tourne sur l'infrastructure de l'entreprise",
+          "Seul GitLab.com gère les merge requests",
+          "L'auto-hébergé n'a pas de CI",
+          "Aucune"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'auto-hébergement répond souvent à des exigences de souveraineté.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "gl-defi-q5",
+        "prompt": "L'issue #42 reste ouverte après la fusion de la MR dans main. Touche la ligne en cause.",
+        "code": "Titre : Corrige le calcul de TVA\nDescription : Ce correctif concerne l'issue 42.\nCible : main",
+        "language": "text",
+        "bugLines": [
+          2
+        ],
+        "explanation": "Il faut un mot-clé de fermeture et une référence : « Closes #42 ».",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "gl-defi-q6",
+        "prompt": "Quels éléments un groupe GitLab peut-il partager avec ses projets ?",
+        "choices": [
+          "Les membres et leurs rôles",
+          "Les variables CI/CD",
+          "Les runners",
+          "L'historique Git de chaque projet"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "L'historique reste propre à chaque dépôt.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

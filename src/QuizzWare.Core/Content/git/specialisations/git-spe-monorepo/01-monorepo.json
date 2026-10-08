@@ -1,0 +1,433 @@
+{
+  "id": "mono-ch-essentiel",
+  "title": "Monorepos : l'essentiel",
+  "summary": "Un dépôt pour tous les projets : outils et compromis.",
+  "lessons": [
+    {
+      "id": "mono-pourquoi",
+      "title": "Monorepo ou polyrepo",
+      "summary": "Ce que l'on gagne, ce que l'on paie.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un seul dépôt",
+          "body": "Un monorepo regroupe plusieurs projets (applications, bibliothèques, services) dans un même dépôt. Ce n'est pas un monolithe : les projets restent séparés et se déploient indépendamment. Google, Meta ou Microsoft en utilisent de gigantesques ; beaucoup d'équipes l'adoptent pour un frontend, une API et leurs bibliothèques partagées.",
+          "code": "apps/\n  web/\n  mobile/\n  api/\nlibs/\n  ui/\n  auth/\n  types/\npackage.json",
+          "language": "text"
+        },
+        {
+          "title": "Les avantages",
+          "body": "Un changement qui touche une bibliothèque et ses utilisateurs se fait en un seul commit, relu et testé ensemble. Pas de publication de versions internes à synchroniser, un outillage commun, et la visibilité de tout le code pour chacun."
+        },
+        {
+          "title": "Les coûts",
+          "body": "Il faut des outils capables de ne construire et tester que ce qui a changé, sinon la CI devient interminable. Le dépôt grossit, les droits se gèrent par dossier, et une erreur dans une bibliothèque commune peut toucher tous les projets."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mono-pourquoi-q1",
+          "prompt": "Qu'est-ce qu'un monorepo ?",
+          "choices": [
+            "Un dépôt qui contient plusieurs projets distincts",
+            "Une application monolithique",
+            "Un dépôt avec une seule branche",
+            "Un dépôt d'un seul développeur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les projets peuvent rester totalement indépendants à l'exécution.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mono-pourquoi-q2",
+          "prompt": "Quel est l'avantage principal d'un monorepo pour modifier une bibliothèque partagée ?",
+          "choices": [
+            "Modifier la bibliothèque et tous ses utilisateurs dans un même commit, testé ensemble",
+            "Ne plus avoir besoin de tests",
+            "Des clones plus petits",
+            "L'absence de relecture"
+          ],
+          "answerIndex": 0,
+          "explanation": "On parle de changement atomique.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "mono-pourquoi-q3",
+          "prompt": "Quel risque guette la CI d'un monorepo mal outillé ?",
+          "choices": [
+            "Tout reconstruire et tout tester à chaque changement, ce qui devient très long",
+            "Ne rien tester",
+            "Perdre l'historique",
+            "Des conflits impossibles à résoudre"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ne construit que ce qui est touché par le changement.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "mono-pourquoi-q4",
+          "prompt": "Touche la ligne qui décrit mal un monorepo.",
+          "code": "Un dépôt unique pour plusieurs projets.\nDes changements atomiques entre projets.\nTous les projets doivent être déployés ensemble.\nUn outillage partagé.",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Les projets d'un monorepo se déploient indépendamment : le dépôt est commun, pas le déploiement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mono-pourquoi-q5",
+          "prompt": "Une équipe publie ses bibliothèques internes en versions sur un registre privé, et chaque mise à jour demande 6 PR dans 6 dépôts. Quelle organisation simplifierait ce travail ?",
+          "choices": [
+            "Un monorepo regroupant les bibliothèques et leurs utilisateurs",
+            "Plus de dépôts",
+            "Copier les bibliothèques dans chaque dépôt",
+            "Arrêter de mettre à jour"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une seule PR met tout à jour.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "mono-pourquoi-q6",
+          "prompt": "Quels sont les coûts d'un monorepo ?",
+          "choices": [
+            "Un outillage de construction sélective nécessaire",
+            "Un dépôt volumineux",
+            "Une gestion des droits par dossier",
+            "L'impossibilité de partager du code"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le partage de code est justement facilité.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "mono-outils",
+      "title": "Les outils",
+      "summary": "Graphe de dépendances, projets affectés et cache.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Le graphe des projets",
+          "body": "Les outils de monorepo (Nx, Turborepo, Bazel, les espaces de travail de pnpm) connaissent les dépendances entre projets. Si libs/ui change, ils savent que apps/web et apps/mobile en dépendent, mais pas apps/api."
+        },
+        {
+          "title": "Les projets affectés",
+          "body": "À partir des fichiers modifiés depuis main, l'outil calcule les projets affectés et ne lance que leurs tâches.",
+          "code": "npx nx affected -t lint test build --base=origin/main\nnpx turbo run test --filter=...[origin/main]"
+        },
+        {
+          "title": "Le cache",
+          "body": "Chaque tâche est identifiée par une empreinte de ses entrées (sources, dépendances, configuration). Si l'empreinte a déjà été calculée, le résultat est restauré depuis le cache au lieu d'être recalculé. Un cache distant partage ces résultats entre les développeurs et la CI."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mono-outils-q1",
+          "prompt": "libs/ui est utilisée par apps/web et apps/mobile. Un commit modifie libs/ui. Quels projets tester ?",
+          "choices": [
+            "libs/ui, apps/web et apps/mobile",
+            "Tous les projets du dépôt",
+            "libs/ui seulement",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ce sont les projets affectés, d'après le graphe de dépendances.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mono-outils-q2",
+          "prompt": "Comment un outil de monorepo sait-il qu'une tâche peut être restaurée depuis le cache ?",
+          "choices": [
+            "Une empreinte de ses entrées (sources, dépendances, configuration) a déjà été calculée",
+            "La tâche a été lancée hier",
+            "Le développeur le précise",
+            "Il ne le sait pas"
+          ],
+          "answerIndex": 0,
+          "explanation": "Mêmes entrées, même résultat.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "mono-outils-q3",
+          "prompt": "Complète : ne tester que les projets affectés depuis main avec Nx.",
+          "code": "npx nx ___ -t test --___=origin/main",
+          "answers": [
+            "affected",
+            "base"
+          ],
+          "distractors": [
+            "changed",
+            "since",
+            "all"
+          ],
+          "explanation": "--base désigne le point de comparaison.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mono-outils-q4",
+          "prompt": "Qu'apporte un cache distant ?",
+          "choices": [
+            "Les résultats de tâches calculés par un développeur ou par la CI profitent à tous",
+            "Une sauvegarde du dépôt",
+            "Des clones plus rapides",
+            "Le chiffrement du code"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une construction déjà faite en CI n'est pas refaite en local.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "mono-outils-q5",
+          "prompt": "Le cache restaure un ancien résultat alors que la configuration de compilation a changé. Touche la ligne en cause.",
+          "code": "\"build\": {\n  \"inputs\": [\"src/**\"],\n  \"outputs\": [\"dist/**\"]\n}",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "La configuration (tsconfig.json, variables…) ne fait pas partie des entrées : l'empreinte ne change pas. Toutes les entrées doivent être déclarées.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "mono-outils-q6",
+          "prompt": "Quels outils servent à gérer un monorepo ?",
+          "choices": [
+            "Nx",
+            "Turborepo",
+            "Bazel",
+            "Git LFS"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Git LFS sert aux gros fichiers, pas à orchestrer les projets.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "mono-echelle",
+      "title": "Passer à l'échelle",
+      "summary": "Clones partiels, sparse checkout et gouvernance.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Cloner moins",
+          "body": "Un clone partiel sans blobs ne télécharge le contenu des fichiers qu'à la demande : le clone initial est bien plus rapide. Le sparse checkout ne place dans le répertoire de travail que les dossiers utiles.",
+          "code": "git clone --filter=blob:none https://exemple.fr/monorepo.git\ncd monorepo\ngit sparse-checkout set apps/web libs/ui"
+        },
+        {
+          "title": "La gouvernance",
+          "body": "Un CODEOWNERS par dossier désigne les relecteurs de chaque projet. Des règles de dépendance (une application ne dépend pas d'une autre application, une bibliothèque de domaine ne dépend pas de l'interface) évitent l'enchevêtrement, et certains outils les vérifient automatiquement."
+        },
+        {
+          "title": "Les versions",
+          "body": "Deux politiques : une version unique pour tout le dépôt (une seule version de chaque dépendance externe, « one version rule »), simple et cohérente ; ou des versions indépendantes par paquet publié, gérées par des outils comme Changesets. La première évite les conflits de versions entre projets."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "mono-echelle-q1",
+          "prompt": "Que fait git clone --filter=blob:none ?",
+          "choices": [
+            "Un clone partiel qui ne télécharge le contenu des fichiers qu'à la demande",
+            "Un clone sans historique",
+            "Un clone sans branches",
+            "Un clone vide"
+          ],
+          "answerIndex": 0,
+          "explanation": "L'historique des commits est présent, le contenu arrive quand on en a besoin.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "mono-echelle-q2",
+          "prompt": "Complète : ne garder dans le répertoire de travail que l'application web et sa bibliothèque.",
+          "code": "git ___ set apps/web libs/ui",
+          "answers": [
+            "sparse-checkout"
+          ],
+          "distractors": [
+            "partial-clone",
+            "worktree",
+            "submodule"
+          ],
+          "explanation": "Les autres dossiers ne sont pas extraits sur le disque.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mono-echelle-q3",
+          "prompt": "Pourquoi interdire qu'une application dépende d'une autre application ?",
+          "choices": [
+            "Pour éviter un enchevêtrement : le code partagé doit passer par une bibliothèque",
+            "Parce que Git l'interdit",
+            "Pour accélérer les clones",
+            "Ce n'est pas utile"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans règle, le graphe de dépendances devient vite un plat de spaghettis.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "mono-echelle-q4",
+          "prompt": "Qu'est-ce que la « one version rule » ?",
+          "choices": [
+            "Une seule version de chaque dépendance externe dans tout le dépôt",
+            "Un seul commit par jour",
+            "Une seule branche",
+            "Un seul langage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Cela évite que deux projets soient incompatibles à cause d'une dépendance.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "mono-echelle-q5",
+          "prompt": "La CI teste tout le dépôt à chaque PR, même pour une coquille dans un README. Touche la ligne en cause.",
+          "code": "tests:\n  script:\n    - pnpm install\n    - pnpm -r test",
+          "language": "yaml",
+          "bugLines": [
+            4
+          ],
+          "explanation": "pnpm -r lance les tests de tous les paquets. On filtre sur les paquets modifiés et leurs dépendants, par exemple pnpm --filter \"...[origin/main]\" test.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "mono-echelle-q6",
+          "prompt": "Quelles techniques accélèrent le travail dans un très gros dépôt ?",
+          "choices": [
+            "Le clone partiel",
+            "Le sparse checkout",
+            "Les tâches limitées aux projets affectés",
+            "Un clone complet de tout l'historique à chaque job de CI"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "En CI, on se contente souvent d'un clone peu profond ou partiel.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "mono-defi",
+    "title": "Défi entretien : regrouper les dépôts",
+    "summary": "Migrer sans ralentir l'équipe.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "mono-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une équipe a un dépôt pour le frontend, un pour l'API et un pour les types partagés, publiés en version sur un registre. Chaque changement d'API demande trois PR synchronisées. Que proposer ?",
+        "choices": [
+          "Un monorepo avec les trois projets, les types en bibliothèque locale",
+          "Un quatrième dépôt de coordination",
+          "Copier les types à la main",
+          "Supprimer les types partagés"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un seul commit modifie l'API, les types et le frontend.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mono-defi-q2",
+        "prompt": "Cas pratique 2/3 — Après la fusion, la CI passe de 8 à 35 minutes. Que faire ?",
+        "choices": [
+          "Ne lancer que les tâches des projets affectés, avec un cache distant",
+          "Supprimer des tests",
+          "Revenir à trois dépôts immédiatement",
+          "Lancer la CI une fois par jour"
+        ],
+        "answerIndex": 0,
+        "explanation": "La plupart des PR ne touchent qu'un projet.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "mono-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment garder l'historique Git des trois dépôts d'origine ?",
+        "choices": [
+          "Importer chaque dépôt dans son sous-dossier en conservant ses commits (fusion avec --allow-unrelated-histories après déplacement des fichiers)",
+          "Copier les fichiers et repartir de zéro",
+          "Garder les anciens dépôts comme seule archive, obligatoirement",
+          "C'est impossible"
+        ],
+        "answerIndex": 0,
+        "explanation": "Des outils comme git filter-repo aident à déplacer l'historique dans un sous-dossier.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "mono-defi-q4",
+        "prompt": "L'équipe mobile ne veut pas extraire tout le dépôt sur ses machines. Que lui proposer ?",
+        "choices": [
+          "Le sparse checkout, limité à apps/mobile et ses bibliothèques",
+          "Un dépôt séparé",
+          "Supprimer les autres dossiers et commiter",
+          "Rien"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le dépôt reste unique ; seule la copie locale est réduite.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "mono-defi-q5",
+        "prompt": "Le build de l'application web ne voit pas la nouvelle version de libs/ui. Touche la ligne en cause.",
+        "code": "{\n  \"name\": \"@acme/web\",\n  \"dependencies\": {\n    \"@acme/ui\": \"1.4.0\"\n  }\n}",
+        "language": "text",
+        "bugLines": [
+          4
+        ],
+        "explanation": "La dépendance pointe vers la version publiée sur le registre, pas vers la bibliothèque locale. Dans un espace de travail pnpm, on écrit \"workspace:*\".",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "mono-defi-q6",
+        "prompt": "Quelles mesures facilitent la vie dans un monorepo partagé par plusieurs équipes ?",
+        "choices": [
+          "Un CODEOWNERS par dossier",
+          "Des règles de dépendances vérifiées automatiquement",
+          "Une CI limitée aux projets affectés",
+          "Des droits d'écriture identiques pour tous sur tous les fichiers sans relecture"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Chaque équipe relit les changements de son périmètre.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

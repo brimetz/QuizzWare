@@ -1,0 +1,437 @@
+{
+  "id": "pact-ch-essentiel",
+  "title": "Tests de contrat : l'essentiel",
+  "summary": "Vérifier les échanges entre services.",
+  "lessons": [
+    {
+      "id": "pact-principes",
+      "title": "Pourquoi des contrats",
+      "summary": "Ni tests unitaires, ni tests de bout en bout.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le problème",
+          "body": "Un frontend appelle une API de commandes, qui appelle un service de paiement. Les tests unitaires de chaque côté utilisent des simulations : ils passent même si l'API a renommé un champ. Les tests de bout en bout détectent le problème, mais sont lents, fragiles, et exigent que tous les services soient déployés ensemble."
+        },
+        {
+          "title": "Le contrat",
+          "body": "Un test de contrat vérifie que deux services s'entendent sur leurs échanges : pour telle requête, telle forme de réponse. Chaque côté est testé séparément contre le même contrat, sans déployer l'autre. Une incompatibilité est détectée en quelques secondes, dans la CI du service qui la provoque."
+        },
+        {
+          "title": "Piloté par le consommateur",
+          "body": "Dans l'approche pilotée par le consommateur (Pact), c'est le client de l'API qui écrit ses attentes. Le contrat ne contient que ce qu'il utilise réellement : le fournisseur sait exactement quels champs il peut modifier sans casser personne."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pact-principes-q1",
+          "prompt": "Pourquoi les tests unitaires ne détectent-ils pas le renommage d'un champ d'API ?",
+          "choices": [
+            "Chaque côté teste contre ses propres simulations, qui ne suivent pas les changements de l'autre",
+            "Les tests unitaires ne testent jamais les API",
+            "Les champs ne sont jamais renommés",
+            "Ils le détectent toujours"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les simulations restent figées dans les hypothèses de leur auteur.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pact-principes-q2",
+          "prompt": "Que contient un contrat piloté par le consommateur ?",
+          "choices": [
+            "Uniquement les requêtes et les champs de réponse que le consommateur utilise",
+            "Toute la documentation de l'API",
+            "Le code du fournisseur",
+            "Les tests de performance"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le fournisseur reste libre de changer le reste.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pact-principes-q3",
+          "prompt": "Quel avantage ont les tests de contrat sur les tests de bout en bout ?",
+          "choices": [
+            "Ils testent chaque service séparément, vite, sans déployer tout le système",
+            "Ils testent l'interface graphique",
+            "Ils remplacent les tests unitaires",
+            "Ils mesurent les performances"
+          ],
+          "answerIndex": 0,
+          "explanation": "Ils ne remplacent pas pour autant quelques tests de bout en bout.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "pact-principes-q4",
+          "prompt": "Touche l'affirmation fausse sur les tests de contrat.",
+          "code": "Ils vérifient la forme des échanges entre deux services.\nChaque côté est testé séparément.\nIls vérifient la logique métier complète du fournisseur.\nIls détectent les incompatibilités avant le déploiement.",
+          "language": "text",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La logique métier se teste par les tests du fournisseur lui-même. Le contrat porte sur l'interface.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pact-principes-q5",
+          "prompt": "Dans Pact, qui écrit les attentes du contrat ?",
+          "choices": [
+            "Le consommateur de l'API",
+            "Le fournisseur de l'API",
+            "Une équipe d'architectes",
+            "Un outil, à partir du trafic de production"
+          ],
+          "answerIndex": 0,
+          "explanation": "D'où le nom « contrat piloté par le consommateur ».",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "pact-principes-q6",
+          "prompt": "Quels défauts des tests de bout en bout les tests de contrat évitent-ils ?",
+          "choices": [
+            "La lenteur",
+            "La nécessité de déployer tous les services ensemble",
+            "Les échecs difficiles à attribuer à un service",
+            "La vérification de l'interface graphique"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'interface graphique ne fait pas partie du contrat.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "pact-pact",
+      "title": "Pact en pratique",
+      "summary": "Côté consommateur, côté fournisseur.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Côté consommateur",
+          "body": "Le test du consommateur déclare une interaction, puis exécute son vrai code client contre un serveur simulé par Pact. Si le client fait bien la requête prévue, Pact écrit le contrat dans un fichier JSON.",
+          "code": "await fournisseur\n  .given(\"le produit 42 existe\")\n  .uponReceiving(\"une demande du produit 42\")\n  .withRequest({ method: \"GET\", path: \"/produits/42\" })\n  .willRespondWith({\n    status: 200,\n    body: { id: like(42), nom: like(\"Vélo\"), prix: like(499.9) },\n  })\n  .executeTest(async (mock) => {\n    const p = await new ClientCatalogue(mock.url).produit(42);\n    expect(p.nom).toBe(\"Vélo\");\n  });",
+          "language": "javascript"
+        },
+        {
+          "title": "Côté fournisseur",
+          "body": "Le fournisseur rejoue chaque interaction du contrat contre sa vraie application et vérifie les réponses. Les états du fournisseur (« le produit 42 existe ») sont préparés par des fonctions dédiées avant chaque interaction."
+        },
+        {
+          "title": "Les correspondances souples",
+          "body": "like(42) exige « un nombre » plutôt que la valeur exacte 42 ; eachLike décrit un tableau d'éléments de même forme. Sans ces correspondances, le contrat exigerait des valeurs précises et casserait au moindre changement de données de test."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pact-pact-q1",
+          "prompt": "Contre quoi s'exécute le code client dans un test consommateur Pact ?",
+          "choices": [
+            "Un serveur simulé par Pact, qui répond selon l'interaction déclarée",
+            "Le vrai fournisseur en production",
+            "Une base de données",
+            "Rien, le code n'est pas exécuté"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le contrat est écrit seulement si le client se comporte comme déclaré.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pact-pact-q2",
+          "prompt": "À quoi sert given(\"le produit 42 existe\") ?",
+          "choices": [
+            "À nommer un état que le fournisseur devra préparer avant de rejouer l'interaction",
+            "À créer le produit côté consommateur",
+            "À commenter le test",
+            "À ignorer l'interaction"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le fournisseur associe une fonction de préparation à chaque état.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "pact-pact-q3",
+          "prompt": "Complète : la réponse contient un tableau de produits de même forme, avec un id numérique.",
+          "code": ".willRespondWith({\n  status: 200,\n  body: ___({ id: ___(42), nom: like(\"Vélo\") }),\n})",
+          "language": "javascript",
+          "answers": [
+            "eachLike",
+            "like"
+          ],
+          "distractors": [
+            "arrayOf",
+            "equal",
+            "exact"
+          ],
+          "explanation": "On décrit la forme, pas les valeurs exactes.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "pact-pact-q4",
+          "prompt": "Le contrat casse dès que les données de test du fournisseur changent de prix. Touche la ligne en cause.",
+          "code": ".willRespondWith({\n  status: 200,\n  body: { id: like(42), nom: like(\"Vélo\"), prix: 499.9 },\n})",
+          "language": "javascript",
+          "bugLines": [
+            3
+          ],
+          "explanation": "prix exige la valeur exacte 499.9. Il faut like(499.9) pour n'exiger qu'un nombre.",
+          "difficulty": 2
+        },
+        {
+          "type": "order",
+          "id": "pact-pact-q5",
+          "prompt": "Remets dans l'ordre le cycle d'un contrat Pact.",
+          "language": "text",
+          "lines": [
+            "Le consommateur déclare ses interactions dans un test",
+            "Son code client s'exécute contre le serveur simulé",
+            "Pact écrit le fichier de contrat",
+            "Le contrat est publié sur un broker",
+            "Le fournisseur rejoue les interactions contre sa vraie application"
+          ],
+          "explanation": "Les deux côtés sont vérifiés sans jamais être déployés ensemble.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "pact-pact-q6",
+          "prompt": "Que décrit une interaction Pact ?",
+          "choices": [
+            "L'état attendu du fournisseur",
+            "La requête envoyée",
+            "La forme de la réponse attendue",
+            "Le temps de réponse maximal"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les performances relèvent d'autres tests.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "pact-deploiement",
+      "title": "Contrats et livraison",
+      "summary": "Broker, can-i-deploy et alternatives.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Le broker",
+          "body": "Le Pact Broker (ou PactFlow) centralise les contrats et les résultats de vérification, par version de chaque service. Quand un consommateur publie un contrat modifié, un webhook peut déclencher la vérification côté fournisseur."
+        },
+        {
+          "title": "can-i-deploy",
+          "body": "Avant de déployer une version, on demande au broker si elle est compatible avec les versions déjà déployées dans l'environnement cible. Si un contrat n'est pas vérifié, le déploiement est bloqué.",
+          "code": "pact-broker can-i-deploy \\\n  --pacticipant catalogue-api --version $GIT_SHA \\\n  --to-environment production\n\npact-broker record-deployment \\\n  --pacticipant catalogue-api --version $GIT_SHA \\\n  --environment production",
+          "language": "shell"
+        },
+        {
+          "title": "Les alternatives",
+          "body": "Les contrats fondés sur un schéma comparent une spécification OpenAPI à ce que le consommateur utilise ; l'approche bidirectionnelle de PactFlow combine les deux. Sans outil, on peut au minimum vérifier que l'implémentation respecte sa spécification OpenAPI. Pour les événements asynchrones, Pact gère aussi des contrats de messages."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "pact-deploiement-q1",
+          "prompt": "Que vérifie can-i-deploy ?",
+          "choices": [
+            "Que la version à déployer est compatible, par contrats vérifiés, avec les versions déjà déployées dans l'environnement",
+            "Que les tests unitaires passent",
+            "Que le serveur a assez de mémoire",
+            "Que le code est formaté"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le broker connaît les versions déployées grâce à record-deployment.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "pact-deploiement-q2",
+          "prompt": "Le fournisseur veut supprimer un champ. Comment savoir s'il casse un consommateur ?",
+          "choices": [
+            "Lancer la vérification des contrats : si un consommateur utilise ce champ, elle échoue",
+            "Supprimer et attendre les plaintes",
+            "Demander à chaque équipe par e-mail",
+            "C'est impossible à savoir"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les contrats listent exactement les champs utilisés.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "pact-deploiement-q3",
+          "prompt": "Complète : vérifier la compatibilité, puis enregistrer le déploiement.",
+          "code": "pact-broker ___ --pacticipant catalogue-api \\\n  --version $GIT_SHA --to-environment production\npact-broker ___ --pacticipant catalogue-api \\\n  --version $GIT_SHA --environment production",
+          "language": "shell",
+          "answers": [
+            "can-i-deploy",
+            "record-deployment"
+          ],
+          "distractors": [
+            "verify",
+            "publish",
+            "deploy"
+          ],
+          "explanation": "Sans record-deployment, le broker ignore ce qui tourne en production.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "pact-deploiement-q4",
+          "prompt": "Un déploiement a cassé un consommateur malgré les contrats. Touche l'étape oubliée du pipeline du fournisseur.",
+          "code": "npm test\nnpm run pact:verify\npact-broker can-i-deploy --pacticipant catalogue-api --version $SHA --to-environment production\n./deployer.sh production",
+          "language": "shell",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Après le déploiement, il manque record-deployment : le broker ne sait pas quelle version est en production, et les vérifications suivantes portent sur de mauvaises versions.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "pact-deploiement-q5",
+          "prompt": "Comment tester le contrat d'un événement publié dans Kafka ?",
+          "choices": [
+            "Avec un contrat de messages : le consommateur décrit le message attendu, le fournisseur vérifie qu'il le produit",
+            "C'est impossible, les contrats ne concernent que HTTP",
+            "En lisant le sujet Kafka de production",
+            "Avec un test de charge"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le principe reste le même, sans requête HTTP.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "pact-deploiement-q6",
+          "prompt": "Quel rôle joue le Pact Broker ?",
+          "choices": [
+            "Stocker les contrats par version",
+            "Conserver les résultats de vérification",
+            "Répondre à can-i-deploy",
+            "Exécuter les tests unitaires"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les tests unitaires tournent dans la CI de chaque service.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "pact-defi",
+    "title": "Défi entretien : les microservices qui se cassent",
+    "summary": "Remplacer un environnement d'intégration fragile.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "pact-defi-q1",
+        "prompt": "Cas pratique 1/3 — Douze microservices partagent un environnement d'intégration où les tests de bout en bout prennent une heure et échouent souvent sans raison claire. Les incompatibilités d'API sont la cause la plus fréquente. Que proposer ?",
+        "choices": [
+          "Des tests de contrat entre services, en gardant quelques tests de bout en bout sur les parcours critiques",
+          "Plus de tests de bout en bout",
+          "Supprimer l'environnement d'intégration sans rien d'autre",
+          "Un seul gros service"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les incompatibilités sont détectées dans la CI de chaque service.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pact-defi-q2",
+        "prompt": "Cas pratique 2/3 — Par quel échange commencer ?",
+        "choices": [
+          "Celui qui casse le plus souvent, entre deux équipes qui acceptent d'essayer",
+          "Tous les échanges en même temps",
+          "Le moins utilisé",
+          "Celui d'un service tiers externe"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un premier succès visible facilite l'adoption.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "pact-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment empêcher le déploiement d'une version incompatible ?",
+        "choices": [
+          "can-i-deploy dans chaque pipeline, avant le déploiement, et record-deployment après",
+          "Une revue manuelle de chaque API",
+          "Déployer tout le vendredi soir",
+          "Ne plus jamais modifier les API"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le broker connaît les versions et leurs vérifications.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "pact-defi-q4",
+        "prompt": "Un fournisseur est une API externe d'un partenaire qui n'utilisera jamais Pact. Que faire ?",
+        "choices": [
+          "Vérifier ses réponses contre sa spécification OpenAPI, ou tester régulièrement contre son bac à sable",
+          "Lui imposer Pact",
+          "Ne rien tester",
+          "Copier son code"
+        ],
+        "answerIndex": 0,
+        "explanation": "L'approche pilotée par le consommateur suppose la coopération du fournisseur.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "pact-defi-q5",
+        "prompt": "Ce test consommateur passe, mais ne protège rien. Touche la ligne en cause.",
+        "code": ".executeTest(async (mock) => {\n  const res = await fetch(`${mock.url}/produits/42`);\n  expect(res.status).toBe(200);\n});",
+        "language": "javascript",
+        "bugLines": [
+          2
+        ],
+        "explanation": "Le test appelle fetch directement au lieu du vrai code client de l'application : le contrat ne reflète pas ce que le client fait réellement.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "pact-defi-q6",
+        "prompt": "Quelles bonnes pratiques avec les tests de contrat ?",
+        "choices": [
+          "Des correspondances souples plutôt que des valeurs exactes",
+          "N'inclure que ce que le consommateur utilise vraiment",
+          "Exercer le vrai code client dans le test consommateur",
+          "Tester toute la logique métier du fournisseur dans le contrat"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La logique métier reste dans les tests du fournisseur.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

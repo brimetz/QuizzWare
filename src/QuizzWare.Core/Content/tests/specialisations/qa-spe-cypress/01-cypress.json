@@ -1,0 +1,446 @@
+{
+  "id": "cy-ch-essentiel",
+  "title": "Cypress : l'essentiel",
+  "summary": "Tests de bout en bout dans le navigateur.",
+  "lessons": [
+    {
+      "id": "cy-bases",
+      "title": "Commandes et assertions",
+      "summary": "visit, get, contains et should.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Un test Cypress",
+          "body": "Cypress s'exécute dans le navigateur, à côté de l'application testée. On enchaîne des commandes : visiter une page, trouver un élément, agir, puis vérifier avec should.",
+          "code": "describe(\"panier\", () => {\n  it(\"ajoute un produit\", () => {\n    cy.visit(\"/produits/42\");\n    cy.contains(\"button\", \"Ajouter au panier\").click();\n    cy.get(\"[data-cy=compteur-panier]\").should(\"have.text\", \"1\");\n  });\n});",
+          "language": "javascript"
+        },
+        {
+          "title": "Réessayer automatiquement",
+          "body": "Les requêtes comme cy.get et cy.contains, suivies d'assertions should, sont réessayées jusqu'à ce que l'assertion passe ou que le délai (4 secondes par défaut) expire. Inutile, donc, d'ajouter cy.wait(2000) pour attendre l'affichage."
+        },
+        {
+          "title": "Des sélecteurs stables",
+          "body": "La documentation de Cypress recommande des attributs dédiés aux tests, comme data-cy, qui ne changent pas avec le style ou le texte. cy.contains convient quand le texte fait partie de ce que l'on veut vérifier."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cy-bases-q1",
+          "prompt": "Quel sélecteur Cypress recommande-t-il ?",
+          "choices": [
+            "Un attribut dédié comme [data-cy=compteur-panier]",
+            ".btn.btn-primary.mt-3",
+            "div > div:nth-child(2) > span",
+            "#ember1532"
+          ],
+          "answerIndex": 0,
+          "explanation": "Il ne dépend ni du style ni de la structure.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cy-bases-q2",
+          "prompt": "Que fait cy.get(sel).should(\"be.visible\") si l'élément apparaît après une seconde ?",
+          "choices": [
+            "Il réessaie jusqu'à ce que l'élément soit visible, dans la limite du délai",
+            "Il échoue immédiatement",
+            "Il attend toujours 4 secondes",
+            "Il recharge la page"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la capacité de réessai (retry-ability) de Cypress.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "cy-bases-q3",
+          "prompt": "Complète : cliquer sur le bouton puis vérifier le compteur.",
+          "code": "cy.visit(\"/produits/42\");\ncy.___(\"button\", \"Ajouter au panier\").click();\ncy.get(\"[data-cy=compteur-panier]\").___(\"have.text\", \"1\");",
+          "language": "javascript",
+          "answers": [
+            "contains",
+            "should"
+          ],
+          "distractors": [
+            "find",
+            "expect",
+            "assert"
+          ],
+          "explanation": "cy.contains trouve un élément par son texte ; should porte l'assertion.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "cy-bases-q4",
+          "prompt": "Ce test est lent et échoue quand même parfois. Touche la ligne en cause.",
+          "code": "cy.contains(\"button\", \"Enregistrer\").click();\ncy.wait(3000);\ncy.contains(\"Profil enregistré\");",
+          "language": "javascript",
+          "bugLines": [
+            2
+          ],
+          "explanation": "L'attente fixe est inutile (cy.contains réessaie déjà) et ne garantit rien si le serveur est plus lent. On attend une requête précise avec cy.wait(\"@alias\") si besoin.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cy-bases-q5",
+          "prompt": "Où s'exécute le code d'un test Cypress ?",
+          "choices": [
+            "Dans le navigateur, à côté de l'application testée",
+            "Dans un processus Node.js qui pilote le navigateur à distance uniquement",
+            "Sur le serveur de l'application",
+            "Dans une machine virtuelle Java"
+          ],
+          "answerIndex": 0,
+          "explanation": "Cela lui donne un accès direct au DOM et au réseau de la page.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cy-bases-q6",
+          "prompt": "Quelles commandes Cypress trouvent des éléments ?",
+          "choices": [
+            "cy.get",
+            "cy.contains",
+            "cy.find, enchaînée après un élément",
+            "cy.visit"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "cy.visit charge une page.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "cy-asynchrone",
+      "title": "Le modèle de commandes",
+      "summary": "Une file de commandes, pas des promesses.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des commandes mises en file",
+          "body": "Les commandes cy ne s'exécutent pas quand la ligne est lue : elles sont ajoutées à une file, puis exécutées dans l'ordre. Elles ne renvoient pas la valeur de l'élément. Pour utiliser une valeur, on enchaîne .then(), ou on crée un alias avec .as()."
+        },
+        {
+          "title": "Utiliser une valeur",
+          "body": "On lit une valeur dans un .then() pour l'utiliser dans les commandes suivantes, ou on compare directement avec une assertion enchaînée.",
+          "code": "cy.get(\"[data-cy=total]\").invoke(\"text\").then((total) => {\n  cy.get(\"[data-cy=valider]\").click();\n  cy.get(\"[data-cy=recap-total]\").should(\"have.text\", total);\n});",
+          "language": "javascript"
+        },
+        {
+          "title": "Les commandes personnalisées",
+          "body": "Cypress.Commands.add ajoute ses propres commandes, comme cy.connexion(). cy.session met en cache l'état de connexion (cookies, stockage) entre les tests, pour ne se connecter qu'une fois.",
+          "code": "Cypress.Commands.add(\"connexion\", (email, mdp) => {\n  cy.session([email], () => {\n    cy.visit(\"/connexion\");\n    cy.get(\"[data-cy=email]\").type(email);\n    cy.get(\"[data-cy=mdp]\").type(mdp, { log: false });\n    cy.get(\"[data-cy=valider]\").click();\n    cy.url().should(\"include\", \"/accueil\");\n  });\n});",
+          "language": "javascript"
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "cy-asynchrone-q1",
+          "prompt": "Cette assertion échoue toujours. Touche la ligne en cause.",
+          "code": "const titre = cy.get(\"h1\").invoke(\"text\");\nexpect(titre).to.equal(\"Mon panier\");",
+          "language": "javascript",
+          "bugLines": [
+            1
+          ],
+          "explanation": "cy.get ne renvoie pas le texte mais un objet de chaîne de commandes, exécuté plus tard. On écrit cy.get(\"h1\").should(\"have.text\", \"Mon panier\").",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cy-asynchrone-q2",
+          "prompt": "Quand une commande cy.get s'exécute-t-elle ?",
+          "choices": [
+            "Plus tard, quand Cypress dépile sa file de commandes, dans l'ordre",
+            "Immédiatement à la lecture de la ligne",
+            "En parallèle des autres commandes",
+            "À la fin du fichier de test"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est pourquoi on ne peut pas stocker son résultat dans une variable.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cy-asynchrone-q3",
+          "prompt": "Complète : lire le total, puis vérifier qu'il est repris dans le récapitulatif.",
+          "code": "cy.get(\"[data-cy=total]\").invoke(\"text\").___((total) => {\n  cy.get(\"[data-cy=recap-total]\").should(\"have.___\", total);\n});",
+          "language": "javascript",
+          "answers": [
+            "then",
+            "text"
+          ],
+          "distractors": [
+            "await",
+            "value",
+            "map"
+          ],
+          "explanation": "await ne fonctionne pas avec les commandes Cypress.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cy-asynchrone-q4",
+          "prompt": "À quoi sert cy.session ?",
+          "choices": [
+            "À mettre en cache l'état de connexion pour ne pas se reconnecter dans chaque test",
+            "À ouvrir un nouvel onglet",
+            "À créer une session de base de données",
+            "À enregistrer une vidéo"
+          ],
+          "answerIndex": 0,
+          "explanation": "La session est restaurée à chaque test, sans repasser par le formulaire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cy-asynchrone-q5",
+          "prompt": "Pourquoi passer { log: false } à .type() pour le mot de passe ?",
+          "choices": [
+            "Pour ne pas afficher le mot de passe dans le journal des commandes et les captures",
+            "Pour taper plus vite",
+            "Pour éviter l'autocomplétion",
+            "C'est obligatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le journal de Cypress est visible dans les vidéos et rapports de CI.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cy-asynchrone-q6",
+          "prompt": "Comment utiliser une valeur lue dans la page ?",
+          "choices": [
+            "Dans un .then()",
+            "Avec un alias créé par .as() puis cy.get(\"@alias\")",
+            "Directement dans une assertion enchaînée",
+            "En stockant le retour de cy.get dans une constante"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le retour de cy.get n'est pas la valeur de l'élément.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "cy-reseau",
+      "title": "Réseau et limites",
+      "summary": "intercept, fixtures et choix de l'outil.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "cy.intercept",
+          "body": "cy.intercept observe ou simule les requêtes de l'application. Avec un alias, cy.wait(\"@alias\") attend précisément cette requête, puis on peut vérifier son contenu. Une fixture fournit une réponse simulée depuis un fichier JSON.",
+          "code": "cy.intercept(\"GET\", \"/api/produits*\", { fixture: \"produits.json\" }).as(\"produits\");\ncy.visit(\"/catalogue\");\ncy.wait(\"@produits\");\ncy.get(\"[data-cy=produit]\").should(\"have.length\", 3);",
+          "language": "javascript"
+        },
+        {
+          "title": "Vérifier une requête envoyée",
+          "body": "On peut aussi laisser passer la requête et vérifier ce que l'application a envoyé : corps, en-têtes, paramètres.",
+          "code": "cy.intercept(\"POST\", \"/api/commandes\").as(\"commande\");\ncy.get(\"[data-cy=valider]\").click();\ncy.wait(\"@commande\").its(\"request.body.quantite\").should(\"eq\", 2);",
+          "language": "javascript"
+        },
+        {
+          "title": "Les limites",
+          "body": "Cypress teste un seul onglet à la fois. Naviguer vers un autre domaine dans un test demande cy.origin. Chrome, Edge, Electron et Firefox sont pris en charge, WebKit seulement de façon expérimentale. Cypress propose aussi des tests de composants, qui montent un composant isolé dans le navigateur."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cy-reseau-q1",
+          "prompt": "Que fait cy.wait(\"@produits\") ?",
+          "choices": [
+            "Il attend que la requête interceptée sous l'alias produits ait lieu",
+            "Il attend un temps fixe",
+            "Il attend l'élément produits dans le DOM",
+            "Il recharge les produits"
+          ],
+          "answerIndex": 0,
+          "explanation": "Bien plus fiable qu'une attente fixe.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cy-reseau-q2",
+          "prompt": "Complète : simuler la liste des produits avec une fixture.",
+          "code": "cy.___(\"GET\", \"/api/produits*\", { ___: \"produits.json\" }).as(\"produits\");",
+          "language": "javascript",
+          "answers": [
+            "intercept",
+            "fixture"
+          ],
+          "distractors": [
+            "route",
+            "body",
+            "mock"
+          ],
+          "explanation": "Le fichier se trouve dans cypress/fixtures.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cy-reseau-q3",
+          "prompt": "cy.wait(\"@commande\") expire alors que la requête a bien lieu. Touche la ligne mal placée.",
+          "code": "cy.get(\"[data-cy=valider]\").click();\ncy.intercept(\"POST\", \"/api/commandes\").as(\"commande\");\ncy.wait(\"@commande\");",
+          "language": "javascript",
+          "bugLines": [
+            2
+          ],
+          "explanation": "L'interception est déclarée après le clic : la requête est déjà partie. cy.intercept doit précéder l'action.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cy-reseau-q4",
+          "prompt": "Comment tester un parcours qui passe par la page de connexion d'un autre domaine ?",
+          "choices": [
+            "Avec cy.origin pour exécuter des commandes sur l'autre domaine",
+            "C'est impossible",
+            "En ouvrant un second onglet",
+            "En désactivant la sécurité du navigateur"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut aussi contourner la page externe en se connectant par l'API.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cy-reseau-q5",
+          "prompt": "Une équipe doit tester Safari en priorité. Quel outil choisir ?",
+          "choices": [
+            "Playwright, qui pilote WebKit en standard",
+            "Cypress, qui prend en charge Safari pleinement",
+            "Aucun outil ne le permet",
+            "Selenium IDE uniquement"
+          ],
+          "answerIndex": 0,
+          "explanation": "La prise en charge de WebKit par Cypress reste expérimentale.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cy-reseau-q6",
+          "prompt": "Que permet cy.intercept ?",
+          "choices": [
+            "Simuler une réponse",
+            "Attendre une requête précise",
+            "Vérifier le corps d'une requête envoyée",
+            "Modifier le code source de l'application"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il agit sur le réseau, pas sur le code.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "cy-defi",
+    "title": "Défi entretien : le tunnel de commande",
+    "summary": "Tester le parcours le plus critique.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cy-defi-q1",
+        "prompt": "Cas pratique 1/3 — Les tests Cypress du tunnel de commande cassent à chaque refonte graphique. Que changer ?",
+        "choices": [
+          "Ajouter des attributs data-cy aux éléments clés et les utiliser comme sélecteurs",
+          "Mettre à jour les sélecteurs CSS après chaque refonte",
+          "Supprimer les tests pendant les refontes",
+          "Utiliser des XPath absolus"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les attributs de test survivent aux changements de style.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "cy-defi-q2",
+        "prompt": "Cas pratique 2/3 — Chaque test se connecte par le formulaire, ce qui ajoute 8 secondes. Que faire ?",
+        "choices": [
+          "Une commande cy.connexion qui utilise cy.session",
+          "Un seul test pour tout le tunnel",
+          "Désactiver l'authentification",
+          "Augmenter le délai par défaut"
+        ],
+        "answerIndex": 0,
+        "explanation": "La session est créée une fois puis restaurée.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cy-defi-q3",
+        "prompt": "Cas pratique 3/3 — Il faut vérifier que la commande envoyée à l'API contient la bonne quantité. Comment ?",
+        "choices": [
+          "Intercepter POST /api/commandes avec un alias, puis vérifier request.body après cy.wait",
+          "Lire la base de données de production",
+          "Regarder la vidéo du test",
+          "Compter les éléments du DOM"
+        ],
+        "answerIndex": 0,
+        "explanation": "On vérifie le contrat entre le frontend et l'API.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cy-defi-q4",
+        "prompt": "Quelle commande lance les tests sans interface, en CI ?",
+        "choices": [
+          "npx cypress run",
+          "npx cypress open",
+          "npx cypress ci",
+          "npx cypress start"
+        ],
+        "answerIndex": 0,
+        "explanation": "cypress open ouvre l'interface interactive.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "cy-defi-q5",
+        "prompt": "Le test passe alors que le prix affiché est faux. Touche la ligne en cause.",
+        "code": "cy.get(\"[data-cy=prix]\").then(($el) => {\n  const prix = $el.text();\n  expect(prix).to.exist;\n});",
+        "language": "javascript",
+        "bugLines": [
+          3
+        ],
+        "explanation": "to.exist ne vérifie que la présence d'une valeur. Il faut une valeur attendue : cy.get(\"[data-cy=prix]\").should(\"have.text\", \"24,90 €\").",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "cy-defi-q6",
+        "prompt": "Quelles pratiques rendent les tests Cypress fiables ?",
+        "choices": [
+          "Des sélecteurs data-cy",
+          "Attendre des requêtes nommées plutôt que des durées",
+          "Des tests indépendants les uns des autres",
+          "Enchaîner les tests pour qu'ils réutilisent l'état du précédent"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Des tests dépendants échouent en cascade et ne peuvent pas tourner seuls.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,435 @@
+{
+  "id": "kop-ch-essentiel",
+  "title": "Opérateurs Kubernetes : l'essentiel",
+  "summary": "Étendre Kubernetes avec ses propres contrôleurs.",
+  "lessons": [
+    {
+      "id": "kop-principes",
+      "title": "Ressources et contrôleurs",
+      "summary": "CRD, état désiré et boucle de réconciliation.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "L'état désiré",
+          "body": "Kubernetes repose sur des contrôleurs : chacun observe des ressources, compare l'état désiré (spec) à l'état réel, et agit pour les rapprocher. Le contrôleur des Deployments crée ou supprime des ReplicaSets ; celui des ReplicaSets, des Pods."
+        },
+        {
+          "title": "Les ressources personnalisées",
+          "body": "Une CustomResourceDefinition (CRD) ajoute un nouveau type à l'API Kubernetes, par exemple BaseDeDonnees. On le manipule avec kubectl comme n'importe quelle ressource.",
+          "code": "apiVersion: donnees.exemple.fr/v1\nkind: BaseDeDonnees\nmetadata:\n  name: commandes\nspec:\n  version: \"16\"\n  replicas: 3\n  stockage: 50Gi",
+          "language": "yaml"
+        },
+        {
+          "title": "L'opérateur",
+          "body": "Un opérateur associe une CRD à un contrôleur qui encode le savoir-faire d'exploitation : créer la base, configurer la réplication, faire les sauvegardes, gérer les mises à jour. On l'écrit souvent en Go avec controller-runtime et Kubebuilder."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "kop-principes-q1",
+          "prompt": "Que fait un contrôleur Kubernetes ?",
+          "choices": [
+            "Il compare l'état désiré à l'état réel et agit pour les rapprocher",
+            "Il compile les images de conteneurs",
+            "Il stocke les ressources",
+            "Il sert l'interface web"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la boucle de réconciliation.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "kop-principes-q2",
+          "prompt": "À quoi sert une CustomResourceDefinition ?",
+          "choices": [
+            "À ajouter un nouveau type de ressource à l'API Kubernetes",
+            "À définir un conteneur",
+            "À configurer le réseau",
+            "À remplacer kubectl"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les ressources de ce type sont stockées dans etcd comme les autres.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "kop-principes-q3",
+          "prompt": "Qu'apporte un opérateur par rapport à un simple chart Helm ?",
+          "choices": [
+            "Il agit en continu : sauvegardes, bascules et mises à jour pilotées par un contrôleur",
+            "Il déploie plus vite",
+            "Il n'a pas besoin de Kubernetes",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Helm installe ; l'opérateur exploite au quotidien.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "kop-principes-q4",
+          "prompt": "Complète cette ressource personnalisée.",
+          "code": "apiVersion: donnees.exemple.fr/v1\n___: BaseDeDonnees\nmetadata:\n  name: commandes\n___:\n  replicas: 3",
+          "language": "yaml",
+          "answers": [
+            "kind",
+            "spec"
+          ],
+          "distractors": [
+            "type",
+            "status",
+            "data"
+          ],
+          "explanation": "L'utilisateur écrit spec ; le contrôleur remplit status.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "kop-principes-q5",
+          "prompt": "L'utilisateur tente de déclarer l'état de la base dans le manifeste. Touche la ligne qui n'a pas sa place.",
+          "code": "kind: BaseDeDonnees\nmetadata:\n  name: commandes\nspec:\n  replicas: 3\nstatus:\n  pret: true",
+          "language": "yaml",
+          "bugLines": [
+            6
+          ],
+          "explanation": "status est écrit par le contrôleur, qui y reflète l'état réel. L'utilisateur ne décrit que spec.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "kop-principes-q6",
+          "prompt": "Quelles tâches un opérateur de base de données peut-il automatiser ?",
+          "choices": [
+            "La création et la configuration de la réplication",
+            "Les sauvegardes planifiées",
+            "Les mises à jour de version",
+            "La rédaction des requêtes SQL de l'application"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Il encode l'exploitation, pas la logique métier.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "kop-reconcile",
+      "title": "La réconciliation",
+      "summary": "Reconcile, idempotence et statut.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "La fonction Reconcile",
+          "body": "Avec controller-runtime, on implémente Reconcile, appelée avec le nom de la ressource à réconcilier. Elle lit l'état actuel, crée ou met à jour ce qui manque, et renvoie éventuellement une demande de nouvel appel. Une ressource introuvable a été supprimée : on renvoie sans erreur.",
+          "code": "func (r *BaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {\n\tvar base donneesv1.BaseDeDonnees\n\tif err := r.Get(ctx, req.NamespacedName, &base); err != nil {\n\t\treturn ctrl.Result{}, client.IgnoreNotFound(err)\n\t}\n\tif err := r.assurerStatefulSet(ctx, &base); err != nil {\n\t\treturn ctrl.Result{}, err\n\t}\n\treturn ctrl.Result{RequeueAfter: 5 * time.Minute}, nil\n}"
+        },
+        {
+          "title": "Déclenché par le niveau",
+          "body": "Reconcile ne reçoit pas « ce qui a changé » mais seulement quelle ressource examiner. Elle peut être appelée plusieurs fois pour le même changement, ou une fois pour plusieurs : elle doit donc être idempotente, et toujours repartir de l'état observé."
+        },
+        {
+          "title": "Le statut",
+          "body": "Le contrôleur écrit ses observations dans le sous-objet status, mis à jour séparément (r.Status().Update). Les conditions (Ready, Progressing…) et observedGeneration indiquent aux humains et aux outils si la dernière spec a été prise en compte."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "kop-reconcile-q1",
+          "prompt": "Pourquoi Reconcile doit-elle être idempotente ?",
+          "choices": [
+            "Elle peut être appelée plusieurs fois pour le même état, et doit alors produire le même résultat sans effet en double",
+            "Pour aller plus vite",
+            "Parce que Kubernetes l'appelle une seule fois",
+            "Ce n'est pas nécessaire"
+          ],
+          "answerIndex": 0,
+          "explanation": "On compare l'état réel au désiré, au lieu de rejouer des événements.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "kop-reconcile-q2",
+          "prompt": "La ressource n'existe plus quand Reconcile est appelée. Que renvoyer ?",
+          "choices": [
+            "Un résultat vide sans erreur : client.IgnoreNotFound(err)",
+            "Une erreur, pour réessayer indéfiniment",
+            "Une panic",
+            "Recréer la ressource"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle a été supprimée : il n'y a plus rien à réconcilier.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "kop-reconcile-q3",
+          "prompt": "À chaque réconciliation, un nouveau StatefulSet est créé, ou l'appel échoue avec « already exists ». Touche la ligne en cause.",
+          "code": "func (r *BaseReconciler) assurerStatefulSet(ctx context.Context, b *donneesv1.BaseDeDonnees) error {\n\tsts := construireStatefulSet(b)\n\treturn r.Create(ctx, sts)\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Reconcile n'est pas idempotente : il faut lire d'abord, créer seulement s'il manque, sinon mettre à jour (controllerutil.CreateOrUpdate).",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "kop-reconcile-q4",
+          "prompt": "Complète : ignorer une ressource supprimée, puis réexaminer dans 5 minutes.",
+          "code": "if err := r.Get(ctx, req.NamespacedName, &base); err != nil {\n\treturn ctrl.Result{}, client.___(err)\n}\nreturn ctrl.Result{___: 5 * time.Minute}, nil",
+          "answers": [
+            "IgnoreNotFound",
+            "RequeueAfter"
+          ],
+          "distractors": [
+            "IgnoreError",
+            "Requeue",
+            "Delay"
+          ],
+          "explanation": "Requeue est un booléen ; RequeueAfter prend une durée.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "kop-reconcile-q5",
+          "prompt": "À quoi sert observedGeneration dans le statut ?",
+          "choices": [
+            "À indiquer quelle génération de la spec le contrôleur a déjà prise en compte",
+            "À compter les Pods",
+            "À stocker la version de Kubernetes",
+            "À rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si elle est inférieure à metadata.generation, la dernière modification n'est pas encore appliquée.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "kop-reconcile-q6",
+          "prompt": "Que fait une bonne fonction Reconcile ?",
+          "choices": [
+            "Elle repart de l'état observé",
+            "Elle met à jour le statut",
+            "Elle renvoie une erreur pour être réessayée en cas d'échec temporaire",
+            "Elle garde en mémoire la liste des événements reçus"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le contrôleur peut redémarrer à tout moment : aucun état ne doit dépendre de la mémoire.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "kop-cycle",
+      "title": "Cycle de vie",
+      "summary": "Propriétaires, finaliseurs et surveillance.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les références de propriétaire",
+          "body": "Les objets créés par l'opérateur (StatefulSet, Service, Secret) portent une référence vers la ressource qui les possède. À sa suppression, le ramasse-miettes de Kubernetes supprime aussi ces objets. Owns() demande en outre au contrôleur d'être réveillé quand ils changent.",
+          "code": "if err := ctrl.SetControllerReference(&base, sts, r.Scheme); err != nil {\n\treturn err\n}\n\n// à l'initialisation\nctrl.NewControllerManagedBy(mgr).\n\tFor(&donneesv1.BaseDeDonnees{}).\n\tOwns(&appsv1.StatefulSet{}).\n\tComplete(r)"
+        },
+        {
+          "title": "Les finaliseurs",
+          "body": "Pour nettoyer une ressource extérieure à Kubernetes (une base gérée chez un fournisseur cloud, un enregistrement DNS), on ajoute un finaliseur. La suppression se contente alors de poser deletionTimestamp ; le contrôleur fait le nettoyage, puis retire le finaliseur, et l'objet disparaît."
+        },
+        {
+          "title": "Exploiter l'opérateur",
+          "body": "Plusieurs répliques de l'opérateur utilisent l'élection d'un leader pour qu'une seule agisse. Les droits RBAC sont limités aux ressources gérées. Les conflits de mise à jour (resourceVersion obsolète) sont normaux : on renvoie l'erreur et la réconciliation est relancée."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "kop-cycle-q1",
+          "prompt": "Pourquoi poser une référence de propriétaire sur le StatefulSet créé par l'opérateur ?",
+          "choices": [
+            "Pour qu'il soit supprimé automatiquement avec la ressource propriétaire, et que ses changements réveillent le contrôleur",
+            "Pour le chiffrer",
+            "Pour le déplacer de nœud",
+            "Pour accélérer son démarrage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le ramasse-miettes de Kubernetes suit ces références.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "kop-cycle-q2",
+          "prompt": "Quand faut-il un finaliseur ?",
+          "choices": [
+            "Pour nettoyer des ressources extérieures à Kubernetes avant que l'objet disparaisse",
+            "Pour chaque objet créé",
+            "Pour accélérer la suppression",
+            "Jamais"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les objets Kubernetes enfants se nettoient déjà par référence de propriétaire.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "kop-cycle-q3",
+          "prompt": "Les ressources supprimées restent indéfiniment en état « Terminating ». Touche la ligne en cause.",
+          "code": "if !base.DeletionTimestamp.IsZero() {\n\tif err := r.supprimerBaseCloud(ctx, &base); err != nil {\n\t\treturn ctrl.Result{}, err\n\t}\n\treturn ctrl.Result{}, nil\n}",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Le finaliseur n'est jamais retiré : il faut controllerutil.RemoveFinalizer puis r.Update avant de renvoyer.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "kop-cycle-q4",
+          "prompt": "Complète : réconcilier les BaseDeDonnees, et être réveillé quand leurs StatefulSets changent.",
+          "code": "ctrl.NewControllerManagedBy(mgr).\n\t___(&donneesv1.BaseDeDonnees{}).\n\t___(&appsv1.StatefulSet{}).\n\tComplete(r)",
+          "answers": [
+            "For",
+            "Owns"
+          ],
+          "distractors": [
+            "Watch",
+            "Has",
+            "Uses"
+          ],
+          "explanation": "Owns relie un changement d'enfant à la réconciliation de son propriétaire.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "kop-cycle-q5",
+          "prompt": "La mise à jour échoue avec un conflit « the object has been modified ». Que faire ?",
+          "choices": [
+            "Renvoyer l'erreur : la réconciliation sera relancée avec une version à jour",
+            "Forcer l'écriture",
+            "Supprimer la ressource",
+            "Redémarrer le cluster"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est le verrouillage optimiste de Kubernetes par resourceVersion.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "kop-cycle-q6",
+          "prompt": "Quelles précautions pour exploiter un opérateur en production ?",
+          "choices": [
+            "L'élection d'un leader entre ses répliques",
+            "Des droits RBAC limités aux ressources gérées",
+            "Des métriques et un statut lisibles",
+            "Des droits administrateur sur tout le cluster par défaut"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le principe du moindre privilège s'applique aussi aux opérateurs.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "kop-defi",
+    "title": "Défi entretien : l'opérateur de bases",
+    "summary": "Automatiser l'exploitation d'une base PostgreSQL.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "kop-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une équipe plateforme crée chaque semaine des bases PostgreSQL pour les autres équipes, à la main, avec réplication et sauvegardes. Que proposer ?",
+        "choices": [
+          "Un opérateur (existant comme CloudNativePG, ou maison) : les équipes déclarent une ressource, le contrôleur fait le reste",
+          "Un tutoriel plus détaillé",
+          "Un script lancé à la main",
+          "Une base partagée par toutes les équipes"
+        ],
+        "answerIndex": 0,
+        "explanation": "On évalue d'abord les opérateurs existants avant d'en écrire un.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "kop-defi-q2",
+        "prompt": "Cas pratique 2/3 — Quelqu'un supprime à la main le Service de la base. Que fait l'opérateur ?",
+        "choices": [
+          "Il est réveillé par le changement et recrée le Service lors de la réconciliation",
+          "Rien, jusqu'au prochain déploiement",
+          "Il supprime la base",
+          "Il envoie un e-mail"
+        ],
+        "answerIndex": 0,
+        "explanation": "La réconciliation ramène en continu l'état réel vers l'état désiré.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "kop-defi-q3",
+        "prompt": "Cas pratique 3/3 — À la suppression d'une BaseDeDonnees, une sauvegarde finale doit être faite dans un stockage objet. Comment ?",
+        "choices": [
+          "Un finaliseur : le contrôleur fait la sauvegarde, puis retire le finaliseur",
+          "Une référence de propriétaire",
+          "Une tâche cron quotidienne",
+          "Demander à l'utilisateur de la faire avant"
+        ],
+        "answerIndex": 0,
+        "explanation": "La suppression attend que le finaliseur soit retiré.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "kop-defi-q4",
+        "prompt": "Que signifie « déclenché par le niveau » pour un contrôleur ?",
+        "choices": [
+          "Il agit selon l'état actuel observé, pas selon une liste d'événements à rejouer",
+          "Il ne s'exécute qu'au-delà d'un certain niveau de charge",
+          "Il traite chaque événement exactement une fois",
+          "Il dépend du niveau de journalisation"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un événement manqué n'a donc pas de conséquence durable.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "kop-defi-q5",
+        "prompt": "Le statut affiché par kubectl n'est jamais mis à jour. Touche la ligne en cause.",
+        "code": "base.Status.Pret = true\nbase.Status.ObservedGeneration = base.Generation\nif err := r.Update(ctx, &base); err != nil {\n\treturn ctrl.Result{}, err\n}",
+        "bugLines": [
+          3
+        ],
+        "explanation": "Avec le sous-objet status activé, Update ignore status. Il faut r.Status().Update(ctx, &base).",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "kop-defi-q6",
+        "prompt": "Quels outils servent à écrire un opérateur en Go ?",
+        "choices": [
+          "controller-runtime",
+          "Kubebuilder",
+          "Operator SDK",
+          "Gin"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Gin est un framework web.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

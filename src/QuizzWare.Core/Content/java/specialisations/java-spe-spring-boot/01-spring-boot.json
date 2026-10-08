@@ -1,0 +1,446 @@
+{
+  "id": "springboot-ch-essentiel",
+  "title": "Spring Boot : l'essentiel",
+  "summary": "Configuration, API REST et mise en production.",
+  "lessons": [
+    {
+      "id": "sb-demarrage",
+      "title": "Démarrer avec Spring Boot",
+      "summary": "Starters, beans et configuration.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Starters et auto-configuration",
+          "body": "Un starter (spring-boot-starter-web, -data-jpa, -security) apporte un ensemble cohérent de dépendances. Au démarrage, l'auto-configuration détecte ce qui est présent dans le classpath et configure les beans correspondants : un serveur Tomcat, Jackson, une DataSource. @SpringBootApplication active tout cela et scanne le paquet de la classe principale."
+        },
+        {
+          "title": "Les beans et l'injection",
+          "body": "Les classes annotées @Component, @Service, @Repository ou @RestController deviennent des beans gérés par le conteneur, uniques par défaut (singleton). Ils reçoivent leurs dépendances par le constructeur : champs final, objet toujours complet, et testable sans Spring. Un singleton ne doit donc pas garder d'état propre à un utilisateur.",
+          "code": "@Service\npublic class CommandeService {\n    private final PaiementClient paiements;\n\n    public CommandeService(PaiementClient paiements) {\n        this.paiements = paiements;\n    }\n}",
+          "language": "java"
+        },
+        {
+          "title": "La configuration",
+          "body": "La configuration vient de application.yml, des profils (application-prod.yml), des variables d'environnement et des arguments de la ligne de commande, dans un ordre de priorité défini. @ConfigurationProperties la lie à une classe ou un record typé, validable, plutôt qu'une multitude de @Value.",
+          "code": "@ConfigurationProperties(prefix = \"paiement\")\npublic record PaiementProps(String url, Duration timeout) {}",
+          "language": "java"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sb-demarrage-q1",
+          "prompt": "Que fait un starter comme spring-boot-starter-web ?",
+          "choices": [
+            "Il apporte des dépendances cohérentes (Spring MVC, Jackson, Tomcat) que l'auto-configuration détecte et configure",
+            "Il génère le code des contrôleurs",
+            "Il démarre une base de données",
+            "Il remplace le fichier pom.xml"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les versions sont alignées par Spring Boot : plus besoin de les choisir une à une.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sb-demarrage-q2",
+          "prompt": "Quelle est la portée par défaut d'un bean Spring ?",
+          "choices": [
+            "Singleton : une seule instance pour toute l'application",
+            "Une instance par requête HTTP",
+            "Une instance à chaque injection",
+            "Une instance par thread"
+          ],
+          "answerIndex": 0,
+          "explanation": "D'autres portées existent (prototype, request, session), mais elles sont l'exception.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sb-demarrage-q3",
+          "prompt": "Les paniers de tous les utilisateurs se mélangent. Touche la ligne en cause.",
+          "code": "@Service\npublic class PanierService {\n    private List<String> articles = new ArrayList<>();\n\n    public void ajouter(String article) {\n        articles.add(article);\n    }\n}",
+          "language": "java",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Le service est un singleton partagé par toutes les requêtes : son état l'est aussi (et sans protection contre les accès concurrents). Le panier se stocke par utilisateur, en base ou en session.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "sb-demarrage-q4",
+          "prompt": "Complète : lier les propriétés paiement.* à un record typé.",
+          "code": "@___(prefix = \"paiement\")\npublic record PaiementProps(String url, Duration timeout) {}",
+          "language": "java",
+          "answers": [
+            "ConfigurationProperties"
+          ],
+          "distractors": [
+            "Value",
+            "Configuration",
+            "Properties"
+          ],
+          "explanation": "Les valeurs comme 5s sont converties automatiquement en Duration.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sb-demarrage-q5",
+          "prompt": "Pourquoi préférer l'injection par constructeur à @Autowired sur un champ ?",
+          "choices": [
+            "Les dépendances sont explicites et final, l'objet est toujours complet, et il se teste sans Spring",
+            "Elle est plus rapide à l'exécution",
+            "@Autowired est interdit depuis Spring 6",
+            "Elle évite d'écrire des tests"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un constructeur à trop de paramètres signale aussi une classe qui en fait trop.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sb-demarrage-q6",
+          "prompt": "Où Spring Boot lit-il la configuration ?",
+          "choices": [
+            "Dans application.yml (ou application.properties)",
+            "Dans les variables d'environnement",
+            "Dans les arguments de la ligne de commande",
+            "Dans les commentaires Javadoc"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "En production, les secrets viennent de l'environnement ou d'un gestionnaire de secrets, jamais du fichier versionné.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "sb-web",
+      "title": "API REST",
+      "summary": "Contrôleurs, validation et erreurs.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les contrôleurs",
+          "body": "Un @RestController expose des méthodes annotées @GetMapping, @PostMapping, etc. @PathVariable lit un segment du chemin, @RequestParam un paramètre de requête, @RequestBody le corps JSON. ResponseEntity permet de choisir le statut et les en-têtes : 201 Created avec un en-tête Location pour une création.",
+          "code": "@RestController\n@RequestMapping(\"/commandes\")\nclass CommandeController {\n    @GetMapping(\"/{id}\")\n    Commande lire(@PathVariable long id) {\n        return service.trouver(id);\n    }\n}",
+          "language": "java"
+        },
+        {
+          "title": "La validation",
+          "body": "Les contraintes Bean Validation (@NotBlank, @Positive, @Email) décrivent les règles des données reçues. Elles ne sont vérifiées que si le paramètre est annoté @Valid : sinon, elles sont ignorées en silence. Une entrée invalide produit alors une réponse 400.",
+          "code": "record NouvelleCommande(@NotBlank String client,\n                        @Positive int quantite) {}\n\n@PostMapping\nCommande creer(@Valid @RequestBody NouvelleCommande c) {\n    return service.creer(c);\n}",
+          "language": "java"
+        },
+        {
+          "title": "Les erreurs",
+          "body": "Plutôt que de gérer les erreurs dans chaque méthode, on lève des exceptions métier (CommandeIntrouvable) et un @RestControllerAdvice les traduit en réponses HTTP. Spring prend en charge le format standard ProblemDetail (RFC 9457) : type, titre, statut, détail."
+        }
+      ],
+      "questions": [
+        {
+          "type": "fill",
+          "id": "sb-web-q1",
+          "prompt": "Complète : lire une commande par son identifiant dans le chemin.",
+          "code": "@___(\"/{id}\")\nCommande lire(@___ long id) {\n    return service.trouver(id);\n}",
+          "language": "java",
+          "answers": [
+            "GetMapping",
+            "PathVariable"
+          ],
+          "distractors": [
+            "RequestParam",
+            "Get",
+            "Path"
+          ],
+          "explanation": "@RequestParam lirait ?id=… dans la chaîne de requête, pas le chemin.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "sb-web-q2",
+          "prompt": "Les contraintes de NouvelleCommande ne sont jamais vérifiées. Touche la ligne en cause.",
+          "code": "record NouvelleCommande(@NotBlank String client,\n                        @Positive int quantite) {}\n\n@PostMapping\nCommande creer(@RequestBody NouvelleCommande c) {\n    return service.creer(c);\n}",
+          "language": "java",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Sans @Valid devant le paramètre, Spring ne déclenche pas la validation.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sb-web-q3",
+          "prompt": "Comment renvoyer un 404 cohérent dans toute l'API quand une commande n'existe pas ?",
+          "choices": [
+            "Lever une exception métier et la traduire dans un @RestControllerAdvice (ProblemDetail)",
+            "Renvoyer null depuis chaque contrôleur",
+            "Renvoyer 200 avec un corps vide",
+            "Écrire un try/catch dans chaque méthode"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le format d'erreur est défini à un seul endroit.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sb-web-q4",
+          "prompt": "Quel statut renvoyer après la création réussie d'une ressource par POST ?",
+          "choices": [
+            "201 Created, avec l'en-tête Location de la nouvelle ressource",
+            "200 OK, toujours",
+            "204 No Content",
+            "302 Found"
+          ],
+          "answerIndex": 0,
+          "explanation": "ResponseEntity.created(uri).body(cree) produit exactement cette réponse.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sb-web-q5",
+          "prompt": "Un contrôleur déclare @RequestParam(defaultValue = \"0\") int page. Que renvoie Spring pour GET /commandes?page=abc ?",
+          "choices": [
+            "400 Bad Request : « abc » ne se convertit pas en int",
+            "200 avec la page 0",
+            "500 Internal Server Error",
+            "404 Not Found"
+          ],
+          "answerIndex": 0,
+          "explanation": "La valeur par défaut ne s'applique que si le paramètre est absent.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sb-web-q6",
+          "prompt": "Quelles annotations relèvent de Spring MVC ?",
+          "choices": [
+            "@RestController",
+            "@RequestBody",
+            "@ResponseStatus",
+            "@Entity"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "@Entity appartient à JPA, la couche de persistance.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "sb-production",
+      "title": "Tests et production",
+      "summary": "Actuator, tranches de tests et Testcontainers.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Actuator",
+          "body": "Spring Boot Actuator expose des endpoints d'exploitation : /actuator/health (avec des groupes liveness et readiness pour Kubernetes), des métriques via Micrometer (Prometheus), des informations de build. On n'expose sur le web que le nécessaire : env, heapdump ou configprops révèlent des secrets.",
+          "code": "management:\n  endpoints:\n    web:\n      exposure:\n        include: health,info,prometheus",
+          "language": "yaml"
+        },
+        {
+          "title": "Tester par tranches",
+          "body": "@SpringBootTest démarre tout le contexte : complet mais lent. Les tranches ne chargent qu'une couche : @WebMvcTest pour les contrôleurs (avec MockMvc), @DataJpaTest pour les repositories. Les dépendances absentes de la tranche sont remplacées par des mocks avec @MockitoBean. Spring met les contextes en cache : chaque configuration différente en crée un nouveau.",
+          "code": "@WebMvcTest(CommandeController.class)\nclass CommandeControllerTest {\n    @Autowired MockMvc mvc;\n    @MockitoBean CommandeService service;\n}",
+          "language": "java"
+        },
+        {
+          "title": "Testcontainers et performances",
+          "body": "Avec Testcontainers et @ServiceConnection, les tests démarrent une vraie base PostgreSQL dans un conteneur, et Spring configure automatiquement la connexion : des tests réalistes et reproductibles. En production, spring.threads.virtual.enabled=true (Spring Boot 3.2 et plus, Java 21) traite les requêtes sur des virtual threads."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "sb-production-q1",
+          "prompt": "À quoi sert /actuator/health ?",
+          "choices": [
+            "À indiquer l'état de l'application et de ses dépendances aux sondes (Kubernetes, répartiteur de charge)",
+            "À afficher le code source",
+            "À redémarrer l'application",
+            "À lister les utilisateurs connectés"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un état DOWN retire l'instance du trafic ou la fait redémarrer selon la sonde.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "sb-production-q2",
+          "prompt": "Quelle différence entre @WebMvcTest et @SpringBootTest ?",
+          "choices": [
+            "@WebMvcTest ne charge que la couche web, plus vite ; @SpringBootTest charge tout le contexte",
+            "@WebMvcTest démarre un vrai serveur, pas @SpringBootTest",
+            "Aucune",
+            "@SpringBootTest ne charge que les repositories"
+          ],
+          "answerIndex": 0,
+          "explanation": "On réserve le contexte complet à quelques tests d'intégration.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "sb-production-q3",
+          "prompt": "Complète : remplacer le service par un mock dans le contexte de test (Spring Boot 3.4 et plus).",
+          "code": "@WebMvcTest(CommandeController.class)\nclass CommandeControllerTest {\n    @Autowired MockMvc mvc;\n    @___ CommandeService service;\n}",
+          "language": "java",
+          "answers": [
+            "MockitoBean"
+          ],
+          "distractors": [
+            "Mock",
+            "InjectMocks",
+            "Autowired"
+          ],
+          "explanation": "@MockitoBean remplace l'ancien @MockBean ; @Mock seul créerait un mock que Spring ne connaît pas.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "sb-production-q4",
+          "prompt": "Revue de la configuration de production : touche la ligne problématique.",
+          "code": "management:\n  endpoints:\n    web:\n      exposure:\n        include: \"*\"",
+          "language": "yaml",
+          "bugLines": [
+            5
+          ],
+          "explanation": "Tous les endpoints sont exposés, dont env, configprops et heapdump, qui peuvent livrer des secrets. On liste explicitement health, info, prometheus.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "sb-production-q5",
+          "prompt": "Comment activer les virtual threads pour les requêtes dans Spring Boot 3.2 et plus, avec Java 21 ?",
+          "choices": [
+            "spring.threads.virtual.enabled=true",
+            "Réécrire tous les contrôleurs en réactif",
+            "Ajouter @Async partout",
+            "Passer server.tomcat.threads.max à 100 000"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le code bloquant habituel passe alors à l'échelle sans changement.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "sb-production-q6",
+          "prompt": "Qu'apportent Testcontainers et @ServiceConnection ?",
+          "choices": [
+            "Une vraie base démarrée dans un conteneur pour les tests",
+            "Une connexion configurée automatiquement par Spring",
+            "Des tests reproductibles d'une machine à l'autre",
+            "La possibilité de se passer de Docker"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Testcontainers a justement besoin d'un environnement Docker compatible.",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "springboot-defi",
+    "title": "Défi entretien : des tests trop lents",
+    "summary": "Contextes, tranches et transactions.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "springboot-defi-q1",
+        "prompt": "Cas pratique 1/3 — Les tests d'intégration d'une API Spring Boot prennent 12 minutes ; ils utilisent tous @SpringBootTest. Quelle piste ?",
+        "choices": [
+          "Passer aux tests de tranche (@WebMvcTest, @DataJpaTest) et réutiliser les contextes",
+          "Supprimer les tests",
+          "Lancer les tests une fois par semaine",
+          "Ajouter de la mémoire à la machine de CI"
+        ],
+        "answerIndex": 0,
+        "explanation": "Chaque tranche ne démarre que ce dont elle a besoin.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "springboot-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le journal montre que le contexte Spring est recréé des dizaines de fois. Pourquoi ?",
+        "choices": [
+          "Chaque combinaison différente de @MockitoBean ou de propriétés de test crée une nouvelle configuration, donc un nouveau contexte",
+          "Spring recrée toujours le contexte pour chaque test",
+          "Les tests s'exécutent en parallèle",
+          "La base de données est trop lente"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une classe de base de test commune, avec les mêmes mocks et propriétés, permet de réutiliser le contexte.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "springboot-defi-q3",
+        "prompt": "Cas pratique 3/3 — En production sur Kubernetes, quelles sondes brancher ?",
+        "choices": [
+          "/actuator/health/liveness pour la sonde de vie et /actuator/health/readiness pour la sonde de disponibilité",
+          "/actuator/env pour les deux",
+          "La page d'accueil",
+          "Aucune"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une base indisponible doit rendre l'instance non prête, sans forcément la faire redémarrer.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "springboot-defi-q4",
+        "prompt": "Appelée depuis importer, la méthode enregistrer ne s'exécute jamais dans une transaction. Touche la ligne en cause.",
+        "code": "@Service\npublic class CommandeService {\n    public void importer(List<Commande> cs) {\n        cs.forEach(this::enregistrer);\n    }\n\n    @Transactional\n    public void enregistrer(Commande c) { /* ... */ }\n}",
+        "language": "java",
+        "bugLines": [
+          4
+        ],
+        "explanation": "@Transactional repose sur un proxy ; un appel interne via this contourne le proxy. On place l'annotation sur la méthode appelée de l'extérieur, ou on déplace enregistrer dans un autre bean.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "springboot-defi-q5",
+        "prompt": "Que fait @Transactional sur une méthode publique d'un bean appelée depuis un autre bean ?",
+        "choices": [
+          "Le proxy ouvre une transaction avant l'appel, la valide après, et l'annule sur une exception non vérifiée",
+          "Il rend la méthode plus rapide",
+          "Il exécute la méthode dans un autre thread",
+          "Il met le résultat en cache"
+        ],
+        "answerIndex": 0,
+        "explanation": "Par défaut, une exception vérifiée (checked) ne provoque pas d'annulation : rollbackFor permet de le changer.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "springboot-defi-q6",
+        "prompt": "Quelles sont de bonnes pratiques Spring Boot ?",
+        "choices": [
+          "L'injection par constructeur",
+          "Une configuration typée avec @ConfigurationProperties",
+          "Des secrets fournis par l'environnement",
+          "Exposer publiquement tous les endpoints Actuator"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Les endpoints sensibles restent internes ou protégés.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

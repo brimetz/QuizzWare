@@ -1,0 +1,437 @@
+{
+  "id": "node-ch-essentiel",
+  "title": "Node.js en profondeur",
+  "summary": "Boucle d'événements, flux et production.",
+  "lessons": [
+    {
+      "id": "node-boucle",
+      "title": "La boucle d'événements en détail",
+      "summary": "Phases, nextTick et setImmediate.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les phases",
+          "body": "La boucle de libuv enchaîne des phases : timers (setTimeout, setInterval), callbacks en attente, poll (attente et traitement des E/S), check (setImmediate), puis fermetures. Entre deux callbacks, Node vide d'abord la file de process.nextTick, puis les microtâches (promesses, queueMicrotask)."
+        },
+        {
+          "title": "setImmediate ou setTimeout(…, 0) ?",
+          "body": "Dans un callback d'E/S, setImmediate s'exécute toujours avant setTimeout(…, 0), car la phase check suit immédiatement la phase poll. Depuis le script principal, l'ordre entre les deux n'est pas garanti. process.nextTick passe avant tout le reste : appelé en boucle, il affame la boucle, qui ne traite plus aucune E/S.",
+          "code": "fs.readFile(__filename, () => {\n  setTimeout(() => console.log(\"timeout\"), 0);\n  setImmediate(() => console.log(\"immediate\"));\n});\n// immediate, puis timeout"
+        },
+        {
+          "title": "Mesurer le retard",
+          "body": "Le meilleur indicateur de santé d'un service Node est le retard de la boucle : combien de temps un callback prêt attend avant de s'exécuter. perf_hooks.monitorEventLoopDelay le mesure en continu ; un p99 de plusieurs dizaines de millisecondes signale du travail synchrone trop long.",
+          "code": "import { monitorEventLoopDelay } from \"node:perf_hooks\";\n\nconst h = monitorEventLoopDelay();\nh.enable();\nsetInterval(() => console.log(h.percentile(99) / 1e6, \"ms\"), 5000);"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "node-boucle-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "const fs = require(\"node:fs\");\nfs.readFile(__filename, () => {\n  setTimeout(() => console.log(\"timeout\"), 0);\n  setImmediate(() => console.log(\"immediate\"));\n});",
+          "choices": [
+            "immediate, puis timeout",
+            "timeout, puis immediate",
+            "Un ordre imprévisible",
+            "Seulement immediate"
+          ],
+          "answerIndex": 0,
+          "explanation": "Depuis la phase poll, la boucle passe d'abord par la phase check (setImmediate), puis revient aux timers.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "node-boucle-q2",
+          "prompt": "Depuis le script principal, dans quel ordre s'exécutent setTimeout(f, 0) et setImmediate(g) ?",
+          "choices": [
+            "L'ordre n'est pas garanti : il dépend du temps écoulé au premier tour de boucle",
+            "Toujours f puis g",
+            "Toujours g puis f",
+            "Ils s'exécutent en même temps"
+          ],
+          "answerIndex": 0,
+          "explanation": "Si la milliseconde du minuteur est déjà écoulée au premier tour, f passe avant ; sinon, g.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "node-boucle-q3",
+          "prompt": "Pendant ce traitement, le serveur ne répond plus à aucune requête. Touche la ligne en cause.",
+          "code": "function boucle() {\n  traiterUnMorceau();\n  process.nextTick(boucle);\n}\nboucle();",
+          "bugLines": [
+            3
+          ],
+          "explanation": "La file nextTick est vidée avant toute E/S : la boucle ne passe jamais à la phase suivante. Avec setImmediate, les E/S sont traitées entre deux morceaux.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "node-boucle-q4",
+          "prompt": "Complète : mesurer le retard de la boucle d'événements.",
+          "code": "import { monitorEventLoopDelay } from \"node:perf_hooks\";\nconst h = monitorEventLoopDelay();\nh.___();\nsetInterval(() => console.log(h.percentile(99) / 1e6), 5000);",
+          "answers": [
+            "enable"
+          ],
+          "distractors": [
+            "start",
+            "run",
+            "listen"
+          ],
+          "explanation": "L'histogramme mesure en nanosecondes, d'où la division par 1e6 pour obtenir des millisecondes.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "node-boucle-q5",
+          "prompt": "Dans quelle phase de la boucle s'exécutent les callbacks de setImmediate ?",
+          "choices": [
+            "check",
+            "timers",
+            "poll",
+            "close"
+          ],
+          "answerIndex": 0,
+          "explanation": "La phase check suit la phase poll, où sont traitées les E/S.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "node-boucle-q6",
+          "prompt": "Qu'est-ce que Node exécute entre deux callbacks de la boucle ?",
+          "choices": [
+            "Les callbacks de process.nextTick",
+            "Les callbacks des promesses résolues",
+            "Les fonctions passées à queueMicrotask",
+            "Les callbacks de setTimeout arrivés à échéance"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les minuteurs attendent leur phase, timers.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "node-flux",
+      "title": "Buffers et flux",
+      "summary": "Octets, encodages et Transform.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Les Buffers",
+          "body": "Un Buffer contient des octets bruts. Une chaîne et ses octets ne font pas la même longueur : \"é\".length vaut 1, mais Buffer.byteLength(\"é\") vaut 2 en UTF-8. Les données reçues du réseau arrivent en morceaux (chunks) qui peuvent couper un caractère multioctet en deux : on rassemble les Buffers avec Buffer.concat avant de décoder, ou on fixe l'encodage du flux."
+        },
+        {
+          "title": "Les types de flux",
+          "body": "Readable produit des données, Writable les consomme, Duplex fait les deux, Transform transforme ce qui le traverse. Un flux Readable s'itère avec for await. Quand write() renvoie false, le tampon interne est plein : on attend l'événement drain avant de continuer, c'est la contre-pression.",
+          "code": "import { Transform } from \"node:stream\";\n\nconst majuscules = new Transform({\n  transform(chunk, enc, callback) {\n    callback(null, chunk.toString().toUpperCase());\n  },\n});"
+        },
+        {
+          "title": "Lire ligne par ligne",
+          "body": "Pour un très gros fichier texte, readline lit ligne par ligne sans tout charger. pipeline relie plusieurs flux, gère la contre-pression et propage les erreurs.",
+          "code": "import readline from \"node:readline\";\n\nconst rl = readline.createInterface({\n  input: fs.createReadStream(\"journal.log\"),\n});\nfor await (const ligne of rl) {\n  if (ligne.includes(\"ERROR\")) n++;\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "node-flux-q1",
+          "prompt": "Qu'affiche ce code ?",
+          "code": "console.log(\"é\".length, Buffer.byteLength(\"é\"));",
+          "choices": [
+            "1 2",
+            "1 1",
+            "2 2",
+            "2 1"
+          ],
+          "answerIndex": 0,
+          "explanation": "length compte des unités UTF-16 ; byteLength compte les octets en UTF-8.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "node-flux-q2",
+          "prompt": "Des caractères accentués arrivent parfois corrompus. Touche la ligne en cause.",
+          "code": "let texte = \"\";\nreq.on(\"data\", (chunk) => { texte += chunk; });\nreq.on(\"end\", () => traiter(JSON.parse(texte)));",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Chaque chunk est converti en chaîne séparément : un caractère coupé entre deux chunks devient illisible. On collecte les Buffers et on décode Buffer.concat(chunks), ou on appelle req.setEncoding(\"utf8\").",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "node-flux-q3",
+          "prompt": "Complète ce flux qui met le texte en majuscules.",
+          "code": "import { Transform } from \"node:stream\";\nconst majuscules = new ___({\n  transform(chunk, enc, callback) {\n    ___(null, chunk.toString().toUpperCase());\n  },\n});",
+          "answers": [
+            "Transform",
+            "callback"
+          ],
+          "distractors": [
+            "Readable",
+            "resolve",
+            "return"
+          ],
+          "explanation": "Appeler callback(erreur, données) signale que le morceau est traité et pousse le résultat.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "node-flux-q4",
+          "prompt": "stream.write() renvoie false. Que faire ?",
+          "choices": [
+            "Arrêter d'écrire et attendre l'événement drain",
+            "Réécrire immédiatement le même morceau",
+            "Fermer le flux",
+            "Rien, false signifie que tout s'est bien passé"
+          ],
+          "answerIndex": 0,
+          "explanation": "Continuer d'écrire accumulerait les données en mémoire. pipeline s'en occupe automatiquement.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "node-flux-q5",
+          "prompt": "Comment compter les lignes d'erreur d'un journal de 10 Go ?",
+          "choices": [
+            "readline sur un flux de lecture, parcouru avec for await",
+            "readFile puis split(\"\\n\")",
+            "Copier le fichier dans un tableau",
+            "JSON.parse du fichier"
+          ],
+          "answerIndex": 0,
+          "explanation": "La mémoire reste constante, quelle que soit la taille du fichier.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "node-flux-q6",
+          "prompt": "Quels types de flux Node.js propose-t-il ?",
+          "choices": [
+            "Readable",
+            "Writable",
+            "Transform",
+            "Compressed"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le quatrième type est Duplex ; la compression est un Transform (zlib).",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "node-production",
+      "title": "Node.js en production",
+      "summary": "Cœurs, contexte, erreurs et diagnostic.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Utiliser la machine",
+          "body": "Un processus Node exécute le JavaScript sur un seul cœur. Pour en utiliser plusieurs, on lance plusieurs processus : le module cluster, ou plus simplement plusieurs réplicas (conteneurs) derrière un répartiteur de charge. Les calculs lourds partent dans des worker_threads pour ne pas bloquer la boucle."
+        },
+        {
+          "title": "Le contexte de requête",
+          "body": "AsyncLocalStorage transporte une valeur à travers toute la chaîne d'appels asynchrones d'une requête, sans la passer en paramètre : idéal pour un identifiant de requête dans les journaux ou le traçage.",
+          "code": "import { AsyncLocalStorage } from \"node:async_hooks\";\n\nconst contexte = new AsyncLocalStorage();\napp.use((req, res, next) => {\n  contexte.run({ requeteId: crypto.randomUUID() }, next);\n});\nfunction log(msg) {\n  console.log(contexte.getStore()?.requeteId, msg);\n}"
+        },
+        {
+          "title": "Erreurs et diagnostic",
+          "body": "Après une exception non rattrapée (uncaughtException), l'état du processus est incertain : on journalise, puis on arrête, et l'orchestrateur relance. Pour diagnostiquer : --inspect et les DevTools, des profils CPU (--cpu-prof), des instantanés du tas comparés pour trouver une fuite. Côté dépendances : lockfile versionné, npm ci, audit en CI."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "node-production-q1",
+          "prompt": "Après une exception non rattrapée (uncaughtException), que faire ?",
+          "choices": [
+            "Journaliser l'erreur, puis arrêter le processus : son état est incertain, l'orchestrateur le relance",
+            "L'ignorer et continuer",
+            "Redémarrer la machine",
+            "Recharger les modules"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une requête a pu s'interrompre à mi-chemin : verrous, connexions ou données en mémoire peuvent être incohérents.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "node-production-q2",
+          "prompt": "Complète : associer un identifiant à chaque requête et le lire dans les journaux.",
+          "code": "const contexte = new AsyncLocalStorage();\napp.use((req, res, next) => {\n  contexte.___({ requeteId: crypto.randomUUID() }, next);\n});\nfunction log(msg) {\n  console.log(contexte.___()?.requeteId, msg);\n}",
+          "answers": [
+            "run",
+            "getStore"
+          ],
+          "distractors": [
+            "enter",
+            "get",
+            "store"
+          ],
+          "explanation": "Tout ce qui est appelé depuis next, même de façon asynchrone, voit la même valeur.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "node-production-q3",
+          "prompt": "Comment exploiter les 8 cœurs d'un serveur pour une API Node.js ?",
+          "choices": [
+            "Lancer plusieurs processus : cluster, ou plusieurs réplicas derrière un répartiteur de charge",
+            "Utiliser async/await partout",
+            "Augmenter UV_THREADPOOL_SIZE à 1000",
+            "C'est automatique"
+          ],
+          "answerIndex": 0,
+          "explanation": "async/await évite d'attendre les E/S, mais le JavaScript reste sur un cœur.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "node-production-q4",
+          "prompt": "Après une erreur inattendue, le serveur continue de tourner avec un état corrompu. Touche la ligne en cause.",
+          "code": "process.on(\"uncaughtException\", (err) => {\n  console.error(err);\n});",
+          "bugLines": [
+            2
+          ],
+          "explanation": "L'erreur est journalisée puis ignorée. Il faut ensuite process.exit(1), après avoir éventuellement fermé proprement ce qui peut l'être.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "node-production-q5",
+          "prompt": "La mémoire d'un service Node augmente sans cesse. Comment trouver la fuite ?",
+          "choices": [
+            "Comparer deux instantanés du tas pris à quelques minutes d'écart",
+            "Augmenter --max-old-space-size",
+            "Redémarrer chaque nuit",
+            "Lire tout le code"
+          ],
+          "answerIndex": 0,
+          "explanation": "Les objets qui s'accumulent entre les deux instantanés, et ce qui les retient, désignent la fuite.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "node-production-q6",
+          "prompt": "Comment sécuriser les dépendances npm ?",
+          "choices": [
+            "Versionner package-lock.json et installer avec npm ci",
+            "Lancer npm audit dans la CI",
+            "Désactiver les scripts d'installation (--ignore-scripts) quand c'est possible",
+            "Monter vers la dernière version de tout, sans relecture, à chaque build"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Des mises à jour automatiques non relues ont déjà propagé des paquets compromis.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "node-defi",
+    "title": "Défi entretien : la latence qui explose",
+    "summary": "Boucle bloquée et diagnostic.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "node-defi-q1",
+        "prompt": "Cas pratique 1/3 — La latence p99 d'une API Node passe parfois de 30 ms à 2 s, avec un cœur à 100 %. Quel indicateur regarder en premier ?",
+        "choices": [
+          "Le retard de la boucle d'événements",
+          "L'espace disque",
+          "Le nombre de dépendances npm",
+          "La version de Node"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un retard élevé confirme qu'un travail synchrone bloque toutes les requêtes.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "node-defi-q2",
+        "prompt": "Cas pratique 2/3 — Un profil CPU montre JSON.stringify de réponses de 30 Mo. Quel correctif ?",
+        "choices": [
+          "Paginer ou réduire la réponse, ou la produire en flux",
+          "Ajouter de la mémoire",
+          "Passer en HTTP/2",
+          "Compresser en gzip"
+        ],
+        "answerIndex": 0,
+        "explanation": "La compression ajouterait encore du calcul synchrone ; le problème est la taille.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "node-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment repérer ce genre de régression avant les utilisateurs ?",
+        "choices": [
+          "Surveiller le retard de la boucle et la latence p99, avec des alertes",
+          "Lire les avis des utilisateurs",
+          "Redémarrer le service chaque heure",
+          "Augmenter le nombre de réplicas en permanence"
+        ],
+        "answerIndex": 0,
+        "explanation": "Des métriques de boucle exportées (Prometheus) suffisent à le voir arriver.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "node-defi-q4",
+        "prompt": "Dans un script CommonJS, qu'affiche ce code ?",
+        "code": "setImmediate(() => console.log(\"A\"));\nprocess.nextTick(() => console.log(\"B\"));\nPromise.resolve().then(() => console.log(\"C\"));",
+        "choices": [
+          "B, C, A",
+          "A, B, C",
+          "C, B, A",
+          "B, A, C"
+        ],
+        "answerIndex": 0,
+        "explanation": "nextTick, puis les microtâches, puis la boucle et sa phase check.",
+        "difficulty": 3
+      },
+      {
+        "type": "bug",
+        "id": "node-defi-q5",
+        "prompt": "Pendant les inscriptions, toute l'API ralentit. Touche la ligne en cause.",
+        "code": "app.post(\"/inscription\", (req, res) => {\n  const hash = crypto.pbkdf2Sync(\n    req.body.mdp, sel, 600000, 64, \"sha512\");\n  enregistrer(req.body.email, hash);\n  res.sendStatus(201);\n});",
+        "bugLines": [
+          2,
+          3
+        ],
+        "explanation": "La version Sync calcule sur le thread principal pendant des centaines de millisecondes. La version asynchrone (crypto.pbkdf2 avec callback, ou promisifiée) s'exécute dans le pool de libuv.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "node-defi-q6",
+        "prompt": "Quelles sont de bonnes pratiques pour Node en production ?",
+        "choices": [
+          "Un arrêt propre sur SIGTERM",
+          "Des journaux structurés avec un identifiant de requête",
+          "Un processus par cœur ou par conteneur",
+          "Attraper uncaughtException et continuer comme si de rien n'était"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Mieux vaut un redémarrage rapide qu'un processus dans un état incertain.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

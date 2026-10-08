@@ -1,0 +1,436 @@
+{
+  "id": "lfs-ch-essentiel",
+  "title": "Git LFS : l'essentiel",
+  "summary": "Versionner de gros fichiers.",
+  "lessons": [
+    {
+      "id": "lfs-principes",
+      "title": "Le principe",
+      "summary": "Des pointeurs dans Git, les fichiers à côté.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le problème",
+          "body": "Git garde chaque version de chaque fichier dans l'historique, et chaque clone récupère tout. Une maquette PSD de 200 Mo modifiée trente fois alourdit le dépôt de plusieurs gigaoctets, pour toujours, même si le fichier est supprimé ensuite. Les fichiers binaires se compressent mal et ne se fusionnent pas."
+        },
+        {
+          "title": "Des fichiers pointeurs",
+          "body": "Git LFS (Large File Storage) remplace dans Git chaque gros fichier par un petit fichier pointeur contenant son empreinte et sa taille. Le contenu réel est envoyé sur un serveur LFS, et n'est téléchargé que pour les versions extraites.",
+          "code": "version https://git-lfs.github.com/spec/v1\noid sha256:4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393\nsize 209715200",
+          "language": "text"
+        },
+        {
+          "title": "Suivre des fichiers",
+          "body": "git lfs install active LFS une fois par machine. git lfs track ajoute un motif dans .gitattributes, qu'il faut commiter : c'est lui qui indique à chacun quels fichiers passent par LFS.",
+          "code": "git lfs install\ngit lfs track \"*.psd\"\ngit add .gitattributes maquette.psd\ngit commit -m \"Ajoute la maquette\""
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "lfs-principes-q1",
+          "prompt": "Que stocke Git pour un fichier suivi par LFS ?",
+          "choices": [
+            "Un petit fichier pointeur avec l'empreinte et la taille du contenu",
+            "Le fichier complet compressé",
+            "Rien du tout",
+            "Un lien vers le poste de l'auteur"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le contenu réel vit sur le serveur LFS.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "lfs-principes-q2",
+          "prompt": "Pourquoi supprimer un gros fichier dans un nouveau commit ne réduit-il pas la taille du dépôt ?",
+          "choices": [
+            "Toutes ses versions restent dans l'historique et sont récupérées par chaque clone",
+            "Git ne supprime jamais rien du répertoire de travail",
+            "Parce que le fichier est en lecture seule",
+            "Ce n'est pas vrai"
+          ],
+          "answerIndex": 0,
+          "explanation": "Seule une réécriture de l'historique l'en retire.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "lfs-principes-q3",
+          "prompt": "Complète : suivre les fichiers PSD avec LFS.",
+          "code": "git lfs install\ngit lfs ___ \"*.psd\"\ngit add ___ maquette.psd\ngit commit -m \"Ajoute la maquette\"",
+          "answers": [
+            "track",
+            ".gitattributes"
+          ],
+          "distractors": [
+            "add",
+            ".gitignore",
+            ".lfsconfig"
+          ],
+          "explanation": "Sans .gitattributes commité, les autres ne savent pas que *.psd passe par LFS.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "lfs-principes-q4",
+          "prompt": "Quelle ligne git lfs track \"*.psd\" ajoute-t-il dans .gitattributes ?",
+          "choices": [
+            "*.psd filter=lfs diff=lfs merge=lfs -text",
+            "*.psd lfs=true",
+            "track *.psd",
+            "*.psd binary"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le filtre lfs convertit le fichier en pointeur à l'ajout, et inversement à l'extraction.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "lfs-principes-q5",
+          "prompt": "Les collègues récupèrent la maquette directement dans Git, sans LFS. Touche la ligne qui manque son effet.",
+          "code": "git lfs track \"*.psd\"\ngit add maquette.psd\ngit commit -m \"Ajoute la maquette\"\ngit push",
+          "bugLines": [
+            2
+          ],
+          "explanation": ".gitattributes n'est pas ajouté au commit : ce réglage reste local. Il faut git add .gitattributes maquette.psd.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "lfs-principes-q6",
+          "prompt": "Quels fichiers sont de bons candidats pour LFS ?",
+          "choices": [
+            "Des maquettes graphiques volumineuses",
+            "Des vidéos et des sons",
+            "Des modèles 3D ou des jeux de données binaires",
+            "Le code source en texte"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le texte se compresse et se fusionne bien dans Git.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "lfs-usage",
+      "title": "Au quotidien",
+      "summary": "Cloner, récupérer, verrouiller.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Cloner et récupérer",
+          "body": "À l'extraction, LFS télécharge le contenu des fichiers suivis. Pour un clone rapide, on peut différer ce téléchargement avec GIT_LFS_SKIP_SMUDGE=1, puis ne récupérer que certains fichiers avec git lfs pull --include. git lfs ls-files liste les fichiers gérés par LFS.",
+          "code": "GIT_LFS_SKIP_SMUDGE=1 git clone https://exemple.fr/jeu.git\ncd jeu\ngit lfs pull --include=\"niveaux/foret/*\"\ngit lfs ls-files"
+        },
+        {
+          "title": "Verrouiller",
+          "body": "Deux modifications concurrentes d'un fichier binaire ne se fusionnent pas : l'une sera perdue. LFS permet de verrouiller un fichier sur le serveur avant de le modifier. Les motifs marqués lockable sont extraits en lecture seule tant qu'on n'a pas pris le verrou.",
+          "code": "git lfs track \"*.psd\" --lockable\ngit lfs lock maquettes/accueil.psd\n# ... modification, commit, push ...\ngit lfs unlock maquettes/accueil.psd"
+        },
+        {
+          "title": "Les quotas",
+          "body": "Les hébergeurs facturent souvent le stockage et la bande passante LFS. Une CI qui clone tout le dépôt à chaque job peut épuiser le quota : on met en cache les objets LFS ou on ne télécharge que ce qui est utile au job."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "lfs-usage-q1",
+          "prompt": "Que fait GIT_LFS_SKIP_SMUDGE=1 au clone ?",
+          "choices": [
+            "Il laisse les fichiers pointeurs sans télécharger leur contenu",
+            "Il supprime les fichiers LFS",
+            "Il désactive Git",
+            "Il clone sans historique"
+          ],
+          "answerIndex": 0,
+          "explanation": "On récupère ensuite seulement le nécessaire avec git lfs pull.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "lfs-usage-q2",
+          "prompt": "Pourquoi verrouiller un fichier binaire avant de le modifier ?",
+          "choices": [
+            "Deux modifications concurrentes d'un binaire ne se fusionnent pas : l'une serait perdue",
+            "Pour le chiffrer",
+            "Pour accélérer le push",
+            "Pour le cacher aux autres"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le verrou signale aux autres que le fichier est en cours de modification.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "lfs-usage-q3",
+          "prompt": "Complète : prendre puis rendre le verrou d'une maquette.",
+          "code": "git lfs ___ maquettes/accueil.psd\ngit commit -am \"Nouvelle maquette d'accueil\"\ngit push\ngit lfs ___ maquettes/accueil.psd",
+          "answers": [
+            "lock",
+            "unlock"
+          ],
+          "distractors": [
+            "track",
+            "release",
+            "untrack"
+          ],
+          "explanation": "git lfs locks liste les verrous en cours.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "lfs-usage-q4",
+          "prompt": "La CI épuise le quota de bande passante LFS. Que faire ?",
+          "choices": [
+            "Mettre en cache les objets LFS entre les jobs, ou ne télécharger que ce que chaque job utilise",
+            "Désinstaller LFS",
+            "Pousser plus souvent",
+            "Supprimer .gitattributes"
+          ],
+          "answerIndex": 0,
+          "explanation": "Chaque job qui télécharge tout consomme la bande passante.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "lfs-usage-q5",
+          "prompt": "Le jeu plante au chargement : les textures contiennent du texte au lieu d'images. Touche la ligne en cause.",
+          "code": "git clone https://exemple.fr/jeu.git\n# LFS n'est pas installé sur cette machine\n./build.sh",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Sans LFS installé (git lfs install), les fichiers suivis restent des pointeurs texte. Il faut installer LFS puis récupérer le contenu avec git lfs pull.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "lfs-usage-q6",
+          "prompt": "Quelles commandes LFS existent ?",
+          "choices": [
+            "git lfs ls-files",
+            "git lfs pull",
+            "git lfs lock",
+            "git lfs compress"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La compression n'est pas une commande LFS.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "lfs-migration",
+      "title": "Migrer et décider",
+      "summary": "Réécrire l'historique et choisir son outil.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Trop tard pour track",
+          "body": "Suivre un motif avec git lfs track ne concerne que les ajouts suivants : les versions déjà commitées restent dans l'historique Git. Pour alléger le dépôt, git lfs migrate import réécrit l'historique en remplaçant ces fichiers par des pointeurs.",
+          "code": "git lfs migrate info --everything\ngit lfs migrate import --include=\"*.psd,*.mp4\" --everything\ngit push --force-with-lease --all"
+        },
+        {
+          "title": "Les conséquences",
+          "body": "Réécrire l'historique change les identifiants de tous les commits touchés. Tous les collaborateurs doivent recloner ou réaligner leurs branches, les PR ouvertes sont à rebaser, et l'ancien contenu reste sur le serveur tant que les anciennes références existent. On planifie l'opération et on prévient l'équipe."
+        },
+        {
+          "title": "Alternatives",
+          "body": "LFS n'est pas toujours la bonne réponse : un artefact de build se publie dans un registre, un gros jeu de données se stocke dans un stockage objet (avec un outil comme DVC pour le versionner), et un fichier généré n'a pas à être versionné du tout."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "lfs-migration-q1",
+          "prompt": "On ajoute git lfs track \"*.mp4\" dans un dépôt qui contient déjà 4 Go de vidéos. Le dépôt s'allège-t-il ?",
+          "choices": [
+            "Non : les versions existantes restent dans l'historique, il faut git lfs migrate import",
+            "Oui, immédiatement",
+            "Oui, au prochain push",
+            "Oui, après git gc"
+          ],
+          "answerIndex": 0,
+          "explanation": "track ne concerne que les ajouts à venir.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "lfs-migration-q2",
+          "prompt": "Complète : convertir toutes les vidéos de l'historique en fichiers LFS.",
+          "code": "git lfs migrate ___ --include=\"*.mp4\" --___",
+          "answers": [
+            "import",
+            "everything"
+          ],
+          "distractors": [
+            "export",
+            "all-branches",
+            "track"
+          ],
+          "explanation": "--everything couvre toutes les branches et étiquettes locales.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "lfs-migration-q3",
+          "prompt": "Quelle conséquence a git lfs migrate import sur l'équipe ?",
+          "choices": [
+            "Les identifiants des commits changent : chacun doit recloner ou réaligner ses branches",
+            "Aucune",
+            "Les fichiers sont supprimés",
+            "Les branches sont fusionnées"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est une réécriture d'historique, à planifier.",
+          "difficulty": 3
+        },
+        {
+          "type": "order",
+          "id": "lfs-migration-q4",
+          "prompt": "Remets dans l'ordre une migration vers LFS.",
+          "lines": [
+            "git lfs migrate info --everything",
+            "Prévenir l'équipe et geler les fusions",
+            "git lfs migrate import --include=\"*.psd\" --everything",
+            "git push --force-with-lease --all",
+            "Chacun reclone le dépôt"
+          ],
+          "language": "text",
+          "explanation": "migrate info mesure d'abord ce qui pèse le plus.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "lfs-migration-q5",
+          "prompt": "Le dépôt contient des binaires de build régénérés à chaque commit, et grossit sans cesse. Touche la ligne qui traite mal le problème.",
+          "code": "git lfs track \"dist/*.exe\"\ngit add .gitattributes dist/\ngit commit -m \"Binaires du build\"",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Des artefacts de build n'ont pas à être versionnés, même avec LFS : on les ignore (.gitignore) et on les publie dans un registre ou comme artefacts de release.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "lfs-migration-q6",
+          "prompt": "Quelles alternatives à LFS selon le cas ?",
+          "choices": [
+            "Un registre d'artefacts pour les binaires de build",
+            "Un stockage objet versionné avec DVC pour les jeux de données",
+            "Ne pas versionner les fichiers générés",
+            "Committer les binaires dans Git sans LFS"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les binaires bruts dans Git sont précisément le problème de départ.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "lfs-defi",
+    "title": "Défi entretien : le studio de jeu",
+    "summary": "Des gigaoctets de ressources, une équipe mixte.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "lfs-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un studio de jeu versionne textures, sons et modèles 3D directement dans Git. Le dépôt pèse 60 Go et un clone prend une heure. Que proposer ?",
+        "choices": [
+          "Migrer ces ressources vers Git LFS, en réécrivant l'historique",
+          "Supprimer les ressources dans un nouveau commit",
+          "Cloner avec --depth 1 pour toujours",
+          "Diviser le jeu en 60 dépôts"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le clone ne télécharge plus que les versions utiles des ressources.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "lfs-defi-q2",
+        "prompt": "Cas pratique 2/3 — Deux graphistes modifient la même texture en parallèle ; l'un perd son travail. Comment l'éviter ?",
+        "choices": [
+          "Rendre les textures verrouillables (--lockable) et prendre un verrou avant toute modification",
+          "Fusionner les deux images à la main",
+          "Interdire les textures",
+          "Une branche par graphiste"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les fichiers verrouillables sont en lecture seule tant qu'on n'a pas le verrou.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "lfs-defi-q3",
+        "prompt": "Cas pratique 3/3 — Les développeurs du serveur n'ont besoin d'aucune ressource graphique. Comment accélérer leur clone ?",
+        "choices": [
+          "Cloner avec GIT_LFS_SKIP_SMUDGE=1, ou exclure les dossiers de ressources du téléchargement LFS",
+          "Leur donner un dépôt sans historique",
+          "Supprimer les ressources sur leur machine après le clone",
+          "Rien n'est possible"
+        ],
+        "answerIndex": 0,
+        "explanation": "La configuration lfs.fetchexclude permet aussi d'exclure des dossiers durablement.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "lfs-defi-q4",
+        "prompt": "Que contient un fichier pointeur LFS ?",
+        "choices": [
+          "La version de la spécification, l'empreinte SHA-256 et la taille du fichier",
+          "Le fichier compressé",
+          "L'URL publique du fichier",
+          "Le nom de l'auteur"
+        ],
+        "answerIndex": 0,
+        "explanation": "Il pèse une centaine d'octets.",
+        "difficulty": 1
+      },
+      {
+        "type": "bug",
+        "id": "lfs-defi-q5",
+        "prompt": "Après la migration, les collègues obtiennent des conflits sur tous les fichiers. Touche l'étape oubliée.",
+        "code": "git lfs migrate import --include=\"*.png,*.wav\" --everything\ngit push --force-with-lease --all\n# les collègues font : git pull",
+        "bugLines": [
+          3
+        ],
+        "explanation": "L'historique a été réécrit : un git pull tente de fusionner l'ancien et le nouvel historique. Il faut recloner (ou réaligner chaque branche sur la nouvelle version distante).",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "lfs-defi-q6",
+        "prompt": "Quelles bonnes pratiques avec Git LFS ?",
+        "choices": [
+          "Committer .gitattributes",
+          "Installer LFS sur toutes les machines, y compris la CI",
+          "Surveiller les quotas de stockage et de bande passante",
+          "Suivre tout le code source avec LFS"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le code source n'a rien à gagner à LFS.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,432 @@
+{
+  "id": "nethttp-ch-essentiel",
+  "title": "net/http : l'essentiel",
+  "summary": "Le serveur HTTP de la bibliothèque standard.",
+  "lessons": [
+    {
+      "id": "nethttp-routage",
+      "title": "Handlers et routage",
+      "summary": "ServeMux, motifs et paramètres de chemin.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le handler",
+          "body": "Un handler reçoit un http.ResponseWriter pour écrire la réponse et un *http.Request qui décrit la requête. Toute valeur qui a une méthode ServeHTTP est un http.Handler ; http.HandlerFunc transforme une simple fonction en handler.",
+          "code": "func bonjour(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintf(w, \"Bonjour %s\", r.URL.Query().Get(\"nom\"))\n}"
+        },
+        {
+          "title": "Le routeur de Go 1.22",
+          "body": "Depuis Go 1.22, le ServeMux standard accepte une méthode et des paramètres dans les motifs. r.PathValue lit un paramètre. Une requête avec une autre méthode reçoit 405 avec l'en-tête Allow.",
+          "code": "mux := http.NewServeMux()\nmux.HandleFunc(\"GET /produits/{id}\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprint(w, \"produit \", r.PathValue(\"id\"))\n})\nmux.HandleFunc(\"GET /produits/nouveau\", formulaire)\nlog.Fatal(http.ListenAndServe(\":8080\", mux))"
+        },
+        {
+          "title": "La priorité des motifs",
+          "body": "Quand plusieurs motifs correspondent, le plus spécifique gagne : /produits/nouveau l'emporte sur /produits/{id}. Un motif terminé par / correspond à tout ce qui commence ainsi ; « / » attrape donc toutes les requêtes non routées, alors que « /{$} » ne correspond qu'à la racine exacte."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "nethttp-routage-q1",
+          "prompt": "Avec les motifs « GET /produits/{id} » et « GET /produits/nouveau », quel handler reçoit GET /produits/nouveau ?",
+          "choices": [
+            "Celui de /produits/nouveau, plus spécifique",
+            "Celui de /produits/{id}, avec id = nouveau",
+            "Les deux",
+            "Aucun : conflit à l'enregistrement"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le motif le plus spécifique l'emporte.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "nethttp-routage-q2",
+          "prompt": "Que reçoit un client qui envoie POST /produits/42 si seul « GET /produits/{id} » est enregistré ?",
+          "choices": [
+            "405 Method Not Allowed, avec Allow: GET, HEAD",
+            "404 Not Found",
+            "200 OK",
+            "500 Internal Server Error"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un motif GET accepte aussi HEAD.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "nethttp-routage-q3",
+          "prompt": "Complète : lire le paramètre id du chemin.",
+          "code": "mux.HandleFunc(\"GET /produits/{id}\", func(w http.ResponseWriter, r *http.Request) {\n\tid := r.___(\"___\")\n\tfmt.Fprint(w, \"produit \", id)\n})",
+          "answers": [
+            "PathValue",
+            "id"
+          ],
+          "distractors": [
+            "FormValue",
+            "Param",
+            "{id}"
+          ],
+          "explanation": "FormValue lit la chaîne de requête ou le formulaire, pas le chemin.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "nethttp-routage-q4",
+          "prompt": "Quelle différence entre les motifs « / » et « /{$} » ?",
+          "choices": [
+            "« / » correspond à tous les chemins non routés ; « /{$} » seulement à la racine",
+            "Aucune",
+            "« /{$} » correspond à tous les chemins",
+            "« / » est invalide"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un motif terminé par / est un préfixe.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "nethttp-routage-q5",
+          "prompt": "La page d'accueil répond aussi à /nimporte/quoi au lieu d'un 404. Touche la ligne en cause.",
+          "code": "mux := http.NewServeMux()\nmux.HandleFunc(\"GET /\", accueil)\nmux.HandleFunc(\"GET /produits/{id}\", produit)",
+          "bugLines": [
+            2
+          ],
+          "explanation": "« GET / » est un préfixe qui attrape tout. Pour la racine seule, on écrit « GET /{$} ».",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "nethttp-routage-q6",
+          "prompt": "Que peut contenir un motif du ServeMux depuis Go 1.22 ?",
+          "choices": [
+            "Une méthode HTTP",
+            "Des paramètres comme {id}",
+            "Un paramètre final {chemin...} qui capture le reste",
+            "Des expressions régulières"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les expressions régulières demandent un routeur tiers.",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "nethttp-reponses",
+      "title": "Réponses et middlewares",
+      "summary": "En-têtes, JSON et chaînage.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "L'ordre d'écriture",
+          "body": "Les en-têtes se fixent avant le code de statut : WriteHeader (ou le premier Write, qui envoie 200) les fige. Un en-tête modifié ensuite est ignoré, et un second WriteHeader provoque l'avertissement « superfluous response.WriteHeader call ».",
+          "code": "w.Header().Set(\"Content-Type\", \"application/json\")\nw.WriteHeader(http.StatusCreated)\njson.NewEncoder(w).Encode(produit)"
+        },
+        {
+          "title": "Lire du JSON",
+          "body": "On décode le corps avec json.NewDecoder, en limitant sa taille avec http.MaxBytesReader et en refusant les champs inconnus si besoin. Une erreur de décodage donne une réponse 400.",
+          "code": "r.Body = http.MaxBytesReader(w, r.Body, 1<<20)\nvar p Produit\nif err := json.NewDecoder(r.Body).Decode(&p); err != nil {\n\thttp.Error(w, \"JSON invalide\", http.StatusBadRequest)\n\treturn\n}"
+        },
+        {
+          "title": "Les middlewares",
+          "body": "Un middleware est une fonction qui prend un http.Handler et en renvoie un autre, qui ajoute un comportement avant ou après l'appel du suivant : journalisation, authentification, récupération des panics.",
+          "code": "func journal(suivant http.Handler) http.Handler {\n\treturn http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {\n\t\tdebut := time.Now()\n\t\tsuivant.ServeHTTP(w, r)\n\t\tlog.Printf(\"%s %s %v\", r.Method, r.URL.Path, time.Since(debut))\n\t})\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "nethttp-reponses-q1",
+          "prompt": "Le client reçoit Content-Type: text/plain au lieu de application/json. Touche la ligne mal placée.",
+          "code": "func creer(w http.ResponseWriter, r *http.Request) {\n\tw.WriteHeader(http.StatusCreated)\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tfmt.Fprint(w, `{\"id\": 42}`)\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Après WriteHeader, les en-têtes sont figés : le Set est ignoré et Go devine text/plain. Les en-têtes se fixent avant WriteHeader.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "nethttp-reponses-q2",
+          "prompt": "Que fait le premier appel à w.Write si WriteHeader n'a pas été appelé ?",
+          "choices": [
+            "Il envoie implicitement le statut 200 et fige les en-têtes",
+            "Il lève une panic",
+            "Il n'envoie rien tant que WriteHeader n'est pas appelé",
+            "Il envoie 204"
+          ],
+          "answerIndex": 0,
+          "explanation": "Un WriteHeader ultérieur serait ignoré, avec un avertissement.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "nethttp-reponses-q3",
+          "prompt": "Complète la réponse JSON avec le statut 201.",
+          "code": "w.Header().Set(\"Content-Type\", \"application/json\")\nw.___(http.StatusCreated)\njson.___(w).Encode(produit)",
+          "answers": [
+            "WriteHeader",
+            "NewEncoder"
+          ],
+          "distractors": [
+            "SetStatus",
+            "Marshal",
+            "NewDecoder"
+          ],
+          "explanation": "json.NewEncoder écrit directement dans le ResponseWriter.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "nethttp-reponses-q4",
+          "prompt": "Pourquoi envelopper r.Body avec http.MaxBytesReader ?",
+          "choices": [
+            "Pour refuser les corps trop volumineux qui épuiseraient la mémoire",
+            "Pour compresser le corps",
+            "Pour lire le corps deux fois",
+            "Pour accélérer le décodage"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sans limite, un client peut envoyer des gigaoctets.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "nethttp-reponses-q5",
+          "prompt": "Quelle est la signature typique d'un middleware avec net/http ?",
+          "choices": [
+            "func(http.Handler) http.Handler",
+            "func(http.ResponseWriter) error",
+            "func(*http.Request) bool",
+            "func() http.Handler"
+          ],
+          "answerIndex": 0,
+          "explanation": "On les enchaîne : journal(auth(mux)).",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "nethttp-reponses-q6",
+          "prompt": "Quels rôles un middleware remplit-il souvent ?",
+          "choices": [
+            "La journalisation des requêtes",
+            "L'authentification",
+            "La récupération des panics",
+            "La compilation du programme"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Les middlewares s'exécutent à chaque requête.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "nethttp-production",
+      "title": "En production",
+      "summary": "Délais, arrêt propre, concurrence et client.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Des délais",
+          "body": "http.ListenAndServe crée un serveur sans aucun délai : un client lent peut garder une connexion ouverte indéfiniment. On configure un http.Server avec ReadHeaderTimeout, ReadTimeout, WriteTimeout et IdleTimeout.",
+          "code": "srv := &http.Server{\n\tAddr:              \":8080\",\n\tHandler:           mux,\n\tReadHeaderTimeout: 5 * time.Second,\n\tWriteTimeout:      15 * time.Second,\n\tIdleTimeout:       60 * time.Second,\n}"
+        },
+        {
+          "title": "L'arrêt propre",
+          "body": "srv.Shutdown(ctx) cesse d'accepter de nouvelles connexions et attend la fin des requêtes en cours, dans la limite du contexte. Chaque requête a son propre contexte, r.Context(), annulé si le client se déconnecte : on le transmet aux appels de base de données."
+        },
+        {
+          "title": "Concurrence et client",
+          "body": "Chaque requête s'exécute dans sa propre goroutine : un état partagé entre handlers doit être protégé. Côté client, http.Client sans Timeout attend indéfiniment, et il faut toujours fermer resp.Body pour réutiliser la connexion. On réutilise un même client plutôt que d'en créer un par requête."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "nethttp-production-q1",
+          "prompt": "Quel est le risque de http.ListenAndServe(\":8080\", mux) en production ?",
+          "choices": [
+            "Aucun délai n'est configuré : des clients lents peuvent épuiser les connexions",
+            "Il n'accepte qu'une requête à la fois",
+            "Il ne gère pas HTTP/1.1",
+            "Aucun"
+          ],
+          "answerIndex": 0,
+          "explanation": "On configure un http.Server avec des délais.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "nethttp-production-q2",
+          "prompt": "Ce compteur de visites provoque une course de données sous charge. Touche la ligne en cause.",
+          "code": "var visites int\n\nfunc compter(w http.ResponseWriter, r *http.Request) {\n\tvisites++\n\tfmt.Fprint(w, visites)\n}",
+          "bugLines": [
+            4
+          ],
+          "explanation": "Chaque requête tourne dans sa goroutine : l'incrément n'est pas atomique. On utilise atomic.Int64 ou un mutex.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "nethttp-production-q3",
+          "prompt": "Que fait srv.Shutdown(ctx) ?",
+          "choices": [
+            "Il refuse les nouvelles connexions et attend la fin des requêtes en cours, dans la limite du contexte",
+            "Il coupe toutes les connexions immédiatement",
+            "Il redémarre le serveur",
+            "Il vide le cache"
+          ],
+          "answerIndex": 0,
+          "explanation": "On l'appelle à la réception de SIGTERM, par exemple lors d'un déploiement.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "nethttp-production-q4",
+          "prompt": "Sous charge, ce client finit par manquer de connexions et de descripteurs de fichiers. Touche la ligne qui manque.",
+          "code": "client := &http.Client{Timeout: 10 * time.Second}\nresp, err := client.Get(url)\nif err != nil {\n\treturn err\n}\nreturn json.NewDecoder(resp.Body).Decode(&res)",
+          "bugLines": [
+            6
+          ],
+          "explanation": "resp.Body n'est jamais fermé : il faut defer resp.Body.Close() juste après la vérification d'erreur.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "nethttp-production-q5",
+          "prompt": "Complète : transmettre l'annulation de la requête à la base de données.",
+          "code": "func produit(w http.ResponseWriter, r *http.Request) {\n\trow := db.QueryRowContext(r.___(), \"SELECT nom FROM produits WHERE id = $1\", r.PathValue(\"id\"))\n\tvar nom string\n\tif err := row.___(&nom); err != nil {\n\t\thttp.Error(w, \"introuvable\", http.StatusNotFound)\n\t\treturn\n\t}\n\tfmt.Fprint(w, nom)\n}",
+          "answers": [
+            "Context",
+            "Scan"
+          ],
+          "distractors": [
+            "Done",
+            "Read",
+            "Background"
+          ],
+          "explanation": "Si le client se déconnecte, la requête SQL est annulée.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "nethttp-production-q6",
+          "prompt": "Quels réglages appliquer à un serveur net/http en production ?",
+          "choices": [
+            "ReadHeaderTimeout",
+            "WriteTimeout et IdleTimeout",
+            "Un arrêt propre avec Shutdown",
+            "Un délai d'attente nul pour tout"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un délai nul signifie « pas de délai ».",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "nethttp-defi",
+    "title": "Défi entretien : une API sans framework",
+    "summary": "La bibliothèque standard suffit-elle ?",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "nethttp-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une équipe hésite à adopter un framework web pour une petite API REST en Go 1.23. Que lui répondre ?",
+        "choices": [
+          "Le ServeMux standard gère désormais méthodes et paramètres : on peut commencer sans framework",
+          "Un framework est obligatoire en Go",
+          "net/http ne gère pas JSON",
+          "Il faut écrire son propre serveur TCP"
+        ],
+        "answerIndex": 0,
+        "explanation": "Moins de dépendances, et un framework reste possible plus tard.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "nethttp-defi-q2",
+        "prompt": "Cas pratique 2/3 — Lors des déploiements, des requêtes en cours échouent. Que mettre en place ?",
+        "choices": [
+          "Écouter SIGTERM et appeler srv.Shutdown avec un délai de quelques secondes",
+          "Redémarrer plus vite",
+          "Augmenter WriteTimeout",
+          "Ignorer SIGTERM"
+        ],
+        "answerIndex": 0,
+        "explanation": "Les requêtes en cours se terminent avant l'arrêt.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "nethttp-defi-q3",
+        "prompt": "Cas pratique 3/3 — Une panic dans un handler ne doit pas renvoyer une réponse vide sans trace. Que faire ?",
+        "choices": [
+          "Un middleware qui récupère la panic avec recover, la journalise et renvoie 500",
+          "Ignorer les panics",
+          "Redémarrer le serveur à chaque panic",
+          "Remplacer toutes les erreurs par des panics"
+        ],
+        "answerIndex": 0,
+        "explanation": "net/http récupère déjà la panic pour ne pas arrêter le serveur, mais coupe la connexion sans réponse utile.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "nethttp-defi-q4",
+        "prompt": "Pourquoi réutiliser un même http.Client plutôt qu'en créer un par appel ?",
+        "choices": [
+          "Il garde un pool de connexions réutilisables",
+          "Il est plus joli",
+          "Il est obligatoire",
+          "Il chiffre mieux"
+        ],
+        "answerIndex": 0,
+        "explanation": "Recréer des connexions TLS à chaque appel coûte cher.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "nethttp-defi-q5",
+        "prompt": "Les appels vers l'API partenaire bloquent parfois une goroutine pour toujours. Touche la ligne en cause.",
+        "code": "var client = &http.Client{}\n\nfunc tarif(id string) (*http.Response, error) {\n\treturn client.Get(\"https://partenaire.exemple/tarifs/\" + id)\n}",
+        "bugLines": [
+          1
+        ],
+        "explanation": "Un http.Client sans Timeout attend indéfiniment. On fixe Timeout, ou on passe un contexte avec échéance.",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "nethttp-defi-q6",
+        "prompt": "Quelles règles respecter dans un handler net/http ?",
+        "choices": [
+          "Fixer les en-têtes avant WriteHeader",
+          "Protéger tout état partagé",
+          "Transmettre r.Context() aux appels lents",
+          "Appeler WriteHeader plusieurs fois pour corriger le statut"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Un second WriteHeader est ignoré.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

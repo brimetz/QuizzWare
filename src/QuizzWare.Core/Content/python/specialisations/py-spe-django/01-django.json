@@ -1,0 +1,444 @@
+{
+  "id": "django-ch-essentiel",
+  "title": "Django : l'essentiel",
+  "summary": "Vues, ORM et mise en production.",
+  "lessons": [
+    {
+      "id": "django-bases",
+      "title": "Les bases de Django",
+      "summary": "Modèles, vues, URL et réglages.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Projet et applications",
+          "body": "Un projet Django regroupe des applications, chacune avec ses modèles (les données), ses vues (le traitement d'une requête) et ses templates (le rendu HTML). urls.py associe des chemins aux vues. manage.py lance les commandes : runserver en développement, makemigrations et migrate pour la base, createsuperuser pour l'administration.",
+          "code": "urlpatterns = [\n    path(\"articles/<int:pk>/\", views.detail, name=\"detail\"),\n]\n\ndef detail(request, pk):\n    article = get_object_or_404(Article, pk=pk)\n    return render(request, \"blog/detail.html\", {\"article\": article})",
+          "language": "python"
+        },
+        {
+          "title": "Ce que Django fournit",
+          "body": "L'administration est générée à partir des modèles. Les formulaires valident les données. Les templates échappent automatiquement les variables (contre le XSS), les formulaires POST portent un jeton CSRF, et l'ORM utilise des requêtes paramétrées (contre l'injection SQL) : des protections actives par défaut."
+        },
+        {
+          "title": "Les réglages",
+          "body": "settings.py contient la configuration. En production : DEBUG = False (sinon les pages d'erreur détaillées révèlent le code et les réglages), ALLOWED_HOSTS limité aux vrais domaines, SECRET_KEY secrète et lue dans l'environnement. python manage.py check --deploy vérifie ces points."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "django-bases-q1",
+          "prompt": "Quel est le rôle d'une vue Django ?",
+          "choices": [
+            "Recevoir une requête et renvoyer une réponse (HTML, JSON, redirection)",
+            "Définir la structure des tables",
+            "Afficher le HTML sans aucune logique",
+            "Lancer les migrations"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le modèle décrit les données, le template le rendu, la vue fait le lien.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "django-bases-q2",
+          "prompt": "Complète : associer /articles/42/ à la vue detail.",
+          "code": "urlpatterns = [\n    ___(\"articles/<___:pk>/\", views.detail, name=\"detail\"),\n]",
+          "language": "python",
+          "answers": [
+            "path",
+            "int"
+          ],
+          "distractors": [
+            "url",
+            "route",
+            "number"
+          ],
+          "explanation": "Le convertisseur int ne laisse passer que des entiers et les fournit à la vue sous ce type.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "django-bases-q3",
+          "prompt": "Revue avant mise en production : touche une ligne problématique.",
+          "code": "DEBUG = True\nALLOWED_HOSTS = [\"*\"]\nSECRET_KEY = \"django-insecure-abc123\"",
+          "language": "python",
+          "bugLines": [
+            1,
+            2,
+            3
+          ],
+          "explanation": "Les trois sont à corriger : DEBUG expose le code, le joker * accepte n'importe quel en-tête Host, et une clé connue permet de forger des sessions.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "django-bases-q4",
+          "prompt": "Qu'apporte l'administration de Django ?",
+          "choices": [
+            "Une interface de gestion des données générée à partir des modèles",
+            "Un tableau de bord des serveurs",
+            "Un outil de déploiement",
+            "Un éditeur de templates"
+          ],
+          "answerIndex": 0,
+          "explanation": "Elle se personnalise avec des classes ModelAdmin.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "django-bases-q5",
+          "prompt": "Que fait python manage.py migrate ?",
+          "choices": [
+            "Il applique à la base les migrations qui ne l'ont pas encore été",
+            "Il crée les fichiers de migration",
+            "Il copie la base vers un autre serveur",
+            "Il met à jour Django"
+          ],
+          "answerIndex": 0,
+          "explanation": "makemigrations crée les fichiers à partir des changements de modèles ; migrate les applique.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "django-bases-q6",
+          "prompt": "Quelles protections Django active-t-il par défaut ?",
+          "choices": [
+            "Le jeton CSRF sur les formulaires POST",
+            "L'échappement automatique dans les templates",
+            "Des requêtes paramétrées dans l'ORM",
+            "La limitation du nombre de tentatives de connexion"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "La limitation des tentatives demande une application tierce ou une configuration en amont.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "django-orm",
+      "title": "L'ORM",
+      "summary": "QuerySets, N+1 et expressions F.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des QuerySets paresseuses",
+          "body": "Article.objects.filter(publie=True) ne lance aucune requête : une QuerySet s'exécute quand on l'évalue (itération, list, len, accès à un élément). On peut donc enchaîner filter, exclude, order_by et une tranche, qui devient un LIMIT.",
+          "code": "articles = (Article.objects\n            .filter(publie=True)\n            .select_related(\"auteur\")\n            .order_by(\"-cree_le\")[:20])",
+          "language": "python"
+        },
+        {
+          "title": "Le problème N+1",
+          "body": "Accéder à article.auteur dans une boucle lance une requête par article : 1 requête pour la liste, plus N pour les auteurs. select_related fait une jointure pour les relations simples (ForeignKey, OneToOne) ; prefetch_related charge une relation multiple (ManyToMany, relation inverse) en une requête de plus, puis assemble en Python."
+        },
+        {
+          "title": "Écritures sûres",
+          "body": "Lire une valeur, la modifier en Python puis sauvegarder perd des mises à jour si deux requêtes le font en même temps. Une expression F fait le calcul dans la base : update(vues=F(\"vues\") + 1). transaction.atomic() regroupe plusieurs écritures en tout-ou-rien ; transaction.on_commit déclenche une action seulement une fois la transaction validée.",
+          "code": "from django.db.models import F\n\nArticle.objects.filter(pk=pk).update(vues=F(\"vues\") + 1)",
+          "language": "python"
+        }
+      ],
+      "questions": [
+        {
+          "type": "bug",
+          "id": "django-orm-q1",
+          "prompt": "Cette page lance 101 requêtes pour afficher 100 articles. Touche la ligne à corriger.",
+          "code": "articles = Article.objects.filter(publie=True)\nfor a in articles:\n    print(a.titre, a.auteur.nom)",
+          "language": "python",
+          "bugLines": [
+            1
+          ],
+          "explanation": "Chaque a.auteur déclenche une requête. Avec .select_related(\"auteur\"), les auteurs viennent dans la même requête, par jointure.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "django-orm-q2",
+          "prompt": "Quelle différence entre select_related et prefetch_related ?",
+          "choices": [
+            "select_related fait une jointure (ForeignKey, OneToOne) ; prefetch_related une requête séparée par relation multiple",
+            "Ce sont deux noms pour la même chose",
+            "select_related charge tout en mémoire, prefetch_related rien",
+            "prefetch_related ne fonctionne qu'avec PostgreSQL"
+          ],
+          "answerIndex": 0,
+          "explanation": "Une jointure sur une relation multiple dupliquerait les lignes ; d'où la seconde requête.",
+          "difficulty": 3
+        },
+        {
+          "type": "fill",
+          "id": "django-orm-q3",
+          "prompt": "Complète : incrémenter le compteur dans la base, sans course entre requêtes.",
+          "code": "from django.db.models import F\nArticle.objects.filter(pk=pk).update(vues=___(\"vues\") + 1)",
+          "language": "python",
+          "answers": [
+            "F"
+          ],
+          "distractors": [
+            "Sum",
+            "Count",
+            "Q"
+          ],
+          "explanation": "La base exécute UPDATE … SET vues = vues + 1 : atomique.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "django-orm-q4",
+          "prompt": "Quand une QuerySet lance-t-elle sa requête SQL ?",
+          "choices": [
+            "Quand on l'évalue (itération, list, len…), pas quand on la construit",
+            "À chaque appel de filter",
+            "Au démarrage du serveur",
+            "Jamais, il faut appeler execute()"
+          ],
+          "answerIndex": 0,
+          "explanation": "On peut donc la composer librement avant de l'utiliser.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "django-orm-q5",
+          "prompt": "Sous forte charge, des vues sont perdues. Touche la ligne en cause.",
+          "code": "a = Article.objects.get(pk=pk)\na.vues += 1\na.save()",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Deux requêtes lisent 10, écrivent 11 : une vue est perdue. Le calcul doit se faire dans la base avec F(\"vues\") + 1.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "django-orm-q6",
+          "prompt": "Quelles affirmations sur les transactions Django sont vraies ?",
+          "choices": [
+            "transaction.atomic() regroupe des écritures en tout-ou-rien",
+            "Une exception dans le bloc annule la transaction",
+            "on_commit permet d'agir seulement après la validation",
+            "Par défaut, chaque requête HTTP est toujours une transaction"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "ATOMIC_REQUESTS vaut False par défaut : chaque requête SQL est validée immédiatement (autocommit).",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "django-production",
+      "title": "Django en production",
+      "summary": "API, sécurité et tâches de fond.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les API avec Django REST framework",
+          "body": "Django REST framework ajoute des serializers, qui convertissent et valident les données, et des vues d'API. Un ModelSerializer déduit ses champs du modèle ; on liste explicitement ceux à exposer.",
+          "code": "class ArticleSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Article\n        fields = [\"id\", \"titre\", \"auteur\"]",
+          "language": "python"
+        },
+        {
+          "title": "Ne pas désactiver les protections",
+          "body": "Le filtre |safe ou mark_safe désactive l'échappement : jamais sur un contenu fourni par un utilisateur. raw() et extra() avec une chaîne formatée réintroduisent l'injection SQL : on passe les paramètres séparément. Les modèles fréquemment filtrés reçoivent des index (Meta.indexes), et les listes une pagination."
+        },
+        {
+          "title": "Déployer",
+          "body": "En production, Django tourne sous un serveur d'application (gunicorn, ou uvicorn pour l'asynchrone) derrière un proxy ; runserver est réservé au développement. collectstatic rassemble les fichiers statiques, servis par un CDN ou WhiteNoise. Les traitements longs (e-mails, exports) partent dans une file de tâches comme Celery, déclenchés après la validation de la transaction."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "django-production-q1",
+          "prompt": "Que fait python manage.py check --deploy ?",
+          "choices": [
+            "Il vérifie les réglages de sécurité attendus en production",
+            "Il déploie l'application",
+            "Il lance les tests",
+            "Il met à jour les dépendances"
+          ],
+          "answerIndex": 0,
+          "explanation": "DEBUG, cookies sécurisés, HSTS, SECRET_KEY… à lancer dans la CI.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "django-production-q2",
+          "prompt": "Ce template permet une XSS par les commentaires. Touche la ligne en cause.",
+          "code": "<h2>{{ article.titre }}</h2>\n<p>{{ commentaire.texte|safe }}</p>",
+          "language": "text",
+          "bugLines": [
+            2
+          ],
+          "explanation": "|safe désactive l'échappement d'un texte écrit par un utilisateur. On le retire, ou on nettoie le HTML avec une bibliothèque dédiée.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "django-production-q3",
+          "prompt": "Revue de code : cette recherche est vulnérable. Touche la ligne en cause.",
+          "code": "Article.objects.raw(\n    f\"SELECT * FROM blog_article WHERE titre = '{titre}'\")",
+          "language": "python",
+          "bugLines": [
+            2
+          ],
+          "explanation": "La chaîne formatée insère la saisie dans le SQL. On écrit raw(\"… WHERE titre = %s\", [titre]), ou simplement filter(titre=titre).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "django-production-q4",
+          "prompt": "Comment envoyer l'e-mail de confirmation d'une inscription sans ralentir la réponse ?",
+          "choices": [
+            "Dans une tâche de fond (Celery), déclenchée après la validation de la transaction",
+            "Dans la vue, avant de répondre",
+            "Dans le template",
+            "Avec un time.sleep pour attendre le serveur SMTP"
+          ],
+          "answerIndex": 0,
+          "explanation": "transaction.on_commit évite d'envoyer un e-mail pour un compte dont la création a échoué.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "django-production-q5",
+          "prompt": "Complète : n'exposer que ces trois champs dans l'API.",
+          "code": "class ArticleSerializer(serializers.___):\n    class Meta:\n        model = Article\n        ___ = [\"id\", \"titre\", \"auteur\"]",
+          "language": "python",
+          "answers": [
+            "ModelSerializer",
+            "fields"
+          ],
+          "distractors": [
+            "Form",
+            "columns",
+            "exclude"
+          ],
+          "explanation": "Une liste explicite évite d'exposer un champ ajouté plus tard au modèle (fields = \"__all__\" le ferait).",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "django-production-q6",
+          "prompt": "Que faut-il pour mettre Django en production ?",
+          "choices": [
+            "Un serveur d'application (gunicorn, uvicorn) derrière un proxy",
+            "Les fichiers statiques collectés et servis par un CDN ou WhiteNoise",
+            "DEBUG = False et SECRET_KEY lue dans l'environnement",
+            "python manage.py runserver"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "runserver n'est ni performant ni audité pour la sécurité.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "django-defi",
+    "title": "Défi entretien : le back-office lent",
+    "summary": "N+1, pagination et transactions.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "django-defi-q1",
+        "prompt": "Cas pratique 1/3 — La liste des commandes du back-office met 8 secondes à s'afficher ; django-debug-toolbar montre 1 200 requêtes SQL. Cause probable ?",
+        "choices": [
+          "Un problème N+1 : une requête par commande pour ses relations",
+          "Un serveur trop lent",
+          "Un index manquant uniquement",
+          "Trop de CSS"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le nombre de requêtes grandit avec le nombre de lignes affichées.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "django-defi-q2",
+        "prompt": "Cas pratique 2/3 — Chaque commande a un client (ForeignKey) et des lignes (relation inverse). Quel correctif ?",
+        "choices": [
+          "select_related(\"client\") et prefetch_related(\"lignes\")",
+          "prefetch_related pour tout",
+          "select_related(\"lignes\")",
+          "Un cache sur chaque commande"
+        ],
+        "answerIndex": 0,
+        "explanation": "Jointure pour la relation simple, requête groupée pour la relation multiple : 3 requêtes au total.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "django-defi-q3",
+        "prompt": "Cas pratique 3/3 — La page affiche encore 50 000 commandes d'un coup. Que faire ?",
+        "choices": [
+          "Paginer la liste",
+          "Augmenter la mémoire du serveur",
+          "Mettre la page en cache pour toujours",
+          "Charger les commandes en JavaScript"
+        ],
+        "answerIndex": 0,
+        "explanation": "Personne ne lit 50 000 lignes : 50 par page suffisent, avec filtres et recherche.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "django-defi-q4",
+        "prompt": "Une vue crée une commande puis lance une tâche Celery d'e-mail. L'e-mail part parfois pour une commande dont la transaction a été annulée. Correctif ?",
+        "choices": [
+          "Déclencher la tâche dans transaction.on_commit",
+          "Lancer la tâche avant de créer la commande",
+          "Ajouter un time.sleep dans la tâche",
+          "Désactiver les transactions"
+        ],
+        "answerIndex": 0,
+        "explanation": "La tâche ne part qu'une fois les données réellement enregistrées.",
+        "difficulty": 3
+      },
+      {
+        "type": "order",
+        "id": "django-defi-q5",
+        "prompt": "Remets dans l'ordre la création d'une commande et de ses lignes.",
+        "language": "python",
+        "lines": [
+          "from django.db import transaction",
+          "with transaction.atomic():",
+          "    commande = Commande.objects.create(client=client)",
+          "    LigneCommande.objects.bulk_create(lignes)",
+          "    transaction.on_commit(lambda: confirmer.delay(commande.id))"
+        ],
+        "explanation": "Les lignes sont créées en une requête, et la confirmation n'est envoyée qu'après la validation.",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "django-defi-q6",
+        "prompt": "Quels indices révèlent un problème N+1 ?",
+        "choices": [
+          "Le nombre de requêtes augmente avec le nombre de lignes affichées",
+          "La même requête se répète avec seulement un identifiant différent",
+          "Des accès à des relations dans une boucle de template",
+          "Une seule requête avec une jointure"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Une seule requête avec jointure est justement la correction.",
+        "difficulty": 2
+      }
+    ]
+  }
+}

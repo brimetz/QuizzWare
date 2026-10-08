@@ -1,0 +1,435 @@
+{
+  "id": "gocli-ch-essentiel",
+  "title": "Outils en ligne de commande : l'essentiel",
+  "summary": "Cobra et la distribution de binaires.",
+  "lessons": [
+    {
+      "id": "gocli-bases",
+      "title": "Arguments et sorties",
+      "summary": "flag, os.Args, stdout, stderr et codes de sortie.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Le paquet flag",
+          "body": "La bibliothèque standard analyse les options avec flag. Chaque option est déclarée avec un nom, une valeur par défaut et une aide ; flag.Parse lit os.Args, et flag.Args() renvoie les arguments restants. L'analyse s'arrête au premier argument qui n'est pas une option : dans « outil fichier.txt -v », -v est un simple argument.",
+          "code": "verbeux := flag.Bool(\"v\", false, \"affiche les détails\")\nsortie := flag.String(\"o\", \"resultat.csv\", \"fichier de sortie\")\nflag.Parse()\nfor _, f := range flag.Args() {\n\ttraiter(f, *sortie, *verbeux)\n}"
+        },
+        {
+          "title": "stdout et stderr",
+          "body": "Les résultats vont sur la sortie standard, pour être redirigés ou enchaînés avec d'autres commandes ; les messages d'erreur et de progression vont sur la sortie d'erreur, pour ne pas polluer les données."
+        },
+        {
+          "title": "Le code de sortie",
+          "body": "0 signifie succès, toute autre valeur un échec : les scripts et la CI s'y fient. os.Exit termine immédiatement, sans exécuter les defer : on l'appelle une seule fois, à la fin de main.",
+          "code": "func main() {\n\tif err := executer(); err != nil {\n\t\tfmt.Fprintln(os.Stderr, \"erreur :\", err)\n\t\tos.Exit(1)\n\t}\n}"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gocli-bases-q1",
+          "prompt": "Avec le paquet flag, on lance « outil fichier.txt -v ». Que vaut l'option -v ?",
+          "choices": [
+            "false : l'analyse s'arrête à fichier.txt, et -v devient un argument",
+            "true",
+            "Une erreur de syntaxe",
+            "Elle dépend de l'ordre de déclaration"
+          ],
+          "answerIndex": 0,
+          "explanation": "flag.Args() vaut [fichier.txt -v]. Les options doivent précéder les arguments.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gocli-bases-q2",
+          "prompt": "Où écrire un message d'erreur dans un outil en ligne de commande ?",
+          "choices": [
+            "Sur la sortie d'erreur (os.Stderr)",
+            "Sur la sortie standard, mélangé aux résultats",
+            "Dans un fichier caché",
+            "Nulle part"
+          ],
+          "answerIndex": 0,
+          "explanation": "« outil > resultats.csv » ne doit pas capturer les erreurs.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "gocli-bases-q3",
+          "prompt": "Complète la déclaration et l'analyse des options.",
+          "code": "verbeux := flag.___(\"v\", false, \"affiche les détails\")\nflag.___()\nfichiers := flag.Args()",
+          "answers": [
+            "Bool",
+            "Parse"
+          ],
+          "distractors": [
+            "Boolean",
+            "Init",
+            "Read"
+          ],
+          "explanation": "flag.Bool renvoie un *bool, lu avec *verbeux.",
+          "difficulty": 1
+        },
+        {
+          "type": "bug",
+          "id": "gocli-bases-q4",
+          "prompt": "Le fichier temporaire n'est jamais supprimé quand le traitement échoue. Touche la ligne en cause.",
+          "code": "func main() {\n\ttmp, _ := os.CreateTemp(\"\", \"outil\")\n\tdefer os.Remove(tmp.Name())\n\tif err := traiter(tmp); err != nil {\n\t\tfmt.Fprintln(os.Stderr, err)\n\t\tos.Exit(1)\n\t}\n}",
+          "bugLines": [
+            6
+          ],
+          "explanation": "os.Exit termine sans exécuter les defer. On fait le travail dans une fonction qui renvoie une erreur, et main appelle os.Exit après son retour.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gocli-bases-q5",
+          "prompt": "Que signifie un code de sortie 0 ?",
+          "choices": [
+            "Le programme a réussi",
+            "Le programme a échoué",
+            "Aucune sortie n'a été produite",
+            "Le programme a été interrompu"
+          ],
+          "answerIndex": 0,
+          "explanation": "Toute valeur non nulle indique un échec.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "gocli-bases-q6",
+          "prompt": "Quelles bonnes pratiques pour un outil en ligne de commande ?",
+          "choices": [
+            "Les résultats sur stdout, les erreurs sur stderr",
+            "Un code de sortie non nul en cas d'échec",
+            "Une aide générée pour --help",
+            "Des questions interactives obligatoires même en CI"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un outil doit pouvoir tourner sans interaction.",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "gocli-cobra",
+      "title": "Cobra",
+      "summary": "Sous-commandes, options et arguments.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Des sous-commandes",
+          "body": "Cobra, utilisé par kubectl, Hugo ou la CLI GitHub, structure un outil en commandes et sous-commandes (« outil projet creer »). Chaque commande décrit son usage, son aide, ses arguments et sa fonction d'exécution. RunE renvoie une erreur, que Cobra affiche avant de sortir en échec.",
+          "code": "var creerCmd = &cobra.Command{\n\tUse:   \"creer <nom>\",\n\tShort: \"Crée un projet\",\n\tArgs:  cobra.ExactArgs(1),\n\tRunE: func(cmd *cobra.Command, args []string) error {\n\t\treturn creerProjet(args[0], modele)\n\t},\n}"
+        },
+        {
+          "title": "Les options",
+          "body": "Les options locales ne concernent qu'une commande ; les options persistantes, déclarées sur une commande parente, sont héritées par toutes ses sous-commandes (--config, --verbose). Une option peut être rendue obligatoire.",
+          "code": "func init() {\n\tcreerCmd.Flags().StringVarP(&modele, \"modele\", \"m\", \"web\", \"modèle de projet\")\n\trootCmd.PersistentFlags().BoolVarP(&verbeux, \"verbose\", \"v\", false, \"détails\")\n\trootCmd.AddCommand(creerCmd)\n}"
+        },
+        {
+          "title": "L'aide et la complétion",
+          "body": "Cobra génère l'aide (--help), les messages d'erreur d'usage et des scripts de complétion pour bash, zsh, fish et PowerShell. Il analyse les options au format POSIX : elles peuvent apparaître avant ou après les arguments."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gocli-cobra-q1",
+          "prompt": "Quelle différence entre une option locale et une option persistante dans Cobra ?",
+          "choices": [
+            "L'option persistante est héritée par toutes les sous-commandes",
+            "L'option locale est sauvegardée sur disque",
+            "L'option persistante est obligatoire",
+            "Aucune"
+          ],
+          "answerIndex": 0,
+          "explanation": "--verbose ou --config se déclarent souvent comme persistantes sur la racine.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gocli-cobra-q2",
+          "prompt": "Que fait Args: cobra.ExactArgs(1) ?",
+          "choices": [
+            "Cobra refuse l'exécution si la commande ne reçoit pas exactement un argument",
+            "Cobra ignore les arguments en trop",
+            "Cobra demande l'argument de façon interactive",
+            "Rien"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le message d'erreur et l'usage sont affichés automatiquement.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "gocli-cobra-q3",
+          "prompt": "Complète la déclaration d'une option -m/--modele et l'ajout de la sous-commande.",
+          "code": "creerCmd.Flags().___(&modele, \"modele\", \"m\", \"web\", \"modèle de projet\")\nrootCmd.___(creerCmd)",
+          "answers": [
+            "StringVarP",
+            "AddCommand"
+          ],
+          "distractors": [
+            "String",
+            "Register",
+            "StringVar"
+          ],
+          "explanation": "Le suffixe P ajoute la forme courte (-m).",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "gocli-cobra-q4",
+          "prompt": "Pourquoi préférer RunE à Run ?",
+          "choices": [
+            "RunE renvoie une erreur que Cobra affiche, avec un code de sortie d'échec",
+            "RunE est plus rapide",
+            "Run n'existe plus",
+            "RunE s'exécute en parallèle"
+          ],
+          "answerIndex": 0,
+          "explanation": "On évite des os.Exit dispersés dans les commandes.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gocli-cobra-q5",
+          "prompt": "outil projet creer --verbose renvoie « unknown flag: --verbose ». Touche la ligne en cause.",
+          "code": "func init() {\n\trootCmd.Flags().BoolVarP(&verbeux, \"verbose\", \"v\", false, \"détails\")\n\trootCmd.AddCommand(projetCmd)\n\tprojetCmd.AddCommand(creerCmd)\n}",
+          "bugLines": [
+            2
+          ],
+          "explanation": "Une option locale de la racine n'est pas héritée. Il faut rootCmd.PersistentFlags().",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "gocli-cobra-q6",
+          "prompt": "Que génère Cobra automatiquement ?",
+          "choices": [
+            "L'aide --help",
+            "Les messages d'erreur d'usage",
+            "Des scripts de complétion pour le shell",
+            "Un installateur graphique"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "L'installation relève de la distribution.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "gocli-distribution",
+      "title": "Distribuer",
+      "summary": "Binaires statiques, compilation croisée et versions.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Un seul binaire",
+          "body": "go build produit un exécutable autonome, sans machine virtuelle ni dépendances à installer. Avec CGO_ENABLED=0, il est entièrement statique et tourne sur une image de conteneur minimale."
+        },
+        {
+          "title": "La compilation croisée",
+          "body": "GOOS et GOARCH choisissent le système et l'architecture cibles, depuis n'importe quelle machine. -ldflags \"-X\" injecte une valeur dans une variable de type string à la compilation, typiquement la version.",
+          "code": "CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \\\n  go build -ldflags \"-s -w -X main.version=1.2.0\" -o dist/outil ."
+        },
+        {
+          "title": "Publier",
+          "body": "GoReleaser automatise la publication : compilation pour chaque plateforme, archives, sommes de contrôle, release GitHub, formule Homebrew, image Docker. Pour les développeurs Go, go install module@latest installe l'outil directement depuis son dépôt."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "gocli-distribution-q1",
+          "prompt": "Comment compiler un outil Go pour Linux ARM64 depuis Windows ?",
+          "choices": [
+            "GOOS=linux GOARCH=arm64 go build",
+            "Il faut une machine Linux ARM64",
+            "go build --target linux",
+            "C'est impossible en Go"
+          ],
+          "answerIndex": 0,
+          "explanation": "La compilation croisée est intégrée à la chaîne d'outils.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "gocli-distribution-q2",
+          "prompt": "Qu'affiche le programme compilé avec -ldflags \"-X main.version=1.2.0\" ?",
+          "code": "package main\n\nimport \"fmt\"\n\nvar version = \"dev\"\n\nfunc main() {\n\tfmt.Println(\"version\", version)\n}",
+          "choices": [
+            "version 1.2.0",
+            "version dev",
+            "Une erreur de compilation",
+            "version"
+          ],
+          "answerIndex": 0,
+          "explanation": "-X remplace la valeur de la variable de type string à l'édition des liens.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "gocli-distribution-q3",
+          "prompt": "Complète : un binaire statique pour Linux, avec la version injectée.",
+          "code": "CGO_ENABLED=___ GOOS=linux GOARCH=amd64 \\\n  go build -ldflags \"___ main.version=1.2.0\" -o dist/outil .",
+          "answers": [
+            "0",
+            "-X"
+          ],
+          "distractors": [
+            "1",
+            "-D",
+            "-v"
+          ],
+          "explanation": "CGO_ENABLED=0 évite toute dépendance à la libc du système.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "gocli-distribution-q4",
+          "prompt": "La version affichée reste « dev » malgré -ldflags \"-X main.version=1.2.0\". Touche la ligne en cause.",
+          "code": "package main\n\nconst version = \"dev\"\n\nfunc main() {\n\tprintln(\"version\", version)\n}",
+          "bugLines": [
+            3
+          ],
+          "explanation": "-X ne modifie que des variables de type string, pas des constantes : il faut var version = \"dev\".",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "gocli-distribution-q5",
+          "prompt": "Que fait GoReleaser ?",
+          "choices": [
+            "Il compile pour chaque plateforme et publie archives, sommes de contrôle et release",
+            "Il remplace le compilateur Go",
+            "Il teste le code",
+            "Il gère les dépendances"
+          ],
+          "answerIndex": 0,
+          "explanation": "On le lance en CI à chaque étiquette de version.",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "gocli-distribution-q6",
+          "prompt": "Pourquoi Go est-il populaire pour les outils en ligne de commande ?",
+          "choices": [
+            "Un seul binaire, sans dépendances à installer",
+            "Une compilation croisée intégrée",
+            "Un démarrage rapide",
+            "Une machine virtuelle obligatoire chez l'utilisateur"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Aucune machine virtuelle n'est nécessaire.",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "gocli-defi",
+    "title": "Défi entretien : l'outil interne",
+    "summary": "Remplacer des scripts par un outil Go.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "gocli-defi-q1",
+        "prompt": "Cas pratique 1/3 — Une équipe maintient dix scripts shell pour gérer ses environnements, difficiles à tester et incompatibles avec Windows. Que proposer ?",
+        "choices": [
+          "Un outil Go avec Cobra, une sous-commande par action, distribué en binaires pour chaque système",
+          "Dix scripts PowerShell en plus",
+          "Un unique script shell plus long",
+          "Une page wiki"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un binaire par plateforme, testable comme n'importe quel code Go.",
+        "difficulty": 1
+      },
+      {
+        "type": "choice",
+        "id": "gocli-defi-q2",
+        "prompt": "Cas pratique 2/3 — Toutes les sous-commandes doivent accepter --env et --verbose. Comment les déclarer ?",
+        "choices": [
+          "Comme options persistantes sur la commande racine",
+          "Dans chaque sous-commande séparément",
+          "Comme variables globales sans option",
+          "Dans un fichier de configuration uniquement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Toutes les sous-commandes en héritent.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gocli-defi-q3",
+        "prompt": "Cas pratique 3/3 — Comment savoir quelle version de l'outil un collègue utilise lors d'un incident ?",
+        "choices": [
+          "Injecter la version et le commit à la compilation avec -ldflags -X, et les afficher avec outil version",
+          "Comparer la taille des binaires",
+          "Demander la date de téléchargement",
+          "Recompiler chez lui"
+        ],
+        "answerIndex": 0,
+        "explanation": "GoReleaser injecte ces valeurs automatiquement.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "gocli-defi-q4",
+        "prompt": "Le résultat de « outil lister > envs.txt » contient aussi des messages de progression. Que corriger ?",
+        "choices": [
+          "Écrire la progression sur stderr, et seulement les résultats sur stdout",
+          "Supprimer la progression",
+          "Écrire tout dans un fichier",
+          "Rien"
+        ],
+        "answerIndex": 0,
+        "explanation": "La redirection ne capture que stdout.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "gocli-defi-q5",
+        "prompt": "La CI considère que le déploiement a réussi alors que l'outil a affiché une erreur. Touche la ligne en cause.",
+        "code": "func main() {\n\tif err := rootCmd.Execute(); err != nil {\n\t\tfmt.Println(\"échec :\", err)\n\t}\n}",
+        "bugLines": [
+          3
+        ],
+        "explanation": "Le programme se termine avec le code 0. Il faut écrire sur stderr et appeler os.Exit(1).",
+        "difficulty": 3
+      },
+      {
+        "type": "multi",
+        "id": "gocli-defi-q6",
+        "prompt": "Comment distribuer l'outil à l'équipe ?",
+        "choices": [
+          "Des binaires publiés par GoReleaser sur une release",
+          "go install module@latest pour les développeurs Go",
+          "Une formule Homebrew ou un paquet interne",
+          "Envoyer le code source par e-mail à chaque version"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "La distribution doit être reproductible et automatisée.",
+        "difficulty": 1
+      }
+    ]
+  }
+}

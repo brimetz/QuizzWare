@@ -1,0 +1,444 @@
+{
+  "id": "cgrp-ch-essentiel",
+  "title": "Namespaces et cgroups : l'essentiel",
+  "summary": "Les briques des conteneurs.",
+  "lessons": [
+    {
+      "id": "cgrp-namespaces",
+      "title": "Les namespaces",
+      "summary": "Ce qu'un processus peut voir.",
+      "difficulty": 1,
+      "sections": [
+        {
+          "title": "Isoler la vue",
+          "body": "Un conteneur n'est pas une machine virtuelle : c'est un processus ordinaire de l'hôte, auquel le noyau Linux présente une vue restreinte du système. Les namespaces isolent ce qu'il voit ; les cgroups limitent ce qu'il consomme."
+        },
+        {
+          "title": "Les différents namespaces",
+          "body": "pid : ses propres numéros de processus, dont un PID 1. net : ses interfaces, adresses et routes. mnt : ses points de montage. uts : son nom d'hôte. ipc : ses files et mémoires partagées. user : ses propres identifiants d'utilisateurs, avec un root qui n'est pas root sur l'hôte. cgroup et time complètent la liste."
+        },
+        {
+          "title": "Essayer",
+          "body": "unshare lance un programme dans de nouveaux namespaces. Dans un nouveau namespace pid avec /proc remonté, le shell se voit comme le processus 1. Les namespaces d'un processus apparaissent dans /proc/<pid>/ns.",
+          "code": "sudo unshare --pid --fork --mount-proc bash\nps aux          # bash a le PID 1\nls -l /proc/$$/ns",
+          "language": "shell"
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cgrp-namespaces-q1",
+          "prompt": "Qu'est-ce qu'un conteneur pour le noyau Linux ?",
+          "choices": [
+            "Un processus ordinaire, placé dans des namespaces et des cgroups",
+            "Une machine virtuelle légère avec son propre noyau",
+            "Un fichier exécutable spécial",
+            "Un module du noyau"
+          ],
+          "answerIndex": 0,
+          "explanation": "On le voit d'ailleurs dans ps sur l'hôte.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cgrp-namespaces-q2",
+          "prompt": "Quel namespace donne au conteneur ses propres interfaces et adresses réseau ?",
+          "choices": [
+            "net",
+            "pid",
+            "uts",
+            "ipc"
+          ],
+          "answerIndex": 0,
+          "explanation": "uts isole le nom d'hôte ; pid, les numéros de processus.",
+          "difficulty": 1
+        },
+        {
+          "type": "choice",
+          "id": "cgrp-namespaces-q3",
+          "prompt": "Après sudo unshare --pid --fork --mount-proc bash, quel PID a le shell dans son namespace ?",
+          "choices": [
+            "1",
+            "Le même que sur l'hôte",
+            "0",
+            "Aléatoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "Sur l'hôte, il garde aussi un PID ordinaire : un processus a un numéro dans chaque namespace pid qui le voit.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cgrp-namespaces-q4",
+          "prompt": "Complète : entrer dans le namespace réseau d'un conteneur dont le processus a le PID 4242.",
+          "code": "sudo ___ -t 4242 --___ ip addr",
+          "language": "shell",
+          "answers": [
+            "nsenter",
+            "net"
+          ],
+          "distractors": [
+            "unshare",
+            "chroot",
+            "pid"
+          ],
+          "explanation": "nsenter rejoint des namespaces existants ; unshare en crée de nouveaux.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cgrp-namespaces-q5",
+          "prompt": "Qu'apporte le namespace user ?",
+          "choices": [
+            "Le root du conteneur correspond à un utilisateur non privilégié de l'hôte",
+            "Il crée des comptes utilisateurs",
+            "Il isole le réseau",
+            "Il limite la mémoire"
+          ],
+          "answerIndex": 0,
+          "explanation": "C'est la base des conteneurs « rootless ».",
+          "difficulty": 2
+        },
+        {
+          "type": "multi",
+          "id": "cgrp-namespaces-q6",
+          "prompt": "Lesquels sont des namespaces Linux ?",
+          "choices": [
+            "pid",
+            "mnt",
+            "user",
+            "cpu"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le processeur se limite avec les cgroups, pas avec un namespace.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "cgrp-cgroups",
+      "title": "Les cgroups",
+      "summary": "Ce qu'un processus peut consommer.",
+      "difficulty": 2,
+      "sections": [
+        {
+          "title": "Limiter les ressources",
+          "body": "Les control groups regroupent des processus et limitent ou mesurent leur consommation : mémoire, processeur, entrées-sorties, nombre de processus. Avec cgroups v2, la hiérarchie est unique, montée dans /sys/fs/cgroup, et chaque groupe est un dossier avec des fichiers de contrôle.",
+          "code": "sudo mkdir /sys/fs/cgroup/demo\necho 256M | sudo tee /sys/fs/cgroup/demo/memory.max\necho \"50000 100000\" | sudo tee /sys/fs/cgroup/demo/cpu.max\necho 100 | sudo tee /sys/fs/cgroup/demo/pids.max\necho $$ | sudo tee /sys/fs/cgroup/demo/cgroup.procs",
+          "language": "shell"
+        },
+        {
+          "title": "La mémoire",
+          "body": "memory.max fixe une limite stricte : si le groupe la dépasse et ne peut rien récupérer, le noyau tue un de ses processus (OOM killer). memory.high ralentit le groupe avant d'atteindre cette limite. Un conteneur « OOMKilled » a dépassé sa limite."
+        },
+        {
+          "title": "Le processeur",
+          "body": "cpu.max indique un quota et une période en microsecondes : « 50000 100000 » autorise 50 ms de processeur toutes les 100 ms, soit la moitié d'un cœur. Au-delà, les processus sont suspendus jusqu'à la période suivante : c'est le throttling, qui allonge la latence sans aucune erreur visible. cpu.weight répartit le processeur en cas de concurrence."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cgrp-cgroups-q1",
+          "prompt": "Que signifie cpu.max = \"50000 100000\" ?",
+          "choices": [
+            "Au plus 50 ms de processeur toutes les 100 ms, soit la moitié d'un cœur",
+            "50 000 processus au maximum",
+            "50 % de la mémoire",
+            "Une priorité de 50 000"
+          ],
+          "answerIndex": 0,
+          "explanation": "« 200000 100000 » autoriserait deux cœurs.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cgrp-cgroups-q2",
+          "prompt": "Un conteneur affiche « OOMKilled ». Que s'est-il passé ?",
+          "choices": [
+            "Il a dépassé sa limite mémoire (memory.max), et le noyau a tué un de ses processus",
+            "L'hôte a redémarré",
+            "Le disque est plein",
+            "Le réseau a coupé"
+          ],
+          "answerIndex": 0,
+          "explanation": "On ajuste la limite ou on corrige la consommation de l'application.",
+          "difficulty": 1
+        },
+        {
+          "type": "fill",
+          "id": "cgrp-cgroups-q3",
+          "prompt": "Complète : limiter le groupe à 256 Mo et à 100 processus.",
+          "code": "echo 256M | sudo tee /sys/fs/cgroup/demo/___\necho 100 | sudo tee /sys/fs/cgroup/demo/___",
+          "language": "shell",
+          "answers": [
+            "memory.max",
+            "pids.max"
+          ],
+          "distractors": [
+            "memory.limit",
+            "cpu.max",
+            "procs.max"
+          ],
+          "explanation": "pids.max protège contre les fork bombs.",
+          "difficulty": 2
+        },
+        {
+          "type": "choice",
+          "id": "cgrp-cgroups-q4",
+          "prompt": "Une API conteneurisée a des pics de latence réguliers sans erreur, avec un processeur limité. Quelle cause probable ?",
+          "choices": [
+            "Le throttling : le groupe épuise son quota et attend la période suivante",
+            "Le OOM killer",
+            "Une fuite de descripteurs",
+            "Le DNS"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le fichier cpu.stat (nr_throttled, throttled_usec) le confirme.",
+          "difficulty": 3
+        },
+        {
+          "type": "bug",
+          "id": "cgrp-cgroups-q5",
+          "prompt": "Le shell n'est pas limité par le groupe créé. Touche la ligne qui manque son effet.",
+          "code": "sudo mkdir /sys/fs/cgroup/demo\necho 256M | sudo tee /sys/fs/cgroup/demo/memory.max\necho $$ | sudo tee /sys/fs/cgroup/memory.max",
+          "language": "shell",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Pour placer un processus dans le groupe, on écrit son PID dans cgroup.procs du groupe : /sys/fs/cgroup/demo/cgroup.procs.",
+          "difficulty": 3
+        },
+        {
+          "type": "multi",
+          "id": "cgrp-cgroups-q6",
+          "prompt": "Quelles ressources les cgroups v2 permettent-ils de limiter ?",
+          "choices": [
+            "La mémoire",
+            "Le temps processeur",
+            "Le nombre de processus et les entrées-sorties",
+            "Les noms d'hôte visibles"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Le nom d'hôte relève du namespace uts.",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "cgrp-conteneurs",
+      "title": "Assembler un conteneur",
+      "summary": "Les autres briques et la sécurité.",
+      "difficulty": 3,
+      "sections": [
+        {
+          "title": "Les autres briques",
+          "body": "Un moteur comme Docker ou containerd combine namespaces et cgroups avec un système de fichiers en couches (overlayfs) pour l'image, des capabilities réduites (le root du conteneur n'a pas tous les pouvoirs), un filtre seccomp qui interdit certains appels système, et souvent AppArmor ou SELinux."
+        },
+        {
+          "title": "Des options aux cgroups",
+          "body": "Les options du moteur se traduisent directement en réglages du noyau : --memory écrit memory.max, --cpus écrit cpu.max, --pids-limit écrit pids.max. Dans Kubernetes, les limites des Pods font de même.",
+          "code": "docker run --memory=512m --cpus=1.5 --pids-limit=200 api:1.4\n# cpu.max : 150000 100000",
+          "language": "shell"
+        },
+        {
+          "title": "Les limites de l'isolation",
+          "body": "Tous les conteneurs partagent le noyau de l'hôte : une faille du noyau peut permettre d'en sortir. Un conteneur --privileged, ou qui monte le socket Docker, a en pratique les pleins pouvoirs sur l'hôte. Pour du code non fiable, on ajoute une couche : gVisor, ou des microVM comme Kata Containers et Firecracker."
+        }
+      ],
+      "questions": [
+        {
+          "type": "choice",
+          "id": "cgrp-conteneurs-q1",
+          "prompt": "Quelle valeur de cpu.max correspond à docker run --cpus=1.5 ?",
+          "choices": [
+            "150000 100000",
+            "1500 1000",
+            "15000 100000",
+            "max 100000"
+          ],
+          "answerIndex": 0,
+          "explanation": "1,5 cœur : 150 ms de processeur par période de 100 ms.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cgrp-conteneurs-q2",
+          "prompt": "Que fait un filtre seccomp ?",
+          "choices": [
+            "Il interdit au conteneur certains appels système du noyau",
+            "Il chiffre le système de fichiers",
+            "Il limite la mémoire",
+            "Il isole le réseau"
+          ],
+          "answerIndex": 0,
+          "explanation": "Le profil par défaut de Docker bloque des dizaines d'appels système rarement utiles.",
+          "difficulty": 2
+        },
+        {
+          "type": "bug",
+          "id": "cgrp-conteneurs-q3",
+          "prompt": "Ce conteneur d'outil de supervision donne en pratique le contrôle total de l'hôte. Touche la ligne en cause.",
+          "code": "docker run -d \\\n  --name supervision \\\n  -v /var/run/docker.sock:/var/run/docker.sock \\\n  supervision:2.1",
+          "language": "shell",
+          "bugLines": [
+            3
+          ],
+          "explanation": "Avec le socket Docker, le conteneur peut lancer un conteneur privilégié qui monte la racine de l'hôte. On limite cet accès (proxy restreint) ou on s'en passe.",
+          "difficulty": 3
+        },
+        {
+          "type": "choice",
+          "id": "cgrp-conteneurs-q4",
+          "prompt": "Pourquoi un conteneur offre-t-il une isolation plus faible qu'une machine virtuelle ?",
+          "choices": [
+            "Tous les conteneurs partagent le noyau de l'hôte : une faille du noyau peut permettre d'en sortir",
+            "Les conteneurs n'ont pas de système de fichiers",
+            "Les conteneurs n'ont pas de limite mémoire",
+            "Ce n'est pas le cas"
+          ],
+          "answerIndex": 0,
+          "explanation": "D'où gVisor ou les microVM pour le code non fiable.",
+          "difficulty": 2
+        },
+        {
+          "type": "fill",
+          "id": "cgrp-conteneurs-q5",
+          "prompt": "Complète : limiter un conteneur à 512 Mo et à 200 processus.",
+          "code": "docker run --___=512m --pids-limit=___ api:1.4",
+          "language": "shell",
+          "answers": [
+            "memory",
+            "200"
+          ],
+          "distractors": [
+            "ram",
+            "512",
+            "max-memory"
+          ],
+          "explanation": "Ces options écrivent memory.max et pids.max.",
+          "difficulty": 1
+        },
+        {
+          "type": "multi",
+          "id": "cgrp-conteneurs-q6",
+          "prompt": "Quelles briques un moteur de conteneurs combine-t-il ?",
+          "choices": [
+            "Namespaces et cgroups",
+            "Un système de fichiers en couches",
+            "Des capabilities réduites et un filtre seccomp",
+            "Un hyperviseur de type 1 obligatoire"
+          ],
+          "answerIndices": [
+            0,
+            1,
+            2
+          ],
+          "explanation": "Un conteneur classique n'a pas besoin d'hyperviseur.",
+          "difficulty": 2
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "cgrp-defi",
+    "title": "Défi entretien : le conteneur capricieux",
+    "summary": "Diagnostiquer avec les outils du noyau.",
+    "questions": [
+      {
+        "type": "choice",
+        "id": "cgrp-defi-q1",
+        "prompt": "Cas pratique 1/3 — Un service Java redémarre plusieurs fois par jour avec le statut OOMKilled, alors que son tas est réglé à 1 Go et sa limite à 1 Go. Pourquoi ?",
+        "choices": [
+          "La JVM consomme aussi de la mémoire hors du tas (threads, métaspace, tampons) : le total dépasse la limite du cgroup",
+          "Le disque est plein",
+          "Le réseau est lent",
+          "Java n'est pas compatible avec les conteneurs"
+        ],
+        "answerIndex": 0,
+        "explanation": "On laisse une marge, ou on règle le tas en pourcentage (MaxRAMPercentage).",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cgrp-defi-q2",
+        "prompt": "Cas pratique 2/3 — Le même service a des pics de latence toutes les quelques secondes, sans erreur. Que vérifier ?",
+        "choices": [
+          "Les compteurs de throttling dans cpu.stat du cgroup",
+          "Les journaux d'erreur seulement",
+          "La taille de l'image",
+          "Le nom d'hôte"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un quota trop serré suspend le processus jusqu'à la période suivante.",
+        "difficulty": 3
+      },
+      {
+        "type": "choice",
+        "id": "cgrp-defi-q3",
+        "prompt": "Cas pratique 3/3 — Pour déboguer le réseau du conteneur, l'image ne contient aucun outil. Comment inspecter ses interfaces ?",
+        "choices": [
+          "Depuis l'hôte, entrer dans son namespace réseau avec nsenter et utiliser les outils de l'hôte",
+          "Installer des outils dans l'image de production",
+          "Redémarrer le conteneur en mode privilégié",
+          "C'est impossible"
+        ],
+        "answerIndex": 0,
+        "explanation": "nsenter -t <pid> --net ip addr, par exemple.",
+        "difficulty": 2
+      },
+      {
+        "type": "choice",
+        "id": "cgrp-defi-q4",
+        "prompt": "Un processus « fork bomb » lancé dans un conteneur ne doit pas paralyser l'hôte. Quelle limite ?",
+        "choices": [
+          "pids.max (--pids-limit)",
+          "memory.high",
+          "Un namespace uts",
+          "cpu.weight"
+        ],
+        "answerIndex": 0,
+        "explanation": "Le nombre de processus du groupe est plafonné.",
+        "difficulty": 2
+      },
+      {
+        "type": "bug",
+        "id": "cgrp-defi-q5",
+        "prompt": "Un conteneur de développement a obtenu l'accès à tous les périphériques de l'hôte. Touche la ligne en cause.",
+        "code": "docker run -it \\\n  --privileged \\\n  -v \"$PWD\":/app \\\n  outils:dev bash",
+        "language": "shell",
+        "bugLines": [
+          2
+        ],
+        "explanation": "--privileged donne toutes les capabilities et l'accès aux périphériques. On n'ajoute que les capabilities nécessaires (--cap-add).",
+        "difficulty": 2
+      },
+      {
+        "type": "multi",
+        "id": "cgrp-defi-q6",
+        "prompt": "Quelles mesures renforcent l'isolation des conteneurs ?",
+        "choices": [
+          "Le namespace user (conteneurs rootless)",
+          "Des capabilities réduites et seccomp",
+          "gVisor ou des microVM pour le code non fiable",
+          "Monter le socket Docker dans chaque conteneur"
+        ],
+        "answerIndices": [
+          0,
+          1,
+          2
+        ],
+        "explanation": "Le socket Docker revient à donner l'hôte.",
+        "difficulty": 2
+      }
+    ]
+  }
+}
