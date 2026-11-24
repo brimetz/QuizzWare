@@ -1,4 +1,4 @@
-#if ANDROID || IOS
+#if (ANDROID || IOS) && PREMIUM
 using Plugin.InAppBilling;
 using QuizzWare.Core.Premium;
 
@@ -7,9 +7,17 @@ namespace QuizzWare.Services;
 /// <summary>
 /// Abonnement via Google Play Billing (et StoreKit sur iOS). Pas de compte ni de serveur :
 /// l'abonnement est rattaché au compte du store, qui indique s'il est actif.
+/// Sur Android, seul un achat signé par Google pour cette application est pris en compte (<see cref="PlayPurchaseVerifier"/>).
 /// </summary>
-public sealed class StoreSubscriptionService : SubscriptionServiceBase
+public sealed class StoreSubscriptionService(IEntitlementStore store, TimeProvider time, IPreferences preferences)
+    : SubscriptionServiceBase(store, time, preferences)
 {
+    /// <summary>
+    /// Clé publique de licence de l'application : Play Console › Monétiser › Configuration de la monétisation › Licences.
+    /// Publique, elle n'est pas un secret. Tant qu'elle est vide, aucun achat n'est accepté sur Android.
+    /// </summary>
+    private const string PlayLicenseKey = "";
+
     private const string ProductId = PremiumPolicy.SubscriptionProductId;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -22,14 +30,17 @@ public sealed class StoreSubscriptionService : SubscriptionServiceBase
             await WithBillingAsync(async billing =>
             {
                 var purchases = await billing.GetPurchasesAsync(ItemType.Subscription);
-                var active = purchases.Where(IsActive).ToList();
+                var active = purchases.Where(p => IsActive(p) && IsAuthentic(p)).ToList();
                 await AcknowledgeAsync(billing, active);
-                SetPremium(active.Count > 0);
+                if (active.Count > 0)
+                    await GrantAsync();
+                else
+                    await RevokeAsync();
             });
         }
         catch (Exception)
         {
-            // Hors ligne ou store indisponible : on garde le dernier état connu.
+            // Hors ligne ou store indisponible : on garde le droit déjà vérifié, jusqu'à son expiration.
         }
     }
 
@@ -71,11 +82,11 @@ public sealed class StoreSubscriptionService : SubscriptionServiceBase
                     return;
                 }
 
-                if (IsActive(purchase))
+                if (IsActive(purchase) && IsAuthentic(purchase))
                 {
                     // Google rembourse automatiquement un achat non acquitté sous 3 jours.
                     await AcknowledgeAsync(billing, [purchase]);
-                    SetPremium(true);
+                    await GrantAsync();
                     outcome = PurchaseOutcome.Success;
                 }
             });
@@ -113,6 +124,14 @@ public sealed class StoreSubscriptionService : SubscriptionServiceBase
 
     private static bool IsActive(InAppBillingPurchase p) =>
         p.ProductId == ProductId && p.State is PurchaseState.Purchased or PurchaseState.Restored;
+
+#if ANDROID
+    private static bool IsAuthentic(InAppBillingPurchase p) =>
+        PlayPurchaseVerifier.Verify(p.OriginalJson, p.Signature, PlayLicenseKey, AppInfo.PackageName, ProductId);
+#else
+    // iOS : StoreKit valide lui-même la transaction ; la vérification du reçu côté app n'est pas encore faite.
+    private static bool IsAuthentic(InAppBillingPurchase p) => true;
+#endif
 
     private static async Task AcknowledgeAsync(IInAppBilling billing, IEnumerable<InAppBillingPurchase> purchases)
     {

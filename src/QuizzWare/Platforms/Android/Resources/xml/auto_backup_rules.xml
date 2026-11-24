@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 et moins. Tout est sauvegardé (progression, réglages), sauf le fichier de SecureStorage (droit Premium
+     chiffré) : sa clé reste dans le Keystore de l'appareil, et une copie restaurée ailleurs ou modifiée ne doit rien débloquer. -->
+<full-backup-content>
+	<exclude domain="sharedpref" path="com.quizzware.app.microsoft.maui.essentials.preferences.xml" />
+</full-backup-content>

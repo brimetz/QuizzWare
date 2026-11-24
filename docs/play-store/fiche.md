@@ -33,7 +33,7 @@ Tu as déjà de l'expérience ? Le test de niveau valide les chapitres que tu ma
 • Objectif quotidien, série de jours et rappels
 
 📚 LES CATÉGORIES
-C++ et C# complets du débutant à l'entretien, Bases de données (SQL, NoSQL, PostgreSQL, MongoDB…), et un grand arbre de sujets qui s'enrichit : architecture système et infra, réseau, Python, Java, Go, Rust, sécurité, Git, tests, frontend, mobile, IA…
+Douze parcours complets, du débutant à l'entretien : C, C++, C#, Java, JavaScript et TypeScript, Python, Go, Rust, Algorithmes, Bases de données (SQL, NoSQL, PostgreSQL, MongoDB…), Git, Tests et qualité. Chacun avec son arbre de spécialisations.
 
 🔒 SANS COMPTE, SANS PUBLICITÉ
 Ta progression reste sur ton téléphone. Aucune donnée collectée, aucune publicité.

@@ -99,9 +99,15 @@ public partial class CategoryViewModel(ContentRepository content, ProgressServic
         {
             var next = PremiumPolicy.NextFreeInterviewAt(progress, now);
             var when = next is { } n ? $" Le prochain entretien gratuit sera disponible le {n.ToLocalTime():dddd d MMMM à HH:mm}." : string.Empty;
+            var quota = $"La version gratuite comprend {PremiumPolicy.FreeInterviewsPerWeek} entretiens par semaine.{when} ";
+            if (!subscription.IsOffered)
+            {
+                await Shell.Current.DisplayAlertAsync("🎤 Entretiens gratuits épuisés", quota + "Les entretiens illimités arrivent bientôt.", "OK");
+                return;
+            }
+
             var discover = await Shell.Current.DisplayAlertAsync("🎤 Entretiens gratuits épuisés",
-                $"La version gratuite comprend {PremiumPolicy.FreeInterviewsPerWeek} entretiens par semaine.{when} "
-                + "Avec Premium, les entretiens sont illimités.", "Découvrir Premium", "Plus tard");
+                quota + "Avec Premium, les entretiens sont illimités.", "Découvrir Premium", "Plus tard");
             if (discover)
                 await Shell.Current.GoToAsync($"{nameof(PremiumPage)}?reason=interview");
             return;

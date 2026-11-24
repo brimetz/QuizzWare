@@ -31,6 +31,11 @@
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+
+    <!-- Abonnement Premium proposé ? Tant que false : les catégories Premium restent visibles, marquées « À venir »,
+         sans achat possible, et le plugin de paiement n'est pas inclus dans l'application. true : définit PREMIUM. -->
+    <PremiumOffered>false</PremiumOffered>
+    <DefineConstants Condition="'$(PremiumOffered)' == 'true'">$(DefineConstants);PREMIUM</DefineConstants>
   </PropertyGroup>
 
   <!-- Publication Play Store : bundle .aab signé. Voir docs/PUBLICATION.md.
@@ -62,21 +67,26 @@
     <PackageReference Include="Plugin.Maui.Audio" Version="4.0.0" />
   </ItemGroup>
 
-  <!-- Notifications locales (rappels quotidiens) et Google Play Billing : Android et iOS seulement. -->
+  <!-- Notifications locales (rappels quotidiens) et Google Play Billing / StoreKit : Android et iOS seulement. -->
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
     <PackageReference Include="Plugin.LocalNotification" Version="14.2.0" />
-    <PackageReference Include="Plugin.InAppBilling" Version="11.0.1" />
+    <PackageReference Include="Plugin.InAppBilling" Version="11.0.1" Condition="'$(PremiumOffered)' == 'true'" />
   </ItemGroup>
 
   <!-- Google Play Billing (via Plugin.InAppBilling) demande des AndroidX plus récents que ceux de MAUI 10 :
        on les référence directement, toutes alignées, pour lever le conflit de versions (NU1107). -->
-  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+  <ItemGroup Condition="'$(PremiumOffered)' == 'true' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
     <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.11.0.1" />
     <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core.Ktx" Version="2.11.0.1" />
     <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" Version="2.11.0.1" />
     <PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="2.11.0.1" />
     <PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.9.0" />
     <PackageReference Include="Xamarin.AndroidX.Collection.Ktx" Version="1.6.0.1" />
+  </ItemGroup>
+
+  <!-- Manifeste de confidentialité exigé par l'App Store (API à « raison déclarée » utilisées par .NET et MAUI). -->
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+    <BundleResource Include="Platforms\iOS\PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
   </ItemGroup>
 
   <ItemGroup>

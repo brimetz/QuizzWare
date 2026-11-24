@@ -4,14 +4,14 @@
              xmlns:vm="clr-namespace:QuizzWare.ViewModels"
              x:Class="QuizzWare.Views.PremiumPage"
              x:DataType="vm:PremiumViewModel"
-             Title="Premium">
+             Title="{Binding PageTitle}">
 
     <ScrollView>
         <VerticalStackLayout Padding="16,8,16,32" Spacing="16">
 
             <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
-                <Label Text="⭐" FontSize="48" HorizontalOptions="Center" />
-                <Label Text="QuizzWare Premium" Style="{StaticResource TitleLabel}" HorizontalOptions="Center" />
+                <Label Text="{Binding HeadlineIcon}" FontSize="48" HorizontalOptions="Center" />
+                <Label Text="{Binding Headline}" Style="{StaticResource TitleLabel}" HorizontalOptions="Center" />
             </VerticalStackLayout>
 
             <Border Style="{StaticResource Card}" Stroke="{DynamicResource Warning}" IsVisible="{Binding HasReason}">
@@ -26,6 +26,11 @@
                 </VerticalStackLayout>
             </Border>
 
+            <!-- Abonnement pas encore proposé -->
+            <Border Style="{StaticResource Card}" IsVisible="{Binding IsComingSoon}">
+                <Label Text="{Binding ComingSoonText}" FontSize="{DynamicResource FontSizeBody}" />
+            </Border>
+
             <!-- Avantages -->
             <Border Style="{StaticResource Card}">
                 <VerticalStackLayout Spacing="12">
@@ -37,16 +42,16 @@
             </Border>
 
             <!-- Achat -->
-            <VerticalStackLayout Spacing="10" IsVisible="{Binding IsNotPremium}">
+            <VerticalStackLayout Spacing="10" IsVisible="{Binding CanSubscribe}">
                 <Label Text="{Binding PriceText}" Style="{StaticResource HeaderLabel}" HorizontalOptions="Center" />
                 <Button Text="S'abonner" Command="{Binding SubscribeCommand}" />
                 <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{DynamicResource Primary}" />
                 <Label Style="{StaticResource MutedLabel}" FontSize="12" HorizontalTextAlignment="Center"
-                       Text="Abonnement mensuel à renouvellement automatique, débité sur ton compte Google Play. Tu peux le résilier à tout moment depuis Google Play : l'accès Premium reste actif jusqu'à la fin de la période payée." />
+                       Text="{Binding TermsText}" />
             </VerticalStackLayout>
 
             <Button Text="Restaurer mes achats" Command="{Binding RestoreCommand}" Style="{StaticResource SecondaryButton}"
-                    IsVisible="{Binding IsNotPremium}" />
+                    IsVisible="{Binding CanSubscribe}" />
 
             <Label Text="🛠️ Version de développement : l'abonnement est simulé, aucun paiement n'est effectué."
                    Style="{StaticResource MutedLabel}" FontSize="12" HorizontalTextAlignment="Center"

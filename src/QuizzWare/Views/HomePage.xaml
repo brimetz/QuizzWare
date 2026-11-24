@@ -59,7 +59,7 @@
                                        IsVisible="{Binding IsFavorite}" />
                                 <Border Grid.Column="2" Style="{StaticResource Pill}" Padding="8,2" VerticalOptions="Start"
                                         IsVisible="{Binding IsPremiumLocked}">
-                                    <Label Text="⭐ Premium" FontSize="11" FontAttributes="Bold" TextColor="{DynamicResource Warning}" />
+                                    <Label Text="{Binding LockBadge}" FontSize="11" FontAttributes="Bold" TextColor="{DynamicResource Warning}" />
                                 </Border>
                             </Grid>
                             <Label Text="{Binding LevelText}" Style="{StaticResource MutedLabel}" />

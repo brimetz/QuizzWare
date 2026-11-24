@@ -11,7 +11,7 @@
 
             <!-- Abonnement -->
             <VerticalStackLayout Spacing="10">
-                <Label Text="⭐ Abonnement" Style="{StaticResource HeaderLabel}" />
+                <Label Text="{Binding SubscriptionHeader}" Style="{StaticResource HeaderLabel}" />
                 <Border Style="{StaticResource Card}">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding OpenPremiumCommand}" />

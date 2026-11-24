@@ -131,7 +131,7 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
             lockedMessage = $"Ce parcours appartient à la catégorie {targetCategory.Name} : termine son chapitre « {chapter} » pour le débloquer.";
         }
 
-        // Un renvoi vers un parcours d'une catégorie Premium mène à l'abonnement.
+        // Un renvoi vers un parcours d'une catégorie Premium mène à l'abonnement (ou à ce qui arrive bientôt).
         var premiumLocked = node.IsLink && target.HasTrack && !PremiumPolicy.CanAccessCategory(targetCategory.Id, subscription.IsPremium);
 
         string status;
@@ -145,7 +145,7 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
         else if (!target.HasTrack)
             (status, statusColor) = ("Bientôt disponible", Palette.TextMuted);
         else if (premiumLocked)
-            (status, statusColor) = ("⭐ Premium", Palette.Warning);
+            (status, statusColor) = (PremiumLabels.Badge(subscription), Palette.Warning);
         else if (targetLocked)
             (status, statusColor) = ($"🔒 S'ouvre dans « {targetCategory.Name} »", Palette.TextMuted);
         else if (done == total)
@@ -193,7 +193,7 @@ public partial class SpecializationsViewModel(ContentRepository content, Progres
             KindLabel = SpecializationLabels.Kind(node.Kind),
             RelatedText = target.HasContent ? null : "🕓 Catégorie en préparation",
             StatusText = !unlocked ? string.Empty
-                : premiumLocked ? $"⭐ « {target.Name} » est une catégorie Premium"
+                : premiumLocked ? PremiumLabels.CategoryStatus(subscription, target.Name)
                 : $"🚪 Explorer « {target.Name} »",
             StatusColor = Palette.Primary,
             Opacity = unlocked ? 1 : 0.5,

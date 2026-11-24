@@ -46,11 +46,19 @@ public static class MauiProgram
         builder.Services.AddSingleton<IBrowserLauncher, MauiBrowserLauncher>();
         builder.Services.AddSingleton<CrashReporter>();
 
-        // Abonnement Premium : Google Play Billing en Release sur mobile, simulé en développement.
+        // Abonnement Premium : Google Play Billing / StoreKit en Release sur mobile, simulé en développement.
+        // Tant qu'il n'est pas proposé (PremiumOffered dans le .csproj), les contenus Premium sont « À venir ».
+#if !PREMIUM
+        builder.Services.AddSingleton<ISubscriptionService, ComingSoonSubscriptionService>();
+#else
+        // Droit Premium chiffré (Keystore / trousseau), jamais un booléen en clair.
+        builder.Services.AddSingleton(SecureStorage.Default);
+        builder.Services.AddSingleton<IEntitlementStore, SecureEntitlementStore>();
 #if (ANDROID || IOS) && !DEBUG
         builder.Services.AddSingleton<ISubscriptionService, StoreSubscriptionService>();
 #else
         builder.Services.AddSingleton<ISubscriptionService, SimulatedSubscriptionService>();
+#endif
 #endif
 
         // Core

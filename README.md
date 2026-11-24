@@ -24,7 +24,7 @@ Au-delà des leçons :
 - **Plantages et problèmes** : les plantages et erreurs inattendues sont enregistrés sur l'appareil (`erreurs.json`, données personnelles retirées). Au lancement suivant un plantage, l'app propose d'envoyer le rapport ; « 🐞 Signaler un problème » (Réglages) fait de même avec les erreurs récentes. L'envoi ouvre une issue GitHub pré-remplie que l'utilisateur relit : aucun service tiers, rien d'automatique. Voir [CrashReporter.cs](src/QuizzWare/Services/CrashReporter.cs).
 - **Mode entretien** : simulation chronométrée (Junior 10 questions / 8 min, Confirmé 15 / 12 min, Senior 15 / 10 min), questions réparties entre les chapitres, verdict et sujets à retravailler. Les erreurs rejoignent la révision espacée.
 
-Publication sur le Play Store : **[docs/PUBLICATION.md](docs/PUBLICATION.md)**.
+Publication : **[Play Store](docs/PUBLICATION.md)** · **[App Store](docs/PUBLICATION-IOS.md)**. Pour l'instant, l'abonnement Premium n'est pas proposé : ses catégories sont visibles, marquées « 🕓 À venir » (`PremiumOffered` dans le `.csproj`).
 
 ## Stack
 

@@ -10,6 +10,8 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
     CrashReporter crashes)
     : ObservableObject
 {
+    public string SubscriptionHeader => subscription.IsOffered ? "⭐ Abonnement" : "🕓 À venir";
+
     [ObservableProperty]
     private string subscriptionTitle = string.Empty;
 
@@ -65,9 +67,12 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
                     $"{progressService.CountDueReviews(progress)} à réviser · 🔥 meilleure série : {progress.BestStreak} jours";
 
         var freeLeft = PremiumPolicy.FreeInterviewsLeft(progress, progressService.Now());
+        var interviewsLeft = $"{freeLeft} entretien{(freeLeft > 1 ? "s" : "")} gratuit{(freeLeft > 1 ? "s" : "")} restant{(freeLeft > 1 ? "s" : "")} cette semaine.";
         (SubscriptionTitle, SubscriptionText) = subscription.IsPremium
             ? ("⭐ Premium actif", "Toutes les catégories et les entretiens illimités. Touche pour gérer ton abonnement.")
-            : ("Version gratuite", $"{freeLeft} entretien{(freeLeft > 1 ? "s" : "")} gratuit{(freeLeft > 1 ? "s" : "")} restant{(freeLeft > 1 ? "s" : "")} cette semaine. Touche pour découvrir Premium.");
+            : subscription.IsOffered
+                ? ("Version gratuite", $"{interviewsLeft} Touche pour découvrir Premium.")
+                : ("Version gratuite", $"{interviewsLeft} Touche pour voir ce qui arrive bientôt.");
         var errors = crashes.RecentErrors().Count;
         ProblemText = errors == 0
             ? "Ouvre un rapport pré-rempli sur GitHub : tu décris le problème, tu relis, puis tu l'envoies."

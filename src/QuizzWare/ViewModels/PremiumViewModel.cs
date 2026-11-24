@@ -9,6 +9,7 @@ namespace QuizzWare.ViewModels;
 /// <summary>
 /// Page Premium : avantages, prix, achat et restauration. Ouverte depuis les réglages,
 /// une catégorie Premium (paramètre categoryId) ou le quota d'entretiens atteint (paramètre reason=interview).
+/// Tant que l'abonnement n'est pas proposé, elle présente les mêmes contenus comme « À venir », sans achat.
 /// </summary>
 public partial class PremiumViewModel(ISubscriptionService subscription, ContentRepository content)
     : ObservableObject, IQueryAttributable
@@ -17,7 +18,7 @@ public partial class PremiumViewModel(ISubscriptionService subscription, Content
     private string? _reason;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNotPremium))]
+    [NotifyPropertyChangedFor(nameof(CanSubscribe))]
     private bool isPremium;
 
     [ObservableProperty]
@@ -33,13 +34,31 @@ public partial class PremiumViewModel(ISubscriptionService subscription, Content
     [NotifyCanExecuteChangedFor(nameof(SubscribeCommand), nameof(RestoreCommand))]
     private bool isBusy;
 
-    public bool IsNotPremium => !IsPremium;
     public bool IsSimulated => subscription.IsSimulated;
+
+    public bool IsOffered => subscription.IsOffered;
+    public bool IsComingSoon => !subscription.IsOffered;
+
+    /// <summary>Achat et restauration : seulement si l'abonnement est proposé et pas déjà actif.</summary>
+    public bool CanSubscribe => IsOffered && !IsPremium;
+
+    public string PageTitle => IsOffered ? "Premium" : "À venir";
+    public string Headline => IsOffered ? "QuizzWare Premium" : "Bientôt dans QuizzWare";
+    public string HeadlineIcon => IsOffered ? "⭐" : "🕓";
+
+    public string ComingSoonText =>
+        "Ces contenus sont en préparation et ne sont pas encore disponibles. En attendant, toutes les autres catégories sont accessibles.";
+
+    public string TermsText =>
+        $"Abonnement mensuel à renouvellement automatique, débité sur ton compte {PremiumLabels.StoreName}. Tu peux le résilier à tout moment "
+        + $"depuis {PremiumLabels.StoreName} : l'accès Premium reste actif jusqu'à la fin de la période payée.";
 
     public string InterviewsText =>
         $"🎤 Entretiens illimités (gratuit : {PremiumPolicy.FreeInterviewsPerWeek} par semaine)";
 
-    public string CategoriesText { get; } = "🗂️ Toutes les catégories : " + string.Join(", ",
+    public string CategoriesIntro => IsOffered ? "Toutes les catégories" : "De nouvelles catégories";
+
+    public string CategoriesText => $"🗂️ {CategoriesIntro} : " + string.Join(", ",
         content.Categories.Where(c => !PremiumPolicy.IsCategoryFree(c.Id)).Select(c => c.Name));
 
     public string FreeText => "Les langages de programmation et les fondamentaux (algorithmes, bases de données, Git, tests) restent gratuits.";
@@ -58,15 +77,17 @@ public partial class PremiumViewModel(ISubscriptionService subscription, Content
 
         var category = _categoryId is null ? null : content.Categories.FirstOrDefault(c => c.Id == _categoryId);
         ReasonText = category is not null
-            ? $"« {category.Name} » fait partie de QuizzWare Premium."
+            ? IsOffered ? $"« {category.Name} » fait partie de QuizzWare Premium." : $"« {category.Name} » arrive bientôt."
             : _reason == "interview"
                 ? $"Tu as utilisé tes {PremiumPolicy.FreeInterviewsPerWeek} entretiens gratuits de la semaine."
                 : string.Empty;
         HasReason = ReasonText.Length > 0;
+        if (!IsOffered)
+            return;
 
         PriceText = "Chargement du prix…";
         var price = await subscription.GetPriceAsync();
-        PriceText = price is null ? "Prix affiché par Google Play au moment de l'achat" : $"{price} par mois";
+        PriceText = price is null ? $"Prix affiché par {PremiumLabels.StoreName} au moment de l'achat" : $"{price} par mois";
 
         await subscription.RefreshAsync();
         IsPremium = subscription.IsPremium;
@@ -91,7 +112,7 @@ public partial class PremiumViewModel(ISubscriptionService subscription, Content
                 PurchaseOutcome.Success => null,
                 PurchaseOutcome.Cancelled => null,
                 PurchaseOutcome.Pending => "Ton paiement est en attente de validation. Premium s'activera dès qu'il sera confirmé.",
-                PurchaseOutcome.Unavailable => "Google Play n'est pas disponible pour le moment. Vérifie ta connexion et réessaie.",
+                PurchaseOutcome.Unavailable => $"{PremiumLabels.StoreName} n'est pas disponible pour le moment. Vérifie ta connexion et réessaie.",
                 _ => "L'achat n'a pas pu aboutir. Aucun montant n'a été débité ; réessaie dans un instant.",
             };
             if (outcome == PurchaseOutcome.Success)
@@ -118,7 +139,7 @@ public partial class PremiumViewModel(ISubscriptionService subscription, Content
             IsPremium = restored;
             await Shell.Current.DisplayAlertAsync("Restaurer mes achats", restored
                 ? "Ton abonnement Premium est actif sur cet appareil."
-                : "Aucun abonnement actif n'a été trouvé pour ce compte Google Play.", "OK");
+                : $"Aucun abonnement actif n'a été trouvé pour ce compte {PremiumLabels.StoreName}.", "OK");
         }
         finally
         {

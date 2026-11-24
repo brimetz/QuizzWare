@@ -56,7 +56,7 @@ public partial class HomeViewModel(ContentRepository content, ProgressService pr
         Categories.Clear();
         foreach (var category in content.Categories.OrderByDescending(c => interests.Contains(c.Id)))
             Categories.Add(new CategoryCardViewModel(category, progressService.GetLevel(progress, category.Id), interests.Contains(category.Id),
-                isPremiumLocked: !PremiumPolicy.CanAccessCategory(category.Id, subscription.IsPremium)));
+                isPremiumLocked: !PremiumPolicy.CanAccessCategory(category.Id, subscription.IsPremium), PremiumLabels.Badge(subscription)));
 
         var totalXp = progress.Categories.Values.Sum(c => c.TotalXp);
         var playableLessons = content.Categories.SelectMany(c => c.AllLessons).Where(l => !l.IsPlanned).Select(l => l.Id).ToHashSet();
@@ -78,13 +78,15 @@ public partial class HomeViewModel(ContentRepository content, ProgressService pr
     }
 }
 
-public sealed partial class CategoryCardViewModel(Category category, LevelInfo level, bool isFavorite = false, bool isPremiumLocked = false)
+public sealed partial class CategoryCardViewModel(Category category, LevelInfo level, bool isFavorite = false, bool isPremiumLocked = false,
+    string lockBadge = "⭐ Premium")
 {
     public string Name => category.Name;
     public bool IsFavorite => isFavorite;
 
-    /// <summary>Catégorie réservée à Premium pour un utilisateur gratuit : l'ouvrir présente l'abonnement.</summary>
+    /// <summary>Catégorie réservée à Premium pour un utilisateur gratuit : l'ouvrir présente l'abonnement (ou ce qui arrive bientôt).</summary>
     public bool IsPremiumLocked => isPremiumLocked;
+    public string LockBadge => lockBadge;
     public string Description => category.Description;
     public string Icon => category.Icon;
     public Color Color { get; } = Color.FromArgb(category.Color);

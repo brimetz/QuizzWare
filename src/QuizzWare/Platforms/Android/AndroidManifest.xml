@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true" android:label="QuizzWare"></application>
+	<!-- Sauvegarde Android : la progression et les réglages sont sauvegardés, pas le droit Premium chiffré (voir Resources/xml). -->
+	<application android:allowBackup="true" android:fullBackupContent="@xml/auto_backup_rules" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true" android:label="QuizzWare"></application>
 
 	<!-- Rappels quotidiens : afficher des notifications (Android 13+) et les reprogrammer après un redémarrage. -->
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

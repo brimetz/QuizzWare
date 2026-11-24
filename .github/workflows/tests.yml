@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+# Les tests n'ont besoin que de lire le dépôt.
+permissions:
+  contents: read
+
 jobs:
   core:
     name: Core et contenu

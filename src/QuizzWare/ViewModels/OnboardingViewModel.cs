@@ -171,7 +171,7 @@ public partial class OnboardingViewModel(ContentRepository content, ProgressServ
 
         Recommendations = chosen
             .Select(c => new RecommendationViewModel(c, suggestPlacement && c.Chapters.Count(ch => ch.Lessons.Any(l => !l.IsPlanned)) >= 2,
-                isPremiumLocked: !PremiumPolicy.CanAccessCategory(c.Id, subscription.IsPremium)))
+                isPremiumLocked: !PremiumPolicy.CanAccessCategory(c.Id, subscription.IsPremium), premiumOffered: subscription.IsOffered))
             .ToList();
 
         SummaryText = suggestPlacement
@@ -201,14 +201,14 @@ public partial class OptionViewModel(string id, string label, string description
 }
 
 /// <summary>Une catégorie choisie, avec le bon point de départ.</summary>
-public partial class RecommendationViewModel(Category category, bool suggestPlacement, bool isPremiumLocked = false)
+public partial class RecommendationViewModel(Category category, bool suggestPlacement, bool isPremiumLocked = false, bool premiumOffered = true)
 {
     public string Name => category.Name;
     public string Icon => category.Icon;
     public Color Color { get; } = Color.FromArgb(category.Color);
     public bool SuggestPlacement => suggestPlacement && !isPremiumLocked;
     public bool HasContent => category.HasContent;
-    public string Hint => isPremiumLocked ? "⭐ Catégorie Premium : touche pour découvrir l'abonnement."
+    public string Hint => isPremiumLocked ? (premiumOffered ? "⭐ Catégorie Premium : touche pour découvrir l'abonnement." : "🕓 Bientôt disponible : touche pour en savoir plus.")
         : !category.HasContent ? "Contenu en préparation : l'arbre des sujets est déjà visible."
         : suggestPlacement ? "Test de niveau conseillé (5 à 10 minutes)."
         : "Premier chapitre : " + category.Chapters.First(c => c.Lessons.Any(l => !l.IsPlanned)).Title;

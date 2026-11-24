@@ -487,3 +487,11 @@ $RECYCLE.BIN/
 *.keystore
 *.jks
 
+# Signature iOS et clés de l'API App Store Connect : jamais dans le dépôt (voir docs/PUBLICATION-IOS.md)
+*.p12
+*.p8
+*.cer
+*.pfx
+*.mobileprovision
+*.provisionprofile
+
