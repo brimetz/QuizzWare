@@ -28,7 +28,7 @@ Publication sur le Play Store : **[docs/PUBLICATION.md](docs/PUBLICATION.md)**.
 
 ## Stack
 
-- **.NET 9 / .NET MAUI** (Android, iOS, Windows pour le dev)
+- **.NET 10 (LTS, supporté jusqu'en novembre 2028) / .NET MAUI 10** (Android, iOS, Windows pour le dev)
 - **MVVM** avec CommunityToolkit.Mvvm
 - **100 % local** : contenu embarqué en JSON, progression sauvegardée dans `progress.json` (dossier de données de l'app)
 
@@ -84,7 +84,7 @@ La sauvegarde (`progress.json`) porte un `SchemaVersion` et une date `UpdatedAt`
 
 ## Démarrer
 
-Prérequis : SDK .NET 9 et le workload MAUI (une fois, dans un terminal **administrateur**) :
+Prérequis : SDK .NET 10 et le workload MAUI (une fois, dans un terminal **administrateur**). Côté IDE : Visual Studio 2026 (Visual Studio 2022 ne prend pas en charge MAUI 10) ou VS Code avec l'extension .NET MAUI.
 
 ```powershell
 dotnet workload install maui
@@ -96,14 +96,14 @@ Pour Android, il faut aussi le SDK Android (installé avec Visual Studio « Dév
 # Tests du Core (ne nécessite pas MAUI)
 dotnet test tests/QuizzWare.Core.Tests
 
-# Tests de l'application : ViewModels, accessibilité, plantages (cible net9.0 de l'app, sans appareil)
+# Tests de l'application : ViewModels, accessibilité, plantages (cible net10.0 de l'app, sans appareil)
 dotnet test tests/QuizzWare.App.Tests
 
 # Lancer sur Windows (le plus rapide pour itérer)
-dotnet build src/QuizzWare -t:Run -f net9.0-windows10.0.19041.0
+dotnet build src/QuizzWare -t:Run -f net10.0-windows10.0.19041.0
 
 # Lancer sur un émulateur / téléphone Android connecté
-dotnet build src/QuizzWare -t:Run -f net9.0-android
+dotnet build src/QuizzWare -t:Run -f net10.0-android
 ```
 
 iOS nécessite un Mac (appairé depuis Visual Studio ou build directement sur macOS).

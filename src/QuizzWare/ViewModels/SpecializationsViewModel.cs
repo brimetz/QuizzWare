@@ -285,7 +285,7 @@ public sealed partial class TreeRowViewModel(string categoryId, SpecializationNo
 
         if (IsLocked)
         {
-            await Shell.Current.DisplayAlert("Pas encore disponible", LockedMessage, "OK");
+            await Shell.Current.DisplayAlertAsync("Pas encore disponible", LockedMessage, "OK");
             return;
         }
 
@@ -308,6 +308,6 @@ public sealed partial class TreeRowViewModel(string categoryId, SpecializationNo
         }
 
         if (IsLeaf)
-            await Shell.Current.DisplayAlert(node.Title, $"{node.Summary}\n\nCe parcours arrive bientôt.", "OK");
+            await Shell.Current.DisplayAlertAsync(node.Title, $"{node.Summary}\n\nCe parcours arrive bientôt.", "OK");
     }
 }

@@ -6,7 +6,7 @@
       "detail": "Compile et lance l'app sur Windows : le plus rapide pour itérer",
       "type": "process",
       "command": "dotnet",
-      "args": ["build", "${workspaceFolder}/src/QuizzWare", "-t:Run", "-f", "net9.0-windows10.0.19041.0"],
+      "args": ["build", "${workspaceFolder}/src/QuizzWare", "-t:Run", "-f", "net10.0-windows10.0.19041.0"],
       "problemMatcher": "$msCompile",
       "group": { "kind": "build", "isDefault": true },
       "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
@@ -16,7 +16,7 @@
       "detail": "Compile, déploie et lance l'app sur le téléphone ou l'émulateur Android connecté",
       "type": "process",
       "command": "dotnet",
-      "args": ["build", "${workspaceFolder}/src/QuizzWare", "-t:Run", "-f", "net9.0-android"],
+      "args": ["build", "${workspaceFolder}/src/QuizzWare", "-t:Run", "-f", "net10.0-android"],
       "problemMatcher": "$msCompile",
       "group": "build",
       "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }

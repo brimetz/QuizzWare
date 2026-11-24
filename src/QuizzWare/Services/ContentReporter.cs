@@ -40,7 +40,7 @@ public sealed class ContentReporter(ILogger<ContentReporter> logger)
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Ouverture du signalement impossible");
-            await Shell.Current.DisplayAlert("Signaler une erreur",
+            await Shell.Current.DisplayAlertAsync("Signaler une erreur",
                 $"Impossible d'ouvrir le navigateur. Tu peux signaler « {subject} » sur github.com/brimetz/QuizzWare/issues.", "OK");
         }
     }

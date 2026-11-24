@@ -39,16 +39,16 @@ public partial class QuizPage : ContentPage
             FeedbackPanel.TranslationY = 0; // Accessibilité : la correction apparaît sans glisser ni trembler.
             return;
         }
-        await FeedbackPanel.TranslateTo(0, 0, 220, Easing.CubicOut);
+        await FeedbackPanel.TranslateToAsync(0, 0, 220, Easing.CubicOut);
 
         if (isCorrect)
         {
-            await Bar.ScaleYTo(2.2, 120, Easing.CubicOut);
-            await Bar.ScaleYTo(1, 160, Easing.CubicIn);
+            await Bar.ScaleYToAsync(2.2, 120, Easing.CubicOut);
+            await Bar.ScaleYToAsync(1, 160, Easing.CubicIn);
             return;
         }
 
         foreach (var x in new[] { -10.0, 10, -7, 7, -3, 0 })
-            await FeedbackPanel.TranslateTo(x, 0, 45);
+            await FeedbackPanel.TranslateToAsync(x, 0, 45);
     }
 }

@@ -187,7 +187,7 @@ public partial class QuizViewModel(
         var due = progressService.GetDueReviews(userProgress);
         if (due.Count == 0)
         {
-            await Shell.Current.DisplayAlert("Rien à réviser", "Toutes tes révisions du jour sont faites. Reviens demain !", "OK");
+            await Shell.Current.DisplayAlertAsync("Rien à réviser", "Toutes tes révisions du jour sont faites. Reviens demain !", "OK");
             await Shell.Current.GoToAsync("..");
             return;
         }
@@ -402,7 +402,7 @@ public partial class QuizViewModel(
         if (_finishing)
             return;
         StopTimer();
-        await Shell.Current.DisplayAlert("⏱ Temps écoulé", "Les questions sans réponse comptent comme fausses.", "Voir le bilan");
+        await Shell.Current.DisplayAlertAsync("⏱ Temps écoulé", "Les questions sans réponse comptent comme fausses.", "Voir le bilan");
         await FinishExamAsync(timeExpired: true);
     }
 

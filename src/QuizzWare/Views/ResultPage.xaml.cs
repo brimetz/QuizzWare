@@ -32,8 +32,8 @@ public partial class ResultPage : ContentPage
         // Le score « saute » à l'arrivée.
         ScoreBlock.Scale = 0.6;
         ScoreBlock.Opacity = 0;
-        await Task.WhenAll(ScoreBlock.FadeTo(1, 250), ScoreBlock.ScaleTo(1.08, 260, Easing.CubicOut));
-        await ScoreBlock.ScaleTo(1, 160, Easing.CubicIn);
+        await Task.WhenAll(ScoreBlock.FadeToAsync(1, 250), ScoreBlock.ScaleToAsync(1.08, 260, Easing.CubicOut));
+        await ScoreBlock.ScaleToAsync(1, 160, Easing.CubicIn);
 
         if (_viewModel.ShouldCelebrate)
             await RainConfettiAsync();
@@ -67,8 +67,8 @@ public partial class ResultPage : ContentPage
     {
         await Task.Delay(delay);
         await Task.WhenAll(
-            label.TranslateTo(drift, height + 80, duration, Easing.CubicIn),
-            label.RotateTo(label.Rotation + drift * 4, duration),
-            label.FadeTo(0.2, duration, Easing.CubicIn));
+            label.TranslateToAsync(drift, height + 80, duration, Easing.CubicIn),
+            label.RotateToAsync(label.Rotation + drift * 4, duration),
+            label.FadeToAsync(0.2, duration, Easing.CubicIn));
     }
 }

@@ -1,6 +1,7 @@
 #if ANDROID || IOS
 using Plugin.LocalNotification;
-using Plugin.LocalNotification.AndroidOption;
+using Plugin.LocalNotification.Core.Models;
+using Plugin.LocalNotification.Core.Models.AndroidOption;
 using QuizzWare.Core.Progress;
 
 namespace QuizzWare.Services;

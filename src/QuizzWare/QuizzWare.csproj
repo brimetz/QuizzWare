@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- net9.0 (sans plateforme) : bibliothèque utilisée par les tests unitaires de l'application (tests/QuizzWare.App.Tests). -->
-    <TargetFrameworks>net9.0;net9.0-android;net9.0-ios</TargetFrameworks>
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net9.0-windows10.0.19041.0</TargetFrameworks>
+    <!-- net10.0 (sans plateforme) : bibliothèque utilisée par les tests unitaires de l'application (tests/QuizzWare.App.Tests). -->
+    <TargetFrameworks>net10.0;net10.0-android;net10.0-ios</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
 
-    <OutputType Condition="'$(TargetFramework)' != 'net9.0'">Exe</OutputType>
+    <OutputType Condition="'$(TargetFramework)' != 'net10.0'">Exe</OutputType>
     <RootNamespace>QuizzWare</RootNamespace>
     <UseMaui>true</UseMaui>
     <SingleProject>true</SingleProject>
@@ -27,7 +27,7 @@
     <!-- Windows : exécution non packagée, pratique pour tester rapidement sur le PC de dev. -->
     <WindowsPackageType>None</WindowsPackageType>
 
-    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
@@ -57,15 +57,26 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Plugin.Maui.Audio" Version="4.0.0" />
   </ItemGroup>
 
-  <!-- Notifications locales (rappels quotidiens) et Google Play Billing : Android et iOS seulement. Version 12.x = dernière compatible .NET 9. -->
+  <!-- Notifications locales (rappels quotidiens) et Google Play Billing : Android et iOS seulement. -->
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
-    <PackageReference Include="Plugin.LocalNotification" Version="12.0.2" />
-    <PackageReference Include="Plugin.InAppBilling" Version="9.1.0" />
+    <PackageReference Include="Plugin.LocalNotification" Version="14.2.0" />
+    <PackageReference Include="Plugin.InAppBilling" Version="11.0.1" />
+  </ItemGroup>
+
+  <!-- Google Play Billing (via Plugin.InAppBilling) demande des AndroidX plus récents que ceux de MAUI 10 :
+       on les référence directement, toutes alignées, pour lever le conflit de versions (NU1107). -->
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.11.0.1" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core.Ktx" Version="2.11.0.1" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" Version="2.11.0.1" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="2.11.0.1" />
+    <PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.9.0" />
+    <PackageReference Include="Xamarin.AndroidX.Collection.Ktx" Version="1.6.0.1" />
   </ItemGroup>
 
   <ItemGroup>

@@ -79,7 +79,7 @@ public partial class CategoryViewModel(ContentRepository content, ProgressServic
             return;
         var category = content.GetCategory(_categoryId);
         var chapters = category.Chapters.Count(c => c.Lessons.Any(l => !l.IsPlanned));
-        var ok = await Shell.Current.DisplayAlert("🎯 Test de niveau",
+        var ok = await Shell.Current.DisplayAlertAsync("🎯 Test de niveau",
             $"Jusqu'à {chapters * PlacementTest.QuestionsPerChapter} questions, {PlacementTest.QuestionsPerChapter} par chapitre, sans correction en cours de route. "
             + "Chaque chapitre réussi sans faute est validé, et le test s'arrête au premier chapitre raté.",
             "C'est parti", "Plus tard");
@@ -99,7 +99,7 @@ public partial class CategoryViewModel(ContentRepository content, ProgressServic
         {
             var next = PremiumPolicy.NextFreeInterviewAt(progress, now);
             var when = next is { } n ? $" Le prochain entretien gratuit sera disponible le {n.ToLocalTime():dddd d MMMM à HH:mm}." : string.Empty;
-            var discover = await Shell.Current.DisplayAlert("🎤 Entretiens gratuits épuisés",
+            var discover = await Shell.Current.DisplayAlertAsync("🎤 Entretiens gratuits épuisés",
                 $"La version gratuite comprend {PremiumPolicy.FreeInterviewsPerWeek} entretiens par semaine.{when} "
                 + "Avec Premium, les entretiens sont illimités.", "Découvrir Premium", "Plus tard");
             if (discover)
@@ -109,13 +109,13 @@ public partial class CategoryViewModel(ContentRepository content, ProgressServic
 
         var category = content.GetCategory(_categoryId);
         var levels = InterviewLevel.All.Where(l => QuizBuilder.CanInterview(category, l)).ToList();
-        var choice = await Shell.Current.DisplayActionSheet("🎤 Niveau de l'entretien", "Annuler", null,
+        var choice = await Shell.Current.DisplayActionSheetAsync("🎤 Niveau de l'entretien", "Annuler", null,
             levels.Select(l => l.Description).ToArray());
         var level = levels.FirstOrDefault(l => l.Description == choice);
         if (level is null)
             return;
 
-        var ok = await Shell.Current.DisplayAlert($"Entretien {level.Label}",
+        var ok = await Shell.Current.DisplayAlertAsync($"Entretien {level.Label}",
             $"{level.QuestionCount} questions en {level.Duration.TotalMinutes:0} minutes, sans correction avant la fin, comme en vrai. "
             + "Tu obtiendras un verdict et les sujets à retravailler.", "Commencer", "Annuler");
         if (ok)
@@ -247,7 +247,7 @@ public sealed partial class UnitItemViewModel
     {
         if (_state == UnitState.Planned)
         {
-            await Shell.Current.DisplayAlert(Title, "Ce contenu est prévu dans le parcours, mais pas encore écrit. Il arrive bientôt !", "OK");
+            await Shell.Current.DisplayAlertAsync(Title, "Ce contenu est prévu dans le parcours, mais pas encore écrit. Il arrive bientôt !", "OK");
             return;
         }
 
@@ -256,7 +256,7 @@ public sealed partial class UnitItemViewModel
             var message = _isChallenge
                 ? "Valide toutes les leçons du chapitre pour accéder au défi."
                 : $"Obtiens au moins {ProgressService.PassPercent} % au quizz de la leçon précédente pour débloquer celle-ci.";
-            await Shell.Current.DisplayAlert("Pas encore disponible", message, "OK");
+            await Shell.Current.DisplayAlertAsync("Pas encore disponible", message, "OK");
             return;
         }
 

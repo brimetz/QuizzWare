@@ -96,11 +96,11 @@ public partial class PremiumViewModel(ISubscriptionService subscription, Content
             };
             if (outcome == PurchaseOutcome.Success)
             {
-                await Shell.Current.DisplayAlert("Bienvenue dans Premium ⭐", "Toutes les catégories et les entretiens illimités sont débloqués. Merci pour ton soutien !", "Super");
+                await Shell.Current.DisplayAlertAsync("Bienvenue dans Premium ⭐", "Toutes les catégories et les entretiens illimités sont débloqués. Merci pour ton soutien !", "Super");
                 await Shell.Current.GoToAsync("..");
             }
             else if (message is not null)
-                await Shell.Current.DisplayAlert("Abonnement", message, "OK");
+                await Shell.Current.DisplayAlertAsync("Abonnement", message, "OK");
         }
         finally
         {
@@ -116,7 +116,7 @@ public partial class PremiumViewModel(ISubscriptionService subscription, Content
         {
             var restored = await subscription.RestoreAsync();
             IsPremium = restored;
-            await Shell.Current.DisplayAlert("Restaurer mes achats", restored
+            await Shell.Current.DisplayAlertAsync("Restaurer mes achats", restored
                 ? "Ton abonnement Premium est actif sur cet appareil."
                 : "Aucun abonnement actif n'a été trouvé pour ce compte Google Play.", "OK");
         }

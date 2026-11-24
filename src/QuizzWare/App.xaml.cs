@@ -32,7 +32,7 @@ public partial class App : Application
             // Après un plantage lors de la dernière utilisation : proposer d'envoyer le rapport, une fois la page affichée.
             await Task.Delay(TimeSpan.FromSeconds(1));
             if (Shell.Current is { } shell)
-                await _crashes.OfferPendingReportAsync(shell.DisplayAlert);
+                await _crashes.OfferPendingReportAsync(shell.DisplayAlertAsync);
         }
         catch (Exception ex)
         {

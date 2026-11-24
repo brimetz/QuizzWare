@@ -89,7 +89,7 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
 
         if (value && !await reminders.RequestPermissionAsync())
         {
-            await Shell.Current.DisplayAlert("Notifications désactivées",
+            await Shell.Current.DisplayAlertAsync("Notifications désactivées",
                 "Autorise les notifications de QuizzWare dans les réglages du téléphone pour recevoir tes rappels.", "OK");
             _loading = true;
             RemindersEnabled = false;
@@ -134,7 +134,7 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
     [RelayCommand]
     private async Task ResetAsync()
     {
-        var confirmed = await Shell.Current.DisplayAlert("Réinitialiser la progression ?",
+        var confirmed = await Shell.Current.DisplayAlertAsync("Réinitialiser la progression ?",
             "XP, niveaux, leçons validées, série et révisions seront effacés. Cette action est irréversible.",
             "Tout effacer", "Annuler");
         if (!confirmed)
@@ -142,7 +142,7 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
 
         await progressService.ResetAsync();
         await LoadAsync();
-        await Shell.Current.DisplayAlert("C'est reparti !", "Ta progression a été réinitialisée.", "OK");
+        await Shell.Current.DisplayAlertAsync("C'est reparti !", "Ta progression a été réinitialisée.", "OK");
     }
 }
 

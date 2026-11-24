@@ -21,10 +21,10 @@ Le projet lit la keystore depuis deux variables d'environnement ([QuizzWare.cspr
 ```powershell
 $env:QUIZZWARE_KEYSTORE = "$HOME\cles\quizzware.keystore"
 $env:QUIZZWARE_KEYSTORE_PASS = "ton mot de passe"
-dotnet publish src/QuizzWare -f net9.0-android -c Release
+dotnet publish src/QuizzWare -f net10.0-android -c Release
 ```
 
-Résultat : `src/QuizzWare/bin/Release/net9.0-android/publish/com.quizzware.app-Signed.aab`.
+Résultat : `src/QuizzWare/bin/Release/net10.0-android/publish/com.quizzware.app-Signed.aab`.
 
 Sans les variables, le bundle est signé avec la clé de debug : pratique pour tester, **refusé par le Play Store**.
 
@@ -38,7 +38,7 @@ Sans les variables, le bundle est signé avec la clé de debug : pratique pour t
 La version Release est compilée différemment de la version Debug (optimisations, suppression du code inutilisé) : il faut l'essayer avant de l'envoyer.
 
 ```powershell
-dotnet build src/QuizzWare -t:Run -f net9.0-android -c Release
+dotnet build src/QuizzWare -t:Run -f net10.0-android -c Release
 ```
 
 À vérifier : premier lancement (parcours de bienvenue), une leçon complète, les sons et vibrations, un rappel (régler l'heure à dans 2 minutes), le test de niveau et le mode entretien.

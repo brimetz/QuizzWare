@@ -72,7 +72,7 @@ public sealed class SimulatedSubscriptionService : SubscriptionServiceBase
 
     public override async Task<PurchaseOutcome> PurchaseAsync()
     {
-        var ok = await Shell.Current.DisplayAlert("Achat simulé",
+        var ok = await Shell.Current.DisplayAlertAsync("Achat simulé",
             "Version de développement : aucun paiement n'est effectué. Activer Premium ?", "Activer", "Annuler");
         if (!ok)
             return PurchaseOutcome.Cancelled;
@@ -82,7 +82,7 @@ public sealed class SimulatedSubscriptionService : SubscriptionServiceBase
 
     public override async Task OpenManagementAsync()
     {
-        var stop = await Shell.Current.DisplayAlert("Abonnement simulé",
+        var stop = await Shell.Current.DisplayAlertAsync("Abonnement simulé",
             "Version de développement : résilier l'abonnement simulé ?", "Résilier", "Garder");
         if (stop)
             SetPremium(false);

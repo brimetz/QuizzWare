@@ -40,7 +40,7 @@ public partial class SettingsPage : ContentPage
         {
             var crashes = Handler?.MauiContext?.Services.GetService<CrashReporter>();
             crashes?.Record(new TimeoutException("Erreur de test enregistrée depuis les Réglages (Debug)."), context: "Réglages › Debug");
-            await DisplayAlert("Erreur enregistrée", "Elle apparaît maintenant dans « Signaler un problème ».", "OK");
+            await DisplayAlertAsync("Erreur enregistrée", "Elle apparaît maintenant dans « Signaler un problème ».", "OK");
             await _viewModel.LoadAsync();
         };
 

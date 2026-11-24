@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Tests de l'application MAUI (ViewModels, services) : référence la cible net9.0 de src/QuizzWare, sans appareil. -->
+  <!-- Tests de l'application MAUI (ViewModels, services) : référence la cible net10.0 de src/QuizzWare, sans appareil. -->
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <UseMaui>true</UseMaui>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -13,6 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
