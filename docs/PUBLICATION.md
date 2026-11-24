@@ -26,6 +26,8 @@ Pour un premier essai, inutile de passer par Google : sur le téléphone, active
 dotnet build src/QuizzWare -t:Run -f net10.0-android -c Release
 ```
 
+Hors publication, la version Release est un `.apk` installé par mise à jour : la progression est conservée d'une installation à l'autre (un `.aab` installé depuis l'ordinateur passerait par une désinstallation).
+
 Pour l'envoyer à quelqu'un sans câble, construire un `.apk` et le partager (le destinataire autorise l'installation d'applications inconnues) :
 
 ```powershell
@@ -33,7 +35,7 @@ dotnet publish src/QuizzWare -f net10.0-android -c Release -p:AndroidPackageForm
 # → src/QuizzWare/bin/Release/net10.0-android/publish/com.quizzware.app-Signed.apk
 ```
 
-À vérifier : premier lancement (parcours de bienvenue), une leçon complète, les sons et vibrations, un rappel (autorisation des notifications, puis heure réglée à dans 2 minutes), le test de niveau, le mode entretien, une catégorie « À venir » et le bouton « ⚑ Signaler ».
+À vérifier : premier lancement (parcours de bienvenue), une leçon complète, les sons et vibrations, un rappel (Réglages › Rappels › « Envoyer un rappel de test » : la notification arrive 10 secondes plus tard ; un rappel réglé à dans 2 minutes ne vient pas si l'objectif du jour est déjà atteint), le test de niveau, le mode entretien, une catégorie « À venir » et le bouton « ⚑ Signaler ».
 
 ## 2. Créer la clé de signature (une seule fois) 👤
 

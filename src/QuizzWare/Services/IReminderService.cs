@@ -13,6 +13,9 @@ public interface IReminderService
 
     /// <summary>Remplace les rappels programmés par ceux du plan.</summary>
     Task ScheduleAsync(IReadOnlyList<PlannedReminder> reminders);
+
+    /// <summary>Programme un rappel isolé (rappel de test), sans toucher aux rappels quotidiens.</summary>
+    Task ScheduleOneAsync(PlannedReminder reminder);
 }
 
 /// <summary>Plateformes sans notifications locales : rien n'est programmé.</summary>
@@ -21,4 +24,5 @@ public sealed class NoReminderService : IReminderService
     public bool IsSupported => false;
     public Task<bool> RequestPermissionAsync() => Task.FromResult(false);
     public Task ScheduleAsync(IReadOnlyList<PlannedReminder> reminders) => Task.CompletedTask;
+    public Task ScheduleOneAsync(PlannedReminder reminder) => Task.CompletedTask;
 }

@@ -33,19 +33,33 @@ public sealed class LocalReminderService : IReminderService
             return;
 
         foreach (var reminder in reminders)
-        {
-            await center.Show(new NotificationRequest
-            {
-                NotificationId = reminder.Id,
-                Title = reminder.Title,
-                Description = reminder.Message,
-                Schedule = new NotificationRequestSchedule
-                {
-                    NotifyTime = reminder.When,
-                    Android = new AndroidScheduleOptions { AlarmType = AndroidAlarmType.Rtc },
-                },
-            });
-        }
+            await ShowAsync(center, reminder);
     }
+
+    public async Task ScheduleOneAsync(PlannedReminder reminder)
+    {
+        var center = LocalNotificationCenter.Current;
+        if (await center.AreNotificationsEnabled())
+            await ShowAsync(center, reminder);
+    }
+
+    private static Task<bool> ShowAsync(INotificationService center, PlannedReminder reminder) =>
+        center.Show(new NotificationRequest
+        {
+            NotificationId = reminder.Id,
+            Title = reminder.Title,
+            Description = reminder.Message,
+            Schedule = new NotificationRequestSchedule
+            {
+                NotifyTime = reminder.When,
+                Android = new AndroidScheduleOptions
+                {
+                    // Réveille le téléphone s'il est en veille, y compris en veille profonde (Doze). Pas d'alarme exacte :
+                    // elle demande une autorisation spéciale (réveils, agendas) ; Android peut donc décaler un peu le rappel.
+                    AlarmType = AndroidAlarmType.RtcWakeup,
+                    ScheduleMode = AndroidScheduleMode.InexactAllowWhileIdle,
+                },
+            },
+        });
 }
 #endif

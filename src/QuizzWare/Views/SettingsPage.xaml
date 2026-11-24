@@ -88,6 +88,11 @@
                             <TimePicker Grid.Column="1" Time="{Binding ReminderTime}" Format="HH:mm"
                                         TextColor="{DynamicResource TextPrimary}" />
                         </Grid>
+                        <Label Text="Pas de rappel le jour où ton objectif est déjà atteint. Le téléphone peut le décaler de quelques minutes pour économiser la batterie."
+                               Style="{StaticResource MutedLabel}" FontSize="{DynamicResource FontSizeSmall}"
+                               IsVisible="{Binding RemindersEnabled}" />
+                        <Button Text="Envoyer un rappel de test" Command="{Binding TestReminderCommand}"
+                                Style="{StaticResource SecondaryButton}" IsVisible="{Binding RemindersEnabled}" />
                         <Label Text="Les rappels sont disponibles sur Android et iOS." Style="{StaticResource MutedLabel}"
                                FontSize="{DynamicResource FontSizeSmall}" IsVisible="{Binding RemindersUnsupported}" />
                     </VerticalStackLayout>

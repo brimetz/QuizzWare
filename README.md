@@ -76,7 +76,7 @@ tools/
 | Erreurs rejouées | Une question ratée revient en fin de quizz (remélangée, 2 reprises max) ; seule la première réponse compte pour le score, l'XP et la révision espacée |
 | Objectif du jour | 10, 30 (par défaut), 50 ou 100 XP, réglable dans ⚙️ Réglages |
 | Révision espacée | Chaque question répondue entre dans un système de Leitner à 6 boîtes (intervalles 1, 3, 7, 14, 30, 60 jours). Bonne réponse à l'échéance → boîte suivante ; erreur → boîte 1, à revoir demain. « 🧠 Réviser » propose jusqu'à 10 questions dues, toutes catégories confondues ; leur XP va à la catégorie de chaque question (sans bonus sans faute) |
-| Rappels | Notification locale quotidienne à l'heure choisie (Android / iOS), sur 3 jours glissants ; pas de rappel le jour même si l'objectif est atteint |
+| Rappels | Notification locale quotidienne à l'heure choisie (Android / iOS), sur 3 jours glissants, qui réveille le téléphone (à quelques minutes près : pas d'alarme exacte) ; pas de rappel le jour même si l'objectif est atteint. « Envoyer un rappel de test » (Réglages) vérifie les notifications en 10 secondes |
 
 Les règles sont dans [LevelSystem.cs](src/QuizzWare.Core/Leveling/LevelSystem.cs), [ProgressService.cs](src/QuizzWare.Core/Progress/ProgressService.cs), [SpacedRepetition.cs](src/QuizzWare.Core/Progress/SpacedRepetition.cs) et [ReminderPlanner.cs](src/QuizzWare.Core/Progress/ReminderPlanner.cs).
 

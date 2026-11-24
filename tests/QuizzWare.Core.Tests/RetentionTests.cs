@@ -256,4 +256,15 @@ public class RetentionTests
         Assert.All(tooLate, r => Assert.True(r.When.Date > new DateTime(2026, 9, 29)));
         Assert.Equal(ReminderPlanner.DaysAhead - 1, goalReached.Count);
     }
+
+    [Fact]
+    public void TestReminder_ComesSoon_AndSurvivesRescheduling()
+    {
+        var now = new DateTime(2026, 11, 24, 21, 0, 0);
+
+        var test = ReminderPlanner.Test(now);
+
+        Assert.Equal(now + ReminderPlanner.TestDelay, test.When);
+        Assert.DoesNotContain(test.Id, ReminderPlanner.AllIds);
+    }
 }

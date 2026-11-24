@@ -8,7 +8,8 @@ namespace QuizzWare.Services;
 /// Garde les rappels à jour : après chaque quizz ou changement de réglage, et quand l'app revient au premier plan
 /// (l'objectif du jour, la série et les révisions dues ont pu changer).
 /// </summary>
-public sealed class ReminderCoordinator(ProgressService progressService, IReminderService reminders, ILogger<ReminderCoordinator> logger)
+public sealed class ReminderCoordinator(ProgressService progressService, IReminderService reminders, CrashReporter crashes,
+    ILogger<ReminderCoordinator> logger)
 {
     private bool _started;
 
@@ -38,8 +39,10 @@ public sealed class ReminderCoordinator(ProgressService progressService, IRemind
         }
         catch (Exception ex)
         {
-            // Un rappel manqué ne doit jamais faire planter l'application.
+            // Un rappel manqué ne doit jamais faire planter l'application, mais l'erreur doit rester visible
+            // (« Signaler un problème ») : en Release, le journal de debug n'existe pas.
             logger.LogWarning(ex, "Impossible de programmer les rappels");
+            crashes.Record(ex, context: "programmation des rappels");
         }
     }
 }

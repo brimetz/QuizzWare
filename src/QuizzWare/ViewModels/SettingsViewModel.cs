@@ -105,6 +105,22 @@ public partial class SettingsViewModel(ProgressService progressService, IReminde
         await progressService.UpdateSettingsAsync(s => s.RemindersEnabled = value);
     }
 
+    /// <summary>Un vrai rappel, quelques secondes plus tard : vérifie autorisation, programmation et affichage.</summary>
+    [RelayCommand]
+    private async Task TestReminderAsync()
+    {
+        if (!await reminders.RequestPermissionAsync())
+        {
+            await Shell.Current.DisplayAlertAsync("Notifications désactivées",
+                "Autorise les notifications de QuizzWare dans les réglages du téléphone pour recevoir tes rappels.", "OK");
+            return;
+        }
+
+        await reminders.ScheduleOneAsync(ReminderPlanner.Test(DateTime.Now));
+        await Shell.Current.DisplayAlertAsync("🔔 Rappel de test",
+            $"Il arrive dans {ReminderPlanner.TestDelay.TotalSeconds:0} secondes, même si tu quittes l'application.", "OK");
+    }
+
     async partial void OnReminderTimeChanged(TimeSpan value)
     {
         if (_loading)

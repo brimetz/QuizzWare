@@ -41,8 +41,11 @@
 
   <!-- Publication Play Store : bundle .aab signé. Voir docs/PUBLICATION.md.
        Le chemin de la keystore et son mot de passe viennent de variables d'environnement : aucun secret dans le dépôt. -->
+  <!-- Bundle .aab seulement pour dotnet publish. Installé sur un téléphone, un .aab passe par une désinstallation
+       qui efface la progression : dotnet build -t:Run produit donc un .apk (le .aab est le format par défaut en Release). -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-    <AndroidPackageFormat>aab</AndroidPackageFormat>
+    <AndroidPackageFormat Condition="'$(_IsPublishing)' == 'true'">aab</AndroidPackageFormat>
+    <AndroidPackageFormat Condition="'$(_IsPublishing)' != 'true' And '$(AndroidPackageFormat)' == ''">apk</AndroidPackageFormat>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release' And '$(QUIZZWARE_KEYSTORE)' != '' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
     <AndroidKeyStore>true</AndroidKeyStore>

@@ -14,6 +14,10 @@ public static class ReminderPlanner
     public const int FirstId = 1000;
     public const int DaysAhead = 3;
 
+    /// <summary>Rappel de test (Réglages) : hors de <see cref="AllIds"/>, il n'est pas annulé quand les rappels sont reprogrammés.</summary>
+    public const int TestId = FirstId - 1;
+    public static readonly TimeSpan TestDelay = TimeSpan.FromSeconds(10);
+
     /// <summary>Identifiants de tous les rappels que QuizzWare peut programmer (pour les annuler avant de reprogrammer).</summary>
     public static IEnumerable<int> AllIds => Enumerable.Range(FirstId, DaysAhead);
 
@@ -50,6 +54,10 @@ public static class ReminderPlanner
             : $"Encore {remaining} XP pour atteindre ton objectif du jour.";
         return (title, message);
     }
+
+    /// <summary>Rappel envoyé quelques secondes plus tard, pour vérifier que les notifications arrivent bien.</summary>
+    public static PlannedReminder Test(DateTime now) =>
+        new(TestId, now + TestDelay, "🔔 Rappel de test", "Les rappels de QuizzWare fonctionnent : tu recevras le prochain à l'heure choisie.");
 
     private static (string Title, string Message) Later() =>
         ("📚 Une leçon de 5 minutes ?", "Tes révisions t'attendent : quelques questions suffisent à entretenir tes acquis.");
