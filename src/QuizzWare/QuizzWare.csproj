@@ -16,8 +16,9 @@
     <MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
 
     <!-- MVVMTK0045 : [ObservableProperty] sur des champs n'est pas compatible AOT sous WinUI.
-         La cible Windows ne sert qu'au dev (pas de publication AOT), on garde donc la syntaxe par champs. -->
-    <NoWarn>$(NoWarn);MVVMTK0045</NoWarn>
+         CsWinRT1032 : expressions de collection vers une interface en lecture seule, même limite AOT sous WinUI.
+         La cible Windows ne sert qu'au dev (pas de publication AOT), on garde donc ces syntaxes. -->
+    <NoWarn>$(NoWarn);MVVMTK0045;CsWinRT1032</NoWarn>
 
     <ApplicationTitle>QuizzWare</ApplicationTitle>
     <ApplicationId>com.quizzware.app</ApplicationId>
