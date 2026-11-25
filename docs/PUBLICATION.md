@@ -81,6 +81,8 @@ Sans les variables, le bundle est signé avec la clé de debug : pratique pour t
 
 ## 5. Fiche et déclarations 👤
 
+Réponses détaillées, formulaire par formulaire (création, contenu de l'application, classification, sécurité des données, fiche, test interne) : **[play-store/play-console.md](play-store/play-console.md)**.
+
 | Rubrique | Quoi mettre |
 |---|---|
 | Fiche du Store | Textes de [play-store/fiche.md](play-store/fiche.md), icône `play-store/icone-512.png`, bannière `play-store/banniere-1024x500.png`, au moins 2 captures d'écran de téléphone |
