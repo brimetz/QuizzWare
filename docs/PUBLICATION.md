@@ -15,7 +15,7 @@ Ce guide mène jusqu'aux **tests sur Google Play**. Tout ce qui est dans le dép
   dotnet build src/QuizzWare -t:InstallAndroidDependencies -f net10.0-android -p:AcceptAndroidSDKLicenses=True
   ```
 
-- L'application fonctionne à partir d'**Android 6.0** (API 23).
+- L'application fonctionne à partir d'**Android 7.0** (API 24, minimum exigé par la protection automatique de Google Play).
 
 ## 1. Essayer tout de suite sur ton téléphone, sans le Play Store
 
